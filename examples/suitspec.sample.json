@@ -12,75 +12,93 @@
   "modules": {
     "helmet": {
       "enabled": true,
-      "asset_ref": "modules/helmet/base.prefab"
+      "asset_ref": "modules/helmet/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\helmet.generated.jpg"
     },
     "chest": {
       "enabled": true,
-      "asset_ref": "modules/chest/base.prefab"
+      "asset_ref": "modules/chest/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\chest.generated.jpg"
     },
     "back": {
       "enabled": true,
-      "asset_ref": "modules/back/base.prefab"
+      "asset_ref": "modules/back/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\back.generated.jpg"
     },
     "left_shoulder": {
       "enabled": true,
-      "asset_ref": "modules/left_shoulder/base.prefab"
+      "asset_ref": "modules/left_shoulder/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_shoulder.generated.jpg"
     },
     "right_shoulder": {
       "enabled": true,
-      "asset_ref": "modules/right_shoulder/base.prefab"
+      "asset_ref": "modules/right_shoulder/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_shoulder.generated.jpg"
     },
     "left_upperarm": {
       "enabled": true,
-      "asset_ref": "modules/left_upperarm/base.prefab"
+      "asset_ref": "modules/left_upperarm/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_upperarm.generated.jpg"
     },
     "right_upperarm": {
       "enabled": true,
-      "asset_ref": "modules/right_upperarm/base.prefab"
+      "asset_ref": "modules/right_upperarm/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_upperarm.generated.jpg"
     },
     "left_forearm": {
       "enabled": true,
-      "asset_ref": "modules/left_forearm/base.prefab"
+      "asset_ref": "modules/left_forearm/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_forearm.generated.jpg"
     },
     "right_forearm": {
       "enabled": true,
-      "asset_ref": "modules/right_forearm/base.prefab"
+      "asset_ref": "modules/right_forearm/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_forearm.generated.jpg"
     },
     "waist": {
       "enabled": true,
-      "asset_ref": "modules/waist/base.prefab"
+      "asset_ref": "modules/waist/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\waist.generated.jpg"
     },
     "left_thigh": {
       "enabled": true,
-      "asset_ref": "modules/left_thigh/base.prefab"
+      "asset_ref": "modules/left_thigh/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_thigh.generated.jpg"
     },
     "right_thigh": {
       "enabled": true,
-      "asset_ref": "modules/right_thigh/base.prefab"
+      "asset_ref": "modules/right_thigh/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_thigh.generated.jpg"
     },
     "left_shin": {
       "enabled": true,
-      "asset_ref": "modules/left_shin/base.prefab"
+      "asset_ref": "modules/left_shin/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_shin.generated.jpg"
     },
     "right_shin": {
       "enabled": true,
-      "asset_ref": "modules/right_shin/base.prefab"
+      "asset_ref": "modules/right_shin/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_shin.generated.jpg"
     },
     "left_boot": {
       "enabled": true,
-      "asset_ref": "modules/left_boot/base.prefab"
+      "asset_ref": "modules/left_boot/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_boot.generated.jpg"
     },
     "right_boot": {
       "enabled": true,
-      "asset_ref": "modules/right_boot/base.prefab"
+      "asset_ref": "modules/right_boot/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_boot.generated.jpg"
     },
     "left_hand": {
       "enabled": true,
-      "asset_ref": "modules/left_hand/base.prefab"
+      "asset_ref": "modules/left_hand/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_hand.generated.jpg"
     },
     "right_hand": {
       "enabled": true,
-      "asset_ref": "modules/right_hand/base.prefab"
+      "asset_ref": "modules/right_hand/base.prefab",
+      "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_hand.generated.jpg"
     }
   },
   "palette": {
@@ -117,6 +135,25 @@
     "model_id": "gemini-3-pro-image-preview",
     "prompt": "Industrial armored suit blueprint",
     "seed": 1001,
-    "part_prompts": {}
+    "part_prompts": {
+      "helmet": "Generate a single isolated armor part image.\nPart: helmet (helmet shell with visor aperture, no face, no neck).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "chest": "Generate a single isolated armor part image.\nPart: chest (chest armor plate, sternum core area, no arms).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "back": "Generate a single isolated armor part image.\nPart: back (backplate with spine line and mount points).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_shoulder": "Generate a single isolated armor part image.\nPart: left_shoulder (left shoulder pauldron, isolated part).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_shoulder": "Generate a single isolated armor part image.\nPart: right_shoulder (right shoulder pauldron, isolated part).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_upperarm": "Generate a single isolated armor part image.\nPart: left_upperarm (left upper-arm armor sleeve, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_upperarm": "Generate a single isolated armor part image.\nPart: right_upperarm (right upper-arm armor sleeve, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_forearm": "Generate a single isolated armor part image.\nPart: left_forearm (left forearm gauntlet, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_forearm": "Generate a single isolated armor part image.\nPart: right_forearm (right forearm gauntlet, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "waist": "Generate a single isolated armor part image.\nPart: waist (waist belt armor and abdomen guard, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_thigh": "Generate a single isolated armor part image.\nPart: left_thigh (left thigh armor plate, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_thigh": "Generate a single isolated armor part image.\nPart: right_thigh (right thigh armor plate, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_shin": "Generate a single isolated armor part image.\nPart: left_shin (left shin greave, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_shin": "Generate a single isolated armor part image.\nPart: right_shin (right shin greave, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_boot": "Generate a single isolated armor part image.\nPart: left_boot (left armored boot, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_boot": "Generate a single isolated armor part image.\nPart: right_boot (right armored boot, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "left_hand": "Generate a single isolated armor part image.\nPart: left_hand (left hand armored glove, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction.",
+      "right_hand": "Generate a single isolated armor part image.\nPart: right_hand (right hand armored glove, isolated).\nStyle tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet.\nRequirements:\n- White or transparent-like clean background.\n- Centered object, orthographic feel, no perspective distortion.\n- No human body, no full character, no text, no watermark.\n- Crisp edge definition for texture/decal extraction."
+    }
   }
 }

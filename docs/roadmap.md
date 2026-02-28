@@ -32,6 +32,7 @@
 - [ ] モジュールキット設計（helmet/chest/shoulder/back）
 - [ ] Blueprint投影モードの実検証（decal/projector/triplanar）
 - [x] 右腕PoCの装着ロジックを独立モジュールとして取り込み
+- [x] 全身当てはめビューア（検証用）を追加
 
 ### Phase 4: Track B 強化（次）
 - [ ] Unity XR プロジェクト最小接続（Quest Link）

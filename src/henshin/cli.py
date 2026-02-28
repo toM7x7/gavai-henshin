@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import functools
+import http.server
 import json
+import socketserver
 from pathlib import Path
 
 from .archive import ensure_session_dir, save_session_bundle
@@ -388,6 +391,30 @@ def _cmd_simulate_body(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve_viewer(args: argparse.Namespace) -> int:
+    port = int(args.port)
+    directory = Path(args.root).resolve()
+    if not directory.exists():
+        print(json.dumps({"ok": False, "error": f"Directory not found: {directory}"}, ensure_ascii=False))
+        return 2
+
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "message": "Serving viewer root",
+                    "root": str(directory),
+                    "url": f"http://localhost:{port}/viewer/body-fit/",
+                },
+                ensure_ascii=False,
+            )
+        )
+        httpd.serve_forever()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="henshin", description="SIM-first henshin prototyping CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -472,6 +499,14 @@ def build_parser() -> argparse.ArgumentParser:
     simulate_body.add_argument("--input", required=True, help="Input JSON sequence file")
     simulate_body.add_argument("--output", help="Optional output JSON path")
     simulate_body.set_defaults(func=_cmd_simulate_body)
+
+    serve_viewer = sub.add_parser(
+        "serve-viewer",
+        help="Serve repository root for browser-based body-fit viewer",
+    )
+    serve_viewer.add_argument("--root", default=".")
+    serve_viewer.add_argument("--port", type=int, default=8000)
+    serve_viewer.set_defaults(func=_cmd_serve_viewer)
 
     return parser
 

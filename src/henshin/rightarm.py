@@ -201,6 +201,7 @@ def run_rightarm_sequence(
         output_frames.append(
             {
                 "index": index,
+                "dt_sec": frame.dt_sec,
                 "equipped": equipped,
                 "hold_sec": round(dock.hold_sec, 4),
                 "transform": {

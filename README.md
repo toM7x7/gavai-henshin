@@ -30,6 +30,7 @@ Loreを基点に、Blueprintを実行可能にするための **SIM-first プロ
 - `docs/roadmap.md`: ロードマップ
 - `docs/progress-log.md`: 進捗ログ
 - `docs/rightarm-integration.md`: 右腕PoC統合メモ
+- `docs/body-fit-viewer.md`: 全身当てはめビューア手順
 - `sessions/`: デモ出力先（Git管理は `.gitkeep` のみ）
 
 ## クイックスタート
@@ -62,6 +63,7 @@ python -m henshin generate-parts --suitspec examples/suitspec.sample.json --dry-
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --update-suitspec
 python -m henshin simulate-rightarm --input examples/rightarm_sequence.sample.json --output sessions/rightarm-sim.json
 python -m henshin simulate-body --input examples/body_sequence.sample.json --output sessions/body-sim.json
+python -m henshin serve-viewer --port 8000
 ```
 
 ## GitHub運用

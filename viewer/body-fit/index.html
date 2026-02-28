@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HENSHIN Body Fit Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="panel">
+        <h1>Body Fit Viewer</h1>
+        <p class="hint">
+          展示会向け表示: suitspec と body-sim を読み込み、全身パーツ当てはめを明るい高コントラストで確認
+        </p>
+
+        <label>
+          SuitSpec JSON
+          <input id="suitspecPath" type="text" />
+        </label>
+
+        <label>
+          Body Sim JSON
+          <input id="simPath" type="text" />
+        </label>
+
+        <div class="row row4">
+          <button id="btnLoad">Load</button>
+          <button id="btnPlay">Play</button>
+          <button id="btnPrev">Prev</button>
+          <button id="btnNext">Next</button>
+        </div>
+
+        <div class="row row2">
+          <button id="btnTexture">Textures: Off</button>
+          <button id="btnTheme">Theme: Bright</button>
+        </div>
+
+        <div class="row row4">
+          <button id="btnCamFront">Cam Front</button>
+          <button id="btnCamSide">Cam Side</button>
+          <button id="btnCamTop">Cam Top</button>
+          <button id="btnFit">Auto Fit</button>
+        </div>
+
+        <label>
+          Frame
+          <input id="frameSlider" type="range" min="0" max="0" value="0" />
+        </label>
+
+        <label>
+          Speed
+          <input id="speedSlider" type="range" min="0.25" max="4" step="0.25" value="1" />
+        </label>
+
+        <div id="status">Ready</div>
+        <pre id="meta"></pre>
+      </aside>
+
+      <main class="viewport">
+        <canvas id="canvas"></canvas>
+        <section id="legend" class="legend">
+          <h2>Display Guide</h2>
+          <p id="legendText">Load すると表示説明がここに出ます。</p>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>

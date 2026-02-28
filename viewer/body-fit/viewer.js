@@ -1,5 +1,5 @@
-import * as THREE from "https://unpkg.com/three@0.164.1/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js";
+import * as THREE from "./vendor/three/build/three.module.js";
+import { OrbitControls } from "./vendor/three/examples/jsm/controls/OrbitControls.js";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";

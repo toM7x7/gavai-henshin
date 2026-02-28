@@ -24,6 +24,8 @@ python -m henshin serve-viewer --port 8000
 
 - `r --port 8000` は PowerShell の履歴コマンド解釈になり失敗します。
 - 必ず `python -m henshin serve-viewer --port 8000` を使ってください。
+- ビューアーは `three.js` をローカル同梱しているため、外部CDN接続なしで動作します。
+- 更新後に表示が古い場合は `Ctrl + F5` で強制再読込してください。
 
 ## 3. 画面で何が見えているか
 

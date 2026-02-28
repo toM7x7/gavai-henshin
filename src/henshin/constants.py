@@ -68,6 +68,12 @@ REQUIRED_SUITSPEC_FIELDS = [
     "generation",
 ]
 
+CORE_MODULE_SLOTS = [
+    "helmet",
+    "chest",
+    "back",
+]
+
 REQUIRED_MORPHOTYPE_FIELDS = [
     "schema_version",
     "morphotype_id",

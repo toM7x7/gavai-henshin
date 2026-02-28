@@ -14,6 +14,8 @@
    - `src/henshin/forge.py`（ドラフト生成）
    - `src/henshin/transform.py`（プロトコル状態遷移）
    - `src/henshin/archive.py`（成果物保存）
+   - `src/henshin/bodyfit.py`（全身セグメント装着追従）
+   - `src/henshin/part_prompts.py`（部位別画像生成プロンプト）
 4. Interface Layer
    - `src/henshin/cli.py`
 

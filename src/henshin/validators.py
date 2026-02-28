@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .constants import REQUIRED_MORPHOTYPE_FIELDS, REQUIRED_SUITSPEC_FIELDS
+from .constants import CORE_MODULE_SLOTS, REQUIRED_MORPHOTYPE_FIELDS, REQUIRED_SUITSPEC_FIELDS
 
 _SUIT_ID_RE = re.compile(r"^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$")
 _APPROVAL_ID_RE = re.compile(r"^APV-[0-9]{8}$")
@@ -50,11 +50,20 @@ def validate_suitspec(payload: dict[str, Any]) -> None:
         raise ValueError("SuitSpec.style_tags must be a non-empty list")
 
     modules = payload.get("modules", {})
-    for slot in ("helmet", "chest", "shoulder", "back"):
+    if not isinstance(modules, dict) or not modules:
+        raise ValueError("SuitSpec.modules must be a non-empty object")
+
+    for slot in CORE_MODULE_SLOTS:
         if slot not in modules:
             raise ValueError(f"SuitSpec.modules.{slot} is required")
-        if "asset_ref" not in modules[slot]:
-            raise ValueError(f"SuitSpec.modules.{slot}.asset_ref is required")
+
+    for name, module in modules.items():
+        if not isinstance(module, dict):
+            raise ValueError(f"SuitSpec.modules.{name} must be an object")
+        if "enabled" not in module:
+            raise ValueError(f"SuitSpec.modules.{name}.enabled is required")
+        if "asset_ref" not in module:
+            raise ValueError(f"SuitSpec.modules.{name}.asset_ref is required")
 
     palette = payload.get("palette", {})
     for color in ("primary", "secondary", "emissive"):

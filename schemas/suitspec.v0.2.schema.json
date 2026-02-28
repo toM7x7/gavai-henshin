@@ -64,7 +64,6 @@
       "required": [
         "helmet",
         "chest",
-        "shoulder",
         "back"
       ],
       "properties": {
@@ -74,10 +73,52 @@
         "chest": {
           "$ref": "#/$defs/module"
         },
-        "shoulder": {
+        "back": {
           "$ref": "#/$defs/module"
         },
-        "back": {
+        "left_shoulder": {
+          "$ref": "#/$defs/module"
+        },
+        "right_shoulder": {
+          "$ref": "#/$defs/module"
+        },
+        "left_upperarm": {
+          "$ref": "#/$defs/module"
+        },
+        "right_upperarm": {
+          "$ref": "#/$defs/module"
+        },
+        "left_forearm": {
+          "$ref": "#/$defs/module"
+        },
+        "right_forearm": {
+          "$ref": "#/$defs/module"
+        },
+        "waist": {
+          "$ref": "#/$defs/module"
+        },
+        "left_thigh": {
+          "$ref": "#/$defs/module"
+        },
+        "right_thigh": {
+          "$ref": "#/$defs/module"
+        },
+        "left_shin": {
+          "$ref": "#/$defs/module"
+        },
+        "right_shin": {
+          "$ref": "#/$defs/module"
+        },
+        "left_boot": {
+          "$ref": "#/$defs/module"
+        },
+        "right_boot": {
+          "$ref": "#/$defs/module"
+        },
+        "left_hand": {
+          "$ref": "#/$defs/module"
+        },
+        "right_hand": {
           "$ref": "#/$defs/module"
         }
       }
@@ -220,6 +261,13 @@
         "seed": {
           "type": "integer",
           "minimum": 0
+        },
+        "part_prompts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -259,6 +307,14 @@
           "minLength": 1
         },
         "material_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "texture_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generation_prompt": {
           "type": "string",
           "minLength": 1
         },

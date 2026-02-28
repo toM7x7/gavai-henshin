@@ -11,6 +11,9 @@ __pycache__/
 .venv/
 venv/
 env/
+.env
+.env.*
+!.env.example
 
 # Editors / OS
 .idea/
@@ -24,3 +27,6 @@ sessions/*
 !sessions/.gitkeep
 dist/
 build/
+
+# Embedded PoC workspace (local reference only, not part of core repo)
+examples/henshin-rightarm-poc/

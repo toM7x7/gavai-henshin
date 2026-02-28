@@ -23,17 +23,33 @@ def create_draft_suitspec(
     sid = suit_id or generate_suit_id()
     tags = style_tags or ["metal", "visor", "audit"]
 
+    modules = {
+        "helmet": {"enabled": True, "asset_ref": "modules/helmet/base.prefab"},
+        "chest": {"enabled": True, "asset_ref": "modules/chest/base.prefab"},
+        "back": {"enabled": True, "asset_ref": "modules/back/base.prefab"},
+        "left_shoulder": {"enabled": True, "asset_ref": "modules/left_shoulder/base.prefab"},
+        "right_shoulder": {"enabled": True, "asset_ref": "modules/right_shoulder/base.prefab"},
+        "left_upperarm": {"enabled": True, "asset_ref": "modules/left_upperarm/base.prefab"},
+        "right_upperarm": {"enabled": True, "asset_ref": "modules/right_upperarm/base.prefab"},
+        "left_forearm": {"enabled": True, "asset_ref": "modules/left_forearm/base.prefab"},
+        "right_forearm": {"enabled": True, "asset_ref": "modules/right_forearm/base.prefab"},
+        "waist": {"enabled": True, "asset_ref": "modules/waist/base.prefab"},
+        "left_thigh": {"enabled": True, "asset_ref": "modules/left_thigh/base.prefab"},
+        "right_thigh": {"enabled": True, "asset_ref": "modules/right_thigh/base.prefab"},
+        "left_shin": {"enabled": True, "asset_ref": "modules/left_shin/base.prefab"},
+        "right_shin": {"enabled": True, "asset_ref": "modules/right_shin/base.prefab"},
+        "left_boot": {"enabled": True, "asset_ref": "modules/left_boot/base.prefab"},
+        "right_boot": {"enabled": True, "asset_ref": "modules/right_boot/base.prefab"},
+        "left_hand": {"enabled": True, "asset_ref": "modules/left_hand/base.prefab"},
+        "right_hand": {"enabled": True, "asset_ref": "modules/right_hand/base.prefab"},
+    }
+
     return {
         "schema_version": "0.2",
         "suit_id": sid,
         "oath": oath,
         "style_tags": tags,
-        "modules": {
-            "helmet": {"enabled": True, "asset_ref": "modules/helmet/base.prefab"},
-            "chest": {"enabled": True, "asset_ref": "modules/chest/base.prefab"},
-            "shoulder": {"enabled": True, "asset_ref": "modules/shoulder/base.prefab"},
-            "back": {"enabled": True, "asset_ref": "modules/back/base.prefab"},
-        },
+        "modules": modules,
         "palette": {"primary": "#1E2A3A", "secondary": "#A8B3C6", "emissive": "#3AC7FF"},
         "blueprint": {"image_path": "artifacts/Blueprint.png", "projection_mode": "triplanar"},
         "emblem": {"image_path": "artifacts/Emblem.png", "placement": "chest"},
@@ -58,6 +74,7 @@ def create_draft_suitspec(
             "model_id": model_id,
             "prompt": "Industrial armored suit blueprint, strict panel lines, no character face.",
             "seed": 1001,
+            "part_prompts": {},
         },
     }
 

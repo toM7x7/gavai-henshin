@@ -18,13 +18,69 @@
       "enabled": true,
       "asset_ref": "modules/chest/base.prefab"
     },
-    "shoulder": {
-      "enabled": true,
-      "asset_ref": "modules/shoulder/base.prefab"
-    },
     "back": {
       "enabled": true,
       "asset_ref": "modules/back/base.prefab"
+    },
+    "left_shoulder": {
+      "enabled": true,
+      "asset_ref": "modules/left_shoulder/base.prefab"
+    },
+    "right_shoulder": {
+      "enabled": true,
+      "asset_ref": "modules/right_shoulder/base.prefab"
+    },
+    "left_upperarm": {
+      "enabled": true,
+      "asset_ref": "modules/left_upperarm/base.prefab"
+    },
+    "right_upperarm": {
+      "enabled": true,
+      "asset_ref": "modules/right_upperarm/base.prefab"
+    },
+    "left_forearm": {
+      "enabled": true,
+      "asset_ref": "modules/left_forearm/base.prefab"
+    },
+    "right_forearm": {
+      "enabled": true,
+      "asset_ref": "modules/right_forearm/base.prefab"
+    },
+    "waist": {
+      "enabled": true,
+      "asset_ref": "modules/waist/base.prefab"
+    },
+    "left_thigh": {
+      "enabled": true,
+      "asset_ref": "modules/left_thigh/base.prefab"
+    },
+    "right_thigh": {
+      "enabled": true,
+      "asset_ref": "modules/right_thigh/base.prefab"
+    },
+    "left_shin": {
+      "enabled": true,
+      "asset_ref": "modules/left_shin/base.prefab"
+    },
+    "right_shin": {
+      "enabled": true,
+      "asset_ref": "modules/right_shin/base.prefab"
+    },
+    "left_boot": {
+      "enabled": true,
+      "asset_ref": "modules/left_boot/base.prefab"
+    },
+    "right_boot": {
+      "enabled": true,
+      "asset_ref": "modules/right_boot/base.prefab"
+    },
+    "left_hand": {
+      "enabled": true,
+      "asset_ref": "modules/left_hand/base.prefab"
+    },
+    "right_hand": {
+      "enabled": true,
+      "asset_ref": "modules/right_hand/base.prefab"
     }
   },
   "palette": {
@@ -60,6 +116,7 @@
   "generation": {
     "model_id": "gemini-3-pro-image-preview",
     "prompt": "Industrial armored suit blueprint",
-    "seed": 1001
+    "seed": 1001,
+    "part_prompts": {}
   }
 }

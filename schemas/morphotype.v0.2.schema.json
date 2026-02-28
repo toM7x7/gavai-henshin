@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gavai-henshin.local/schema/morphotype.v0.2.schema.json",
+  "title": "Morphotype v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "morphotype_id",
+    "height_cm",
+    "shoulder_width_cm",
+    "hip_width_cm",
+    "arm_length_cm",
+    "leg_length_cm",
+    "torso_length_cm",
+    "scale",
+    "source",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.2"
+    },
+    "morphotype_id": {
+      "type": "string",
+      "pattern": "^MTP-[0-9]{8}$"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^S-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "height_cm": {
+      "type": "number",
+      "minimum": 120,
+      "maximum": 240
+    },
+    "shoulder_width_cm": {
+      "type": "number",
+      "minimum": 20,
+      "maximum": 80
+    },
+    "hip_width_cm": {
+      "type": "number",
+      "minimum": 20,
+      "maximum": 80
+    },
+    "arm_length_cm": {
+      "type": "number",
+      "minimum": 30,
+      "maximum": 110
+    },
+    "leg_length_cm": {
+      "type": "number",
+      "minimum": 50,
+      "maximum": 140
+    },
+    "torso_length_cm": {
+      "type": "number",
+      "minimum": 30,
+      "maximum": 100
+    },
+    "scale": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 1.5
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "mocopi",
+        "webcam"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "landmarks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "head_to_neck_cm": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 50
+        },
+        "neck_to_hip_cm": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 100
+        },
+        "shoulder_to_wrist_cm": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 80
+        },
+        "hip_to_ankle_cm": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 120
+        }
+      }
+    }
+  }
+}

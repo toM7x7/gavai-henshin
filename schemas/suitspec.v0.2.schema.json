@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gavai-henshin.local/schema/suitspec.v0.2.schema.json",
+  "title": "SuitSpec v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "suit_id",
+    "style_tags",
+    "modules",
+    "palette",
+    "blueprint",
+    "emblem",
+    "effects",
+    "text",
+    "generation"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.2"
+    },
+    "suit_id": {
+      "type": "string",
+      "pattern": "^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$"
+    },
+    "approval_id": {
+      "type": "string",
+      "pattern": "^APV-[0-9]{8}$"
+    },
+    "morphotype_id": {
+      "type": "string",
+      "pattern": "^MTP-[0-9]{8}$"
+    },
+    "oath": {
+      "type": "string",
+      "enum": [
+        "NO_OMISSION",
+        "NO_FABRICATION",
+        "SEAL_INTACT",
+        "AUDIT_READY",
+        "REFUSAL_ACCEPTED",
+        "NC_OBSERVED",
+        "POSTED_OBEYED",
+        "CLEARANCE_RESPECT",
+        "PROTOCOL_COMPLETE",
+        "INTEGRITY_FIRST"
+      ]
+    },
+    "style_tags": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helmet",
+        "chest",
+        "shoulder",
+        "back"
+      ],
+      "properties": {
+        "helmet": {
+          "$ref": "#/$defs/module"
+        },
+        "chest": {
+          "$ref": "#/$defs/module"
+        },
+        "shoulder": {
+          "$ref": "#/$defs/module"
+        },
+        "back": {
+          "$ref": "#/$defs/module"
+        }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "secondary",
+        "emissive"
+      ],
+      "properties": {
+        "primary": {
+          "$ref": "#/$defs/colorHex"
+        },
+        "secondary": {
+          "$ref": "#/$defs/colorHex"
+        },
+        "emissive": {
+          "$ref": "#/$defs/colorHex"
+        }
+      }
+    },
+    "blueprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image_path",
+        "projection_mode"
+      ],
+      "properties": {
+        "image_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projection_mode": {
+          "type": "string",
+          "enum": [
+            "decal",
+            "projector",
+            "triplanar"
+          ]
+        }
+      }
+    },
+    "emblem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image_path",
+        "placement"
+      ],
+      "properties": {
+        "image_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "chest",
+            "left_shoulder",
+            "right_shoulder",
+            "back",
+            "helmet"
+          ]
+        }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deposition_seconds",
+        "particle_density",
+        "wire_to_metal_curve"
+      ],
+      "properties": {
+        "deposition_seconds": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 60
+        },
+        "particle_density": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "wire_to_metal_curve": {
+          "type": "string",
+          "enum": [
+            "linear",
+            "ease_in",
+            "ease_out",
+            "ease_in_out"
+          ]
+        }
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deposition_log_lines"
+      ],
+      "properties": {
+        "deposition_log_lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "callout": {
+          "type": "string",
+          "maxLength": 120
+        }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "prompt"
+      ],
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "colorHex": {
+      "type": "string",
+      "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "asset_ref"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "asset_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "material_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    }
+  }
+}

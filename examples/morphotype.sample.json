@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.2",
+  "session_id": "S-20260228-A1B2",
+  "morphotype_id": "MTP-12345678",
+  "height_cm": 175.0,
+  "shoulder_width_cm": 44.0,
+  "hip_width_cm": 36.0,
+  "arm_length_cm": 62.0,
+  "leg_length_cm": 92.0,
+  "torso_length_cm": 56.0,
+  "scale": 1.0,
+  "source": "manual",
+  "confidence": 0.72
+}

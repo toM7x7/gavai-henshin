@@ -1,0 +1,28 @@
+[project]
+name = "gavai-henshin"
+version = "0.1.0"
+description = "SIM-first henshin prototyping toolkit (Lore-driven, Blueprint-executable)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "gavai-henshin team" }
+]
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+henshin = "henshin.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

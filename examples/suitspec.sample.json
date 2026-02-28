@@ -1,0 +1,65 @@
+{
+  "schema_version": "0.2",
+  "suit_id": "VDA-AXIS-OP-00-0001",
+  "approval_id": "APV-12345678",
+  "morphotype_id": "MTP-12345678",
+  "oath": "INTEGRITY_FIRST",
+  "style_tags": [
+    "metal",
+    "visor",
+    "audit"
+  ],
+  "modules": {
+    "helmet": {
+      "enabled": true,
+      "asset_ref": "modules/helmet/base.prefab"
+    },
+    "chest": {
+      "enabled": true,
+      "asset_ref": "modules/chest/base.prefab"
+    },
+    "shoulder": {
+      "enabled": true,
+      "asset_ref": "modules/shoulder/base.prefab"
+    },
+    "back": {
+      "enabled": true,
+      "asset_ref": "modules/back/base.prefab"
+    }
+  },
+  "palette": {
+    "primary": "#1E2A3A",
+    "secondary": "#A8B3C6",
+    "emissive": "#3AC7FF"
+  },
+  "blueprint": {
+    "image_path": "artifacts/Blueprint.png",
+    "projection_mode": "triplanar"
+  },
+  "emblem": {
+    "image_path": "artifacts/Emblem.png",
+    "placement": "chest"
+  },
+  "effects": {
+    "deposition_seconds": 7.5,
+    "particle_density": 0.8,
+    "wire_to_metal_curve": "ease_in_out"
+  },
+  "text": {
+    "deposition_log_lines": [
+      "STATUS: POSTED",
+      "FIT AUDIT: PASS",
+      "MORPHOTYPE: LOCKED",
+      "BLUEPRINT: ISSUED",
+      "APPROVAL: GRANTED",
+      "DEPOSITION: START",
+      "SEAL: VERIFIED"
+    ],
+    "callout": "Protocol complete. Integrity first."
+  },
+  "generation": {
+    "model_id": "gemini-3-pro-image-preview",
+    "prompt": "Industrial armored suit blueprint",
+    "seed": 1001
+  }
+}

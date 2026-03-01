@@ -172,6 +172,12 @@ input[type="range"] {
   color: #3d5f8e;
 }
 
+.fit-editor hr {
+  border: none;
+  border-top: 1px solid #c1d2ed;
+  margin: 12px 0;
+}
+
 .bridge-row {
   align-items: end;
 }

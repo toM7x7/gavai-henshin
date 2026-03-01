@@ -314,6 +314,113 @@
           "type": "string",
           "minLength": 1
         },
+        "attachment_slot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "fit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": [
+                "box",
+                "sphere",
+                "cylinder"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "chest_core",
+                "left_upperarm",
+                "right_upperarm",
+                "left_forearm",
+                "right_forearm",
+                "left_thigh",
+                "right_thigh",
+                "left_shin",
+                "right_shin"
+              ]
+            },
+            "attach": {
+              "type": "string",
+              "enum": [
+                "start",
+                "center",
+                "end"
+              ]
+            },
+            "offsetY": {
+              "type": "number"
+            },
+            "zOffset": {
+              "type": "number"
+            },
+            "scale": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            },
+            "follow": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            },
+            "minScale": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "vrm_anchor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bone": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "offset": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            },
+            "rotation": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            },
+            "scale": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number",
+                "minimum": 0.01
+              }
+            }
+          }
+        },
         "generation_prompt": {
           "type": "string",
           "minLength": 1

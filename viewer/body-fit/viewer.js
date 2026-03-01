@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { loadVrmScene, VRM_RUNTIME_TARGETS } from "./vrm-loader.js?v=20260304a";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";
@@ -25,6 +26,11 @@ const PANEL = {
   btnVrmClear: document.getElementById("btnVrmClear"),
   btnVrmToggle: document.getElementById("btnVrmToggle"),
   btnVrmAttach: document.getElementById("btnVrmAttach"),
+  btnArmorToggle: document.getElementById("btnArmorToggle"),
+  btnVrmIdleToggle: document.getElementById("btnVrmIdleToggle"),
+  btnVrmFocus: document.getElementById("btnVrmFocus"),
+  vrmIdleAmount: document.getElementById("vrmIdleAmount"),
+  vrmIdleSpeed: document.getElementById("vrmIdleSpeed"),
   vrmStatus: document.getElementById("vrmStatus"),
   btnLiveStart: document.getElementById("btnLiveStart"),
   btnLiveStop: document.getElementById("btnLiveStop"),
@@ -36,6 +42,21 @@ const PANEL = {
   fitScaleZ: document.getElementById("fitScaleZ"),
   fitOffsetY: document.getElementById("fitOffsetY"),
   fitZOffset: document.getElementById("fitZOffset"),
+  vrmEditPart: document.getElementById("vrmEditPart"),
+  vrmEditBone: document.getElementById("vrmEditBone"),
+  vrmEditOffsetX: document.getElementById("vrmEditOffsetX"),
+  vrmEditOffsetY: document.getElementById("vrmEditOffsetY"),
+  vrmEditOffsetZ: document.getElementById("vrmEditOffsetZ"),
+  vrmEditRotX: document.getElementById("vrmEditRotX"),
+  vrmEditRotY: document.getElementById("vrmEditRotY"),
+  vrmEditRotZ: document.getElementById("vrmEditRotZ"),
+  vrmEditScaleX: document.getElementById("vrmEditScaleX"),
+  vrmEditScaleY: document.getElementById("vrmEditScaleY"),
+  vrmEditScaleZ: document.getElementById("vrmEditScaleZ"),
+  btnVrmEditLoad: document.getElementById("btnVrmEditLoad"),
+  btnVrmEditApply: document.getElementById("btnVrmEditApply"),
+  btnVrmEditReset: document.getElementById("btnVrmEditReset"),
+  vrmEditHint: document.getElementById("vrmEditHint"),
   btnFitSuggestCurrent: document.getElementById("btnFitSuggestCurrent"),
   btnFitApplyCurrent: document.getElementById("btnFitApplyCurrent"),
   btnFitResetCurrent: document.getElementById("btnFitResetCurrent"),
@@ -50,10 +71,6 @@ const PANEL = {
 const textureLoader = new THREE.TextureLoader();
 const meshGeometryCache = new Map();
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
-let gltfLoaderModulePromise = null;
-let threeVrmModulePromise = null;
-const THREE_VERSION = "0.180.0";
-const THREE_VRM_VERSION = "3.4.4";
 
 const MODULE_VIS = {
   helmet: {
@@ -268,6 +285,59 @@ const VRM_BONE_ALIASES = {
   rightLowerLeg: ["rightlowerleg", "j_bip_r_lowerleg", "r_shin", "leg_r"],
   leftFoot: ["leftfoot", "j_bip_l_foot", "l_foot", "foot_l"],
   rightFoot: ["rightfoot", "j_bip_r_foot", "r_foot", "foot_r"],
+};
+
+const VRM_PART_BONE_FALLBACKS = {
+  helmet: ["head", "neck", "upperChest", "chest"],
+  chest: ["upperChest", "chest", "spine", "hips"],
+  back: ["upperChest", "chest", "spine"],
+  waist: ["hips", "spine"],
+  left_shoulder: ["leftShoulder", "leftUpperArm", "upperChest", "chest"],
+  right_shoulder: ["rightShoulder", "rightUpperArm", "upperChest", "chest"],
+  left_upperarm: ["leftUpperArm", "leftShoulder", "leftLowerArm"],
+  right_upperarm: ["rightUpperArm", "rightShoulder", "rightLowerArm"],
+  left_forearm: ["leftLowerArm", "leftUpperArm", "leftHand"],
+  right_forearm: ["rightLowerArm", "rightUpperArm", "rightHand"],
+  left_hand: ["leftHand", "leftLowerArm"],
+  right_hand: ["rightHand", "rightLowerArm"],
+  left_thigh: ["leftUpperLeg", "hips", "leftLowerLeg"],
+  right_thigh: ["rightUpperLeg", "hips", "rightLowerLeg"],
+  left_shin: ["leftLowerLeg", "leftUpperLeg", "leftFoot"],
+  right_shin: ["rightLowerLeg", "rightUpperLeg", "rightFoot"],
+  left_boot: ["leftFoot", "leftLowerLeg"],
+  right_boot: ["rightFoot", "rightLowerLeg"],
+};
+
+const ATTACHMENT_SLOT_ALIASES = {
+  helm: "helmet",
+  torso: "chest",
+  chest_core: "chest",
+  shoulder_l: "left_shoulder",
+  shoulder_r: "right_shoulder",
+  upperarm_l: "left_upperarm",
+  upperarm_r: "right_upperarm",
+  forearm_l: "left_forearm",
+  forearm_r: "right_forearm",
+  hand_l: "left_hand",
+  hand_r: "right_hand",
+  thigh_l: "left_thigh",
+  thigh_r: "right_thigh",
+  shin_l: "left_shin",
+  shin_r: "right_shin",
+  boot_l: "left_boot",
+  boot_r: "right_boot",
+};
+
+const VRM_ATTACH_MODES = {
+  BODY: "body",
+  HYBRID: "hybrid",
+  VRM: "vrm",
+};
+
+const VRM_ATTACH_MODE_LABELS = {
+  [VRM_ATTACH_MODES.BODY]: "BodySim",
+  [VRM_ATTACH_MODES.HYBRID]: "Hybrid",
+  [VRM_ATTACH_MODES.VRM]: "VRM",
 };
 
 const DEFAULT_SEGMENT_POSE = {
@@ -531,6 +601,39 @@ function normalizeBoneName(name) {
     .replace(/[^a-z0-9]/g, "");
 }
 
+function normalizeAttachmentSlot(partName, module) {
+  const fallback = String(partName || "").trim();
+  const raw = String(module?.attachment_slot || fallback)
+    .trim()
+    .toLowerCase();
+  if (!raw) return fallback;
+  if (VRM_ANCHOR_BASELINES[raw]) return raw;
+  const alias = ATTACHMENT_SLOT_ALIASES[raw];
+  if (alias && VRM_ANCHOR_BASELINES[alias]) return alias;
+  const collapsed = raw.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (VRM_ANCHOR_BASELINES[collapsed]) return collapsed;
+  const collapsedAlias = ATTACHMENT_SLOT_ALIASES[collapsed];
+  if (collapsedAlias && VRM_ANCHOR_BASELINES[collapsedAlias]) return collapsedAlias;
+  return fallback;
+}
+
+function normalizeVrmAttachMode(mode) {
+  const v = String(mode || "")
+    .trim()
+    .toLowerCase();
+  if (v === VRM_ATTACH_MODES.BODY || v === VRM_ATTACH_MODES.HYBRID || v === VRM_ATTACH_MODES.VRM) {
+    return v;
+  }
+  return VRM_ATTACH_MODES.HYBRID;
+}
+
+function nextVrmAttachMode(currentMode) {
+  const mode = normalizeVrmAttachMode(currentMode);
+  if (mode === VRM_ATTACH_MODES.BODY) return VRM_ATTACH_MODES.HYBRID;
+  if (mode === VRM_ATTACH_MODES.HYBRID) return VRM_ATTACH_MODES.VRM;
+  return VRM_ATTACH_MODES.BODY;
+}
+
 function normalizeVrmAnchor(rawAnchor, fallback) {
   const base = fallback || {
     bone: "chest",
@@ -547,12 +650,14 @@ function normalizeVrmAnchor(rawAnchor, fallback) {
   };
 }
 
-function baseVrmAnchorFor(partName) {
-  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[partName], null);
+function baseVrmAnchorFor(slotName) {
+  const key = String(slotName || "").trim();
+  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[key], null);
 }
 
 function effectiveVrmAnchorFor(partName, module) {
-  return normalizeVrmAnchor(module?.vrm_anchor, baseVrmAnchorFor(partName));
+  const slot = normalizeAttachmentSlot(partName, module);
+  return normalizeVrmAnchor(module?.vrm_anchor, baseVrmAnchorFor(slot));
 }
 
 function defaultModuleVisualConfig(name) {
@@ -772,18 +877,31 @@ class BodyFitViewer {
       model: null,
       skeleton: null,
       instance: null,
+      source: null,
       boneMap: new Map(),
       path: "",
       visible: true,
-      attachArmor: true,
+      attachMode: VRM_ATTACH_MODES.HYBRID,
+      idleEnabled: false,
+      idleAmount: clamp(Number(PANEL.vrmIdleAmount?.value || 0.35), 0, 1),
+      idleSpeed: clamp(Number(PANEL.vrmIdleSpeed?.value || 1.0), 0.25, 3),
+      idleTimeSec: 0,
+      restPosition: new THREE.Vector3(),
+      restQuaternion: new THREE.Quaternion(),
+      hasRestPose: false,
       boneCount: 0,
+      missingAnchorParts: [],
+      resolvedAnchors: {},
       error: "",
     };
+    this.armorVisible = true;
 
     this.lastTime = performance.now();
     this.updateBridgeButton();
+    this.updateArmorButton();
     this.updateVrmButton();
     this.updateVrmAttachButton();
+    this.updateVrmIdleButton();
     this.updateVrmStatus("VRM: not loaded");
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -833,14 +951,23 @@ class BodyFitViewer {
       bridge_enabled: this.bridgeEnabled,
       bridge_thickness: round3(this.bridgeThickness),
       bridge_visible_count: this.bridgeVisibleCount,
+      armor_visible: this.armorVisible,
       vrm_path: this.vrm.path || null,
+      vrm_source: this.vrm.source || null,
+      vrm_humanoid_available: Boolean(this.vrm.instance?.humanoid),
       vrm_bones_visible: this.vrm.visible,
-      vrm_attach_armor: this.vrm.attachArmor,
+      vrm_attach_mode: this.vrm.attachMode,
+      vrm_attach_armor: this.vrm.attachMode !== VRM_ATTACH_MODES.BODY,
+      vrm_idle_enabled: this.vrm.idleEnabled,
+      vrm_idle_amount: round3(this.vrm.idleAmount),
+      vrm_idle_speed: round3(this.vrm.idleSpeed),
       vrm_bone_count: this.vrm.boneCount || 0,
+      vrm_missing_anchor_parts: this.vrm.missingAnchorParts || [],
+      vrm_resolved_anchors: this.vrm.resolvedAnchors || {},
       vrm_error: this.vrm.error || null,
       three_revision: THREE.REVISION,
-      three_target: THREE_VERSION,
-      three_vrm_target: THREE_VRM_VERSION,
+      three_target: VRM_RUNTIME_TARGETS.threeVersion,
+      three_vrm_target: VRM_RUNTIME_TARGETS.threeVrmVersion,
       live_active: this.live?.active || false,
       live_fps: round3(this.live?.fps || 0),
     });
@@ -858,15 +985,28 @@ class BodyFitViewer {
     }
   }
 
+  updateArmorButton() {
+    if (PANEL.btnArmorToggle) {
+      PANEL.btnArmorToggle.textContent = `Armor: ${this.armorVisible ? "On" : "Off"}`;
+    }
+  }
+
   updateVrmButton() {
     if (PANEL.btnVrmToggle) {
       PANEL.btnVrmToggle.textContent = `VRM Bones: ${this.vrm.visible ? "On" : "Off"}`;
     }
   }
 
+  updateVrmIdleButton() {
+    if (PANEL.btnVrmIdleToggle) {
+      PANEL.btnVrmIdleToggle.textContent = `VRM Idle: ${this.vrm.idleEnabled ? "On" : "Off"}`;
+    }
+  }
+
   updateVrmAttachButton() {
     if (PANEL.btnVrmAttach) {
-      PANEL.btnVrmAttach.textContent = `Attach: ${this.vrm.attachArmor ? "VRM" : "BodySim"}`;
+      const mode = normalizeVrmAttachMode(this.vrm.attachMode);
+      PANEL.btnVrmAttach.textContent = `Attach: ${VRM_ATTACH_MODE_LABELS[mode] || "Hybrid"}`;
     }
   }
 
@@ -884,14 +1024,52 @@ class BodyFitViewer {
     this.setLegend();
   }
 
-  setVrmAttachArmor(enabled) {
-    this.vrm.attachArmor = Boolean(enabled);
+  setArmorVisible(enabled) {
+    this.armorVisible = Boolean(enabled);
+    this.root.visible = this.armorVisible;
+    this.updateArmorButton();
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  setVrmIdleEnabled(enabled) {
+    this.vrm.idleEnabled = Boolean(enabled);
+    this.updateVrmIdleButton();
+    if (!this.vrm.idleEnabled) {
+      this.applyVrmIdlePose(0, true);
+      if (this.frames.length) {
+        this.applyFrame(this.frameIndex);
+      }
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  fitCameraToVrm() {
+    if (!this.vrm.model) return;
+    const box = new THREE.Box3().setFromObject(this.vrm.model);
+    if (box.isEmpty()) return;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const radius = Math.max(sphere.radius, 0.35);
+    const distance = Math.max(radius * 2.8, 1.45);
+    this.controls.target.copy(sphere.center);
+    this.camera.position.copy(sphere.center).add(new THREE.Vector3(0, radius * 0.15, distance));
+    this.updateCameraRange(distance);
+    this.controls.update();
+  }
+
+  setVrmAttachMode(mode) {
+    this.vrm.attachMode = normalizeVrmAttachMode(mode);
     this.updateVrmAttachButton();
     if (this.frames.length) {
       this.applyFrame(this.frameIndex);
     }
     this.updateMetaPanel();
     this.setLegend();
+  }
+
+  cycleVrmAttachMode() {
+    this.setVrmAttachMode(nextVrmAttachMode(this.vrm.attachMode));
   }
 
   clearVrmModel() {
@@ -923,11 +1101,17 @@ class BodyFitViewer {
     this.vrm.instance = null;
     this.vrm.boneMap = new Map();
     this.vrm.path = "";
+    this.vrm.source = null;
     this.vrm.boneCount = 0;
+    this.vrm.idleTimeSec = 0;
+    this.vrm.hasRestPose = false;
+    this.vrm.missingAnchorParts = [];
+    this.vrm.resolvedAnchors = {};
     this.vrm.error = "";
     this.updateVrmStatus("VRM: cleared");
     this.updateMetaPanel();
     this.updateVrmAttachButton();
+    this.populateVrmAnchorEditor();
     this.setLegend();
   }
 
@@ -966,15 +1150,48 @@ class BodyFitViewer {
     return null;
   }
 
+  resolveVrmBoneForPart(partName, module, primaryBone) {
+    const tried = new Set();
+    const slot = normalizeAttachmentSlot(partName, module);
+    const candidates = [primaryBone, ...(VRM_PART_BONE_FALLBACKS[slot] || [])];
+    for (const candidate of candidates) {
+      const boneKey = String(candidate || "").trim();
+      if (!boneKey) continue;
+      const norm = normalizeBoneName(boneKey);
+      if (tried.has(norm)) continue;
+      tried.add(norm);
+      const bone = this.resolveVrmBone(boneKey);
+      if (bone) return bone;
+    }
+    return null;
+  }
+
   applyArmorToVrmBones() {
-    if (!this.vrm.attachArmor || !this.vrm.model) return;
+    const attachMode = normalizeVrmAttachMode(this.vrm.attachMode);
+    if (attachMode === VRM_ATTACH_MODES.BODY || !this.vrm.model) {
+      this.vrm.missingAnchorParts = [];
+      this.vrm.resolvedAnchors = {};
+      return;
+    }
     const modules = this.suitspec?.modules || {};
+    const missing = [];
+    const resolved = {};
     for (const [partName, rec] of this.meshes.entries()) {
       if (!rec?.group?.visible) continue;
       const module = modules[partName];
       const anchor = effectiveVrmAnchorFor(partName, module);
-      const bone = this.resolveVrmBone(anchor.bone);
-      if (!bone) continue;
+      const bone = this.resolveVrmBoneForPart(partName, module, anchor.bone);
+      if (!bone) {
+        missing.push(partName);
+        if (attachMode === VRM_ATTACH_MODES.VRM) {
+          rec.group.visible = false;
+        }
+        continue;
+      }
+      if (attachMode === VRM_ATTACH_MODES.VRM) {
+        rec.group.visible = true;
+      }
+      resolved[partName] = bone.name || anchor.bone;
 
       const bonePos = bone.getWorldPosition(new THREE.Vector3());
       const boneQuat = bone.getWorldQuaternion(new THREE.Quaternion());
@@ -994,6 +1211,40 @@ class BodyFitViewer {
       rec.group.quaternion.copy(boneQuat).multiply(localRot);
       rec.group.scale.multiply(new THREE.Vector3(anchor.scale[0], anchor.scale[1], anchor.scale[2]));
     }
+    this.vrm.missingAnchorParts = missing;
+    this.vrm.resolvedAnchors = resolved;
+  }
+
+  captureVrmRestPose() {
+    if (!this.vrm.model) {
+      this.vrm.hasRestPose = false;
+      return;
+    }
+    this.vrm.restPosition.copy(this.vrm.model.position);
+    this.vrm.restQuaternion.copy(this.vrm.model.quaternion);
+    this.vrm.hasRestPose = true;
+  }
+
+  applyVrmIdlePose(dtSec, forceRest = false) {
+    if (!this.vrm.model || !this.vrm.hasRestPose) return;
+    if (forceRest || !this.vrm.idleEnabled) {
+      this.vrm.model.position.copy(this.vrm.restPosition);
+      this.vrm.model.quaternion.copy(this.vrm.restQuaternion);
+      this.vrm.model.updateMatrixWorld(true);
+      return;
+    }
+    const dt = Math.max(0, Number(dtSec || 0));
+    this.vrm.idleTimeSec += dt * this.vrm.idleSpeed;
+    const t = this.vrm.idleTimeSec;
+    const amount = clamp(this.vrm.idleAmount, 0, 1);
+    const rise = Math.sin(t * 1.7) * (0.012 * amount);
+    const yaw = Math.sin(t * 0.9 + 0.4) * (0.02 * amount);
+    const roll = Math.sin(t * 1.2) * (0.028 * amount);
+    const offset = new THREE.Vector3(0, rise, 0);
+    const qIdle = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, roll, "XYZ"));
+    this.vrm.model.position.copy(this.vrm.restPosition).add(offset);
+    this.vrm.model.quaternion.copy(this.vrm.restQuaternion).multiply(qIdle);
+    this.vrm.model.updateMatrixWorld(true);
   }
 
   alignVrmModelToArmor(model) {
@@ -1025,6 +1276,9 @@ class BodyFitViewer {
     const shiftZ = targetCenterXZ.y - scaledCenter.z;
     model.position.add(new THREE.Vector3(shiftX, shiftY, shiftZ));
     model.updateMatrixWorld(true);
+    if (this.vrm.model === model) {
+      this.captureVrmRestPose();
+    }
   }
 
   async loadVrmModel(path, { silent = false } = {}) {
@@ -1045,62 +1299,19 @@ class BodyFitViewer {
     }
 
     this.updateVrmStatus(`VRM loading: ${rawPath}`);
-    const GLTFLoader = await getGLTFLoaderClass();
-    let ThreeVrm = null;
-    try {
-      ThreeVrm = await getThreeVrmModule();
-    } catch {
-      ThreeVrm = null;
-    }
-    const loader = new GLTFLoader();
-    if (ThreeVrm?.VRMLoaderPlugin) {
-      loader.register((parser) => new ThreeVrm.VRMLoaderPlugin(parser));
-    }
-    const gltf = await new Promise((resolve, reject) => {
-      loader.load(
-        normalizePath(rawPath),
-        resolve,
-        (progress) => {
-          if (!progress?.total) return;
-          const ratio = clamp(progress.loaded / progress.total, 0, 1);
-          const pct = Math.round(ratio * 100);
-          this.updateVrmStatus(`VRM loading: ${rawPath} (${pct}%)`);
-        },
-        reject
-      );
+    const { model, vrmInstance, source } = await loadVrmScene(normalizePath(rawPath), {
+      onProgress: (progress) => {
+        if (progress?.ratio == null) return;
+        const pct = Math.round(clamp(progress.ratio, 0, 1) * 100);
+        this.updateVrmStatus(`VRM loading: ${rawPath} (${pct}%)`);
+      },
     });
-
-    const vrmInstance = gltf.userData?.vrm || null;
-    const model = vrmInstance?.scene || gltf.scene || gltf.scenes?.[0];
     if (!model) {
       throw new Error(`Invalid VRM/GLTF scene: ${rawPath}`);
-    }
-    if (vrmInstance && ThreeVrm?.VRMUtils?.rotateVRM0) {
-      // Official recommendation for VRM 0.0 to align axes with newer conventions.
-      try {
-        ThreeVrm.VRMUtils.rotateVRM0(vrmInstance);
-      } catch {
-        // Non-fatal: continue rendering even if rotateVRM0 fails for this model.
-      }
     }
 
     this.clearVrmModel();
     this.alignVrmModelToArmor(model);
-    model.traverse((obj) => {
-      if (!obj.isMesh) return;
-      const srcMat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
-      const mat = new THREE.MeshStandardMaterial({
-        color: srcMat?.color?.getHex?.() || 0x1a1f29,
-        metalness: 0.08,
-        roughness: 0.82,
-        transparent: true,
-        opacity: 0.18,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-      obj.material = mat;
-      obj.renderOrder = 0;
-    });
     this.vrmGroup.add(model);
 
     const skeleton = new THREE.SkeletonHelper(model);
@@ -1115,20 +1326,29 @@ class BodyFitViewer {
     this.vrm.model = model;
     this.vrm.skeleton = skeleton;
     this.vrm.instance = vrmInstance;
+    this.vrm.source = source;
     this.vrm.boneMap = this.buildBoneMap(model);
     this.vrm.path = rawPath;
     this.vrm.boneCount = this.countModelBones(model);
+    this.captureVrmRestPose();
+    this.applyVrmIdlePose(0, true);
     this.vrm.error = "";
     this.updateVrmButton();
     this.updateVrmAttachButton();
-    const vrmSource = vrmInstance ? "three-vrm" : "gltf-fallback";
-    this.updateVrmStatus(`VRM loaded: ${rawPath} (bones=${this.vrm.boneCount}, source=${vrmSource})`);
+    this.populateVrmAnchorEditor();
+    this.updateVrmStatus(`VRM loaded: ${rawPath} (bones=${this.vrm.boneCount}, source=${source})`);
     if (this.frames.length) {
       this.applyFrame(this.frameIndex);
     }
     this.updateMetaPanel();
     this.setLegend();
-    if (!silent) this.setStatus(`Loaded VRM: ${rawPath}`);
+    if (!silent) {
+      if (source === "gltf-fallback") {
+        this.setStatus(`Loaded as GLTF fallback (VRM extension not parsed): ${rawPath}`, true);
+      } else {
+        this.setStatus(`Loaded VRM: ${rawPath}`);
+      }
+    }
   }
 
   setBridgeEnabled(enabled) {
@@ -1496,6 +1716,133 @@ class BodyFitViewer {
     if (!parts.length) return;
     PANEL.fitPart.value = parts.includes(prev) ? prev : parts[0];
     this.loadFitEditorForPart(PANEL.fitPart.value);
+    this.populateVrmAnchorEditor(parts);
+  }
+
+  populateVrmAnchorEditor(parts = null) {
+    if (!PANEL.vrmEditPart || !PANEL.vrmEditBone) return;
+    const editableParts = Array.isArray(parts) ? parts : this.listEditableParts();
+    const prevPart = PANEL.vrmEditPart.value;
+    PANEL.vrmEditPart.innerHTML = "";
+    for (const name of editableParts) {
+      const op = document.createElement("option");
+      op.value = name;
+      op.textContent = name;
+      PANEL.vrmEditPart.appendChild(op);
+    }
+
+    const bones = this.listVrmBoneOptions();
+    const prevBone = PANEL.vrmEditBone.value;
+    PANEL.vrmEditBone.innerHTML = "";
+    for (const bone of bones) {
+      const op = document.createElement("option");
+      op.value = bone;
+      op.textContent = bone;
+      PANEL.vrmEditBone.appendChild(op);
+    }
+
+    if (!editableParts.length) return;
+    PANEL.vrmEditPart.value = editableParts.includes(prevPart) ? prevPart : editableParts[0];
+    if (bones.length) {
+      PANEL.vrmEditBone.value = bones.includes(prevBone) ? prevBone : bones[0];
+    }
+    this.loadVrmAnchorEditorForPart(PANEL.vrmEditPart.value);
+  }
+
+  listVrmBoneOptions() {
+    const base = Object.keys(VRM_BONE_ALIASES);
+    const fromModel = [];
+    for (const [, bone] of this.vrm.boneMap || []) {
+      if (bone?.name) fromModel.push(String(bone.name));
+    }
+    const merged = [...base, ...fromModel];
+    return Array.from(new Set(merged)).sort((a, b) => a.localeCompare(b));
+  }
+
+  updateVrmAnchorPreview(anchor, slotName = null) {
+    if (!PANEL.vrmEditHint) return;
+    const slotText = slotName ? `slot=${slotName} ` : "";
+    PANEL.vrmEditHint.textContent = `${slotText}bone=${anchor.bone} offset=[${anchor.offset
+      .map((v) => round3(v))
+      .join(", ")}] rot=[${anchor.rotation.map((v) => round3(v)).join(", ")}] scale=[${anchor.scale
+      .map((v) => round3(v))
+      .join(", ")}]`;
+  }
+
+  loadVrmAnchorEditorForPart(partName) {
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+    const slot = normalizeAttachmentSlot(partName, module);
+    const anchor = effectiveVrmAnchorFor(partName, module);
+    if (PANEL.vrmEditBone) {
+      const exists = Array.from(PANEL.vrmEditBone.options || []).some((op) => op.value === anchor.bone);
+      if (!exists) {
+        const op = document.createElement("option");
+        op.value = anchor.bone;
+        op.textContent = anchor.bone;
+        PANEL.vrmEditBone.appendChild(op);
+      }
+      PANEL.vrmEditBone.value = anchor.bone;
+    }
+    if (PANEL.vrmEditOffsetX) PANEL.vrmEditOffsetX.value = String(round3(anchor.offset[0]));
+    if (PANEL.vrmEditOffsetY) PANEL.vrmEditOffsetY.value = String(round3(anchor.offset[1]));
+    if (PANEL.vrmEditOffsetZ) PANEL.vrmEditOffsetZ.value = String(round3(anchor.offset[2]));
+    if (PANEL.vrmEditRotX) PANEL.vrmEditRotX.value = String(round3(anchor.rotation[0]));
+    if (PANEL.vrmEditRotY) PANEL.vrmEditRotY.value = String(round3(anchor.rotation[1]));
+    if (PANEL.vrmEditRotZ) PANEL.vrmEditRotZ.value = String(round3(anchor.rotation[2]));
+    if (PANEL.vrmEditScaleX) PANEL.vrmEditScaleX.value = String(round3(anchor.scale[0]));
+    if (PANEL.vrmEditScaleY) PANEL.vrmEditScaleY.value = String(round3(anchor.scale[1]));
+    if (PANEL.vrmEditScaleZ) PANEL.vrmEditScaleZ.value = String(round3(anchor.scale[2]));
+    this.updateVrmAnchorPreview(anchor, slot);
+  }
+
+  applyVrmAnchorEditorToCurrentPart({ silent = false } = {}) {
+    const partName = PANEL.vrmEditPart?.value;
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+
+    const effective = effectiveVrmAnchorFor(partName, module);
+    const slot = normalizeAttachmentSlot(partName, module);
+    module.attachment_slot = slot;
+    module.vrm_anchor = {
+      bone: String(PANEL.vrmEditBone?.value || effective.bone || "chest"),
+      offset: normalizeVec3(
+        [PANEL.vrmEditOffsetX?.value, PANEL.vrmEditOffsetY?.value, PANEL.vrmEditOffsetZ?.value],
+        effective.offset
+      ),
+      rotation: normalizeVec3(
+        [PANEL.vrmEditRotX?.value, PANEL.vrmEditRotY?.value, PANEL.vrmEditRotZ?.value],
+        effective.rotation
+      ),
+      scale: normalizeVec3(
+        [PANEL.vrmEditScaleX?.value, PANEL.vrmEditScaleY?.value, PANEL.vrmEditScaleZ?.value],
+        effective.scale
+      ).map((v) => Math.max(0.01, Number(v || 1))),
+    };
+
+    this.applyFrame(this.frameIndex);
+    this.updateMetaPanel();
+    this.updateVrmAnchorPreview(module.vrm_anchor, slot);
+    if (!silent) {
+      this.setStatus(`Applied VRM anchor: ${partName}`);
+    }
+  }
+
+  resetVrmAnchorForCurrentPart() {
+    const partName = PANEL.vrmEditPart?.value;
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+    delete module.vrm_anchor;
+    this.loadVrmAnchorEditorForPart(partName);
+    this.applyFrame(this.frameIndex);
+    this.updateMetaPanel();
+    this.setStatus(`Reset VRM anchor: ${partName}`);
   }
 
   loadFitEditorForPart(partName) {
@@ -1656,11 +2003,17 @@ class BodyFitViewer {
       `Bridges: ${this.bridgeEnabled ? "ON" : "OFF"} | Visible: ${this.bridgeVisibleCount} | Thickness: ${this.bridgeThickness.toFixed(
         2
       )}`,
-      `VRM: ${this.vrm.path ? "ON" : "OFF"} | Bones: ${this.vrm.boneCount || 0} | Visible: ${
-        this.vrm.visible ? "ON" : "OFF"
-      } | Attach: ${this.vrm.attachArmor ? "VRM" : "BodySim"}`,
+      `ArmorVisible: ${this.armorVisible ? "ON" : "OFF"} | VRM Idle: ${this.vrm.idleEnabled ? "ON" : "OFF"} x${this.vrm.idleSpeed.toFixed(
+        2
+      )}`,
+      `AttachMode: ${VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "Hybrid"}`,
+      `VRM: ${this.vrm.path ? "ON" : "OFF"} | Source: ${this.vrm.source || "-"} | Humanoid: ${
+        this.vrm.instance?.humanoid ? "YES" : "NO"
+      } | Bones: ${this.vrm.boneCount || 0} | Visible: ${this.vrm.visible ? "ON" : "OFF"} | Missing: ${
+        (this.vrm.missingAnchorParts || []).length
+      }`,
       `FitScore: ${fitScore} | Gap: ${fitGap} | Penetration: ${fitPen}`,
-      "Tip: Attach を VRM にすると、各部位をVRM骨に追従表示します。",
+      "Tip: Attach=Hybrid は骨追従+BodySimフォールバック、Attach=VRM は骨主軸です。",
     ];
     PANEL.legendText.innerHTML = lines.join("<br>");
   }
@@ -1942,6 +2295,12 @@ class BodyFitViewer {
     if (this.vrm.instance && typeof this.vrm.instance.update === "function") {
       this.vrm.instance.update(dt);
     }
+    if (this.vrm.model) {
+      this.applyVrmIdlePose(dt, false);
+      if (normalizeVrmAttachMode(this.vrm.attachMode) !== VRM_ATTACH_MODES.BODY) {
+        this.applyArmorToVrmBones();
+      }
+    }
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -2162,52 +2521,6 @@ async function pathExists(path) {
   }
 }
 
-async function getGLTFLoaderClass() {
-  if (!gltfLoaderModulePromise) {
-    gltfLoaderModulePromise = importFirstSuccessful([
-      () => import("three/addons/loaders/GLTFLoader.js"),
-      () =>
-        import(`https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/loaders/GLTFLoader.js`),
-      () =>
-        import(`https://unpkg.com/three@${THREE_VERSION}/examples/jsm/loaders/GLTFLoader.js?module`),
-    ]);
-  }
-  const mod = await gltfLoaderModulePromise;
-  if (!mod?.GLTFLoader) {
-    throw new Error("GLTFLoader is not available.");
-  }
-  return mod.GLTFLoader;
-}
-
-async function getThreeVrmModule() {
-  if (!threeVrmModulePromise) {
-    threeVrmModulePromise = importFirstSuccessful([
-      () => import("@pixiv/three-vrm"),
-      () =>
-        import(
-          `https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@${THREE_VRM_VERSION}/lib/three-vrm.module.min.js`
-        ),
-      () =>
-        import(
-          `https://unpkg.com/@pixiv/three-vrm@${THREE_VRM_VERSION}/lib/three-vrm.module.min.js?module`
-        ),
-    ]);
-  }
-  return threeVrmModulePromise;
-}
-
-async function importFirstSuccessful(loaders) {
-  let lastError = null;
-  for (const load of loaders) {
-    try {
-      return await load();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError || new Error("Module import failed.");
-}
-
 function withFallbackSegments(segments) {
   const merged = {};
   for (const [name, pose] of Object.entries(DEFAULT_SEGMENT_POSE)) {
@@ -2272,6 +2585,7 @@ function init() {
   }
 
   const viewer = new BodyFitViewer(document.getElementById("canvas"));
+  viewer.setVrmAttachMode(params.get("attach") || VRM_ATTACH_MODES.HYBRID);
 
   PANEL.btnLoad.onclick = async () => {
     try {
@@ -2343,11 +2657,32 @@ function init() {
     PANEL.btnVrmToggle.onclick = () => viewer.setVrmVisible(!viewer.vrm.visible);
   }
   if (PANEL.btnVrmAttach) {
-    PANEL.btnVrmAttach.onclick = () => viewer.setVrmAttachArmor(!viewer.vrm.attachArmor);
+    PANEL.btnVrmAttach.onclick = () => viewer.cycleVrmAttachMode();
+  }
+  if (PANEL.btnArmorToggle) {
+    PANEL.btnArmorToggle.onclick = () => viewer.setArmorVisible(!viewer.armorVisible);
+  }
+  if (PANEL.btnVrmIdleToggle) {
+    PANEL.btnVrmIdleToggle.onclick = () => viewer.setVrmIdleEnabled(!viewer.vrm.idleEnabled);
+  }
+  if (PANEL.btnVrmFocus) {
+    PANEL.btnVrmFocus.onclick = () => viewer.fitCameraToVrm();
   }
 
   if (PANEL.fitPart) {
     PANEL.fitPart.onchange = () => viewer.loadFitEditorForPart(PANEL.fitPart.value);
+  }
+  if (PANEL.vrmEditPart) {
+    PANEL.vrmEditPart.onchange = () => viewer.loadVrmAnchorEditorForPart(PANEL.vrmEditPart.value);
+  }
+  if (PANEL.btnVrmEditLoad) {
+    PANEL.btnVrmEditLoad.onclick = () => viewer.loadVrmAnchorEditorForPart(PANEL.vrmEditPart?.value || "");
+  }
+  if (PANEL.btnVrmEditApply) {
+    PANEL.btnVrmEditApply.onclick = () => viewer.applyVrmAnchorEditorToCurrentPart();
+  }
+  if (PANEL.btnVrmEditReset) {
+    PANEL.btnVrmEditReset.onclick = () => viewer.resetVrmAnchorForCurrentPart();
   }
   if (PANEL.btnFitSuggestCurrent) {
     PANEL.btnFitSuggestCurrent.onclick = () => viewer.suggestFitForCurrentPart();
@@ -2384,10 +2719,44 @@ function init() {
     input.oninput = () => viewer.applyFitEditorToCurrentPart({ silent: true });
   }
 
+  const liveVrmAnchorInputs = [
+    PANEL.vrmEditBone,
+    PANEL.vrmEditOffsetX,
+    PANEL.vrmEditOffsetY,
+    PANEL.vrmEditOffsetZ,
+    PANEL.vrmEditRotX,
+    PANEL.vrmEditRotY,
+    PANEL.vrmEditRotZ,
+    PANEL.vrmEditScaleX,
+    PANEL.vrmEditScaleY,
+    PANEL.vrmEditScaleZ,
+  ];
+  for (const input of liveVrmAnchorInputs) {
+    if (!input) continue;
+    input.oninput = () => viewer.applyVrmAnchorEditorToCurrentPart({ silent: true });
+  }
+
+  if (PANEL.vrmIdleAmount) {
+    PANEL.vrmIdleAmount.oninput = () => {
+      viewer.vrm.idleAmount = clamp(Number(PANEL.vrmIdleAmount.value || 0.35), 0, 1);
+      viewer.updateMetaPanel();
+      viewer.setLegend();
+    };
+  }
+  if (PANEL.vrmIdleSpeed) {
+    PANEL.vrmIdleSpeed.oninput = () => {
+      viewer.vrm.idleSpeed = clamp(Number(PANEL.vrmIdleSpeed.value || 1), 0.25, 3);
+      viewer.updateMetaPanel();
+      viewer.setLegend();
+    };
+  }
+
   viewer.applyTheme();
   viewer.updateBridgeButton();
+  viewer.updateArmorButton();
   viewer.updateVrmButton();
   viewer.updateVrmAttachButton();
+  viewer.updateVrmIdleButton();
   viewer.setCameraPreset("front");
   viewer.setLegend();
   viewer.updateLiveStatus("Live: inactive");

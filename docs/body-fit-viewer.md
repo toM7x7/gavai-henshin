@@ -1,63 +1,70 @@
-# Body Fit Viewer (Exhibition Setup)
+﻿# Body Fit Viewer 手順
 
-展示会で初見の人にも分かりやすく見せるための、最短起動手順と画面説明です。
+更新日: 2026-03-01
 
-## 1. 事前データ生成（未生成なら）
+## 1. 目的
+
+`viewer/body-fit` は、全身プレビュー上で以下を確認するための画面です。
+
+1. body-sim に対する各パーツの追従
+2. 部位ごとの fit 調整（scale / offset）
+3. VRM 骨格を重ねた配置確認（Attach: BodySim / Hybrid / VRM）
+4. 接続ブリッジ（隙間可視化）の確認
+
+## 2. 起動
 
 ```powershell
 $env:PYTHONPATH="src"
-python -m henshin simulate-body --input examples/body_sequence.sample.json --output sessions/body-sim.json
+python -m henshin serve-dashboard --port 8010 --root .
 ```
 
-## 2. ビューアー起動
+開くURL:
 
-```powershell
-$env:PYTHONPATH="src"
-python -m henshin serve-viewer --port 8000
-```
-
-ブラウザで次を開く:
-
-- `http://localhost:8000/viewer/body-fit/`
+- `http://localhost:8010/viewer/body-fit/`
 
 補足:
 
-- `r --port 8000` は PowerShell の履歴コマンド解釈になり失敗します。
-- 必ず `python -m henshin serve-viewer --port 8000` を使ってください。
-- ビューアーは `three.js` をローカル同梱しているため、外部CDN接続なしで動作します。
+- `--port` は値を1つ取ります。正しくは `--port 8010` です。
+- `--port8010` や改行で分断された `--port` はエラーになります。
 - 更新後に表示が古い場合は `Ctrl + F5` で強制再読込してください。
 
-## 3. 画面で何が見えているか
+## 3. 最短確認フロー
 
-右側（3D表示）:
+1. `Load` を押して `suitspec` と `sim` を読込
+2. `Load VRM` を押して `viewer/assets/vrm/default.vrm` を読込
+3. `Attach` を押して `Hybrid` か `VRM` に切替
+4. `VRM Bones: On` で骨表示
+5. `VRM Anchor Editor` で `Part` を選び `Load Anchor` -> `Apply Anchor`
+6. `Save SuitSpec` で永続化
 
-- 色付きブロック: 各装備パーツの仮形状（実寸イメージ確認用）
-- 白い輪郭線: パーツ境界を見やすくする補助線
-- 床とグリッド: 体勢・高さの把握用
+## 3.1 VRM単体の確認（推奨）
 
-左側（操作パネル）:
+1. `Armor: Off` にして鎧表示を隠す
+2. `Focus VRM` でカメラをVRMに合わせる
+3. `VRM Idle: On` で待機モーション（軽い揺れ）を確認
+4. 必要に応じて `VRM Idle Amount / Speed` を調整
 
-- `Load`: SuitSpec と Body Sim を読み込み
-- `Play/Pause`: フレーム再生/停止
-- `Prev/Next`: 1フレーム移動
-- `Textures: On/Off`: 生成画像テクスチャ表示切替
-- `Mesh Relief`: 生成画像の明暗を使ってメッシュ凹凸を疑似生成（0で無効）
-- `Theme: Bright/Dark`: 明暗テーマ切替（展示時は Bright 推奨）
-- `Cam Front/Side/Top`: 定点カメラ
-- `Auto Fit`: 全身が画面に収まるよう再センタリング
+## 4. 画面メモ（重要）
 
-## 4. 404対処（`Failed to load JSON ... (404)`）
+- `meta` に `vrm_bone_count > 0` が出ていれば、骨取得は成功です。
+- `meta` の `vrm_missing_anchor_parts` が空なら、骨未解決部位はありません。
+- `meta` の `vrm_resolved_anchors` で、部位 -> 実際に使われた骨名を確認できます。
+- `meta` の `vrm_attach_mode` で現在モード（`body`/`hybrid`/`vrm`）を確認できます。
+- `attachment_slot` が設定されている部位は、そのスロット基準で骨マッチします。
+- `meta` の `three_revision` / `three_target` で three.js 実行系を確認できます。
+- `Bridges` は部位間ギャップの可視化です。
 
-1. URLが `http://localhost:8000/viewer/body-fit/` になっているか確認  
-2. `examples/suitspec.sample.json` と `sessions/body-sim.json` が存在するか確認  
-3. 左パネルのパス入力は、次のような相対パスで指定
+## 5. 404/読込失敗の対処
+
+1. URLが `http://localhost:8010/viewer/body-fit/` か確認
+2. `suitspec` / `sim` / `vrm` の相対パスを確認
    - `examples/suitspec.sample.json`
    - `sessions/body-sim.json`
+   - `viewer/assets/vrm/default.vrm`
+3. `Load` → `Load VRM` の順で再実行
 
-## 5. 展示会向けおすすめ設定
+## 6. 既知の改善対象
 
-1. `Theme: Bright`
-2. `Textures: On`（生成画像を反映）
-3. `Mesh Relief: 0.04〜0.06`（立体感を出す）
-4. `Auto Fit`
-5. `Cam Front` で開始、説明時に `Cam Side` / `Cam Top` 切替
+1. `helmet/chest` の当たり精度をさらに上げる
+2. `BodySim` と `VRM` の切替時に、部位ごとの初期オフセット最適化を追加
+3. Live入力（WebCam / mocopi）の平滑化・遅延メトリクス表示を強化

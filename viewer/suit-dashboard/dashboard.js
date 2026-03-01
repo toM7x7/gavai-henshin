@@ -32,6 +32,7 @@ const UI = {
   btnFitSave: document.getElementById("btnFitSave"),
   fitPreview: document.getElementById("fitPreview"),
   vrmPart: document.getElementById("vrmPart"),
+  vrmSlot: document.getElementById("vrmSlot"),
   vrmBone: document.getElementById("vrmBone"),
   vrmOffsetX: document.getElementById("vrmOffsetX"),
   vrmOffsetY: document.getElementById("vrmOffsetY"),
@@ -352,6 +353,26 @@ const VRM_ANCHOR_BASELINES = {
   right_boot: { bone: "rightFoot", offset: [0, -0.01, 0.08], rotation: [0, 0, 0], scale: [1, 1, 1] },
 };
 
+const ATTACHMENT_SLOT_ALIASES = {
+  helm: "helmet",
+  torso: "chest",
+  chest_core: "chest",
+  shoulder_l: "left_shoulder",
+  shoulder_r: "right_shoulder",
+  upperarm_l: "left_upperarm",
+  upperarm_r: "right_upperarm",
+  forearm_l: "left_forearm",
+  forearm_r: "right_forearm",
+  hand_l: "left_hand",
+  hand_r: "right_hand",
+  thigh_l: "left_thigh",
+  thigh_r: "right_thigh",
+  shin_l: "left_shin",
+  shin_r: "right_shin",
+  boot_l: "left_boot",
+  boot_r: "right_boot",
+};
+
 const DEFAULT_VRM_CANDIDATES = [
   "viewer/assets/vrm/default.vrm",
   "viewer/assets/vrm/default.glb",
@@ -541,12 +562,29 @@ function normalizeVrmAnchor(rawAnchor, fallback) {
   return { bone, offset, rotation, scale };
 }
 
-function baseVrmAnchorFor(partName) {
-  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[partName], null);
+function normalizeAttachmentSlot(partName, module) {
+  const fallback = String(partName || "").trim();
+  const raw = String(module?.attachment_slot || fallback)
+    .trim()
+    .toLowerCase();
+  if (!raw) return fallback;
+  if (VRM_ANCHOR_BASELINES[raw]) return raw;
+  const alias = ATTACHMENT_SLOT_ALIASES[raw];
+  if (alias && VRM_ANCHOR_BASELINES[alias]) return alias;
+  const collapsed = raw.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (VRM_ANCHOR_BASELINES[collapsed]) return collapsed;
+  const collapsedAlias = ATTACHMENT_SLOT_ALIASES[collapsed];
+  if (collapsedAlias && VRM_ANCHOR_BASELINES[collapsedAlias]) return collapsedAlias;
+  return fallback;
+}
+
+function baseVrmAnchorFor(slotName) {
+  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[slotName], null);
 }
 
 function effectiveVrmAnchorFor(partName, module) {
-  const base = baseVrmAnchorFor(partName);
+  const slot = normalizeAttachmentSlot(partName, module);
+  const base = baseVrmAnchorFor(slot);
   return normalizeVrmAnchor(module?.vrm_anchor, base);
 }
 
@@ -1592,7 +1630,10 @@ function setFitEditorValues(fit) {
   UI.fitMinScaleZ.value = String(fit.minScale[2]);
 }
 
-function setVrmEditorValues(anchor) {
+function setVrmEditorValues(slot, anchor) {
+  if (UI.vrmSlot) {
+    UI.vrmSlot.value = String(slot || "");
+  }
   ensureSelectValue(UI.vrmBone, anchor.bone);
   UI.vrmOffsetX.value = String(anchor.offset[0]);
   UI.vrmOffsetY.value = String(anchor.offset[1]);
@@ -1694,11 +1735,13 @@ function renderVrmPreview(partName) {
     return;
   }
   const module = currentSuit.modules[partName];
-  const base = baseVrmAnchorFor(partName);
+  const slot = normalizeAttachmentSlot(partName, module);
+  const base = baseVrmAnchorFor(slot);
   const effective = effectiveVrmAnchorFor(partName, module);
   UI.vrmPreview.textContent = JSON.stringify(
     {
       part: partName,
+      attachment_slot: slot,
       base_anchor: base,
       override_anchor: module.vrm_anchor || null,
       effective_anchor: effective,
@@ -1733,8 +1776,9 @@ function loadVrmEditor(partName) {
     return;
   }
   const module = currentSuit.modules[partName];
+  const slot = normalizeAttachmentSlot(partName, module);
   const effective = effectiveVrmAnchorFor(partName, module);
-  setVrmEditorValues(effective);
+  setVrmEditorValues(slot, effective);
   renderVrmPreview(partName);
 }
 
@@ -1755,8 +1799,12 @@ function readFitEditor(partName) {
 }
 
 function readVrmEditor(partName) {
-  const base = baseVrmAnchorFor(partName);
-  return normalizeVrmAnchor(
+  const module = currentSuit?.modules?.[partName] || {};
+  const slot = normalizeAttachmentSlot(partName, {
+    attachment_slot: UI.vrmSlot?.value || module.attachment_slot || partName,
+  });
+  const base = baseVrmAnchorFor(slot);
+  const anchor = normalizeVrmAnchor(
     {
       bone: UI.vrmBone.value,
       offset: [UI.vrmOffsetX.value, UI.vrmOffsetY.value, UI.vrmOffsetZ.value],
@@ -1765,6 +1813,7 @@ function readVrmEditor(partName) {
     },
     base
   );
+  return { slot, anchor };
 }
 
 function applyFitEditorToSuit() {
@@ -1803,12 +1852,13 @@ function applyVrmEditorToSuit({ silent = false } = {}) {
     setStatus("vrm_anchor適用対象の部位がありません。", true);
     return false;
   }
-  const anchor = readVrmEditor(partName);
+  const { slot, anchor } = readVrmEditor(partName);
+  currentSuit.modules[partName].attachment_slot = slot;
   currentSuit.modules[partName].vrm_anchor = anchor;
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
   renderVrmPreview(partName);
   if (!silent) {
-    setStatus(`vrm_anchorを適用しました: ${partName}`);
+    setStatus(`vrm_anchorを適用しました: ${partName} (slot=${slot})`);
   }
   return true;
 }
@@ -1820,6 +1870,7 @@ function resetVrmAnchorForPart() {
     return;
   }
   delete currentSuit.modules[partName].vrm_anchor;
+  delete currentSuit.modules[partName].attachment_slot;
   loadVrmEditor(partName);
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
   setStatus(`vrm_anchorを解除しました: ${partName}`);
@@ -2075,8 +2126,9 @@ async function runGenerate() {
 function openBodyFit() {
   const suit = encodeURIComponent(currentSuitPath || UI.suitPath.value);
   const sim = encodeURIComponent(UI.simPath.value.trim() || "sessions/body-sim.json");
+  const attach = encodeURIComponent("hybrid");
   const t = Date.now();
-  window.open(`/viewer/body-fit/?suitspec=${suit}&sim=${sim}&t=${t}`, "_blank");
+  window.open(`/viewer/body-fit/?suitspec=${suit}&sim=${sim}&attach=${attach}&t=${t}`, "_blank");
 }
 
 function bindEvents() {
@@ -2216,6 +2268,7 @@ function bindEvents() {
     applyVrmEditorToSuit({ silent: true });
   };
   const vrmInputs = [
+    UI.vrmSlot,
     UI.vrmBone,
     UI.vrmOffsetX,
     UI.vrmOffsetY,

@@ -28,6 +28,7 @@ Loreを基点に、Blueprintを実行可能にするための **SIM-first プロ
 - `examples/`: サンプルJSON
 - `docs/`: 実行準備ドキュメント
 - `docs/roadmap.md`: ロードマップ
+- `docs/execution-plan.md`: 直近の実行計画
 - `docs/progress-log.md`: 進捗ログ
 - `docs/id-policy.md`: ID運用ポリシー
 - `docs/armory-io-contract.md`: Armory連携I/O契約

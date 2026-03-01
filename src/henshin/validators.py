@@ -17,6 +17,18 @@ _APPROVAL_ID_RE = re.compile(r"^APV-[0-9]{8}$")
 _MORPHOTYPE_ID_RE = re.compile(r"^MTP-[0-9]{8}$")
 _HEX_RE = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$")
 
+_FIT_SOURCES = {
+    "chest_core",
+    "left_upperarm",
+    "right_upperarm",
+    "left_forearm",
+    "right_forearm",
+    "left_thigh",
+    "right_thigh",
+    "left_shin",
+    "right_shin",
+}
+
 
 def load_json(path: str | Path) -> dict[str, Any]:
     p = Path(path)
@@ -28,6 +40,14 @@ def _require_fields(payload: dict[str, Any], required: list[str], label: str) ->
     missing = [k for k in required if k not in payload]
     if missing:
         raise ValueError(f"{label} missing required fields: {missing}")
+
+
+def _validate_vec3(value: Any, label: str) -> None:
+    if not isinstance(value, list) or len(value) != 3:
+        raise ValueError(f"{label} must be a 3-item array")
+    for n in value:
+        if not isinstance(n, (int, float)):
+            raise ValueError(f"{label} items must be numbers")
 
 
 def validate_suitspec(payload: dict[str, Any]) -> None:
@@ -64,6 +84,41 @@ def validate_suitspec(payload: dict[str, Any]) -> None:
             raise ValueError(f"SuitSpec.modules.{name}.enabled is required")
         if "asset_ref" not in module:
             raise ValueError(f"SuitSpec.modules.{name}.asset_ref is required")
+        attachment_slot = module.get("attachment_slot")
+        if attachment_slot is not None:
+            if not isinstance(attachment_slot, str) or not attachment_slot.strip():
+                raise ValueError(f"SuitSpec.modules.{name}.attachment_slot must be a non-empty string")
+
+        fit = module.get("fit")
+        if fit is not None:
+            if not isinstance(fit, dict):
+                raise ValueError(f"SuitSpec.modules.{name}.fit must be an object")
+            source = fit.get("source")
+            if source is not None and source not in _FIT_SOURCES:
+                raise ValueError(
+                    f"SuitSpec.modules.{name}.fit.source must be one of {sorted(_FIT_SOURCES)}"
+                )
+            attach = fit.get("attach")
+            if attach is not None and attach not in {"start", "center", "end"}:
+                raise ValueError(f"SuitSpec.modules.{name}.fit.attach must be start/center/end")
+            for key in ("scale", "follow", "minScale"):
+                vec = fit.get(key)
+                if vec is not None:
+                    _validate_vec3(vec, f"SuitSpec.modules.{name}.fit.{key}")
+
+        vrm_anchor = module.get("vrm_anchor")
+        if vrm_anchor is not None:
+            if not isinstance(vrm_anchor, dict):
+                raise ValueError(f"SuitSpec.modules.{name}.vrm_anchor must be an object")
+            bone = vrm_anchor.get("bone")
+            if bone is not None and (not isinstance(bone, str) or not bone.strip()):
+                raise ValueError(f"SuitSpec.modules.{name}.vrm_anchor.bone must be a non-empty string")
+            for key in ("offset", "rotation", "scale"):
+                vec = vrm_anchor.get(key)
+                if vec is not None:
+                    _validate_vec3(vec, f"SuitSpec.modules.{name}.vrm_anchor.{key}")
+                    if key == "scale" and any(float(v) <= 0 for v in vec):
+                        raise ValueError(f"SuitSpec.modules.{name}.vrm_anchor.scale must be > 0")
 
     palette = payload.get("palette", {})
     for color in ("primary", "secondary", "emissive"):

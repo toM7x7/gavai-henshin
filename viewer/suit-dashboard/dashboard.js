@@ -31,6 +31,27 @@ const UI = {
   btnFitReset: document.getElementById("btnFitReset"),
   btnFitSave: document.getElementById("btnFitSave"),
   fitPreview: document.getElementById("fitPreview"),
+  vrmPart: document.getElementById("vrmPart"),
+  vrmBone: document.getElementById("vrmBone"),
+  vrmOffsetX: document.getElementById("vrmOffsetX"),
+  vrmOffsetY: document.getElementById("vrmOffsetY"),
+  vrmOffsetZ: document.getElementById("vrmOffsetZ"),
+  vrmRotX: document.getElementById("vrmRotX"),
+  vrmRotY: document.getElementById("vrmRotY"),
+  vrmRotZ: document.getElementById("vrmRotZ"),
+  vrmScaleX: document.getElementById("vrmScaleX"),
+  vrmScaleY: document.getElementById("vrmScaleY"),
+  vrmScaleZ: document.getElementById("vrmScaleZ"),
+  btnVrmLoad: document.getElementById("btnVrmLoad"),
+  btnVrmApply: document.getElementById("btnVrmApply"),
+  btnVrmReset: document.getElementById("btnVrmReset"),
+  btnVrmSave: document.getElementById("btnVrmSave"),
+  vrmAnchorVisible: document.getElementById("vrmAnchorVisible"),
+  vrmPreview: document.getElementById("vrmPreview"),
+  vrmModelPath: document.getElementById("vrmModelPath"),
+  btnVrmModelLoad: document.getElementById("btnVrmModelLoad"),
+  btnVrmModelClear: document.getElementById("btnVrmModelClear"),
+  vrmModelStatus: document.getElementById("vrmModelStatus"),
   reliefSlider: document.getElementById("reliefSlider"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
@@ -266,6 +287,102 @@ const FIT_BASELINES = {
   },
 };
 
+const PART_COLOR_MAP = {
+  helmet: 0xffcd4f,
+  chest: 0x4fa8ff,
+  back: 0x4f88e8,
+  waist: 0x62c9ff,
+  left_shoulder: 0xff8f6a,
+  right_shoulder: 0xff6a8f,
+  left_upperarm: 0x9a8cff,
+  right_upperarm: 0x7f99ff,
+  left_forearm: 0x63d5ff,
+  right_forearm: 0x5deec3,
+  left_hand: 0xd4ff73,
+  right_hand: 0xb2ff73,
+  left_thigh: 0xff8ec8,
+  right_thigh: 0xff82ab,
+  left_shin: 0x7cd7ff,
+  right_shin: 0x63c6ff,
+  left_boot: 0xffe48a,
+  right_boot: 0xffd36f,
+};
+
+const VRM_HUMANOID_BONES = [
+  "hips",
+  "spine",
+  "chest",
+  "upperChest",
+  "neck",
+  "head",
+  "leftShoulder",
+  "rightShoulder",
+  "leftUpperArm",
+  "rightUpperArm",
+  "leftLowerArm",
+  "rightLowerArm",
+  "leftHand",
+  "rightHand",
+  "leftUpperLeg",
+  "rightUpperLeg",
+  "leftLowerLeg",
+  "rightLowerLeg",
+  "leftFoot",
+  "rightFoot",
+];
+
+const VRM_ANCHOR_BASELINES = {
+  helmet: { bone: "head", offset: [0, 0.08, 0.12], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  chest: { bone: "upperChest", offset: [0, 0.03, 0.1], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  back: { bone: "upperChest", offset: [0, 0.01, -0.1], rotation: [0, 180, 0], scale: [1, 1, 1] },
+  waist: { bone: "hips", offset: [0, 0.0, 0.06], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_shoulder: { bone: "leftShoulder", offset: [0.02, 0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_shoulder: { bone: "rightShoulder", offset: [-0.02, 0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_upperarm: { bone: "leftUpperArm", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_upperarm: { bone: "rightUpperArm", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_forearm: { bone: "leftLowerArm", offset: [0, -0.01, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_forearm: { bone: "rightLowerArm", offset: [0, -0.01, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_hand: { bone: "leftHand", offset: [0, 0, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_hand: { bone: "rightHand", offset: [0, 0, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_thigh: { bone: "leftUpperLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_thigh: { bone: "rightUpperLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_shin: { bone: "leftLowerLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_shin: { bone: "rightLowerLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_boot: { bone: "leftFoot", offset: [0, -0.01, 0.08], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_boot: { bone: "rightFoot", offset: [0, -0.01, 0.08], rotation: [0, 0, 0], scale: [1, 1, 1] },
+};
+
+const DEFAULT_VRM_CANDIDATES = [
+  "viewer/assets/vrm/default.vrm",
+  "viewer/assets/vrm/default.glb",
+  "viewer/assets/vrm/default.gltf",
+];
+
+const VRM_BONE_ALIASES = {
+  hips: ["hips", "j_bip_c_hips", "pelvis"],
+  spine: ["spine", "j_bip_c_spine", "spine1"],
+  chest: ["chest", "j_bip_c_chest", "spine2"],
+  upperChest: ["upperchest", "upper_chest", "j_bip_c_upperchest", "spine3"],
+  neck: ["neck", "j_bip_c_neck"],
+  head: ["head", "j_bip_c_head"],
+  leftShoulder: ["leftshoulder", "j_bip_l_shoulder", "l_shoulder", "shoulder_l"],
+  rightShoulder: ["rightshoulder", "j_bip_r_shoulder", "r_shoulder", "shoulder_r"],
+  leftUpperArm: ["leftupperarm", "j_bip_l_upperarm", "l_upperarm", "upperarm_l"],
+  rightUpperArm: ["rightupperarm", "j_bip_r_upperarm", "r_upperarm", "upperarm_r"],
+  leftLowerArm: ["leftlowerarm", "j_bip_l_lowerarm", "l_forearm", "lowerarm_l"],
+  rightLowerArm: ["rightlowerarm", "j_bip_r_lowerarm", "r_forearm", "lowerarm_r"],
+  leftHand: ["lefthand", "j_bip_l_hand", "l_hand", "hand_l"],
+  rightHand: ["righthand", "j_bip_r_hand", "r_hand", "hand_r"],
+  leftUpperLeg: ["leftupperleg", "j_bip_l_upperleg", "l_thigh", "upleg_l"],
+  rightUpperLeg: ["rightupperleg", "j_bip_r_upperleg", "r_thigh", "upleg_r"],
+  leftLowerLeg: ["leftlowerleg", "j_bip_l_lowerleg", "l_shin", "leg_l"],
+  rightLowerLeg: ["rightlowerleg", "j_bip_r_lowerleg", "r_shin", "leg_r"],
+  leftFoot: ["leftfoot", "j_bip_l_foot", "l_foot", "foot_l"],
+  rightFoot: ["rightfoot", "j_bip_r_foot", "r_foot", "foot_r"],
+};
+
+let gltfLoaderModulePromise = null;
+
 function setStatus(text, isError = false) {
   UI.status.textContent = text;
   UI.status.style.color = isError ? "#9c1b2f" : "#17335f";
@@ -278,6 +395,56 @@ function normPath(path) {
   if (p.startsWith("/")) return p;
   if (p.startsWith("./")) p = p.slice(2);
   return `/${p}`;
+}
+
+function normalizeBoneName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+async function pathExists(path) {
+  const url = normPath(path);
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    if (res.ok) return true;
+  } catch {
+    // fall through
+  }
+  try {
+    const res = await fetch(url, { method: "GET" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function discoverDefaultVrmPath() {
+  for (const candidate of DEFAULT_VRM_CANDIDATES) {
+    if (await pathExists(candidate)) {
+      return candidate;
+    }
+  }
+  return "";
+}
+
+function setVrmModelStatus(text) {
+  if (!UI.vrmModelStatus) return;
+  UI.vrmModelStatus.textContent = text;
+}
+
+async function getGLTFLoaderClass() {
+  if (!gltfLoaderModulePromise) {
+    gltfLoaderModulePromise = import("../body-fit/vendor/three/examples/jsm/loaders/GLTFLoader.js").catch(() =>
+      import("https://cdn.jsdelivr.net/npm/three@0.173.0/examples/jsm/loaders/GLTFLoader.js/+esm")
+    );
+  }
+  const mod = await gltfLoaderModulePromise;
+  if (!mod?.GLTFLoader) {
+    throw new Error("GLTFLoader not available.");
+  }
+  return mod.GLTFLoader;
 }
 
 function clamp(value, low, high) {
@@ -355,6 +522,34 @@ function effectiveFitFor(partName, module) {
   return normalizeFit(override, base);
 }
 
+function partColor(partName) {
+  return PART_COLOR_MAP[partName] || 0x6ea3e6;
+}
+
+function normalizeVrmAnchor(rawAnchor, fallback) {
+  const base = fallback || {
+    bone: "chest",
+    offset: [0, 0, 0],
+    rotation: [0, 0, 0],
+    scale: [1, 1, 1],
+  };
+  const anchor = rawAnchor && typeof rawAnchor === "object" ? rawAnchor : {};
+  const bone = String(anchor.bone ?? base.bone ?? "chest").trim() || "chest";
+  const offset = vec3Or(anchor.offset, base.offset ?? [0, 0, 0]);
+  const rotation = vec3Or(anchor.rotation, base.rotation ?? [0, 0, 0]);
+  const scale = vec3Or(anchor.scale, base.scale ?? [1, 1, 1]).map((v) => Math.max(0.01, v));
+  return { bone, offset, rotation, scale };
+}
+
+function baseVrmAnchorFor(partName) {
+  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[partName], null);
+}
+
+function effectiveVrmAnchorFor(partName, module) {
+  const base = baseVrmAnchorFor(partName);
+  return normalizeVrmAnchor(module?.vrm_anchor, base);
+}
+
 function bodyFrontTransformFor(partName, module) {
   const layout = BODY_FRONT_LAYOUT[partName] || { pos: [0, 0, 0], scale: [1, 1, 1] };
   const fit = effectiveFitFor(partName, module);
@@ -379,6 +574,17 @@ function ensureSelectValue(select, value) {
     select.appendChild(option);
   }
   select.value = normalized;
+}
+
+function populateVrmBoneOptions() {
+  if (!UI.vrmBone) return;
+  UI.vrmBone.innerHTML = "";
+  for (const bone of VRM_HUMANOID_BONES) {
+    const op = document.createElement("option");
+    op.value = bone;
+    op.textContent = bone;
+    UI.vrmBone.appendChild(op);
+  }
 }
 
 function readEnabledModules(suitspec) {
@@ -829,6 +1035,13 @@ class BodyFrontPreview {
     this.canvas = canvas;
     this.metaNode = metaNode;
     this.records = [];
+    this.anchorRecords = new Map();
+    this.anchorVisible = true;
+    this.vrmRoot = new THREE.Group();
+    this.vrmModel = null;
+    this.vrmModelPath = "";
+    this.vrmBoneMap = new Map();
+    this.vrmLoadError = "";
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -848,6 +1061,9 @@ class BodyFrontPreview {
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
+    this.anchorGroup = new THREE.Group();
+    this.scene.add(this.anchorGroup);
+    this.scene.add(this.vrmRoot);
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.68));
     const key = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -862,6 +1078,7 @@ class BodyFrontPreview {
   }
 
   clear() {
+    this.clearAnchors();
     for (const rec of this.records) {
       this.root.remove(rec.group);
       rec.mesh.geometry.dispose();
@@ -870,6 +1087,236 @@ class BodyFrontPreview {
       rec.wire.material.dispose();
     }
     this.records = [];
+  }
+
+  clearVrmModel() {
+    if (this.vrmModel) {
+      this.vrmRoot.remove(this.vrmModel);
+      this.vrmModel.traverse((obj) => {
+        if (!obj.isMesh) return;
+        if (obj.geometry) obj.geometry.dispose?.();
+        const material = obj.material;
+        if (Array.isArray(material)) {
+          for (const m of material) m?.dispose?.();
+        } else {
+          material?.dispose?.();
+        }
+      });
+    }
+    this.vrmModel = null;
+    this.vrmBoneMap = new Map();
+    this.vrmModelPath = "";
+    this.vrmLoadError = "";
+  }
+
+  buildVrmBoneMap(model) {
+    const map = new Map();
+    model.traverse((obj) => {
+      if (!obj.isBone) return;
+      const key = normalizeBoneName(obj.name);
+      if (!key) return;
+      if (!map.has(key)) map.set(key, obj);
+    });
+    return map;
+  }
+
+  findVrmBone(humanoidBoneName) {
+    if (!this.vrmBoneMap || this.vrmBoneMap.size === 0) return null;
+    const aliases = VRM_BONE_ALIASES[humanoidBoneName] || [humanoidBoneName];
+    for (const alias of aliases) {
+      const key = normalizeBoneName(alias);
+      const bone = this.vrmBoneMap.get(key);
+      if (bone) return bone;
+    }
+    return null;
+  }
+
+  alignVrmModelToScene(model) {
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
+    if (box.isEmpty()) return;
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const height = Math.max(size.y, 0.001);
+    const targetHeight = 3.0;
+    const scale = clamp(targetHeight / height, 0.4, 4.0);
+    model.scale.setScalar(scale);
+    model.updateMatrixWorld(true);
+
+    const scaledBox = new THREE.Box3().setFromObject(model);
+    const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+    const minY = scaledBox.min.y;
+    const targetFloorY = -1.74;
+    model.position.set(
+      model.position.x - scaledCenter.x,
+      model.position.y + (targetFloorY - minY),
+      model.position.z - scaledCenter.z + 0.02
+    );
+    model.updateMatrixWorld(true);
+  }
+
+  async loadVrmModel(path, { applyBlackMaterial = false } = {}) {
+    const rawPath = String(path || "").trim();
+    if (!rawPath) {
+      this.clearVrmModel();
+      this.updateMeta();
+      return;
+    }
+
+    const exists = await pathExists(rawPath);
+    if (!exists) {
+      this.vrmLoadError = `VRM file not found: ${rawPath}`;
+      throw new Error(this.vrmLoadError);
+    }
+
+    const GLTFLoader = await getGLTFLoaderClass();
+    const loader = new GLTFLoader();
+    const url = normPath(rawPath);
+    const gltf = await new Promise((resolve, reject) => {
+      loader.load(url, resolve, undefined, reject);
+    });
+
+    this.clearVrmModel();
+    const model = gltf.scene || gltf.scenes?.[0];
+    if (!model) {
+      this.vrmLoadError = `Invalid VRM/GLTF scene: ${rawPath}`;
+      throw new Error(this.vrmLoadError);
+    }
+
+    if (applyBlackMaterial) {
+      model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.material = new THREE.MeshStandardMaterial({
+          color: 0x0a0a0a,
+          metalness: 0.12,
+          roughness: 0.82,
+          side: THREE.DoubleSide,
+        });
+      });
+    }
+
+    this.alignVrmModelToScene(model);
+    this.vrmRoot.add(model);
+    this.vrmModel = model;
+    this.vrmModelPath = rawPath;
+    this.vrmBoneMap = this.buildVrmBoneMap(model);
+    this.vrmLoadError = "";
+
+    this.updateAnchors(currentSuit);
+    this.updateMeta();
+    fitCameraToObject(this.camera, this.controls, this.root, 2.6);
+  }
+
+  clearAnchors() {
+    for (const marker of this.anchorRecords.values()) {
+      this.anchorGroup.remove(marker.sphere);
+      this.anchorGroup.remove(marker.line);
+      this.anchorGroup.remove(marker.axes);
+      marker.sphere.geometry.dispose();
+      marker.sphere.material.dispose();
+      marker.line.geometry.dispose();
+      marker.line.material.dispose();
+      marker.axes.geometry.dispose();
+      if (Array.isArray(marker.axes.material)) {
+        for (const m of marker.axes.material) m.dispose();
+      } else {
+        marker.axes.material.dispose();
+      }
+    }
+    this.anchorRecords.clear();
+  }
+
+  setAnchorVisible(enabled) {
+    this.anchorVisible = Boolean(enabled);
+    for (const marker of this.anchorRecords.values()) {
+      marker.sphere.visible = this.anchorVisible;
+      marker.line.visible = this.anchorVisible;
+      marker.axes.visible = this.anchorVisible;
+    }
+    this.updateMeta();
+  }
+
+  ensureAnchorMarker(partName) {
+    const cached = this.anchorRecords.get(partName);
+    if (cached) return cached;
+    const color = partColor(partName);
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03, 14, 10),
+      new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.34,
+        roughness: 0.45,
+        metalness: 0.2,
+      })
+    );
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.82 })
+    );
+    const axes = new THREE.AxesHelper(0.09);
+    sphere.visible = this.anchorVisible;
+    line.visible = this.anchorVisible;
+    axes.visible = this.anchorVisible;
+    this.anchorGroup.add(sphere);
+    this.anchorGroup.add(line);
+    this.anchorGroup.add(axes);
+    const marker = { sphere, line, axes };
+    this.anchorRecords.set(partName, marker);
+    return marker;
+  }
+
+  updateAnchorForPart(partName, module) {
+    const rec = this.findRecord(partName);
+    const marker = this.ensureAnchorMarker(partName);
+    if (!rec || !module) {
+      marker.sphere.visible = false;
+      marker.line.visible = false;
+      marker.axes.visible = false;
+      return;
+    }
+
+    const anchor = effectiveVrmAnchorFor(partName, module);
+    const center = rec.mesh.getWorldPosition(new THREE.Vector3());
+    const anchorWorld = new THREE.Vector3();
+    const baseQuat = new THREE.Quaternion();
+    const vrmBone = this.findVrmBone(anchor.bone);
+    if (vrmBone) {
+      vrmBone.getWorldPosition(anchorWorld);
+      vrmBone.getWorldQuaternion(baseQuat);
+      const localOffset = new THREE.Vector3(anchor.offset[0], anchor.offset[1], anchor.offset[2]);
+      localOffset.applyQuaternion(baseQuat);
+      anchorWorld.add(localOffset);
+    } else {
+      rec.mesh.getWorldQuaternion(baseQuat);
+      anchorWorld.copy(rec.mesh.localToWorld(new THREE.Vector3(anchor.offset[0], anchor.offset[1], anchor.offset[2])));
+    }
+
+    marker.sphere.position.copy(anchorWorld);
+    marker.line.geometry.setFromPoints([center, anchorWorld]);
+    marker.axes.position.copy(anchorWorld);
+    const localQuat = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(
+        THREE.MathUtils.degToRad(anchor.rotation[0]),
+        THREE.MathUtils.degToRad(anchor.rotation[1]),
+        THREE.MathUtils.degToRad(anchor.rotation[2]),
+        "XYZ"
+      )
+    );
+    marker.axes.quaternion.copy(baseQuat).multiply(localQuat);
+    const axisScale = clamp((anchor.scale[0] + anchor.scale[1] + anchor.scale[2]) / 3, 0.2, 3.0);
+    marker.axes.scale.setScalar(axisScale);
+    marker.sphere.visible = this.anchorVisible;
+    marker.line.visible = this.anchorVisible;
+    marker.axes.visible = this.anchorVisible;
+  }
+
+  updateAnchors(suitspec) {
+    const modules = suitspec?.modules || {};
+    for (const rec of this.records) {
+      this.updateAnchorForPart(rec.partName, modules[rec.partName]);
+    }
   }
 
   applyTransformToRecord(rec, transform) {
@@ -889,6 +1336,7 @@ class BodyFrontPreview {
     const rec = this.findRecord(partName);
     if (!rec) return;
     this.applyTransformToRecord(rec, bodyFrontTransformFor(partName, module));
+    this.updateAnchorForPart(partName, module);
     this.root.updateMatrixWorld(true);
     this.updateMeta();
     fitCameraToObject(this.camera, this.controls, this.root, 2.6);
@@ -958,11 +1406,15 @@ class BodyFrontPreview {
       `表示: ボディ前景 + 頂点線`,
       `背景: 白固定`,
       `反映: fit.scale / fit.offsetY / fit.zOffset`,
+      `VRMモデル: ${this.vrmModel ? "LOADED" : "NONE"} ${this.vrmModelPath ? `(${this.vrmModelPath})` : ""}`,
+      `VRMボーン数: ${this.vrmBoneMap?.size || 0}`,
+      `VRMアンカー: ${this.anchorRecords.size} / visible=${this.anchorVisible ? "ON" : "OFF"}`,
       `接続ペア: ${stats.pairCount}`,
       `平均すき間: ${stats.meanGap.toFixed(3)}`,
       `平均食い込み: ${stats.meanPenetration.toFixed(3)}`,
       `フィットスコア: ${(stats.score * 100).toFixed(1)} / 100`,
       `要改善ペア:\n${weakText}`,
+      this.vrmLoadError ? `VRM読込エラー: ${this.vrmLoadError}` : "VRM読込エラー: なし",
       `用途: パーツの接続・密度・前景バランス確認`,
     ].join("\n");
   }
@@ -1014,6 +1466,8 @@ class BodyFrontPreview {
       this.records.push(rec);
     }
 
+    this.updateAnchors(suitspec);
+    this.setAnchorVisible(Boolean(UI.vrmAnchorVisible?.checked ?? true));
     fitCameraToObject(this.camera, this.controls, this.root, 2.6);
     this.updateMeta();
   }
@@ -1037,6 +1491,37 @@ class BodyFrontPreview {
 }
 
 const bodyFrontPreview = new BodyFrontPreview(UI.bodyFrontCanvas, UI.bodyFrontMeta);
+
+async function loadVrmModelFromInput({ silent = false } = {}) {
+  const path = String(UI.vrmModelPath?.value || "").trim();
+  if (!path) {
+    bodyFrontPreview.clearVrmModel();
+    bodyFrontPreview.updateAnchors(currentSuit);
+    bodyFrontPreview.updateMeta();
+    setVrmModelStatus("VRM: 未読込");
+    if (!silent) setStatus("VRMモデルを解除しました。");
+    return;
+  }
+  try {
+    setVrmModelStatus(`VRM読込中: ${path}`);
+    await bodyFrontPreview.loadVrmModel(path, { applyBlackMaterial: false });
+    const bones = bodyFrontPreview.vrmBoneMap?.size || 0;
+    setVrmModelStatus(`VRM: 読込済み\npath: ${path}\nbones: ${bones}`);
+    if (!silent) setStatus(`VRMモデルを読込しました: ${path}`);
+  } catch (err) {
+    const msg = String(err?.message || err || "VRM load failed");
+    setVrmModelStatus(`VRM: 読込失敗\npath: ${path}\nerror: ${msg}`);
+    setStatus(`VRM読込失敗: ${msg}`, true);
+  }
+}
+
+function clearVrmModelFromInput({ silent = false } = {}) {
+  bodyFrontPreview.clearVrmModel();
+  bodyFrontPreview.updateAnchors(currentSuit);
+  bodyFrontPreview.updateMeta();
+  setVrmModelStatus("VRM: 未読込");
+  if (!silent) setStatus("VRMモデルを解除しました。");
+}
 
 function renderPartChecks(parts) {
   UI.partChecks.innerHTML = "";
@@ -1072,6 +1557,25 @@ function renderFitPartSelector(parts) {
   loadFitEditor(UI.fitPart.value);
 }
 
+function renderVrmPartSelector(parts) {
+  const prev = UI.vrmPart.value;
+  UI.vrmPart.innerHTML = "";
+  for (const [name] of parts) {
+    const op = document.createElement("option");
+    op.value = name;
+    op.textContent = name;
+    UI.vrmPart.appendChild(op);
+  }
+
+  if (!parts.length) {
+    UI.vrmPreview.textContent = "vrm_anchor対象パーツなし";
+    return;
+  }
+
+  UI.vrmPart.value = parts.some(([name]) => name === prev) ? prev : parts[0][0];
+  loadVrmEditor(UI.vrmPart.value);
+}
+
 function setFitEditorValues(fit) {
   ensureSelectValue(UI.fitSource, fit.source);
   ensureSelectValue(UI.fitAttach, fit.attach);
@@ -1086,6 +1590,19 @@ function setFitEditorValues(fit) {
   UI.fitMinScaleX.value = String(fit.minScale[0]);
   UI.fitMinScaleY.value = String(fit.minScale[1]);
   UI.fitMinScaleZ.value = String(fit.minScale[2]);
+}
+
+function setVrmEditorValues(anchor) {
+  ensureSelectValue(UI.vrmBone, anchor.bone);
+  UI.vrmOffsetX.value = String(anchor.offset[0]);
+  UI.vrmOffsetY.value = String(anchor.offset[1]);
+  UI.vrmOffsetZ.value = String(anchor.offset[2]);
+  UI.vrmRotX.value = String(anchor.rotation[0]);
+  UI.vrmRotY.value = String(anchor.rotation[1]);
+  UI.vrmRotZ.value = String(anchor.rotation[2]);
+  UI.vrmScaleX.value = String(anchor.scale[0]);
+  UI.vrmScaleY.value = String(anchor.scale[1]);
+  UI.vrmScaleZ.value = String(anchor.scale[2]);
 }
 
 function renderBodyTuneSelector(parts) {
@@ -1171,6 +1688,26 @@ function renderFitPreview(partName) {
   );
 }
 
+function renderVrmPreview(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    UI.vrmPreview.textContent = "vrm_anchor未設定";
+    return;
+  }
+  const module = currentSuit.modules[partName];
+  const base = baseVrmAnchorFor(partName);
+  const effective = effectiveVrmAnchorFor(partName, module);
+  UI.vrmPreview.textContent = JSON.stringify(
+    {
+      part: partName,
+      base_anchor: base,
+      override_anchor: module.vrm_anchor || null,
+      effective_anchor: effective,
+    },
+    null,
+    2
+  );
+}
+
 function loadFitEditor(partName) {
   if (!partName || !currentSuit?.modules?.[partName]) {
     UI.fitPreview.textContent = "fit未設定";
@@ -1182,8 +1719,23 @@ function loadFitEditor(partName) {
   if (UI.bodyTunePart.value !== partName) {
     UI.bodyTunePart.value = partName;
   }
+  if (UI.vrmPart.value !== partName) {
+    UI.vrmPart.value = partName;
+  }
   setBodyTuneValues(effective);
   renderFitPreview(partName);
+  renderVrmPreview(partName);
+}
+
+function loadVrmEditor(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    UI.vrmPreview.textContent = "vrm_anchor未設定";
+    return;
+  }
+  const module = currentSuit.modules[partName];
+  const effective = effectiveVrmAnchorFor(partName, module);
+  setVrmEditorValues(effective);
+  renderVrmPreview(partName);
 }
 
 function readFitEditor(partName) {
@@ -1197,6 +1749,19 @@ function readFitEditor(partName) {
       scale: [UI.fitScaleX.value, UI.fitScaleY.value, UI.fitScaleZ.value],
       follow: [UI.fitFollowX.value, UI.fitFollowY.value, UI.fitFollowZ.value],
       minScale: [UI.fitMinScaleX.value, UI.fitMinScaleY.value, UI.fitMinScaleZ.value],
+    },
+    base
+  );
+}
+
+function readVrmEditor(partName) {
+  const base = baseVrmAnchorFor(partName);
+  return normalizeVrmAnchor(
+    {
+      bone: UI.vrmBone.value,
+      offset: [UI.vrmOffsetX.value, UI.vrmOffsetY.value, UI.vrmOffsetZ.value],
+      rotation: [UI.vrmRotX.value, UI.vrmRotY.value, UI.vrmRotZ.value],
+      scale: [UI.vrmScaleX.value, UI.vrmScaleY.value, UI.vrmScaleZ.value],
     },
     base
   );
@@ -1230,6 +1795,34 @@ function resetFitForPart() {
   loadFitEditor(partName);
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
   setStatus(`fitを解除しました: ${partName}`);
+}
+
+function applyVrmEditorToSuit({ silent = false } = {}) {
+  const partName = UI.vrmPart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    setStatus("vrm_anchor適用対象の部位がありません。", true);
+    return false;
+  }
+  const anchor = readVrmEditor(partName);
+  currentSuit.modules[partName].vrm_anchor = anchor;
+  bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  renderVrmPreview(partName);
+  if (!silent) {
+    setStatus(`vrm_anchorを適用しました: ${partName}`);
+  }
+  return true;
+}
+
+function resetVrmAnchorForPart() {
+  const partName = UI.vrmPart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    setStatus("vrm_anchor解除対象の部位がありません。", true);
+    return;
+  }
+  delete currentSuit.modules[partName].vrm_anchor;
+  loadVrmEditor(partName);
+  bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  setStatus(`vrm_anchorを解除しました: ${partName}`);
 }
 
 async function saveCurrentSuit() {
@@ -1398,10 +1991,26 @@ async function loadSuit(path) {
   const enabled = readEnabledModules(currentSuit);
   renderPartChecks(enabled);
   renderFitPartSelector(enabled);
+  renderVrmPartSelector(enabled);
   renderBodyTuneSelector(enabled);
   renderPromptSelector(enabled, currentSuit);
   renderPartCards(currentSuit);
   await bodyFrontPreview.loadSuit(currentSuit);
+  const vrmPath = String(UI.vrmModelPath?.value || "").trim();
+  if (vrmPath) {
+    const shouldReload =
+      !bodyFrontPreview.vrmModel ||
+      bodyFrontPreview.vrmModelPath !== vrmPath ||
+      bodyFrontPreview.vrmLoadError;
+    if (shouldReload) {
+      await loadVrmModelFromInput({ silent: true });
+    } else {
+      bodyFrontPreview.updateAnchors(currentSuit);
+      bodyFrontPreview.updateMeta();
+    }
+  } else {
+    setVrmModelStatus("VRM: 未読込");
+  }
 
   setStatus(`読込完了: ${path}\n有効パーツ: ${enabled.length}`);
 }
@@ -1502,6 +2111,10 @@ function bindEvents() {
     loadFitEditor(UI.fitPart.value);
   };
 
+  UI.vrmPart.onchange = () => {
+    loadVrmEditor(UI.vrmPart.value);
+  };
+
   UI.btnFitLoad.onclick = () => {
     loadFitEditor(UI.fitPart.value);
     setStatus(`fitを読込しました: ${UI.fitPart.value}`);
@@ -1526,9 +2139,46 @@ function bindEvents() {
     }
   };
 
+  UI.btnVrmLoad.onclick = () => {
+    loadVrmEditor(UI.vrmPart.value);
+    setStatus(`vrm_anchorを読込しました: ${UI.vrmPart.value}`);
+  };
+
+  UI.btnVrmApply.onclick = () => {
+    applyVrmEditorToSuit();
+  };
+
+  UI.btnVrmReset.onclick = () => {
+    resetVrmAnchorForPart();
+  };
+
+  UI.btnVrmSave.onclick = async () => {
+    try {
+      if (!applyVrmEditorToSuit()) return;
+      await saveCurrentSuit();
+      setStatus(`vrm_anchorを保存しました: ${currentSuitPath}`);
+      await loadSuit(currentSuitPath);
+    } catch (err) {
+      setStatus(String(err), true);
+    }
+  };
+
+  if (UI.btnVrmModelLoad) {
+    UI.btnVrmModelLoad.onclick = async () => {
+      await loadVrmModelFromInput();
+    };
+  }
+
+  if (UI.btnVrmModelClear) {
+    UI.btnVrmModelClear.onclick = () => {
+      clearVrmModelFromInput();
+    };
+  }
+
   UI.bodyTunePart.onchange = () => {
     const part = UI.bodyTunePart.value;
     UI.fitPart.value = part;
+    UI.vrmPart.value = part;
     loadFitEditor(part);
   };
 
@@ -1555,6 +2205,34 @@ function bindEvents() {
     setStatus(`Fit編集欄へ同期しました: ${part}`);
   };
 
+  if (UI.vrmAnchorVisible) {
+    UI.vrmAnchorVisible.onchange = () => {
+      bodyFrontPreview.setAnchorVisible(UI.vrmAnchorVisible.checked);
+    };
+  }
+
+  const onVrmEditorInput = () => {
+    if (!UI.vrmPart.value || !currentSuit?.modules?.[UI.vrmPart.value]) return;
+    applyVrmEditorToSuit({ silent: true });
+  };
+  const vrmInputs = [
+    UI.vrmBone,
+    UI.vrmOffsetX,
+    UI.vrmOffsetY,
+    UI.vrmOffsetZ,
+    UI.vrmRotX,
+    UI.vrmRotY,
+    UI.vrmRotZ,
+    UI.vrmScaleX,
+    UI.vrmScaleY,
+    UI.vrmScaleZ,
+  ];
+  for (const input of vrmInputs) {
+    if (!input) continue;
+    input.oninput = onVrmEditorInput;
+    input.onchange = onVrmEditorInput;
+  }
+
   UI.reliefSlider.oninput = () => {
     const amp = Number(UI.reliefSlider.value || "0.05");
     for (const preview of previewCards) {
@@ -1573,8 +2251,22 @@ function bindEvents() {
 }
 
 async function init() {
+  populateVrmBoneOptions();
   bindEvents();
   activateTab("parts");
+
+  try {
+    const detected = await discoverDefaultVrmPath();
+    if (detected && UI.vrmModelPath) {
+      UI.vrmModelPath.value = detected;
+      setVrmModelStatus(`VRM: 既定ファイル検出\npath: ${detected}`);
+    } else {
+      const fallback = String(UI.vrmModelPath?.value || DEFAULT_VRM_CANDIDATES[0]);
+      setVrmModelStatus(`VRM: 未検出\n候補: ${fallback}\n配置後に「VRM読込」を押してください。`);
+    }
+  } catch {
+    setVrmModelStatus("VRM: 自動検出でエラー（手動読込を利用してください）");
+  }
 
   try {
     await loadSuitList();

@@ -1,5 +1,5 @@
-import * as THREE from "./vendor/three/build/three.module.js";
-import { OrbitControls } from "./vendor/three/examples/jsm/controls/OrbitControls.js";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";
@@ -20,15 +20,28 @@ const PANEL = {
   frameSlider: document.getElementById("frameSlider"),
   speedSlider: document.getElementById("speedSlider"),
   reliefSlider: document.getElementById("reliefSlider"),
+  vrmPath: document.getElementById("vrmPath"),
+  btnVrmLoad: document.getElementById("btnVrmLoad"),
+  btnVrmClear: document.getElementById("btnVrmClear"),
+  btnVrmToggle: document.getElementById("btnVrmToggle"),
+  btnVrmAttach: document.getElementById("btnVrmAttach"),
+  vrmStatus: document.getElementById("vrmStatus"),
+  btnLiveStart: document.getElementById("btnLiveStart"),
+  btnLiveStop: document.getElementById("btnLiveStop"),
+  liveStatus: document.getElementById("liveStatus"),
+  liveVideo: document.getElementById("liveVideo"),
   fitPart: document.getElementById("fitPart"),
   fitScaleX: document.getElementById("fitScaleX"),
   fitScaleY: document.getElementById("fitScaleY"),
   fitScaleZ: document.getElementById("fitScaleZ"),
   fitOffsetY: document.getElementById("fitOffsetY"),
   fitZOffset: document.getElementById("fitZOffset"),
+  btnFitSuggestCurrent: document.getElementById("btnFitSuggestCurrent"),
   btnFitApplyCurrent: document.getElementById("btnFitApplyCurrent"),
   btnFitResetCurrent: document.getElementById("btnFitResetCurrent"),
   btnFitSaveSuitspec: document.getElementById("btnFitSaveSuitspec"),
+  btnBridgeToggle: document.getElementById("btnBridgeToggle"),
+  bridgeThickness: document.getElementById("bridgeThickness"),
   status: document.getElementById("status"),
   meta: document.getElementById("meta"),
   legendText: document.getElementById("legendText"),
@@ -36,6 +49,11 @@ const PANEL = {
 
 const textureLoader = new THREE.TextureLoader();
 const meshGeometryCache = new Map();
+const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
+let gltfLoaderModulePromise = null;
+let threeVrmModulePromise = null;
+const THREE_VERSION = "0.180.0";
+const THREE_VRM_VERSION = "3.4.4";
 
 const MODULE_VIS = {
   helmet: {
@@ -208,6 +226,50 @@ const MODULE_VIS = {
   },
 };
 
+const VRM_ANCHOR_BASELINES = {
+  helmet: { bone: "head", offset: [0, 0.08, 0.12], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  chest: { bone: "upperChest", offset: [0, 0.03, 0.1], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  back: { bone: "upperChest", offset: [0, 0.01, -0.1], rotation: [0, 180, 0], scale: [1, 1, 1] },
+  waist: { bone: "hips", offset: [0, 0.0, 0.06], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_shoulder: { bone: "leftShoulder", offset: [0.02, 0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_shoulder: { bone: "rightShoulder", offset: [-0.02, 0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_upperarm: { bone: "leftUpperArm", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_upperarm: { bone: "rightUpperArm", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_forearm: { bone: "leftLowerArm", offset: [0, -0.01, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_forearm: { bone: "rightLowerArm", offset: [0, -0.01, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_hand: { bone: "leftHand", offset: [0, 0, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_hand: { bone: "rightHand", offset: [0, 0, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_thigh: { bone: "leftUpperLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_thigh: { bone: "rightUpperLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_shin: { bone: "leftLowerLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_shin: { bone: "rightLowerLeg", offset: [0, -0.02, 0.02], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  left_boot: { bone: "leftFoot", offset: [0, -0.01, 0.08], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  right_boot: { bone: "rightFoot", offset: [0, -0.01, 0.08], rotation: [0, 0, 0], scale: [1, 1, 1] },
+};
+
+const VRM_BONE_ALIASES = {
+  hips: ["hips", "j_bip_c_hips", "pelvis"],
+  spine: ["spine", "j_bip_c_spine", "spine1"],
+  chest: ["chest", "j_bip_c_chest", "spine2"],
+  upperChest: ["upperchest", "upper_chest", "j_bip_c_upperchest", "spine3"],
+  neck: ["neck", "j_bip_c_neck"],
+  head: ["head", "j_bip_c_head"],
+  leftShoulder: ["leftshoulder", "j_bip_l_shoulder", "l_shoulder", "shoulder_l"],
+  rightShoulder: ["rightshoulder", "j_bip_r_shoulder", "r_shoulder", "shoulder_r"],
+  leftUpperArm: ["leftupperarm", "j_bip_l_upperarm", "l_upperarm", "upperarm_l"],
+  rightUpperArm: ["rightupperarm", "j_bip_r_upperarm", "r_upperarm", "upperarm_r"],
+  leftLowerArm: ["leftlowerarm", "j_bip_l_lowerarm", "l_forearm", "lowerarm_l"],
+  rightLowerArm: ["rightlowerarm", "j_bip_r_lowerarm", "r_forearm", "lowerarm_r"],
+  leftHand: ["lefthand", "j_bip_l_hand", "l_hand", "hand_l"],
+  rightHand: ["righthand", "j_bip_r_hand", "r_hand", "hand_r"],
+  leftUpperLeg: ["leftupperleg", "j_bip_l_upperleg", "l_thigh", "upleg_l"],
+  rightUpperLeg: ["rightupperleg", "j_bip_r_upperleg", "r_thigh", "upleg_r"],
+  leftLowerLeg: ["leftlowerleg", "j_bip_l_lowerleg", "l_shin", "leg_l"],
+  rightLowerLeg: ["rightlowerleg", "j_bip_r_lowerleg", "r_shin", "leg_r"],
+  leftFoot: ["leftfoot", "j_bip_l_foot", "l_foot", "foot_l"],
+  rightFoot: ["rightfoot", "j_bip_r_foot", "r_foot", "foot_r"],
+};
+
 const DEFAULT_SEGMENT_POSE = {
   chest_core: {
     position_x: 0.55,
@@ -331,6 +393,114 @@ const FIT_CONTACT_PAIRS = [
   ["right_shin", "right_boot"],
 ];
 
+const POSE_IDX = {
+  LEFT_SHOULDER: 11,
+  RIGHT_SHOULDER: 12,
+  LEFT_ELBOW: 13,
+  RIGHT_ELBOW: 14,
+  LEFT_WRIST: 15,
+  RIGHT_WRIST: 16,
+  LEFT_HIP: 23,
+  RIGHT_HIP: 24,
+  LEFT_KNEE: 25,
+  RIGHT_KNEE: 26,
+  LEFT_ANKLE: 27,
+  RIGHT_ANKLE: 28,
+};
+
+const LIVE_SEGMENT_SPECS = [
+  {
+    name: "right_upperarm",
+    startJoint: "right_shoulder",
+    endJoint: "right_elbow",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "right_forearm",
+    startJoint: "right_elbow",
+    endJoint: "right_wrist",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_upperarm",
+    startJoint: "left_shoulder",
+    endJoint: "left_elbow",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_forearm",
+    startJoint: "left_elbow",
+    endJoint: "left_wrist",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "right_thigh",
+    startJoint: "right_hip",
+    endJoint: "right_knee",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "right_shin",
+    startJoint: "right_knee",
+    endJoint: "right_ankle",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_thigh",
+    startJoint: "left_hip",
+    endJoint: "left_knee",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_shin",
+    startJoint: "left_knee",
+    endJoint: "left_ankle",
+    radiusFactor: 0.22,
+    radiusMin: 0.05,
+    radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "chest_core",
+    startJoint: "left_shoulder",
+    endJoint: "right_hip",
+    radiusFactor: 0.38,
+    radiusMin: 0.05,
+    radiusMax: 0.35,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+];
+
 function toNumberOr(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -353,6 +523,36 @@ function normalizeVec3(input, fallback) {
     ];
   }
   return [...fb];
+}
+
+function normalizeBoneName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeVrmAnchor(rawAnchor, fallback) {
+  const base = fallback || {
+    bone: "chest",
+    offset: [0, 0, 0],
+    rotation: [0, 0, 0],
+    scale: [1, 1, 1],
+  };
+  const anchor = rawAnchor && typeof rawAnchor === "object" ? rawAnchor : {};
+  return {
+    bone: String(anchor.bone ?? base.bone ?? "chest"),
+    offset: normalizeVec3(anchor.offset, base.offset),
+    rotation: normalizeVec3(anchor.rotation, base.rotation),
+    scale: normalizeVec3(anchor.scale, base.scale).map((v) => Math.max(0.01, Number(v || 1))),
+  };
+}
+
+function baseVrmAnchorFor(partName) {
+  return normalizeVrmAnchor(VRM_ANCHOR_BASELINES[partName], null);
+}
+
+function effectiveVrmAnchorFor(partName, module) {
+  return normalizeVrmAnchor(module?.vrm_anchor, baseVrmAnchorFor(partName));
 }
 
 function defaultModuleVisualConfig(name) {
@@ -431,6 +631,60 @@ function fitPairScore(gap, penetration) {
   return clamp(1 - gapPenalty * 0.65 - penetrationPenalty * 0.35, 0, 1);
 }
 
+function supportPointOnBoxFace(box, towardPoint) {
+  const center = box.getCenter(new THREE.Vector3());
+  const dir = new THREE.Vector3().subVectors(towardPoint, center);
+  const ax = Math.abs(dir.x);
+  const ay = Math.abs(dir.y);
+  const az = Math.abs(dir.z);
+  if (ax >= ay && ax >= az) {
+    return new THREE.Vector3(dir.x >= 0 ? box.max.x : box.min.x, center.y, center.z);
+  }
+  if (ay >= ax && ay >= az) {
+    return new THREE.Vector3(center.x, dir.y >= 0 ? box.max.y : box.min.y, center.z);
+  }
+  return new THREE.Vector3(center.x, center.y, dir.z >= 0 ? box.max.z : box.min.z);
+}
+
+function normToWorld(x01, y01, mirror = true) {
+  const xNorm = mirror ? 1 - x01 : x01;
+  const x = xNorm * 2 - 1;
+  const y = -(y01 * 2 - 1);
+  return { x, y };
+}
+
+function extractPoseJointsWorld(landmarks) {
+  const pick = (index) => landmarks?.[index] || null;
+  const joints = {};
+
+  const lShoulder = pick(POSE_IDX.LEFT_SHOULDER);
+  const rShoulder = pick(POSE_IDX.RIGHT_SHOULDER);
+  const lElbow = pick(POSE_IDX.LEFT_ELBOW);
+  const rElbow = pick(POSE_IDX.RIGHT_ELBOW);
+  const lWrist = pick(POSE_IDX.LEFT_WRIST);
+  const rWrist = pick(POSE_IDX.RIGHT_WRIST);
+  const lHip = pick(POSE_IDX.LEFT_HIP);
+  const rHip = pick(POSE_IDX.RIGHT_HIP);
+  const lKnee = pick(POSE_IDX.LEFT_KNEE);
+  const rKnee = pick(POSE_IDX.RIGHT_KNEE);
+  const lAnkle = pick(POSE_IDX.LEFT_ANKLE);
+  const rAnkle = pick(POSE_IDX.RIGHT_ANKLE);
+
+  if (lShoulder) joints.left_shoulder = normToWorld(lShoulder.x, lShoulder.y, true);
+  if (rShoulder) joints.right_shoulder = normToWorld(rShoulder.x, rShoulder.y, true);
+  if (lElbow) joints.left_elbow = normToWorld(lElbow.x, lElbow.y, true);
+  if (rElbow) joints.right_elbow = normToWorld(rElbow.x, rElbow.y, true);
+  if (lWrist) joints.left_wrist = normToWorld(lWrist.x, lWrist.y, true);
+  if (rWrist) joints.right_wrist = normToWorld(rWrist.x, rWrist.y, true);
+  if (lHip) joints.left_hip = normToWorld(lHip.x, lHip.y, true);
+  if (rHip) joints.right_hip = normToWorld(rHip.x, rHip.y, true);
+  if (lKnee) joints.left_knee = normToWorld(lKnee.x, lKnee.y, true);
+  if (rKnee) joints.right_knee = normToWorld(rKnee.x, rKnee.y, true);
+  if (lAnkle) joints.left_ankle = normToWorld(lAnkle.x, lAnkle.y, true);
+  if (rAnkle) joints.right_ankle = normToWorld(rAnkle.x, rAnkle.y, true);
+  return joints;
+}
+
 class BodyFitViewer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -453,6 +707,10 @@ class BodyFitViewer {
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
+    this.bridgeGroup = new THREE.Group();
+    this.root.add(this.bridgeGroup);
+    this.vrmGroup = new THREE.Group();
+    this.scene.add(this.vrmGroup);
 
     this.grid = new THREE.GridHelper(3.2, 32, 0x9ab4dc, 0xd6e1f2);
     this.grid.position.y = -1.0;
@@ -483,6 +741,10 @@ class BodyFitViewer {
     this.useTextures = true;
     this.reliefStrength = Number(PANEL.reliefSlider?.value || "0.05");
     if (!Number.isFinite(this.reliefStrength)) this.reliefStrength = 0.05;
+    this.bridgeEnabled = true;
+    this.bridgeThickness = clamp(Number(PANEL.bridgeThickness?.value || 0.1), 0.03, 0.22);
+    this.bridgeVisibleCount = 0;
+    this.bridgeMeshes = new Map();
     this.darkTheme = false;
     this.modelCenter = new THREE.Vector3(0, 0, 0.2);
     this.modelRadius = 0.85;
@@ -493,10 +755,36 @@ class BodyFitViewer {
       meanGap: 0,
       meanPenetration: 0,
       score: 0,
+      pairs: [],
       weakest: [],
+    };
+    this.live = {
+      active: false,
+      video: null,
+      stream: null,
+      landmarker: null,
+      lastVideoTime: -1,
+      lastNowMs: performance.now(),
+      fps: 0,
+    };
+    this.liveFollowers = new Map();
+    this.vrm = {
+      model: null,
+      skeleton: null,
+      instance: null,
+      boneMap: new Map(),
+      path: "",
+      visible: true,
+      attachArmor: true,
+      boneCount: 0,
+      error: "",
     };
 
     this.lastTime = performance.now();
+    this.updateBridgeButton();
+    this.updateVrmButton();
+    this.updateVrmAttachButton();
+    this.updateVrmStatus("VRM: not loaded");
     this.resize();
     window.addEventListener("resize", () => this.resize());
     requestAnimationFrame((t) => this.tick(t));
@@ -542,7 +830,600 @@ class BodyFitViewer {
         gap: round3(w.gap),
         penetration: round3(w.penetration),
       })),
+      bridge_enabled: this.bridgeEnabled,
+      bridge_thickness: round3(this.bridgeThickness),
+      bridge_visible_count: this.bridgeVisibleCount,
+      vrm_path: this.vrm.path || null,
+      vrm_bones_visible: this.vrm.visible,
+      vrm_attach_armor: this.vrm.attachArmor,
+      vrm_bone_count: this.vrm.boneCount || 0,
+      vrm_error: this.vrm.error || null,
+      three_revision: THREE.REVISION,
+      three_target: THREE_VERSION,
+      three_vrm_target: THREE_VRM_VERSION,
+      live_active: this.live?.active || false,
+      live_fps: round3(this.live?.fps || 0),
     });
+  }
+
+  updateLiveStatus(text, isError = false) {
+    if (!PANEL.liveStatus) return;
+    PANEL.liveStatus.textContent = text;
+    PANEL.liveStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  updateBridgeButton() {
+    if (PANEL.btnBridgeToggle) {
+      PANEL.btnBridgeToggle.textContent = `Bridges: ${this.bridgeEnabled ? "On" : "Off"}`;
+    }
+  }
+
+  updateVrmButton() {
+    if (PANEL.btnVrmToggle) {
+      PANEL.btnVrmToggle.textContent = `VRM Bones: ${this.vrm.visible ? "On" : "Off"}`;
+    }
+  }
+
+  updateVrmAttachButton() {
+    if (PANEL.btnVrmAttach) {
+      PANEL.btnVrmAttach.textContent = `Attach: ${this.vrm.attachArmor ? "VRM" : "BodySim"}`;
+    }
+  }
+
+  updateVrmStatus(text, isError = false) {
+    if (!PANEL.vrmStatus) return;
+    PANEL.vrmStatus.textContent = text;
+    PANEL.vrmStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  setVrmVisible(enabled) {
+    this.vrm.visible = Boolean(enabled);
+    if (this.vrm.skeleton) this.vrm.skeleton.visible = this.vrm.visible;
+    this.updateVrmButton();
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  setVrmAttachArmor(enabled) {
+    this.vrm.attachArmor = Boolean(enabled);
+    this.updateVrmAttachButton();
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  clearVrmModel() {
+    if (this.vrm.skeleton) {
+      this.vrmGroup.remove(this.vrm.skeleton);
+      const mat = this.vrm.skeleton.material;
+      this.vrm.skeleton.geometry?.dispose?.();
+      if (Array.isArray(mat)) {
+        for (const m of mat) m?.dispose?.();
+      } else {
+        mat?.dispose?.();
+      }
+    }
+    if (this.vrm.model) {
+      this.vrmGroup.remove(this.vrm.model);
+      this.vrm.model.traverse((obj) => {
+        if (!obj.isMesh) return;
+        obj.geometry?.dispose?.();
+        const material = obj.material;
+        if (Array.isArray(material)) {
+          for (const m of material) m?.dispose?.();
+        } else {
+          material?.dispose?.();
+        }
+      });
+    }
+    this.vrm.model = null;
+    this.vrm.skeleton = null;
+    this.vrm.instance = null;
+    this.vrm.boneMap = new Map();
+    this.vrm.path = "";
+    this.vrm.boneCount = 0;
+    this.vrm.error = "";
+    this.updateVrmStatus("VRM: cleared");
+    this.updateMetaPanel();
+    this.updateVrmAttachButton();
+    this.setLegend();
+  }
+
+  countModelBones(model) {
+    let count = 0;
+    model.traverse((obj) => {
+      if (obj.isBone) count += 1;
+    });
+    return count;
+  }
+
+  buildBoneMap(model) {
+    const map = new Map();
+    model.traverse((obj) => {
+      if (!obj.isBone) return;
+      const key = normalizeBoneName(obj.name);
+      if (key && !map.has(key)) {
+        map.set(key, obj);
+      }
+    });
+    return map;
+  }
+
+  resolveVrmBone(boneName) {
+    const humanoid = this.vrm.instance?.humanoid;
+    if (humanoid && typeof humanoid.getNormalizedBoneNode === "function") {
+      const node = humanoid.getNormalizedBoneNode(boneName);
+      if (node) return node;
+    }
+    const aliases = VRM_BONE_ALIASES[boneName] || [boneName];
+    for (const alias of aliases) {
+      const key = normalizeBoneName(alias);
+      const bone = this.vrm.boneMap?.get(key);
+      if (bone) return bone;
+    }
+    return null;
+  }
+
+  applyArmorToVrmBones() {
+    if (!this.vrm.attachArmor || !this.vrm.model) return;
+    const modules = this.suitspec?.modules || {};
+    for (const [partName, rec] of this.meshes.entries()) {
+      if (!rec?.group?.visible) continue;
+      const module = modules[partName];
+      const anchor = effectiveVrmAnchorFor(partName, module);
+      const bone = this.resolveVrmBone(anchor.bone);
+      if (!bone) continue;
+
+      const bonePos = bone.getWorldPosition(new THREE.Vector3());
+      const boneQuat = bone.getWorldQuaternion(new THREE.Quaternion());
+      const offset = new THREE.Vector3(anchor.offset[0], anchor.offset[1], anchor.offset[2]).applyQuaternion(
+        boneQuat
+      );
+      const anchorPos = bonePos.add(offset);
+      const localRot = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(
+          THREE.MathUtils.degToRad(anchor.rotation[0]),
+          THREE.MathUtils.degToRad(anchor.rotation[1]),
+          THREE.MathUtils.degToRad(anchor.rotation[2]),
+          "XYZ"
+        )
+      );
+      rec.group.position.copy(anchorPos);
+      rec.group.quaternion.copy(boneQuat).multiply(localRot);
+      rec.group.scale.multiply(new THREE.Vector3(anchor.scale[0], anchor.scale[1], anchor.scale[2]));
+    }
+  }
+
+  alignVrmModelToArmor(model) {
+    model.updateMatrixWorld(true);
+    const modelBox = new THREE.Box3().setFromObject(model);
+    if (modelBox.isEmpty()) return;
+
+    const armorBox = new THREE.Box3().setFromObject(this.root);
+    const sourceHeight = Math.max(modelBox.max.y - modelBox.min.y, 0.001);
+    let targetHeight = 2.9;
+    let targetMinY = -1.6;
+    let targetCenterXZ = new THREE.Vector2(0, 0);
+
+    if (!armorBox.isEmpty()) {
+      targetHeight = Math.max(armorBox.max.y - armorBox.min.y, 0.5);
+      targetMinY = armorBox.min.y;
+      const center = armorBox.getCenter(new THREE.Vector3());
+      targetCenterXZ = new THREE.Vector2(center.x, center.z);
+    }
+
+    const scale = clamp(targetHeight / sourceHeight, 0.2, 5.0);
+    model.scale.setScalar(scale);
+    model.updateMatrixWorld(true);
+
+    const scaledBox = new THREE.Box3().setFromObject(model);
+    const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+    const shiftX = targetCenterXZ.x - scaledCenter.x;
+    const shiftY = targetMinY - scaledBox.min.y;
+    const shiftZ = targetCenterXZ.y - scaledCenter.z;
+    model.position.add(new THREE.Vector3(shiftX, shiftY, shiftZ));
+    model.updateMatrixWorld(true);
+  }
+
+  async loadVrmModel(path, { silent = false } = {}) {
+    const rawPath = String(path || "").trim();
+    if (!rawPath) {
+      this.clearVrmModel();
+      if (!silent) this.setStatus("VRM path is empty.");
+      return;
+    }
+
+    const exists = await pathExists(rawPath);
+    if (!exists) {
+      this.vrm.error = `VRM file not found: ${rawPath}`;
+      this.updateVrmStatus(this.vrm.error, true);
+      this.updateMetaPanel();
+      if (!silent) this.setStatus(this.vrm.error, true);
+      return;
+    }
+
+    this.updateVrmStatus(`VRM loading: ${rawPath}`);
+    const GLTFLoader = await getGLTFLoaderClass();
+    let ThreeVrm = null;
+    try {
+      ThreeVrm = await getThreeVrmModule();
+    } catch {
+      ThreeVrm = null;
+    }
+    const loader = new GLTFLoader();
+    if (ThreeVrm?.VRMLoaderPlugin) {
+      loader.register((parser) => new ThreeVrm.VRMLoaderPlugin(parser));
+    }
+    const gltf = await new Promise((resolve, reject) => {
+      loader.load(
+        normalizePath(rawPath),
+        resolve,
+        (progress) => {
+          if (!progress?.total) return;
+          const ratio = clamp(progress.loaded / progress.total, 0, 1);
+          const pct = Math.round(ratio * 100);
+          this.updateVrmStatus(`VRM loading: ${rawPath} (${pct}%)`);
+        },
+        reject
+      );
+    });
+
+    const vrmInstance = gltf.userData?.vrm || null;
+    const model = vrmInstance?.scene || gltf.scene || gltf.scenes?.[0];
+    if (!model) {
+      throw new Error(`Invalid VRM/GLTF scene: ${rawPath}`);
+    }
+    if (vrmInstance && ThreeVrm?.VRMUtils?.rotateVRM0) {
+      // Official recommendation for VRM 0.0 to align axes with newer conventions.
+      try {
+        ThreeVrm.VRMUtils.rotateVRM0(vrmInstance);
+      } catch {
+        // Non-fatal: continue rendering even if rotateVRM0 fails for this model.
+      }
+    }
+
+    this.clearVrmModel();
+    this.alignVrmModelToArmor(model);
+    model.traverse((obj) => {
+      if (!obj.isMesh) return;
+      const srcMat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+      const mat = new THREE.MeshStandardMaterial({
+        color: srcMat?.color?.getHex?.() || 0x1a1f29,
+        metalness: 0.08,
+        roughness: 0.82,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      obj.material = mat;
+      obj.renderOrder = 0;
+    });
+    this.vrmGroup.add(model);
+
+    const skeleton = new THREE.SkeletonHelper(model);
+    skeleton.material.depthTest = false;
+    skeleton.material.transparent = true;
+    skeleton.material.opacity = 0.95;
+    skeleton.material.color.setHex(0x2d6de6);
+    skeleton.visible = this.vrm.visible;
+    skeleton.renderOrder = 5;
+    this.vrmGroup.add(skeleton);
+
+    this.vrm.model = model;
+    this.vrm.skeleton = skeleton;
+    this.vrm.instance = vrmInstance;
+    this.vrm.boneMap = this.buildBoneMap(model);
+    this.vrm.path = rawPath;
+    this.vrm.boneCount = this.countModelBones(model);
+    this.vrm.error = "";
+    this.updateVrmButton();
+    this.updateVrmAttachButton();
+    const vrmSource = vrmInstance ? "three-vrm" : "gltf-fallback";
+    this.updateVrmStatus(`VRM loaded: ${rawPath} (bones=${this.vrm.boneCount}, source=${vrmSource})`);
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+    if (!silent) this.setStatus(`Loaded VRM: ${rawPath}`);
+  }
+
+  setBridgeEnabled(enabled) {
+    this.bridgeEnabled = Boolean(enabled);
+    this.updateBridgeButton();
+    this.updateBridges();
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  clearBridges() {
+    for (const mesh of this.bridgeMeshes.values()) {
+      this.bridgeGroup.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    }
+    this.bridgeMeshes.clear();
+    this.bridgeVisibleCount = 0;
+  }
+
+  ensureBridgeMesh(key) {
+    const cached = this.bridgeMeshes.get(key);
+    if (cached) return cached;
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(1, 1, 1, 24, 1, false),
+      new THREE.MeshStandardMaterial({
+        color: 0x8db4f7,
+        transparent: true,
+        opacity: 0.72,
+        roughness: 0.52,
+        metalness: 0.1,
+      })
+    );
+    mesh.visible = false;
+    mesh.renderOrder = 2;
+    this.bridgeGroup.add(mesh);
+    this.bridgeMeshes.set(key, mesh);
+    return mesh;
+  }
+
+  updateBridges() {
+    if (!this.bridgeEnabled) {
+      this.bridgeVisibleCount = 0;
+      for (const mesh of this.bridgeMeshes.values()) mesh.visible = false;
+      return;
+    }
+    const pairScoreMap = new Map((this.fitStats?.pairs || []).map((p) => [p.pair, p.score]));
+    const up = new THREE.Vector3(0, 1, 0);
+    const scoreGood = new THREE.Color(0x84b6ff);
+    const scoreBad = new THREE.Color(0xff9a8c);
+    let visibleCount = 0;
+
+    for (const [aName, bName] of FIT_CONTACT_PAIRS) {
+      const key = `${aName}-${bName}`;
+      const mesh = this.ensureBridgeMesh(key);
+      const recA = this.meshes.get(aName);
+      const recB = this.meshes.get(bName);
+      if (!recA || !recB || !recA.group.visible || !recB.group.visible) {
+        mesh.visible = false;
+        continue;
+      }
+
+      const boxA = new THREE.Box3().setFromObject(recA.group);
+      const boxB = new THREE.Box3().setFromObject(recB.group);
+      if (boxA.isEmpty() || boxB.isEmpty()) {
+        mesh.visible = false;
+        continue;
+      }
+
+      const centerA = boxA.getCenter(new THREE.Vector3());
+      const centerB = boxB.getCenter(new THREE.Vector3());
+      const anchorA = supportPointOnBoxFace(boxA, centerB);
+      const anchorB = supportPointOnBoxFace(boxB, centerA);
+      const axis = new THREE.Vector3().subVectors(anchorB, anchorA);
+      const distance = axis.length();
+      if (!Number.isFinite(distance) || distance < 0.003) {
+        mesh.visible = false;
+        continue;
+      }
+
+      axis.normalize();
+      const score = clamp(pairScoreMap.get(key) ?? 0.9, 0, 1);
+      const radius = clamp(this.bridgeThickness * (1 + (1 - score) * 0.45), 0.02, 0.3);
+      const color = scoreBad.clone().lerp(scoreGood, score);
+
+      mesh.visible = true;
+      mesh.position.copy(anchorA).lerp(anchorB, 0.5);
+      mesh.quaternion.setFromUnitVectors(up, axis);
+      mesh.scale.set(radius, distance, radius);
+      mesh.material.color.copy(color);
+      mesh.material.opacity = clamp(0.58 + (1 - score) * 0.25, 0.45, 0.9);
+      visibleCount += 1;
+    }
+    this.bridgeVisibleCount = visibleCount;
+  }
+
+  resetLiveFollowers() {
+    this.liveFollowers.clear();
+    for (const spec of LIVE_SEGMENT_SPECS) {
+      const fallback = DEFAULT_SEGMENT_POSE[spec.name] || {
+        position_x: 0,
+        position_y: 0,
+        position_z: spec.z,
+        rotation_z: 0,
+        scale_x: 1,
+        scale_y: 1,
+        scale_z: 1,
+      };
+      this.liveFollowers.set(spec.name, { ...fallback });
+    }
+  }
+
+  buildLiveSegmentsFromLandmarks(landmarks, dtSec) {
+    const joints = extractPoseJointsWorld(landmarks);
+    const segments = {};
+
+    for (const spec of LIVE_SEGMENT_SPECS) {
+      const prev = this.liveFollowers.get(spec.name) || DEFAULT_SEGMENT_POSE[spec.name];
+      const start = joints[spec.startJoint];
+      const end = joints[spec.endJoint];
+      if (!start || !end) {
+        segments[spec.name] = { ...prev };
+        continue;
+      }
+
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy);
+      const midpointX = (start.x + end.x) * 0.5;
+      const midpointY = (start.y + end.y) * 0.5;
+      const angle = Math.atan2(dy, dx);
+      const rotationZ = angle - Math.PI / 2;
+      const radius = clamp(length * spec.radiusFactor, spec.radiusMin, spec.radiusMax);
+      const lerp = clamp(dtSec * spec.smoothGain, 0, 1);
+
+      const next = {
+        position_x: prev.position_x + (midpointX - prev.position_x) * lerp,
+        position_y: prev.position_y + (midpointY - prev.position_y) * lerp,
+        position_z: spec.z,
+        rotation_z: prev.rotation_z + (rotationZ - prev.rotation_z) * lerp,
+        scale_x: prev.scale_x + (radius - prev.scale_x) * lerp,
+        scale_y: prev.scale_y + (length - prev.scale_y) * lerp,
+        scale_z: prev.scale_z + (radius - prev.scale_z) * lerp,
+      };
+      this.liveFollowers.set(spec.name, next);
+      segments[spec.name] = next;
+    }
+    return segments;
+  }
+
+  applySegments(segments, frame = null) {
+    const segs = withFallbackSegments(segments || {});
+    for (const [name, rec] of this.meshes.entries()) {
+      const t = resolveTransform(name, rec.config, segs);
+      if (!t) {
+        rec.group.visible = false;
+        continue;
+      }
+      rec.group.visible = true;
+      rec.group.position.set(t.position_x, t.position_y, t.position_z);
+      rec.group.rotation.set(0, 0, t.rotation_z);
+      rec.group.scale.set(t.scale_x, t.scale_y, t.scale_z);
+    }
+    const sphere = this.computeVisibleBounds();
+    if (sphere) {
+      this.modelCenter.copy(sphere.center);
+      this.modelRadius = Math.max(sphere.radius, 0.35);
+    }
+    if (this.vrm.model && !this.playing && !this.live.active) {
+      this.alignVrmModelToArmor(this.vrm.model);
+    }
+    this.applyArmorToVrmBones();
+    this.fitStats = this.calculateFitStats();
+    this.updateBridges();
+    this.updateMetaPanel();
+    this.setLegend(frame);
+  }
+
+  async startLiveWebcam() {
+    if (this.live.active) {
+      this.updateLiveStatus("Live: already active");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      this.updateLiveStatus("Live: camera API unavailable", true);
+      this.setStatus("WebCam unavailable in this browser/context", true);
+      return;
+    }
+
+    try {
+      this.setStatus("Starting webcam + pose model...");
+      this.updateLiveStatus("Live: loading model...");
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 960 }, height: { ideal: 540 } },
+        audio: false,
+      });
+      const video = PANEL.liveVideo || document.createElement("video");
+      video.srcObject = stream;
+      await video.play();
+
+      const visionTasks = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const vision = await visionTasks.FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+      );
+      const modelAssetPath =
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+      const landmarker = await visionTasks.PoseLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath },
+        runningMode: "VIDEO",
+        numPoses: 1,
+      });
+
+      this.live = {
+        active: true,
+        video,
+        stream,
+        landmarker,
+        lastVideoTime: -1,
+        lastNowMs: performance.now(),
+        fps: 0,
+      };
+      this.resetLiveFollowers();
+      this.playing = false;
+      PANEL.btnPlay.textContent = "Play";
+      this.updateLiveStatus("Live: webcam active");
+      this.setStatus("Live webcam started");
+      this.updateMetaPanel();
+    } catch (err) {
+      this.stopLive({ silent: true });
+      const detail = String(err?.message || err || "unknown");
+      this.updateLiveStatus("Live: start failed", true);
+      this.setStatus(`Live start failed: ${detail}`, true);
+    }
+  }
+
+  stopLive({ silent = false } = {}) {
+    const live = this.live;
+    try {
+      live.landmarker?.close?.();
+    } catch {
+      // ignore
+    }
+    if (live.stream) {
+      for (const track of live.stream.getTracks()) {
+        track.stop();
+      }
+    }
+    if (live.video) {
+      live.video.pause?.();
+      live.video.srcObject = null;
+    }
+
+    this.live = {
+      active: false,
+      video: null,
+      stream: null,
+      landmarker: null,
+      lastVideoTime: -1,
+      lastNowMs: performance.now(),
+      fps: 0,
+    };
+    this.updateLiveStatus("Live: inactive");
+    this.updateMetaPanel();
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    }
+    if (!silent) {
+      this.setStatus("Live webcam stopped");
+    }
+  }
+
+  updateLivePose(nowMs) {
+    if (!this.live.active || !this.live.landmarker || !this.live.video) return;
+    const video = this.live.video;
+    if (video.readyState < 2) return;
+    if (video.currentTime === this.live.lastVideoTime) return;
+    this.live.lastVideoTime = video.currentTime;
+
+    let result = null;
+    try {
+      result = this.live.landmarker.detectForVideo(video, nowMs);
+    } catch (err) {
+      this.updateLiveStatus("Live: detect error", true);
+      this.setStatus(`Live detect failed: ${String(err?.message || err || "unknown")}`, true);
+      return;
+    }
+    const landmarks = result?.landmarks?.[0];
+    const dtSec = clamp((nowMs - this.live.lastNowMs) / 1000, 0.001, 0.1);
+    this.live.lastNowMs = nowMs;
+    this.live.fps = dtSec > 0 ? 1 / dtSec : 0;
+
+    if (!landmarks || landmarks.length === 0) return;
+    const liveSegments = this.buildLiveSegmentsFromLandmarks(landmarks, dtSec);
+    this.applySegments(liveSegments, null);
   }
 
   calculateFitStats() {
@@ -569,7 +1450,7 @@ class BodyFitViewer {
       totalPenetration += penetration;
       totalScore += score;
       count += 1;
-      weakPairs.push({ pair: `${aName}-${bName}`, gap, penetration, score });
+      weakPairs.push({ a: aName, b: bName, pair: `${aName}-${bName}`, gap, penetration, score });
     }
 
     if (count === 0) {
@@ -578,6 +1459,7 @@ class BodyFitViewer {
         meanGap: 0,
         meanPenetration: 0,
         score: 0,
+        pairs: [],
         weakest: [],
       };
     }
@@ -588,6 +1470,7 @@ class BodyFitViewer {
       meanGap: totalGap / count,
       meanPenetration: totalPenetration / count,
       score: totalScore / count,
+      pairs: weakPairs,
       weakest: weakPairs.slice(0, 3),
     };
   }
@@ -625,6 +1508,49 @@ class BodyFitViewer {
     PANEL.fitScaleZ.value = String(round3(fit.scale[2]));
     PANEL.fitOffsetY.value = String(round3(fit.offsetY));
     PANEL.fitZOffset.value = String(round3(fit.zOffset || 0));
+  }
+
+  suggestFitForCurrentPart() {
+    const partName = PANEL.fitPart?.value;
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+
+    const pairs = (this.fitStats?.pairs || []).filter((p) => p.a === partName || p.b === partName);
+    if (!pairs.length) {
+      this.setStatus(`Suggest unavailable: no contact pair for ${partName}`, true);
+      return;
+    }
+
+    const worst = pairs[0];
+    const effective = getModuleVisualConfig(partName, module);
+    const gap = Number(worst.gap || 0);
+    const penetration = Number(worst.penetration || 0);
+
+    const scaleAllFactor = clamp(1 + clamp(gap * 1.9, 0, 0.16) - clamp(penetration * 2.1, 0, 0.18), 0.82, 1.22);
+    const scaleYFactor = clamp(1 + clamp((gap - penetration) * 2.0, -0.16, 0.16), 0.82, 1.22);
+    const towardSign = worst.b === partName ? 1 : -1;
+    const offsetAdjust = clamp((gap - penetration) * 0.28, -0.035, 0.035) * towardSign;
+
+    const nextScale = [
+      round3(effective.scale[0] * scaleAllFactor),
+      round3(effective.scale[1] * scaleYFactor),
+      round3(effective.scale[2] * scaleAllFactor),
+    ];
+    const nextOffsetY = round3(effective.offsetY + offsetAdjust);
+
+    PANEL.fitScaleX.value = String(nextScale[0]);
+    PANEL.fitScaleY.value = String(nextScale[1]);
+    PANEL.fitScaleZ.value = String(nextScale[2]);
+    PANEL.fitOffsetY.value = String(nextOffsetY);
+
+    this.applyFitEditorToCurrentPart({ silent: true });
+    this.setStatus(
+      `Suggest applied: ${partName} <- ${worst.pair} (score ${(worst.score * 100).toFixed(1)}, gap ${gap.toFixed(
+        3
+      )}, pen ${penetration.toFixed(3)})`
+    );
   }
 
   applyFitEditorToCurrentPart({ silent = false } = {}) {
@@ -722,13 +1648,19 @@ class BodyFitViewer {
     const fitGap = (this.fitStats?.meanGap || 0).toFixed(3);
     const fitPen = (this.fitStats?.meanPenetration || 0).toFixed(3);
     const lines = [
-      "色付きブロック: 各パーツ仮形状 / 白縁: 輪郭",
+      "表示ガイド: パーツ形状 / テクスチャ / 接続ブリッジ / VRM骨組み",
       `Frame ${frameText} | Equipped: ${equipped ? "YES" : "NO"} | Speed x${this.speed.toFixed(2)}`,
       `Textures: ${this.useTextures ? "ON" : "OFF"} | Relief: ${this.reliefStrength.toFixed(2)} | Theme: ${
         this.darkTheme ? "Dark" : "Bright"
       }`,
+      `Bridges: ${this.bridgeEnabled ? "ON" : "OFF"} | Visible: ${this.bridgeVisibleCount} | Thickness: ${this.bridgeThickness.toFixed(
+        2
+      )}`,
+      `VRM: ${this.vrm.path ? "ON" : "OFF"} | Bones: ${this.vrm.boneCount || 0} | Visible: ${
+        this.vrm.visible ? "ON" : "OFF"
+      } | Attach: ${this.vrm.attachArmor ? "VRM" : "BodySim"}`,
       `FitScore: ${fitScore} | Gap: ${fitGap} | Penetration: ${fitPen}`,
-      "Tip: Auto Fitで全体を再センタリング",
+      "Tip: Attach を VRM にすると、各部位をVRM骨に追従表示します。",
     ];
     PANEL.legendText.innerHTML = lines.join("<br>");
   }
@@ -829,6 +1761,9 @@ class BodyFitViewer {
   }
 
   async load(suitspecPath, simPath) {
+    if (this.live.active) {
+      this.stopLive({ silent: true });
+    }
     this.setStatus("Loading JSON...");
     const [spec, sim] = await Promise.all([this.fetchJson(suitspecPath), this.fetchJson(simPath)]);
     this.suitspec = spec;
@@ -842,6 +1777,23 @@ class BodyFitViewer {
     PANEL.frameSlider.max = String(Math.max(0, this.frames.length - 1));
     PANEL.frameSlider.value = "0";
     this.applyFrame(0);
+    const vrmPath = String(PANEL.vrmPath?.value || "").trim();
+    if (vrmPath) {
+      try {
+        if (this.vrm.model && this.vrm.path === vrmPath) {
+          this.alignVrmModelToArmor(this.vrm.model);
+          this.updateVrmStatus(`VRM loaded: ${vrmPath} (bones=${this.vrm.boneCount})`);
+        } else {
+          await this.loadVrmModel(vrmPath, { silent: true });
+        }
+      } catch (error) {
+        const detail = String(error?.message || error || "VRM load failed");
+        this.vrm.error = detail;
+        this.updateVrmStatus(`VRM load failed: ${detail}`, true);
+      }
+    } else {
+      this.updateVrmStatus("VRM: not loaded");
+    }
     this.fitCameraToVisible();
     const hasFrames = this.frames.length > 0;
     this.setStatus(
@@ -865,6 +1817,7 @@ class BodyFitViewer {
   }
 
   clearMeshes() {
+    this.clearBridges();
     for (const rec of this.meshes.values()) {
       this.root.remove(rec.group);
       rec.mesh.geometry.dispose();
@@ -962,27 +1915,7 @@ class BodyFitViewer {
     this.frameIndex = safeIndex;
     PANEL.frameSlider.value = String(safeIndex);
     const frame = this.frames[safeIndex];
-    const segs = withFallbackSegments(frame.segments || {});
-
-    for (const [name, rec] of this.meshes.entries()) {
-      const t = resolveTransform(name, rec.config, segs);
-      if (!t) {
-        rec.group.visible = false;
-        continue;
-      }
-      rec.group.visible = true;
-      rec.group.position.set(t.position_x, t.position_y, t.position_z);
-      rec.group.rotation.set(0, 0, t.rotation_z);
-      rec.group.scale.set(t.scale_x, t.scale_y, t.scale_z);
-    }
-    const sphere = this.computeVisibleBounds();
-    if (sphere) {
-      this.modelCenter.copy(sphere.center);
-      this.modelRadius = Math.max(sphere.radius, 0.35);
-    }
-    this.fitStats = this.calculateFitStats();
-    this.updateMetaPanel();
-    this.setLegend(frame);
+    this.applySegments(frame.segments || {}, frame);
   }
 
   tick(now) {
@@ -990,7 +1923,9 @@ class BodyFitViewer {
     this.lastTime = now;
     this.speed = Number(PANEL.speedSlider.value || "1");
 
-    if (this.playing && this.frames.length > 0) {
+    if (this.live.active) {
+      this.updateLivePose(now);
+    } else if (this.playing && this.frames.length > 0) {
       this.playbackAccumSec += dt * this.speed;
       let frame = this.frames[this.frameIndex];
       let targetDt = Number(frame?.dt_sec || 0.1);
@@ -1002,6 +1937,10 @@ class BodyFitViewer {
         frame = this.frames[this.frameIndex];
         targetDt = Number(frame?.dt_sec || 0.1);
       }
+    }
+
+    if (this.vrm.instance && typeof this.vrm.instance.update === "function") {
+      this.vrm.instance.update(dt);
     }
 
     this.controls.update();
@@ -1206,6 +2145,69 @@ function normalizePath(path) {
   return `/${p}`;
 }
 
+async function pathExists(path) {
+  const url = normalizePath(path);
+  if (!url) return false;
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    if (head.ok) return true;
+  } catch {
+    // Some local servers may not support HEAD.
+  }
+  try {
+    const res = await fetch(url);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function getGLTFLoaderClass() {
+  if (!gltfLoaderModulePromise) {
+    gltfLoaderModulePromise = importFirstSuccessful([
+      () => import("three/addons/loaders/GLTFLoader.js"),
+      () =>
+        import(`https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/loaders/GLTFLoader.js`),
+      () =>
+        import(`https://unpkg.com/three@${THREE_VERSION}/examples/jsm/loaders/GLTFLoader.js?module`),
+    ]);
+  }
+  const mod = await gltfLoaderModulePromise;
+  if (!mod?.GLTFLoader) {
+    throw new Error("GLTFLoader is not available.");
+  }
+  return mod.GLTFLoader;
+}
+
+async function getThreeVrmModule() {
+  if (!threeVrmModulePromise) {
+    threeVrmModulePromise = importFirstSuccessful([
+      () => import("@pixiv/three-vrm"),
+      () =>
+        import(
+          `https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@${THREE_VRM_VERSION}/lib/three-vrm.module.min.js`
+        ),
+      () =>
+        import(
+          `https://unpkg.com/@pixiv/three-vrm@${THREE_VRM_VERSION}/lib/three-vrm.module.min.js?module`
+        ),
+    ]);
+  }
+  return threeVrmModulePromise;
+}
+
+async function importFirstSuccessful(loaders) {
+  let lastError = null;
+  for (const load of loaders) {
+    try {
+      return await load();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Module import failed.");
+}
+
 function withFallbackSegments(segments) {
   const merged = {};
   for (const [name, pose] of Object.entries(DEFAULT_SEGMENT_POSE)) {
@@ -1265,6 +2267,9 @@ function init() {
   const params = new URLSearchParams(window.location.search);
   PANEL.suitspecPath.value = params.get("suitspec") || DEFAULT_SUITSPEC;
   PANEL.simPath.value = params.get("sim") || DEFAULT_SIM;
+  if (PANEL.vrmPath) {
+    PANEL.vrmPath.value = params.get("vrm") || DEFAULT_VRM_PATH;
+  }
 
   const viewer = new BodyFitViewer(document.getElementById("canvas"));
 
@@ -1278,7 +2283,7 @@ function init() {
         error: String(details),
         suitspec: PANEL.suitspecPath.value,
         sim: PANEL.simPath.value,
-        tip: "python -m henshin serve-viewer --port 8000 で起動し、URLは /viewer/body-fit/ を開く",
+        tip: "python -m henshin serve-dashboard --port 8010 で起動し、URLは /viewer/body-fit/ を開いてください。",
       });
     }
   };
@@ -1312,9 +2317,40 @@ function init() {
   PANEL.btnCamSide.onclick = () => viewer.setCameraPreset("side");
   PANEL.btnCamTop.onclick = () => viewer.setCameraPreset("top");
   PANEL.btnFit.onclick = () => viewer.fitCameraToVisible();
+  if (PANEL.btnLiveStart) {
+    PANEL.btnLiveStart.onclick = () => viewer.startLiveWebcam();
+  }
+  if (PANEL.btnLiveStop) {
+    PANEL.btnLiveStop.onclick = () => viewer.stopLive();
+  }
+  if (PANEL.btnVrmLoad) {
+    PANEL.btnVrmLoad.onclick = async () => {
+      try {
+        await viewer.loadVrmModel(PANEL.vrmPath?.value || "");
+      } catch (error) {
+        const detail = String(error?.message || error || "VRM load failed");
+        viewer.vrm.error = detail;
+        viewer.updateVrmStatus(`VRM load failed: ${detail}`, true);
+        viewer.updateMetaPanel();
+        viewer.setLegend();
+      }
+    };
+  }
+  if (PANEL.btnVrmClear) {
+    PANEL.btnVrmClear.onclick = () => viewer.clearVrmModel();
+  }
+  if (PANEL.btnVrmToggle) {
+    PANEL.btnVrmToggle.onclick = () => viewer.setVrmVisible(!viewer.vrm.visible);
+  }
+  if (PANEL.btnVrmAttach) {
+    PANEL.btnVrmAttach.onclick = () => viewer.setVrmAttachArmor(!viewer.vrm.attachArmor);
+  }
 
   if (PANEL.fitPart) {
     PANEL.fitPart.onchange = () => viewer.loadFitEditorForPart(PANEL.fitPart.value);
+  }
+  if (PANEL.btnFitSuggestCurrent) {
+    PANEL.btnFitSuggestCurrent.onclick = () => viewer.suggestFitForCurrentPart();
   }
   if (PANEL.btnFitApplyCurrent) {
     PANEL.btnFitApplyCurrent.onclick = () => viewer.applyFitEditorToCurrentPart();
@@ -1324,6 +2360,17 @@ function init() {
   }
   if (PANEL.btnFitSaveSuitspec) {
     PANEL.btnFitSaveSuitspec.onclick = () => viewer.saveSuitspecFit();
+  }
+  if (PANEL.btnBridgeToggle) {
+    PANEL.btnBridgeToggle.onclick = () => viewer.setBridgeEnabled(!viewer.bridgeEnabled);
+  }
+  if (PANEL.bridgeThickness) {
+    PANEL.bridgeThickness.oninput = () => {
+      viewer.bridgeThickness = clamp(Number(PANEL.bridgeThickness.value || 0.1), 0.03, 0.22);
+      viewer.updateBridges();
+      viewer.updateMetaPanel();
+      viewer.setLegend();
+    };
   }
   const liveFitInputs = [
     PANEL.fitScaleX,
@@ -1338,8 +2385,13 @@ function init() {
   }
 
   viewer.applyTheme();
+  viewer.updateBridgeButton();
+  viewer.updateVrmButton();
+  viewer.updateVrmAttachButton();
   viewer.setCameraPreset("front");
   viewer.setLegend();
+  viewer.updateLiveStatus("Live: inactive");
+  window.addEventListener("beforeunload", () => viewer.stopLive({ silent: true }));
   PANEL.btnLoad.click();
 }
 
@@ -1347,9 +2399,11 @@ function formatLoadError(error) {
   const raw = String(error?.message || error || "Unknown error");
   if (!raw.includes("Failed to load JSON")) return raw;
   if (raw.includes("(404)")) {
-    return `${raw} / パス誤りの可能性があります (examples/... または sessions/... を確認)`;
+    return `${raw} / examples/... や sessions/... の相対パスを確認してください。`;
   }
-  return `${raw} / ローカルHTTPサーバー起動中か確認してください`;
+  return `${raw} / ローカルHTTPサーバー起動中か確認してください。`;
 }
 
 init();
+
+

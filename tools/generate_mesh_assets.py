@@ -148,6 +148,7 @@ def build_shell(
     radial_segments: int = 72,
     theta_start: float = 0.0,
     theta_end: float = math.tau,
+    seam_offset: float = 0.0,
     cap_top: bool = False,
     cap_bottom: bool = False,
 ) -> MeshData:
@@ -164,7 +165,7 @@ def build_shell(
         v = j / (len(rings) - 1)
         for i in range(columns):
             u = i / radial_segments
-            theta = theta_start + theta_span * u
+            theta = theta_start + theta_span * u + seam_offset
             x, z = _ring_point(r, theta)
             mesh.append_vertex(x, r.y, z, u, v)
 
@@ -228,14 +229,26 @@ def translate_mesh(mesh: MeshData, tx: float, ty: float, tz: float) -> MeshData:
 def build_helmet() -> MeshData:
     return build_shell(
         [
-            ring(-0.56, 0.10, 0.10, shift_z=-0.02, power=2.2),
-            ring(-0.43, 0.22, 0.20, shift_z=-0.01, front_bulge=0.02, power=2.6),
-            ring(-0.18, 0.31, 0.28, shift_z=0.04, front_bulge=0.08, back_flatten=0.05, front_pinch=0.08, power=3.0),
-            ring(0.10, 0.35, 0.31, shift_z=0.05, front_bulge=0.10, back_flatten=0.08, front_pinch=0.06, power=3.2),
-            ring(0.34, 0.30, 0.24, shift_z=0.02, front_bulge=0.06, back_flatten=0.03, power=2.8),
-            ring(0.50, 0.20, 0.15, shift_z=-0.02, power=2.4),
+            ring(-0.62, 0.09, 0.085, shift_z=-0.03, power=2.2),
+            ring(-0.48, 0.20, 0.18, shift_z=-0.02, front_bulge=0.015, back_flatten=0.01, power=2.5),
+            ring(-0.26, 0.31, 0.27, shift_z=0.03, front_bulge=0.06, back_flatten=0.05, front_pinch=0.08, power=2.9),
+            ring(
+                0.02,
+                0.38,
+                0.34,
+                shift_z=0.05,
+                front_bulge=0.11,
+                back_flatten=0.08,
+                front_pinch=0.06,
+                side_bulge=0.04,
+                power=3.2,
+            ),
+            ring(0.24, 0.36, 0.31, shift_z=0.04, front_bulge=0.09, back_flatten=0.08, front_pinch=0.05, power=3.1),
+            ring(0.42, 0.28, 0.23, shift_z=0.00, front_bulge=0.05, back_flatten=0.05, power=2.8),
+            ring(0.56, 0.18, 0.14, shift_z=-0.03, power=2.4),
         ],
-        radial_segments=84,
+        radial_segments=96,
+        seam_offset=-0.5 * math.pi,
         cap_top=True,
         cap_bottom=False,
     )
@@ -244,16 +257,18 @@ def build_helmet() -> MeshData:
 def build_chest() -> MeshData:
     return build_shell(
         [
-            ring(-0.60, 0.20, 0.16, shift_z=0.05, front_bulge=0.06, front_pinch=0.14, power=2.8),
-            ring(-0.42, 0.33, 0.24, shift_z=0.09, front_bulge=0.12, front_pinch=0.10, power=3.0),
-            ring(-0.12, 0.46, 0.31, shift_z=0.12, front_bulge=0.16, front_pinch=0.06, side_bulge=0.06, power=3.2),
-            ring(0.14, 0.49, 0.32, shift_z=0.11, front_bulge=0.16, front_pinch=0.06, side_bulge=0.05, power=3.2),
-            ring(0.38, 0.42, 0.27, shift_z=0.08, front_bulge=0.12, front_pinch=0.09, power=3.0),
-            ring(0.56, 0.26, 0.19, shift_z=0.04, front_bulge=0.07, front_pinch=0.12, power=2.8),
+            ring(-0.62, 0.19, 0.15, shift_z=0.05, front_bulge=0.05, front_pinch=0.15, power=2.8),
+            ring(-0.48, 0.29, 0.21, shift_z=0.09, front_bulge=0.10, front_pinch=0.12, side_bulge=0.04, power=3.0),
+            ring(-0.28, 0.40, 0.28, shift_z=0.12, front_bulge=0.15, front_pinch=0.08, side_bulge=0.07, power=3.2),
+            ring(-0.05, 0.50, 0.35, shift_z=0.14, front_bulge=0.19, front_pinch=0.06, side_bulge=0.08, power=3.3),
+            ring(0.18, 0.50, 0.34, shift_z=0.13, front_bulge=0.18, back_flatten=0.02, front_pinch=0.06, side_bulge=0.07, power=3.3),
+            ring(0.38, 0.44, 0.29, shift_z=0.10, front_bulge=0.13, front_pinch=0.08, side_bulge=0.05, power=3.1),
+            ring(0.56, 0.30, 0.21, shift_z=0.06, front_bulge=0.08, front_pinch=0.11, side_bulge=0.03, power=2.9),
+            ring(0.66, 0.23, 0.17, shift_z=0.04, front_bulge=0.05, front_pinch=0.13, power=2.8),
         ],
-        radial_segments=72,
-        theta_start=0.07 * math.pi,
-        theta_end=0.93 * math.pi,
+        radial_segments=84,
+        theta_start=0.04 * math.pi,
+        theta_end=0.96 * math.pi,
         cap_top=True,
         cap_bottom=True,
     )
@@ -262,16 +277,17 @@ def build_chest() -> MeshData:
 def build_back() -> MeshData:
     return build_shell(
         [
-            ring(-0.58, 0.18, 0.15, shift_z=-0.06, back_flatten=0.04, back_pinch=0.12, power=2.7),
-            ring(-0.40, 0.31, 0.23, shift_z=-0.10, back_flatten=0.08, back_pinch=0.08, power=2.9),
-            ring(-0.12, 0.43, 0.29, shift_z=-0.13, back_flatten=0.12, back_pinch=0.06, side_bulge=0.04, power=3.1),
-            ring(0.14, 0.45, 0.30, shift_z=-0.12, back_flatten=0.12, back_pinch=0.06, side_bulge=0.03, power=3.1),
-            ring(0.36, 0.39, 0.25, shift_z=-0.09, back_flatten=0.08, back_pinch=0.08, power=2.9),
-            ring(0.54, 0.24, 0.18, shift_z=-0.05, back_flatten=0.04, back_pinch=0.12, power=2.7),
+            ring(-0.60, 0.17, 0.14, shift_z=-0.06, back_flatten=0.05, back_pinch=0.13, power=2.7),
+            ring(-0.46, 0.27, 0.20, shift_z=-0.10, back_flatten=0.09, back_pinch=0.10, side_bulge=0.03, power=2.9),
+            ring(-0.24, 0.37, 0.26, shift_z=-0.13, back_flatten=0.13, back_pinch=0.08, side_bulge=0.04, power=3.1),
+            ring(0.00, 0.44, 0.30, shift_z=-0.14, back_flatten=0.16, back_pinch=0.06, side_bulge=0.04, power=3.2),
+            ring(0.22, 0.44, 0.29, shift_z=-0.12, back_flatten=0.14, back_pinch=0.06, side_bulge=0.03, power=3.1),
+            ring(0.42, 0.36, 0.24, shift_z=-0.09, back_flatten=0.09, back_pinch=0.08, side_bulge=0.02, power=2.9),
+            ring(0.58, 0.25, 0.18, shift_z=-0.06, back_flatten=0.05, back_pinch=0.12, power=2.7),
         ],
-        radial_segments=72,
-        theta_start=1.07 * math.pi,
-        theta_end=1.93 * math.pi,
+        radial_segments=84,
+        theta_start=1.04 * math.pi,
+        theta_end=1.96 * math.pi,
         cap_top=True,
         cap_bottom=True,
     )
@@ -280,13 +296,15 @@ def build_back() -> MeshData:
 def build_waist() -> MeshData:
     return build_shell(
         [
-            ring(-0.34, 0.28, 0.21, shift_z=0.00, front_bulge=0.05, back_flatten=0.04, power=2.8),
-            ring(-0.16, 0.38, 0.29, shift_z=0.01, front_bulge=0.07, back_flatten=0.06, side_bulge=0.05, power=3.0),
-            ring(0.00, 0.42, 0.31, shift_z=0.01, front_bulge=0.08, back_flatten=0.08, side_bulge=0.06, power=3.2),
-            ring(0.16, 0.37, 0.28, shift_z=0.00, front_bulge=0.06, back_flatten=0.06, side_bulge=0.04, power=3.0),
-            ring(0.32, 0.28, 0.21, shift_z=0.00, front_bulge=0.04, back_flatten=0.04, power=2.8),
+            ring(-0.38, 0.31, 0.22, shift_z=0.00, front_bulge=0.03, back_flatten=0.05, power=2.9),
+            ring(-0.22, 0.39, 0.30, shift_z=0.01, front_bulge=0.06, back_flatten=0.08, side_bulge=0.06, power=3.1),
+            ring(-0.06, 0.43, 0.33, shift_z=0.02, front_bulge=0.08, back_flatten=0.09, side_bulge=0.07, power=3.2),
+            ring(0.08, 0.42, 0.31, shift_z=0.02, front_bulge=0.07, back_flatten=0.08, side_bulge=0.06, power=3.2),
+            ring(0.22, 0.35, 0.27, shift_z=0.01, front_bulge=0.05, back_flatten=0.07, side_bulge=0.05, power=3.0),
+            ring(0.36, 0.29, 0.22, shift_z=0.00, front_bulge=0.03, back_flatten=0.05, power=2.8),
         ],
-        radial_segments=72,
+        radial_segments=80,
+        seam_offset=-0.5 * math.pi,
         cap_top=False,
         cap_bottom=False,
     )
@@ -342,14 +360,16 @@ def build_forearm() -> MeshData:
 def build_thigh() -> MeshData:
     return build_shell(
         [
-            ring(-0.56, 0.16, 0.13, shift_z=0.00, front_bulge=0.02, power=2.6),
-            ring(-0.30, 0.19, 0.15, shift_z=0.01, front_bulge=0.04, side_bulge=0.03, power=2.9),
-            ring(0.00, 0.22, 0.18, shift_z=0.02, front_bulge=0.06, side_bulge=0.05, power=3.1),
-            ring(0.30, 0.21, 0.17, shift_z=0.02, front_bulge=0.05, side_bulge=0.04, power=3.0),
-            ring(0.50, 0.18, 0.14, shift_z=0.01, front_bulge=0.03, power=2.8),
-            ring(0.58, 0.15, 0.12, shift_z=0.00, power=2.5),
+            ring(-0.62, 0.20, 0.16, shift_z=0.01, front_bulge=0.04, side_bulge=0.06, power=2.9),
+            ring(-0.40, 0.24, 0.19, shift_z=0.02, front_bulge=0.06, side_bulge=0.08, power=3.1),
+            ring(-0.16, 0.27, 0.22, shift_z=0.03, front_bulge=0.09, side_bulge=0.10, power=3.2),
+            ring(0.10, 0.26, 0.21, shift_z=0.03, front_bulge=0.08, side_bulge=0.08, power=3.1),
+            ring(0.34, 0.23, 0.18, shift_z=0.02, front_bulge=0.05, side_bulge=0.06, power=2.9),
+            ring(0.54, 0.19, 0.14, shift_z=0.01, front_bulge=0.03, side_bulge=0.04, power=2.7),
+            ring(0.64, 0.16, 0.12, shift_z=0.00, power=2.5),
         ],
-        radial_segments=64,
+        radial_segments=72,
+        seam_offset=-0.5 * math.pi,
         cap_top=False,
         cap_bottom=False,
     )

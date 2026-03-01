@@ -146,6 +146,85 @@
           <pre id="fitPreview">fit未設定</pre>
         </div>
 
+        <div class="field fit-panel">
+          <label>VRM 配置（部位 -> 骨アンカー）</label>
+          <div class="fit-head">
+            <select id="vrmPart"></select>
+            <button id="btnVrmLoad">読込</button>
+            <button id="btnVrmApply">適用</button>
+          </div>
+
+          <div class="fit-grid">
+            <label class="fit-field">
+              <span>bone</span>
+              <select id="vrmBone"></select>
+            </label>
+            <label class="fit-field">
+              <span>offsetX</span>
+              <input id="vrmOffsetX" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>offsetY</span>
+              <input id="vrmOffsetY" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>offsetZ</span>
+              <input id="vrmOffsetZ" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>rotX(deg)</span>
+              <input id="vrmRotX" type="number" step="1" />
+            </label>
+            <label class="fit-field">
+              <span>rotY(deg)</span>
+              <input id="vrmRotY" type="number" step="1" />
+            </label>
+            <label class="fit-field">
+              <span>rotZ(deg)</span>
+              <input id="vrmRotZ" type="number" step="1" />
+            </label>
+            <label class="fit-field">
+              <span>scaleX</span>
+              <input id="vrmScaleX" type="number" step="0.01" min="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>scaleY</span>
+              <input id="vrmScaleY" type="number" step="0.01" min="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>scaleZ</span>
+              <input id="vrmScaleZ" type="number" step="0.01" min="0.01" />
+            </label>
+          </div>
+
+          <div class="fit-actions">
+            <button id="btnVrmReset">部位anchorを解除</button>
+            <button id="btnVrmSave">SuitSpecへ保存</button>
+          </div>
+          <div class="checks">
+            <label><input id="vrmAnchorVisible" type="checkbox" checked /> 全身プレビューにアンカー表示</label>
+          </div>
+          <pre id="vrmPreview">vrm_anchor未設定</pre>
+        </div>
+
+        <div class="field fit-panel">
+          <label>VRM モデル（既定ファイル運用）</label>
+          <div class="fit-head">
+            <input
+              id="vrmModelPath"
+              type="text"
+              value="viewer/assets/vrm/default.vrm"
+              placeholder="viewer/assets/vrm/default.vrm"
+            />
+            <button id="btnVrmModelLoad">VRM読込</button>
+            <button id="btnVrmModelClear">VRM解除</button>
+          </div>
+          <p class="fit-note">
+            既定: <code>viewer/assets/vrm/default.vrm</code>（.glb/.gltf も可）
+          </p>
+          <pre id="vrmModelStatus">VRM: 未読込</pre>
+        </div>
+
         <div class="actions">
           <button id="btnGenerate" class="primary">生成実行</button>
           <button id="btnOpenBodyFit">Body Fit を開く</button>
@@ -212,6 +291,6 @@
       </section>
     </div>
 
-    <script type="module" src="./dashboard.js?v=20260303b"></script>
+    <script type="module" src="./dashboard.js?v=20260303c"></script>
   </body>
 </html>

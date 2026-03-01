@@ -10,9 +10,7 @@
     <div id="app">
       <aside class="panel">
         <h1>Body Fit Viewer</h1>
-        <p class="hint">
-          展示会向け表示: suitspec と body-sim を読み込み、全身パーツ当てはめを明るい高コントラストで確認
-        </p>
+        <p class="hint">suitspec と body-sim を読み込み、全身プレビュー上で各パーツのフィットを調整します。</p>
 
         <label>
           SuitSpec JSON
@@ -58,9 +56,39 @@
           <input id="speedSlider" type="range" min="0.25" max="4" step="0.25" value="1" />
         </label>
 
+        <section class="vrm-panel">
+          <h2>VRM Skeleton</h2>
+          <p class="fit-note">VRM を重ねて骨ベースでパーツ位置を確認します。</p>
+          <label>
+            VRM Path
+            <input id="vrmPath" type="text" value="viewer/assets/vrm/default.vrm" />
+          </label>
+          <div class="row row3">
+            <button id="btnVrmLoad">Load VRM</button>
+            <button id="btnVrmClear">Clear VRM</button>
+            <button id="btnVrmToggle">VRM Bones: On</button>
+          </div>
+          <div class="row row2">
+            <button id="btnVrmAttach">Attach: VRM</button>
+            <div class="fit-note">Attach: VRM で骨追従、BodySim で従来配置です。</div>
+          </div>
+          <div id="vrmStatus" class="vrm-status">VRM: not loaded</div>
+        </section>
+
+        <section class="live-input">
+          <h2>Live Input (PoC)</h2>
+          <p class="fit-note">Webカメラから姿勢を推定して body-fit にリアルタイム反映します。</p>
+          <div class="row row2">
+            <button id="btnLiveStart">Start WebCam</button>
+            <button id="btnLiveStop">Stop Live</button>
+          </div>
+          <div id="liveStatus" class="live-status">Live: inactive</div>
+          <video id="liveVideo" class="live-video" autoplay playsinline muted></video>
+        </section>
+
         <section class="fit-editor">
           <h2>Fit Editor</h2>
-          <p class="fit-note">全身表示しながら、部位ごとのサイズと位置を調整できます。</p>
+          <p class="fit-note">全身表示を見ながら、各パーツのサイズと位置を調整できます。</p>
 
           <label>
             Part
@@ -93,11 +121,22 @@
             </label>
           </div>
 
-          <div class="row row3">
+          <div class="row row4">
+            <button id="btnFitSuggestCurrent">Suggest</button>
             <button id="btnFitApplyCurrent">Apply</button>
             <button id="btnFitResetCurrent">Reset Part</button>
             <button id="btnFitSaveSuitspec">Save SuitSpec</button>
           </div>
+
+          <div class="row row2 bridge-row">
+            <button id="btnBridgeToggle">Bridges: On</button>
+            <label class="mini-field">
+              bridge thickness
+              <input id="bridgeThickness" type="range" min="0.03" max="0.22" step="0.01" value="0.10" />
+            </label>
+          </div>
+
+          <p id="fitSuggestHint" class="fit-suggest-hint">Suggest は現在のスコアを元に仮値を提示します。</p>
         </section>
 
         <div id="status">Ready</div>
@@ -108,11 +147,21 @@
         <canvas id="canvas"></canvas>
         <section id="legend" class="legend">
           <h2>Display Guide</h2>
-          <p id="legendText">Load すると表示説明がここに出ます。</p>
+          <p id="legendText">Load すると表示ガイドがここに出ます。</p>
         </section>
       </main>
     </div>
 
-    <script type="module" src="./viewer.js?v=20260303b"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.4.4/lib/three-vrm.module.min.js"
+        }
+      }
+    </script>
+    <script type="module" src="./viewer.js?v=20260303i"></script>
   </body>
 </html>

@@ -93,6 +93,59 @@ input[type="range"] {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.live-input {
+  margin: 10px 0 14px;
+  border: 1px solid #9cb6e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f6faff;
+}
+
+.vrm-panel {
+  margin: 10px 0 14px;
+  border: 1px solid #9cb6e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f5f9ff;
+}
+
+.vrm-panel h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #173767;
+}
+
+.vrm-status {
+  margin: -2px 0 4px;
+  font-size: 12px;
+  color: #264b7f;
+  font-weight: 700;
+  white-space: pre-wrap;
+}
+
+.live-input h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #173767;
+}
+
+.live-status {
+  margin: -2px 0 8px;
+  font-size: 12px;
+  color: #264b7f;
+  font-weight: 700;
+}
+
+.live-video {
+  width: 100%;
+  display: block;
+  border: 1px solid #b0c3e6;
+  border-radius: 8px;
+  background: #d7e3f8;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
 .fit-editor {
   margin: 10px 0 14px;
   border: 1px solid #9cb6e1;
@@ -111,6 +164,20 @@ input[type="range"] {
   margin: 0 0 8px;
   font-size: 12px;
   color: #335788;
+}
+
+.fit-suggest-hint {
+  margin: -4px 0 2px;
+  font-size: 11px;
+  color: #3d5f8e;
+}
+
+.bridge-row {
+  align-items: end;
+}
+
+.bridge-row .mini-field {
+  margin: 0;
 }
 
 .mini-field {

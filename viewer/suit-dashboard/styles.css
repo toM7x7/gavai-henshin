@@ -188,6 +188,30 @@ button:hover {
   white-space: pre-wrap;
 }
 
+#vrmPreview {
+  margin: 0;
+  border: 1px solid #d9e3f2;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+  font-size: 11px;
+  max-height: 170px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+#vrmModelStatus {
+  margin: 0;
+  border: 1px solid #d9e3f2;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+  font-size: 11px;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 .actions {
   display: grid;
   gap: 8px;

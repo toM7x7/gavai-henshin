@@ -1,0 +1,87 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Suit Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <h1>Suit Dashboard</h1>
+        <p class="sub">メッシュUV向け生成・3Dプレビュー・UV展開確認</p>
+      </header>
+
+      <section class="controls">
+        <div class="field">
+          <label for="suitPath">SuitSpec</label>
+          <div class="row">
+            <select id="suitPath"></select>
+            <button id="btnRefreshSuits">更新</button>
+            <button id="btnLoadSuit">読込</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fallbackDir">Fallback Dir</label>
+          <input id="fallbackDir" type="text" value="sessions/S-20260228-JBJK/artifacts/parts" />
+        </div>
+
+        <div class="field grid2">
+          <div>
+            <label for="textureMode">生成モード</label>
+            <select id="textureMode">
+              <option value="mesh_uv" selected>mesh_uv（展開図向け）</option>
+              <option value="concept">concept（イメージ）</option>
+            </select>
+          </div>
+          <div>
+            <label for="simPath">Body Sim</label>
+            <input id="simPath" type="text" value="sessions/body-sim.json" />
+          </div>
+        </div>
+
+        <div class="checks">
+          <label><input id="preferFallback" type="checkbox" /> 既存画像を優先</label>
+          <label><input id="updateSuitspec" type="checkbox" checked /> SuitSpecへ反映</label>
+        </div>
+
+        <div class="field">
+          <label>対象パーツ</label>
+          <div id="partChecks" class="parts"></div>
+        </div>
+
+        <div class="actions">
+          <button id="btnGenerate" class="primary">生成実行</button>
+          <button id="btnOpenBodyFit">Body Fit を開く</button>
+        </div>
+
+        <div class="field">
+          <label for="reliefSlider">Mesh Relief</label>
+          <input id="reliefSlider" type="range" min="0" max="0.1" step="0.01" value="0.05" />
+        </div>
+
+        <pre id="status">準備中...</pre>
+      </section>
+
+      <section class="content-wrap">
+        <div class="content-tabs">
+          <button id="tabParts" class="tab-btn active" data-tab="parts">パーツカード</button>
+          <button id="tabBody" class="tab-btn" data-tab="body">ボディ前景</button>
+        </div>
+
+        <div id="panelParts" class="panel active">
+          <div id="cards" class="cards"></div>
+        </div>
+
+        <div id="panelBody" class="panel">
+          <canvas id="bodyFrontCanvas" class="body-canvas"></canvas>
+          <div id="bodyFrontMeta" class="body-meta">読み込み待機中...</div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="./dashboard.js?v=20260302a"></script>
+  </body>
+</html>

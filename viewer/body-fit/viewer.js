@@ -19,18 +19,20 @@ const PANEL = {
   btnFit: document.getElementById("btnFit"),
   frameSlider: document.getElementById("frameSlider"),
   speedSlider: document.getElementById("speedSlider"),
+  reliefSlider: document.getElementById("reliefSlider"),
   status: document.getElementById("status"),
   meta: document.getElementById("meta"),
   legendText: document.getElementById("legendText"),
 };
 
 const textureLoader = new THREE.TextureLoader();
+const meshGeometryCache = new Map();
 
 const MODULE_VIS = {
-  helmet: { shape: "sphere", source: "chest_core", offsetY: 0.8, scale: [0.2, 0.2, 0.2] },
-  chest: { shape: "box", source: "chest_core", offsetY: 0.0, scale: [0.45, 0.55, 0.22] },
-  back: { shape: "box", source: "chest_core", offsetY: -0.08, scale: [0.4, 0.5, 0.2], zOffset: -0.08 },
-  waist: { shape: "box", source: "chest_core", offsetY: -0.45, scale: [0.32, 0.22, 0.2] },
+  helmet: { shape: "sphere", source: "chest_core", offsetY: 0.86, scale: [0.26, 0.26, 0.26] },
+  chest: { shape: "box", source: "chest_core", offsetY: 0.0, scale: [0.62, 0.68, 0.56] },
+  back: { shape: "box", source: "chest_core", offsetY: -0.03, scale: [0.58, 0.66, 0.52], zOffset: -0.08 },
+  waist: { shape: "box", source: "chest_core", offsetY: -0.48, scale: [0.44, 0.3, 0.34] },
   left_shoulder: { shape: "sphere", source: "left_upperarm", offsetY: 0.42, scale: [0.18, 0.18, 0.18] },
   right_shoulder: { shape: "sphere", source: "right_upperarm", offsetY: 0.42, scale: [0.18, 0.18, 0.18] },
   left_upperarm: { shape: "cylinder", source: "left_upperarm", offsetY: 0.0, scale: [0.9, 1.0, 0.9] },
@@ -77,7 +79,7 @@ class BodyFitViewer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe7eefb);
+    this.scene.background = new THREE.Color(0xffffff);
 
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
     this.camera.position.set(0, 0.2, 2.8);
@@ -91,14 +93,14 @@ class BodyFitViewer {
     this.root = new THREE.Group();
     this.scene.add(this.root);
 
-    this.grid = new THREE.GridHelper(3.2, 32, 0x5e8bc6, 0x9bb8df);
+    this.grid = new THREE.GridHelper(3.2, 32, 0x9ab4dc, 0xd6e1f2);
     this.grid.position.y = -1.0;
     this.grid.rotation.x = Math.PI / 2;
     this.scene.add(this.grid);
 
     this.floor = new THREE.Mesh(
       new THREE.CircleGeometry(1.65, 80),
-      new THREE.MeshBasicMaterial({ color: 0xf3f7ff, transparent: true, opacity: 0.92 })
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.94 })
     );
     this.floor.position.set(0, -1.0, -0.15);
     this.scene.add(this.floor);
@@ -117,7 +119,9 @@ class BodyFitViewer {
     this.playing = false;
     this.playbackAccumSec = 0;
     this.speed = 1.0;
-    this.useTextures = false;
+    this.useTextures = true;
+    this.reliefStrength = Number(PANEL.reliefSlider?.value || "0.05");
+    if (!Number.isFinite(this.reliefStrength)) this.reliefStrength = 0.05;
     this.darkTheme = false;
     this.modelCenter = new THREE.Vector3(0, 0, 0.2);
     this.modelRadius = 0.85;
@@ -152,7 +156,9 @@ class BodyFitViewer {
     const lines = [
       "色付きブロック: 各パーツ仮形状 / 白縁: 輪郭",
       `Frame ${frameText} | Equipped: ${equipped ? "YES" : "NO"} | Speed x${this.speed.toFixed(2)}`,
-      `Textures: ${this.useTextures ? "ON" : "OFF"} | Theme: ${this.darkTheme ? "Dark" : "Bright"}`,
+      `Textures: ${this.useTextures ? "ON" : "OFF"} | Relief: ${this.reliefStrength.toFixed(2)} | Theme: ${
+        this.darkTheme ? "Dark" : "Bright"
+      }`,
       "Tip: Auto Fitで全体を再センタリング",
     ];
     PANEL.legendText.innerHTML = lines.join("<br>");
@@ -230,21 +236,21 @@ class BodyFitViewer {
     const outlineColor = this.darkTheme ? 0xeaf2ff : 0x0f2342;
 
     if (this.darkTheme) {
-      this.scene.background = new THREE.Color(0x0a0e15);
-      this.floor.material.color.setHex(0x121b2a);
-      this.floor.material.opacity = 0.75;
+      this.scene.background = new THREE.Color(0xf4f7fc);
+      this.floor.material.color.setHex(0xffffff);
+      this.floor.material.opacity = 0.95;
       for (const mat of gridMaterials) {
-        mat.color.setHex(0x2c4f80);
+        mat.color.setHex(0xc4d2e8);
       }
-      PANEL.btnTheme.textContent = "Theme: Dark";
+      PANEL.btnTheme.textContent = "Theme: Soft";
     } else {
-      this.scene.background = new THREE.Color(0xe7eefb);
-      this.floor.material.color.setHex(0xf3f7ff);
-      this.floor.material.opacity = 0.92;
+      this.scene.background = new THREE.Color(0xffffff);
+      this.floor.material.color.setHex(0xffffff);
+      this.floor.material.opacity = 0.94;
       for (const mat of gridMaterials) {
-        mat.color.setHex(0x9bb8df);
+        mat.color.setHex(0xd6e1f2);
       }
-      PANEL.btnTheme.textContent = "Theme: Bright";
+      PANEL.btnTheme.textContent = "Theme: White";
     }
 
     for (const rec of this.meshes.values()) {
@@ -261,7 +267,7 @@ class BodyFitViewer {
     this.frames = Array.isArray(sim.frames) ? sim.frames : [];
     this.frameIndex = 0;
     this.playbackAccumSec = 0;
-    this.buildMeshes();
+    await this.buildMeshes();
     PANEL.frameSlider.max = String(Math.max(0, this.frames.length - 1));
     PANEL.frameSlider.value = "0";
     this.applyFrame(0);
@@ -307,7 +313,7 @@ class BodyFitViewer {
     this.meshes.clear();
   }
 
-  buildMeshes() {
+  async buildMeshes() {
     this.clearMeshes();
     const modules = this.suitspec?.modules || {};
     for (const [name, module] of Object.entries(modules)) {
@@ -318,7 +324,9 @@ class BodyFitViewer {
         offsetY: 0,
         scale: [0.2, 0.2, 0.2],
       };
-      const mesh = createMesh(config.shape);
+      const assetPath = resolveMeshAssetPath(name, module);
+      const geometry = await loadModuleGeometry(name, config.shape, assetPath);
+      const mesh = createMeshFromGeometry(geometry);
       mesh.material.color.setHex(partColor(name));
       mesh.userData.partName = name;
 
@@ -329,10 +337,12 @@ class BodyFitViewer {
 
       this.root.add(group);
       this.meshes.set(name, {
+        partName: name,
         group,
         mesh,
         outline,
         config,
+        assetPath,
         texturePath: module.texture_path || null,
         texture: null,
       });
@@ -340,18 +350,26 @@ class BodyFitViewer {
     this.updateTextureMode();
   }
 
-  updateTextureMode() {
+  updateTextureMode(forceRelief = false) {
     PANEL.btnTexture.textContent = this.useTextures ? "Textures: On" : "Textures: Off";
     for (const rec of this.meshes.values()) {
+      rec.outline.visible = !this.useTextures;
       if (!this.useTextures) {
         rec.mesh.material.map = null;
+        rec.mesh.material.color.setHex(partColor(rec.partName));
         rec.mesh.material.needsUpdate = true;
+        restoreBaseGeometry(rec.mesh);
         continue;
       }
       if (!rec.texturePath) continue;
       if (rec.texture) {
         rec.mesh.material.map = rec.texture;
+        rec.mesh.material.color.setHex(0xffffff);
         rec.mesh.material.needsUpdate = true;
+        if (forceRelief || !rec.reliefApplied) {
+          applyReliefFromTexture(rec.mesh, rec.texture, this.reliefStrength);
+          rec.reliefApplied = true;
+        }
         continue;
       }
       textureLoader.load(
@@ -361,14 +379,19 @@ class BodyFitViewer {
           tex.wrapS = THREE.RepeatWrapping;
           tex.wrapT = THREE.RepeatWrapping;
           rec.texture = tex;
+          rec.reliefApplied = false;
           if (this.useTextures) {
             rec.mesh.material.map = tex;
+            rec.mesh.material.color.setHex(0xffffff);
             rec.mesh.material.needsUpdate = true;
+            applyReliefFromTexture(rec.mesh, tex, this.reliefStrength);
+            rec.reliefApplied = true;
           }
         },
         undefined,
         () => {
           rec.texture = null;
+          rec.reliefApplied = false;
         }
       );
     }
@@ -427,26 +450,104 @@ class BodyFitViewer {
   }
 }
 
-function createMesh(shape) {
+function createDefaultGeometry(shape) {
   let geometry;
   switch (shape) {
     case "cylinder":
-      geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 20, 1, true);
+      geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 48, 40, true);
       break;
     case "sphere":
-      geometry = new THREE.SphereGeometry(0.5, 20, 14);
+      geometry = new THREE.SphereGeometry(0.5, 34, 24);
       break;
     case "box":
     default:
-      geometry = new THREE.BoxGeometry(1, 1, 1);
+      geometry = new THREE.BoxGeometry(1, 1, 1, 16, 20, 16);
       break;
   }
+  if (geometry.index) {
+    geometry = geometry.toNonIndexed();
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createMeshFromGeometry(geometry) {
   const material = new THREE.MeshStandardMaterial({
     color: 0x80a9e0,
     metalness: 0.55,
     roughness: 0.45,
   });
-  return new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
+  const pos = mesh.geometry.attributes.position;
+  mesh.userData.basePositions = new Float32Array(pos.array);
+  return mesh;
+}
+
+function resolveMeshAssetPath(partName, module) {
+  const ref = String(module?.asset_ref || "").replace(/\\/g, "/").trim();
+  if (ref.toLowerCase().endsWith(".mesh.json")) return ref;
+  return `viewer/assets/meshes/${partName}.mesh.json`;
+}
+
+async function loadModuleGeometry(partName, fallbackShape, assetPath) {
+  try {
+    return await loadMeshGeometryFromAsset(assetPath);
+  } catch (error) {
+    console.warn(`mesh asset load failed for ${partName}:`, error);
+    return createDefaultGeometry(fallbackShape);
+  }
+}
+
+async function loadMeshGeometryFromAsset(assetPath) {
+  const key = normalizePath(assetPath);
+  if (meshGeometryCache.has(key)) {
+    return meshGeometryCache.get(key).clone();
+  }
+
+  const res = await fetch(key);
+  if (!res.ok) {
+    throw new Error(`Failed to load mesh asset: ${key} (${res.status})`);
+  }
+  const payload = await res.json();
+  const geometry = meshGeometryFromPayload(payload);
+  meshGeometryCache.set(key, geometry);
+  return geometry.clone();
+}
+
+function meshGeometryFromPayload(payload) {
+  if (!payload || payload.format !== "mesh.v1") {
+    throw new Error("Unsupported mesh asset format.");
+  }
+
+  const positions = new Float32Array(payload.positions || []);
+  const normals = new Float32Array(payload.normals || []);
+  const uv = new Float32Array(payload.uv || []);
+  const indices = Array.isArray(payload.indices) ? payload.indices : [];
+
+  if (positions.length < 9 || positions.length % 3 !== 0) {
+    throw new Error("Invalid mesh positions.");
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (uv.length === (positions.length / 3) * 2) {
+    geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  }
+  if (normals.length === positions.length) {
+    geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  }
+  if (indices.length > 0) {
+    geometry.setIndex(indices);
+  }
+  if (geometry.index) {
+    const expanded = geometry.toNonIndexed();
+    expanded.computeVertexNormals();
+    return expanded;
+  }
+  if (!geometry.getAttribute("normal")) {
+    geometry.computeVertexNormals();
+  }
+  return geometry;
 }
 
 function createOutline(mesh, color) {
@@ -457,6 +558,82 @@ function createOutline(mesh, color) {
 
 function partColor(name) {
   return PART_COLOR_MAP[name] || 0x7eb6ff;
+}
+
+function clamp(value, low, high) {
+  return Math.max(low, Math.min(high, value));
+}
+
+function restoreBaseGeometry(mesh) {
+  const geo = mesh.geometry;
+  const pos = geo.attributes.position;
+  const base = mesh.userData.basePositions;
+  if (!pos || !base || base.length !== pos.array.length) return;
+
+  for (let i = 0; i < pos.count; i++) {
+    pos.setXYZ(i, base[i * 3 + 0], base[i * 3 + 1], base[i * 3 + 2]);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
+function applyReliefFromTexture(mesh, tex, amplitude) {
+  const image = tex?.image;
+  if (!image || amplitude <= 0) {
+    restoreBaseGeometry(mesh);
+    return;
+  }
+
+  const geo = mesh.geometry;
+  const pos = geo.attributes.position;
+  const norm = geo.attributes.normal;
+  const uv = geo.attributes.uv;
+  const base = mesh.userData.basePositions;
+  if (!pos || !norm || !uv || !base || base.length !== pos.array.length) return;
+
+  const W = 256;
+  const H = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.drawImage(image, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H).data;
+
+  for (let i = 0; i < pos.count; i++) {
+    const u = clamp(uv.getX(i), 0, 1);
+    const v = clamp(uv.getY(i), 0, 1);
+    const x = Math.floor(u * (W - 1));
+    const y = Math.floor((1 - v) * (H - 1));
+    const idx = (y * W + x) * 4;
+
+    const r = data[idx + 0];
+    const g = data[idx + 1];
+    const b = data[idx + 2];
+
+    const lum = (r + g + b) / (3 * 255);
+    const minCh = Math.min(r, g, b) / 255;
+    const maxCh = Math.max(r, g, b) / 255;
+    const satLike = maxCh - minCh;
+    const mask = clamp((0.95 - minCh) * 8 + satLike * 2, 0, 1);
+
+    const disp = (lum - 0.5) * amplitude * mask;
+    const nx = norm.getX(i);
+    const ny = norm.getY(i);
+    const nz = norm.getZ(i);
+    const nLen = Math.hypot(nx, ny, nz) || 1;
+
+    pos.setXYZ(
+      i,
+      base[i * 3 + 0] + (nx / nLen) * disp,
+      base[i * 3 + 1] + (ny / nLen) * disp,
+      base[i * 3 + 2] + (nz / nLen) * disp
+    );
+  }
+
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
 }
 
 function normalizePath(path) {
@@ -479,15 +656,18 @@ function resolveTransform(name, config, segments) {
   const y = base.position_y + axis.y * base.scale_y * offset;
   const z = base.position_z + Number(config.zOffset || 0);
   const scale = config.scale || [1, 1, 1];
+  const baseScaleX = Math.max(Number(base.scale_x || 1), 0.45);
+  const baseScaleY = Math.max(Number(base.scale_y || 1), 0.45);
+  const baseScaleZ = Math.max(Number(base.scale_z || 1), 0.45);
 
   return {
     position_x: x,
     position_y: y,
     position_z: z,
     rotation_z: base.rotation_z,
-    scale_x: base.scale_x * scale[0],
-    scale_y: base.scale_y * scale[1],
-    scale_z: base.scale_z * scale[2],
+    scale_x: baseScaleX * scale[0],
+    scale_y: baseScaleY * scale[1],
+    scale_z: baseScaleZ * scale[2],
   };
 }
 
@@ -531,6 +711,13 @@ function init() {
     viewer.useTextures = !viewer.useTextures;
     viewer.updateTextureMode();
   };
+  if (PANEL.reliefSlider) {
+    PANEL.reliefSlider.oninput = () => {
+      viewer.reliefStrength = Number(PANEL.reliefSlider.value || "0");
+      if (!Number.isFinite(viewer.reliefStrength)) viewer.reliefStrength = 0;
+      viewer.updateTextureMode(true);
+    };
+  }
   PANEL.btnTheme.onclick = () => {
     viewer.darkTheme = !viewer.darkTheme;
     viewer.applyTheme();

@@ -12,92 +12,92 @@
   "modules": {
     "helmet": {
       "enabled": true,
-      "asset_ref": "modules/helmet/base.prefab",
+      "asset_ref": "viewer/assets/meshes/helmet.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\helmet.generated.jpg"
     },
     "chest": {
       "enabled": true,
-      "asset_ref": "modules/chest/base.prefab",
+      "asset_ref": "viewer/assets/meshes/chest.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\chest.generated.jpg"
     },
     "back": {
       "enabled": true,
-      "asset_ref": "modules/back/base.prefab",
+      "asset_ref": "viewer/assets/meshes/back.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\back.generated.jpg"
     },
     "left_shoulder": {
       "enabled": true,
-      "asset_ref": "modules/left_shoulder/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_shoulder.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_shoulder.generated.jpg"
     },
     "right_shoulder": {
       "enabled": true,
-      "asset_ref": "modules/right_shoulder/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_shoulder.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_shoulder.generated.jpg"
     },
     "left_upperarm": {
       "enabled": true,
-      "asset_ref": "modules/left_upperarm/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_upperarm.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_upperarm.generated.jpg"
     },
     "right_upperarm": {
       "enabled": true,
-      "asset_ref": "modules/right_upperarm/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_upperarm.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_upperarm.generated.jpg"
     },
     "left_forearm": {
       "enabled": true,
-      "asset_ref": "modules/left_forearm/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_forearm.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_forearm.generated.jpg"
     },
     "right_forearm": {
       "enabled": true,
-      "asset_ref": "modules/right_forearm/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_forearm.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_forearm.generated.jpg"
     },
     "waist": {
       "enabled": true,
-      "asset_ref": "modules/waist/base.prefab",
+      "asset_ref": "viewer/assets/meshes/waist.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\waist.generated.jpg"
     },
     "left_thigh": {
       "enabled": true,
-      "asset_ref": "modules/left_thigh/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_thigh.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_thigh.generated.jpg"
     },
     "right_thigh": {
       "enabled": true,
-      "asset_ref": "modules/right_thigh/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_thigh.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_thigh.generated.jpg"
     },
     "left_shin": {
       "enabled": true,
-      "asset_ref": "modules/left_shin/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_shin.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_shin.generated.jpg"
     },
     "right_shin": {
       "enabled": true,
-      "asset_ref": "modules/right_shin/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_shin.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_shin.generated.jpg"
     },
     "left_boot": {
       "enabled": true,
-      "asset_ref": "modules/left_boot/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_boot.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_boot.generated.jpg"
     },
     "right_boot": {
       "enabled": true,
-      "asset_ref": "modules/right_boot/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_boot.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_boot.generated.jpg"
     },
     "left_hand": {
       "enabled": true,
-      "asset_ref": "modules/left_hand/base.prefab",
+      "asset_ref": "viewer/assets/meshes/left_hand.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\left_hand.generated.jpg"
     },
     "right_hand": {
       "enabled": true,
-      "asset_ref": "modules/right_hand/base.prefab",
+      "asset_ref": "viewer/assets/meshes/right_hand.mesh.json",
       "texture_path": "sessions\\S-20260228-JBJK\\artifacts\\parts\\right_hand.generated.jpg"
     }
   },

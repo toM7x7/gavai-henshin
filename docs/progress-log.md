@@ -7,6 +7,33 @@
 
 ---
 
+## 2026-03-01
+
+### 実施
+- `docs/id-policy.md` を追加し、`SuitID / ApprovalID / MorphotypeID / SessionID` の発行・採番ルールを固定
+- `docs/armory-io-contract.md` を追加し、Armory Viewer連携の入力JSON・座標・エラー契約を固定
+- `docs/roadmap.md` の Phase 1 を完了状態へ更新
+- `docs/gate0-checklist.md` のID発行関連チェックを更新
+- `generate-parts` に `--fallback-dir` / `--prefer-fallback` を追加
+- `generate-parts` に `--texture-mode mesh_uv` を追加（メッシュ貼り込み向け）
+- 既存資産 `sessions/S-20260228-JBJK/artifacts/parts` を使ってフォールバック生成を実行確認
+- `serve-dashboard` コマンドと `viewer/suit-dashboard` UI を追加
+- `python -m unittest discover -s tests -v` を実行
+
+### 結果
+- Phase 1 の未完了項目だった「IDポリシー確定」「Armory I/O契約化」をドキュメント上で完了
+- CLI実装（`ids.py` / `simulate-body`）とViewer読込仕様（`viewer/body-fit`）の間に、参照可能な契約文書を配置
+- APIキー未設定時でも、既存パーツ画像から `generate-parts` を完走可能にした
+- 部位ごとの個別3D確認と、ダッシュボード上からの生成実行が可能になった
+- 単体テスト 27件がすべて成功（`OK`）
+
+### 次アクション
+- APIキー投入後の実画像生成スモークテスト
+- Track Aの最初のWear Build完走
+- SuitSpecテンプレート拡充（最低10パターン）
+
+---
+
 ## 2026-02-28
 
 ### 実施
@@ -39,3 +66,5 @@
 - APIキー投入後の実画像生成スモークテスト
 - 生成失敗時フォールバック実装
 - Armory Viewer連携I/O仕様の固定
+
+- 2026-03-02: suit-dashboard��UV�W�J�m�F�^�u�ƃ{�f�B�O�i�^�u��ǉ��Bmesh_uv�v�����v�g���ʎw�W�t���ɋ����B

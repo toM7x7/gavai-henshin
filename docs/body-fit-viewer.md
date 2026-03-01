@@ -41,6 +41,7 @@ python -m henshin serve-viewer --port 8000
 - `Play/Pause`: フレーム再生/停止
 - `Prev/Next`: 1フレーム移動
 - `Textures: On/Off`: 生成画像テクスチャ表示切替
+- `Mesh Relief`: 生成画像の明暗を使ってメッシュ凹凸を疑似生成（0で無効）
 - `Theme: Bright/Dark`: 明暗テーマ切替（展示時は Bright 推奨）
 - `Cam Front/Side/Top`: 定点カメラ
 - `Auto Fit`: 全身が画面に収まるよう再センタリング
@@ -56,6 +57,7 @@ python -m henshin serve-viewer --port 8000
 ## 5. 展示会向けおすすめ設定
 
 1. `Theme: Bright`
-2. `Textures: Off`（輪郭と構成優先で見せる）
-3. `Auto Fit`
-4. `Cam Front` で開始、説明時に `Cam Side` / `Cam Top` 切替
+2. `Textures: On`（生成画像を反映）
+3. `Mesh Relief: 0.04〜0.06`（立体感を出す）
+4. `Auto Fit`
+5. `Cam Front` で開始、説明時に `Cam Side` / `Cam Top` 切替

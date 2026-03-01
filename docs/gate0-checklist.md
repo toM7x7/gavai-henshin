@@ -4,15 +4,15 @@
 
 - [x] `SuitSpec v0.2` のJSON Schemaが存在する
 - [x] `Morphotype v0.2` のJSON Schemaが存在する
-- [ ] `SuitID` 採番規約（SERIES / ROLE / REV / SEQ）が確定している
-- [ ] `ApprovalID` と `MorphotypeID` の発行方式が確定している
+- [x] `SuitID` 採番規約（SERIES / ROLE / REV / SEQ）が確定している
+- [x] `ApprovalID` と `MorphotypeID` の発行方式が確定している
 
 ## 2. 実装前提（必須）
 
 - [ ] Armory Viewerが `SuitSpec` の必須項目だけで起動できる
 - [ ] `modules` の最小スロット構成（最低4部位）が確定している
 - [ ] Blueprint投影方式（`decal/projector/triplanar`）のMVP採用方式が決まっている
-- [ ] 生成失敗時に過去資産へフォールバックできる
+- [x] 生成失敗時に過去資産へフォールバックできる
 
 ## 3. 受け入れ条件（Gate 0 DoD）
 
@@ -28,6 +28,6 @@
 
 ## 4. 議論ログ（決めたら追記）
 
-- 決定1:
-- 決定2:
-- 保留1:
+- 決定1: ID規約は `docs/id-policy.md` に固定（`VDA-{SERIES}-{ROLE}-{REV}-{SEQ}`、`APV-########`、`MTP-########`）。
+- 決定2: Armory連携のI/O契約は `docs/armory-io-contract.md` に固定（`SuitSpec` + `simulate-body` JSON）。
+- 保留1: `SuitPackage` の実バイナリ構成（Unity側ローダー実装時に確定）。

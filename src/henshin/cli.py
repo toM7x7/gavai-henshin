@@ -6,12 +6,14 @@ import argparse
 import functools
 import http.server
 import json
+import shutil
 import socketserver
 from pathlib import Path
 
 from .archive import ensure_session_dir, save_session_bundle
 from .bodyfit import BodyFrame, CoverScale as BodyCoverScale, SegmentSpec, Vec2 as BodyVec2, run_body_sequence
 from .constants import REFUSAL_CODES
+from .dashboard_server import serve_dashboard
 from .forge import create_draft_morphotype, create_draft_suitspec, write_json
 from .gemini_image import (
     GeminiImageError,
@@ -208,7 +210,7 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
         print(json.dumps({"ok": False, "error": "No enabled parts found in suitspec."}, ensure_ascii=False))
         return 2
 
-    prompts = resolve_part_prompts(spec, requested)
+    prompts = resolve_part_prompts(spec, requested, texture_mode=args.texture_mode)
     if args.dry_run:
         print(
             json.dumps(
@@ -224,11 +226,30 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
         )
         return 0
 
+    fallback_dir: Path | None = None
+    if args.fallback_dir:
+        fallback_dir = Path(args.fallback_dir)
+        if not fallback_dir.exists() or not fallback_dir.is_dir():
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": f"Fallback dir not found or not a directory: {fallback_dir}",
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 2
+
+    api_key: str | None = None
+    api_key_error: str | None = None
     try:
         api_key = resolve_api_key(args.api_key)
     except GeminiImageError as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-        return 2
+        api_key_error = str(exc)
+        if fallback_dir is None:
+            print(json.dumps({"ok": False, "error": api_key_error}, ensure_ascii=False))
+            return 2
 
     model_id = args.model_id or spec.get("generation", {}).get("model_id", "gemini-3-pro-image-preview")
     session_id = args.session_id or generate_session_id()
@@ -238,24 +259,51 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
 
     generated: dict[str, dict[str, str]] = {}
     errors: dict[str, str] = {}
+    fallback_used: list[str] = []
     for part in requested:
-        try:
-            result = generate_image(
-                prompt=prompts[part],
-                model_id=model_id,
-                api_key=api_key,
-                timeout_seconds=args.timeout,
-            )
-            ext = extension_for_mime(result.mime_type)
-            image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
-            meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
-            generated[part] = {"image_path": str(image_path), "meta_path": str(meta_path)}
-        except GeminiImageError as exc:
-            errors[part] = str(exc)
+        part_error: str | None = None
+        used_fallback = False
+
+        if args.prefer_fallback and fallback_dir is not None:
+            fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
+            if fallback_info is not None:
+                generated[part] = fallback_info
+                fallback_used.append(part)
+                used_fallback = True
+
+        if not used_fallback and api_key is not None:
+            try:
+                result = generate_image(
+                    prompt=prompts[part],
+                    model_id=model_id,
+                    api_key=api_key,
+                    timeout_seconds=args.timeout,
+                )
+                ext = extension_for_mime(result.mime_type)
+                image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
+                meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
+                generated[part] = {"image_path": str(image_path), "meta_path": str(meta_path), "source": "gemini"}
+            except GeminiImageError as exc:
+                part_error = str(exc)
+
+        if part in generated:
+            continue
+
+        if fallback_dir is not None:
+            fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
+            if fallback_info is not None:
+                generated[part] = fallback_info
+                fallback_used.append(part)
+                continue
+
+        if part_error is None:
+            part_error = api_key_error or "Image generation failed and fallback asset not found."
+        errors[part] = part_error
 
     if args.update_suitspec:
         modules = spec.setdefault("modules", {})
         generation = spec.setdefault("generation", {})
+        generation["texture_mode"] = args.texture_mode
         part_prompts = generation.setdefault("part_prompts", {})
         for part, prompt in prompts.items():
             part_prompts[part] = prompt
@@ -268,7 +316,11 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
     summary = {
         "session_id": session_id,
         "model_id": model_id,
+        "texture_mode": args.texture_mode,
         "requested_parts": requested,
+        "prompts": prompts,
+        "fallback_dir": str(fallback_dir) if fallback_dir else None,
+        "fallback_used": fallback_used,
         "generated": generated,
         "errors": errors,
     }
@@ -282,12 +334,56 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
                 "session_id": session_id,
                 "generated_count": len(generated),
                 "error_count": len(errors),
+                "fallback_used_count": len(fallback_used),
                 "summary_path": str(summary_path),
             },
             ensure_ascii=False,
         )
     )
     return 0 if ok else 1
+
+
+def _resolve_fallback_image(part: str, fallback_dir: Path) -> Path | None:
+    candidates = [
+        f"{part}.generated.png",
+        f"{part}.generated.jpg",
+        f"{part}.generated.jpeg",
+        f"{part}.generated.webp",
+        f"{part}.png",
+        f"{part}.jpg",
+        f"{part}.jpeg",
+        f"{part}.webp",
+    ]
+    for name in candidates:
+        path = fallback_dir / name
+        if path.exists() and path.is_file():
+            return path
+    return None
+
+
+def _use_fallback_asset(part: str, fallback_dir: Path, parts_dir: Path) -> dict[str, str] | None:
+    source = _resolve_fallback_image(part, fallback_dir)
+    if source is None:
+        return None
+
+    ext = source.suffix.lower() or ".png"
+    image_path = parts_dir / f"{part}.generated{ext}"
+    if source.resolve() != image_path.resolve():
+        shutil.copy2(source, image_path)
+
+    meta_path = parts_dir / f"{part}.generation.json"
+    meta_payload = {
+        "kind": f"part:{part}",
+        "source": "fallback",
+        "fallback_image_path": str(source),
+    }
+    meta_path.write_text(json.dumps(meta_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    return {
+        "image_path": str(image_path),
+        "meta_path": str(meta_path),
+        "source": "fallback",
+    }
 
 
 def _cmd_simulate_rightarm(args: argparse.Namespace) -> int:
@@ -415,6 +511,15 @@ def _cmd_serve_viewer(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve_dashboard(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    if not root.exists():
+        print(json.dumps({"ok": False, "error": f"Directory not found: {root}"}, ensure_ascii=False))
+        return 2
+    serve_dashboard(root=root, port=int(args.port))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="henshin", description="SIM-first henshin prototyping CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -480,6 +585,21 @@ def build_parser() -> argparse.ArgumentParser:
     generate_parts.add_argument("--model-id", help="Overrides suitspec generation.model_id")
     generate_parts.add_argument("--api-key", help="Gemini API key (optional if env is set)")
     generate_parts.add_argument("--timeout", type=int, default=90)
+    generate_parts.add_argument(
+        "--texture-mode",
+        choices=["concept", "mesh_uv"],
+        default="mesh_uv",
+        help="Prompt mode: concept image or UV-ready mesh texture",
+    )
+    generate_parts.add_argument(
+        "--fallback-dir",
+        help="Directory of existing part images used when generation is unavailable or fails",
+    )
+    generate_parts.add_argument(
+        "--prefer-fallback",
+        action="store_true",
+        help="Use fallback images first when both API and fallback are available",
+    )
     generate_parts.add_argument("--update-suitspec", action="store_true")
     generate_parts.add_argument("--dry-run", action="store_true")
     generate_parts.set_defaults(func=_cmd_generate_parts)
@@ -507,6 +627,14 @@ def build_parser() -> argparse.ArgumentParser:
     serve_viewer.add_argument("--root", default=".")
     serve_viewer.add_argument("--port", type=int, default=8000)
     serve_viewer.set_defaults(func=_cmd_serve_viewer)
+
+    serve_dashboard_cmd = sub.add_parser(
+        "serve-dashboard",
+        help="Serve suit dashboard (part preview + local generate API)",
+    )
+    serve_dashboard_cmd.add_argument("--root", default=".")
+    serve_dashboard_cmd.add_argument("--port", type=int, default=8010)
+    serve_dashboard_cmd.set_defaults(func=_cmd_serve_dashboard)
 
     return parser
 

@@ -29,8 +29,11 @@ Loreを基点に、Blueprintを実行可能にするための **SIM-first プロ
 - `docs/`: 実行準備ドキュメント
 - `docs/roadmap.md`: ロードマップ
 - `docs/progress-log.md`: 進捗ログ
+- `docs/id-policy.md`: ID運用ポリシー
+- `docs/armory-io-contract.md`: Armory連携I/O契約
 - `docs/rightarm-integration.md`: 右腕PoC統合メモ
 - `docs/body-fit-viewer.md`: 全身当てはめビューア手順
+- `docs/suit-dashboard.md`: スーツ別 生成/確認ダッシュボード手順
 - `sessions/`: デモ出力先（Git管理は `.gitkeep` のみ）
 
 ## クイックスタート
@@ -60,10 +63,13 @@ python -m henshin demo --mode happy
 python -m henshin validate --kind morphotype --path examples/morphotype.sample.json
 python -m henshin generate-image --kind blueprint --suitspec examples/suitspec.sample.json
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --dry-run
+python -m henshin generate-parts --suitspec examples/suitspec.sample.json --texture-mode mesh_uv --dry-run
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --update-suitspec
+python -m henshin generate-parts --suitspec examples/suitspec.sample.json --fallback-dir sessions/S-20260228-JBJK/artifacts/parts --prefer-fallback
 python -m henshin simulate-rightarm --input examples/rightarm_sequence.sample.json --output sessions/rightarm-sim.json
 python -m henshin simulate-body --input examples/body_sequence.sample.json --output sessions/body-sim.json
 python -m henshin serve-viewer --port 8000
+python -m henshin serve-dashboard --port 8010
 ```
 
 ## GitHub運用
@@ -73,5 +79,5 @@ python -m henshin serve-viewer --port 8000
 
 ## 次の実装候補
 1. SuitSpecサンプルを増やしてモジュール差し替え検証を追加
-2. Armory Viewer（Unity）連携I/O仕様の固定
+2. APIキー投入後の実画像生成スモークテスト
 3. mocopi入力をMorphotype推定に変換する前処理実装

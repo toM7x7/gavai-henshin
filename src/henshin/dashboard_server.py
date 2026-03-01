@@ -60,9 +60,16 @@ class GeneratePartsPayload:
     api_key: str | None = None
     timeout: int = 90
     texture_mode: str = "mesh_uv"
+    uv_refine: bool = False
     fallback_dir: str | None = None
     prefer_fallback: bool = True
     update_suitspec: bool = False
+
+
+@dataclass(slots=True)
+class SaveSuitspecPayload:
+    path: str
+    suitspec: dict[str, Any]
 
 
 def run_generate_parts(root: Path, payload: GeneratePartsPayload) -> dict[str, Any]:
@@ -94,6 +101,8 @@ def run_generate_parts(root: Path, payload: GeneratePartsPayload) -> dict[str, A
         cmd.extend(["--api-key", payload.api_key])
     if payload.fallback_dir:
         cmd.extend(["--fallback-dir", payload.fallback_dir])
+    if payload.uv_refine:
+        cmd.append("--uv-refine")
     if payload.prefer_fallback:
         cmd.append("--prefer-fallback")
     if payload.update_suitspec:
@@ -126,6 +135,21 @@ def run_generate_parts(root: Path, payload: GeneratePartsPayload) -> dict[str, A
         "parsed": parsed,
     }
     return result
+
+
+def run_save_suitspec(root: Path, payload: SaveSuitspecPayload) -> dict[str, Any]:
+    target = _resolve_repo_path(root, payload.path)
+    if target.suffix.lower() != ".json":
+        raise ValueError("Only JSON files can be saved.")
+    if not isinstance(payload.suitspec, dict):
+        raise ValueError("suitspec must be a JSON object.")
+
+    text = json.dumps(payload.suitspec, ensure_ascii=False, indent=2) + "\n"
+    target.write_text(text, encoding="utf-8")
+    return {
+        "ok": True,
+        "path": str(target.relative_to(root)).replace("\\", "/"),
+    }
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -167,7 +191,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/api/generate-parts":
+        if parsed.path not in ("/api/generate-parts", "/api/suitspec-save"):
             self._write_json({"ok": False, "error": "Unknown API endpoint."}, status=HTTPStatus.NOT_FOUND)
             return
 
@@ -175,8 +199,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             content_len = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
             payload_dict = json.loads(raw)
-            payload = GeneratePartsPayload(**payload_dict)
-            result = run_generate_parts(self.repo_root, payload)
+            if parsed.path == "/api/generate-parts":
+                payload = GeneratePartsPayload(**payload_dict)
+                result = run_generate_parts(self.repo_root, payload)
+            else:
+                payload = SaveSuitspecPayload(**payload_dict)
+                result = run_save_suitspec(self.repo_root, payload)
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             self._write_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             return

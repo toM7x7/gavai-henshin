@@ -57,3 +57,7 @@ python -m henshin serve-dashboard --port 8010
 - UV定量指標（UV占有率 / テクスチャ充填率 / 外周充填率 / 一致度）を表示
 - 全体タブに ボディ前景 を追加（頂点線つき）
 - prefer fallback の初期値をOFFに変更（mesh_uv生成を優先）
+
+- uv_refine 対応: 2段階生成（コンセプト画像→参照付きUV再構築）を追加
+- 生成プロンプトをUI上で確認可能（SuitSpec/直近実行）
+- 3D表示は DoubleSide + ワイヤ併用で視認性を改善（helmet/chest/全景）

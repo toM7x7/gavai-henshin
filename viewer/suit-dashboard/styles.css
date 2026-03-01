@@ -129,6 +129,65 @@ button:hover {
   color: #213f6d;
 }
 
+.fit-panel {
+  border: 1px solid #d4dfef;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.fit-head {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr auto auto;
+  margin-bottom: 8px;
+}
+
+.fit-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 8px;
+}
+
+.fit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.fit-field span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #31588d;
+}
+
+.fit-field input,
+.fit-field select {
+  font-size: 12px;
+  padding: 7px 8px;
+}
+
+.fit-actions {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 8px;
+}
+
+#fitPreview {
+  margin: 0;
+  border: 1px solid #d9e3f2;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+  font-size: 11px;
+  max-height: 170px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 .actions {
   display: grid;
   gap: 8px;
@@ -145,6 +204,19 @@ button:hover {
   min-height: 92px;
   font-size: 12px;
   overflow: auto;
+  white-space: pre-wrap;
+}
+
+#promptPreview {
+  margin: 6px 0 0;
+  border: 1px solid #d7e0ef;
+  background: #f8fbff;
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 96px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
   white-space: pre-wrap;
 }
 
@@ -283,6 +355,59 @@ button:hover {
   background: #ffffff;
 }
 
+.body-tune {
+  margin-top: 8px;
+  border: 1px solid #d7e1ef;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 10px;
+}
+
+.body-tune-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.body-tune-head small {
+  color: #355985;
+  font-size: 11px;
+}
+
+.body-tune-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.body-tune-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.body-tune-field span {
+  font-size: 11px;
+  color: #2f5385;
+  font-weight: 700;
+}
+
+.body-tune-field input,
+.body-tune-field select {
+  font-size: 12px;
+  padding: 7px 8px;
+}
+
+.body-tune-actions {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
 .body-meta {
   margin-top: 8px;
   border: 1px solid #d7e1ef;
@@ -305,6 +430,18 @@ button:hover {
   }
 
   .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .fit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body-tune-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body-tune-actions {
     grid-template-columns: 1fr;
   }
 }

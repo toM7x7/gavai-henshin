@@ -20,6 +20,15 @@ const PANEL = {
   frameSlider: document.getElementById("frameSlider"),
   speedSlider: document.getElementById("speedSlider"),
   reliefSlider: document.getElementById("reliefSlider"),
+  fitPart: document.getElementById("fitPart"),
+  fitScaleX: document.getElementById("fitScaleX"),
+  fitScaleY: document.getElementById("fitScaleY"),
+  fitScaleZ: document.getElementById("fitScaleZ"),
+  fitOffsetY: document.getElementById("fitOffsetY"),
+  fitZOffset: document.getElementById("fitZOffset"),
+  btnFitApplyCurrent: document.getElementById("btnFitApplyCurrent"),
+  btnFitResetCurrent: document.getElementById("btnFitResetCurrent"),
+  btnFitSaveSuitspec: document.getElementById("btnFitSaveSuitspec"),
   status: document.getElementById("status"),
   meta: document.getElementById("meta"),
   legendText: document.getElementById("legendText"),
@@ -29,24 +38,258 @@ const textureLoader = new THREE.TextureLoader();
 const meshGeometryCache = new Map();
 
 const MODULE_VIS = {
-  helmet: { shape: "sphere", source: "chest_core", offsetY: 0.86, scale: [0.26, 0.26, 0.26] },
-  chest: { shape: "box", source: "chest_core", offsetY: 0.0, scale: [0.62, 0.68, 0.56] },
-  back: { shape: "box", source: "chest_core", offsetY: -0.03, scale: [0.58, 0.66, 0.52], zOffset: -0.08 },
-  waist: { shape: "box", source: "chest_core", offsetY: -0.48, scale: [0.44, 0.3, 0.34] },
-  left_shoulder: { shape: "sphere", source: "left_upperarm", offsetY: 0.42, scale: [0.18, 0.18, 0.18] },
-  right_shoulder: { shape: "sphere", source: "right_upperarm", offsetY: 0.42, scale: [0.18, 0.18, 0.18] },
-  left_upperarm: { shape: "cylinder", source: "left_upperarm", offsetY: 0.0, scale: [0.9, 1.0, 0.9] },
-  right_upperarm: { shape: "cylinder", source: "right_upperarm", offsetY: 0.0, scale: [0.9, 1.0, 0.9] },
-  left_forearm: { shape: "cylinder", source: "left_forearm", offsetY: 0.0, scale: [0.86, 1.0, 0.86] },
-  right_forearm: { shape: "cylinder", source: "right_forearm", offsetY: 0.0, scale: [0.86, 1.0, 0.86] },
-  left_hand: { shape: "sphere", source: "left_forearm", offsetY: -0.55, scale: [0.14, 0.14, 0.14] },
-  right_hand: { shape: "sphere", source: "right_forearm", offsetY: -0.55, scale: [0.14, 0.14, 0.14] },
-  left_thigh: { shape: "cylinder", source: "left_thigh", offsetY: 0.0, scale: [1.0, 1.0, 1.0] },
-  right_thigh: { shape: "cylinder", source: "right_thigh", offsetY: 0.0, scale: [1.0, 1.0, 1.0] },
-  left_shin: { shape: "cylinder", source: "left_shin", offsetY: 0.0, scale: [0.92, 1.0, 0.92] },
-  right_shin: { shape: "cylinder", source: "right_shin", offsetY: 0.0, scale: [0.92, 1.0, 0.92] },
-  left_boot: { shape: "box", source: "left_shin", offsetY: -0.62, scale: [0.2, 0.14, 0.32] },
-  right_boot: { shape: "box", source: "right_shin", offsetY: -0.62, scale: [0.2, 0.14, 0.32] },
+  helmet: {
+    shape: "sphere",
+    source: "chest_core",
+    attach: "start",
+    offsetY: 0.2,
+    scale: [0.3, 0.32, 0.3],
+    follow: [0.34, 0.42, 0.34],
+    minScale: [0.22, 0.24, 0.22],
+    zOffset: 0.02,
+  },
+  chest: {
+    shape: "box",
+    source: "chest_core",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.72, 0.78, 0.66],
+    follow: [0.72, 0.78, 0.72],
+    minScale: [0.48, 0.56, 0.46],
+  },
+  back: {
+    shape: "box",
+    source: "chest_core",
+    attach: "center",
+    offsetY: -0.02,
+    scale: [0.68, 0.74, 0.6],
+    follow: [0.68, 0.76, 0.68],
+    minScale: [0.46, 0.54, 0.42],
+    zOffset: -0.1,
+  },
+  waist: {
+    shape: "box",
+    source: "chest_core",
+    attach: "end",
+    offsetY: -0.08,
+    scale: [0.52, 0.38, 0.46],
+    follow: [0.62, 0.7, 0.62],
+    minScale: [0.34, 0.28, 0.3],
+  },
+  left_shoulder: {
+    shape: "sphere",
+    source: "left_upperarm",
+    attach: "start",
+    offsetY: 0.08,
+    scale: [0.24, 0.24, 0.24],
+    follow: [0.56, 0.5, 0.56],
+    minScale: [0.16, 0.16, 0.16],
+  },
+  right_shoulder: {
+    shape: "sphere",
+    source: "right_upperarm",
+    attach: "start",
+    offsetY: 0.08,
+    scale: [0.24, 0.24, 0.24],
+    follow: [0.56, 0.5, 0.56],
+    minScale: [0.16, 0.16, 0.16],
+  },
+  left_upperarm: {
+    shape: "cylinder",
+    source: "left_upperarm",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.94, 1.0, 0.94],
+    follow: [0.88, 0.94, 0.88],
+    minScale: [0.52, 0.56, 0.52],
+  },
+  right_upperarm: {
+    shape: "cylinder",
+    source: "right_upperarm",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.94, 1.0, 0.94],
+    follow: [0.88, 0.94, 0.88],
+    minScale: [0.52, 0.56, 0.52],
+  },
+  left_forearm: {
+    shape: "cylinder",
+    source: "left_forearm",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.9, 1.02, 0.9],
+    follow: [0.9, 0.96, 0.9],
+    minScale: [0.48, 0.56, 0.48],
+  },
+  right_forearm: {
+    shape: "cylinder",
+    source: "right_forearm",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.9, 1.02, 0.9],
+    follow: [0.9, 0.96, 0.9],
+    minScale: [0.48, 0.56, 0.48],
+  },
+  left_hand: {
+    shape: "sphere",
+    source: "left_forearm",
+    attach: "end",
+    offsetY: -0.08,
+    scale: [0.2, 0.2, 0.2],
+    follow: [0.38, 0.34, 0.38],
+    minScale: [0.14, 0.14, 0.14],
+    zOffset: 0.03,
+  },
+  right_hand: {
+    shape: "sphere",
+    source: "right_forearm",
+    attach: "end",
+    offsetY: -0.08,
+    scale: [0.2, 0.2, 0.2],
+    follow: [0.38, 0.34, 0.38],
+    minScale: [0.14, 0.14, 0.14],
+    zOffset: 0.03,
+  },
+  left_thigh: {
+    shape: "cylinder",
+    source: "left_thigh",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [1.0, 1.04, 1.0],
+    follow: [0.94, 0.96, 0.94],
+    minScale: [0.56, 0.66, 0.56],
+  },
+  right_thigh: {
+    shape: "cylinder",
+    source: "right_thigh",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [1.0, 1.04, 1.0],
+    follow: [0.94, 0.96, 0.94],
+    minScale: [0.56, 0.66, 0.56],
+  },
+  left_shin: {
+    shape: "cylinder",
+    source: "left_shin",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.96, 1.04, 0.96],
+    follow: [0.92, 0.96, 0.92],
+    minScale: [0.52, 0.64, 0.52],
+  },
+  right_shin: {
+    shape: "cylinder",
+    source: "right_shin",
+    attach: "center",
+    offsetY: 0.0,
+    scale: [0.96, 1.04, 0.96],
+    follow: [0.92, 0.96, 0.92],
+    minScale: [0.52, 0.64, 0.52],
+  },
+  left_boot: {
+    shape: "box",
+    source: "left_shin",
+    attach: "end",
+    offsetY: -0.14,
+    scale: [0.28, 0.22, 0.4],
+    follow: [0.58, 0.52, 0.62],
+    minScale: [0.2, 0.16, 0.24],
+    zOffset: 0.08,
+  },
+  right_boot: {
+    shape: "box",
+    source: "right_shin",
+    attach: "end",
+    offsetY: -0.14,
+    scale: [0.28, 0.22, 0.4],
+    follow: [0.58, 0.52, 0.62],
+    minScale: [0.2, 0.16, 0.24],
+    zOffset: 0.08,
+  },
+};
+
+const DEFAULT_SEGMENT_POSE = {
+  chest_core: {
+    position_x: 0.55,
+    position_y: -0.25,
+    position_z: 0.22,
+    rotation_z: 0,
+    scale_x: 1,
+    scale_y: 1,
+    scale_z: 1,
+  },
+  left_upperarm: {
+    position_x: 0.22,
+    position_y: -0.02,
+    position_z: 0.22,
+    rotation_z: 0.2,
+    scale_x: 0.9,
+    scale_y: 0.95,
+    scale_z: 0.9,
+  },
+  right_upperarm: {
+    position_x: 0.88,
+    position_y: -0.02,
+    position_z: 0.22,
+    rotation_z: -0.2,
+    scale_x: 0.9,
+    scale_y: 0.95,
+    scale_z: 0.9,
+  },
+  left_forearm: {
+    position_x: 0.16,
+    position_y: -0.42,
+    position_z: 0.22,
+    rotation_z: 0.18,
+    scale_x: 0.88,
+    scale_y: 0.95,
+    scale_z: 0.88,
+  },
+  right_forearm: {
+    position_x: 0.94,
+    position_y: -0.42,
+    position_z: 0.22,
+    rotation_z: -0.18,
+    scale_x: 0.88,
+    scale_y: 0.95,
+    scale_z: 0.88,
+  },
+  left_thigh: {
+    position_x: 0.42,
+    position_y: -0.72,
+    position_z: 0.22,
+    rotation_z: 0.04,
+    scale_x: 0.95,
+    scale_y: 1.05,
+    scale_z: 0.95,
+  },
+  right_thigh: {
+    position_x: 0.68,
+    position_y: -0.72,
+    position_z: 0.22,
+    rotation_z: -0.04,
+    scale_x: 0.95,
+    scale_y: 1.05,
+    scale_z: 0.95,
+  },
+  left_shin: {
+    position_x: 0.42,
+    position_y: -1.18,
+    position_z: 0.22,
+    rotation_z: 0.02,
+    scale_x: 0.92,
+    scale_y: 1.05,
+    scale_z: 0.92,
+  },
+  right_shin: {
+    position_x: 0.68,
+    position_y: -1.18,
+    position_z: 0.22,
+    rotation_z: -0.02,
+    scale_x: 0.92,
+    scale_y: 1.05,
+    scale_z: 0.92,
+  },
 };
 
 const PART_COLOR_MAP = {
@@ -69,6 +312,124 @@ const PART_COLOR_MAP = {
   left_boot: 0xffe48a,
   right_boot: 0xffd36f,
 };
+
+const FIT_CONTACT_PAIRS = [
+  ["helmet", "chest"],
+  ["chest", "waist"],
+  ["chest", "back"],
+  ["left_shoulder", "left_upperarm"],
+  ["right_shoulder", "right_upperarm"],
+  ["left_upperarm", "left_forearm"],
+  ["right_upperarm", "right_forearm"],
+  ["left_forearm", "left_hand"],
+  ["right_forearm", "right_hand"],
+  ["waist", "left_thigh"],
+  ["waist", "right_thigh"],
+  ["left_thigh", "left_shin"],
+  ["right_thigh", "right_shin"],
+  ["left_shin", "left_boot"],
+  ["right_shin", "right_boot"],
+];
+
+function toNumberOr(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizeVec3(input, fallback) {
+  const fb = Array.isArray(fallback) && fallback.length >= 3 ? fallback : [1, 1, 1];
+  if (Array.isArray(input) && input.length >= 3) {
+    return [
+      toNumberOr(input[0], fb[0]),
+      toNumberOr(input[1], fb[1]),
+      toNumberOr(input[2], fb[2]),
+    ];
+  }
+  if (input && typeof input === "object") {
+    return [
+      toNumberOr(input.x, fb[0]),
+      toNumberOr(input.y, fb[1]),
+      toNumberOr(input.z, fb[2]),
+    ];
+  }
+  return [...fb];
+}
+
+function defaultModuleVisualConfig(name) {
+  const base = MODULE_VIS[name];
+  if (!base) {
+    return {
+      shape: "box",
+      source: "chest_core",
+      attach: "center",
+      offsetY: 0,
+      zOffset: 0,
+      scale: [0.2, 0.2, 0.2],
+      follow: [1, 1, 1],
+      minScale: [0.2, 0.2, 0.2],
+    };
+  }
+  return {
+    ...base,
+    scale: normalizeVec3(base.scale, [1, 1, 1]),
+    follow: normalizeVec3(base.follow, [1, 1, 1]),
+    minScale: normalizeVec3(base.minScale, [0.2, 0.2, 0.2]),
+  };
+}
+
+function getModuleVisualConfig(name, module) {
+  const merged = defaultModuleVisualConfig(name);
+  const fit = module?.fit;
+  if (!fit || typeof fit !== "object") return merged;
+
+  if (typeof fit.shape === "string" && fit.shape.trim()) {
+    merged.shape = fit.shape.trim();
+  }
+  if (typeof fit.source === "string" && fit.source.trim()) {
+    merged.source = fit.source.trim();
+  }
+  if (typeof fit.attach === "string") {
+    const attach = fit.attach.trim().toLowerCase();
+    if (attach === "start" || attach === "center" || attach === "end") {
+      merged.attach = attach;
+    }
+  }
+  merged.offsetY = toNumberOr(fit.offsetY, toNumberOr(merged.offsetY, 0));
+  merged.zOffset = toNumberOr(fit.zOffset, toNumberOr(merged.zOffset, 0));
+  merged.scale = normalizeVec3(fit.scale, merged.scale);
+  merged.follow = normalizeVec3(fit.follow, merged.follow);
+  merged.minScale = normalizeVec3(fit.minScale, merged.minScale);
+  return merged;
+}
+
+function countFitOverrides(suitspec) {
+  const modules = suitspec?.modules || {};
+  return Object.values(modules).filter((module) => module && typeof module.fit === "object").length;
+}
+
+function round3(value) {
+  return Math.round(Number(value || 0) * 1000) / 1000;
+}
+
+function aabbGapAndPenetration(a, b) {
+  const gapX = Math.max(0, Math.max(a.min.x - b.max.x, b.min.x - a.max.x));
+  const gapY = Math.max(0, Math.max(a.min.y - b.max.y, b.min.y - a.max.y));
+  const gapZ = Math.max(0, Math.max(a.min.z - b.max.z, b.min.z - a.max.z));
+  const gap = Math.hypot(gapX, gapY, gapZ);
+
+  const overlapX = Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x);
+  const overlapY = Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y);
+  const overlapZ = Math.min(a.max.z, b.max.z) - Math.max(a.min.z, b.min.z);
+  const penetration =
+    overlapX > 0 && overlapY > 0 && overlapZ > 0 ? Math.min(overlapX, overlapY, overlapZ) : 0;
+  return { gap, penetration };
+}
+
+function fitPairScore(gap, penetration) {
+  const gapPenalty = clamp(gap / 0.09, 0, 1);
+  const penetrationPenalty = clamp(penetration / 0.05, 0, 1);
+  return clamp(1 - gapPenalty * 0.65 - penetrationPenalty * 0.35, 0, 1);
+}
 
 class BodyFitViewer {
   constructor(canvas) {
@@ -125,6 +486,15 @@ class BodyFitViewer {
     this.darkTheme = false;
     this.modelCenter = new THREE.Vector3(0, 0, 0.2);
     this.modelRadius = 0.85;
+    this.loadedSuitspecPath = "";
+    this.loadedSimPath = "";
+    this.fitStats = {
+      pairCount: 0,
+      meanGap: 0,
+      meanPenetration: 0,
+      score: 0,
+      weakest: [],
+    };
 
     this.lastTime = performance.now();
     this.resize();
@@ -149,16 +519,215 @@ class BodyFitViewer {
     PANEL.meta.textContent = JSON.stringify(meta, null, 2);
   }
 
+  updateMetaPanel() {
+    const sim = this.sim || {};
+    this.setMeta({
+      suitspec: this.loadedSuitspecPath || PANEL.suitspecPath.value,
+      sim: this.loadedSimPath || PANEL.simPath.value,
+      modules: this.meshes.size,
+      fit_overrides: countFitOverrides(this.suitspec),
+      frames: this.frames.length,
+      segments: Array.isArray(sim.segments) ? sim.segments.length : 0,
+      equip_frame: sim.equip_frame ?? -1,
+      equipped: sim.equipped ?? false,
+      textures: this.useTextures,
+      theme: this.darkTheme ? "dark" : "bright",
+      fit_score: round3((this.fitStats?.score || 0) * 100),
+      fit_pair_count: this.fitStats?.pairCount || 0,
+      fit_mean_gap: round3(this.fitStats?.meanGap || 0),
+      fit_mean_penetration: round3(this.fitStats?.meanPenetration || 0),
+      fit_weak_pairs: (this.fitStats?.weakest || []).map((w) => ({
+        pair: w.pair,
+        score: round3(w.score * 100),
+        gap: round3(w.gap),
+        penetration: round3(w.penetration),
+      })),
+    });
+  }
+
+  calculateFitStats() {
+    this.root.updateMatrixWorld(true);
+    const boxes = new Map();
+    for (const [name, rec] of this.meshes.entries()) {
+      if (!rec.group.visible) continue;
+      boxes.set(name, new THREE.Box3().setFromObject(rec.group));
+    }
+
+    let totalGap = 0;
+    let totalPenetration = 0;
+    let totalScore = 0;
+    let count = 0;
+    const weakPairs = [];
+
+    for (const [aName, bName] of FIT_CONTACT_PAIRS) {
+      const a = boxes.get(aName);
+      const b = boxes.get(bName);
+      if (!a || !b) continue;
+      const { gap, penetration } = aabbGapAndPenetration(a, b);
+      const score = fitPairScore(gap, penetration);
+      totalGap += gap;
+      totalPenetration += penetration;
+      totalScore += score;
+      count += 1;
+      weakPairs.push({ pair: `${aName}-${bName}`, gap, penetration, score });
+    }
+
+    if (count === 0) {
+      return {
+        pairCount: 0,
+        meanGap: 0,
+        meanPenetration: 0,
+        score: 0,
+        weakest: [],
+      };
+    }
+
+    weakPairs.sort((x, y) => x.score - y.score);
+    return {
+      pairCount: count,
+      meanGap: totalGap / count,
+      meanPenetration: totalPenetration / count,
+      score: totalScore / count,
+      weakest: weakPairs.slice(0, 3),
+    };
+  }
+
+  listEditableParts() {
+    const modules = this.suitspec?.modules || {};
+    return Object.entries(modules)
+      .filter(([, module]) => module?.enabled)
+      .map(([name]) => name);
+  }
+
+  populateFitEditor() {
+    if (!PANEL.fitPart) return;
+    const prev = PANEL.fitPart.value;
+    const parts = this.listEditableParts();
+    PANEL.fitPart.innerHTML = "";
+    for (const name of parts) {
+      const op = document.createElement("option");
+      op.value = name;
+      op.textContent = name;
+      PANEL.fitPart.appendChild(op);
+    }
+    if (!parts.length) return;
+    PANEL.fitPart.value = parts.includes(prev) ? prev : parts[0];
+    this.loadFitEditorForPart(PANEL.fitPart.value);
+  }
+
+  loadFitEditorForPart(partName) {
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+    const fit = getModuleVisualConfig(partName, module);
+    PANEL.fitScaleX.value = String(round3(fit.scale[0]));
+    PANEL.fitScaleY.value = String(round3(fit.scale[1]));
+    PANEL.fitScaleZ.value = String(round3(fit.scale[2]));
+    PANEL.fitOffsetY.value = String(round3(fit.offsetY));
+    PANEL.fitZOffset.value = String(round3(fit.zOffset || 0));
+  }
+
+  applyFitEditorToCurrentPart({ silent = false } = {}) {
+    const partName = PANEL.fitPart?.value;
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+
+    const effective = getModuleVisualConfig(partName, module);
+    module.fit = {
+      shape: effective.shape,
+      source: effective.source,
+      attach: effective.attach,
+      offsetY: toNumberOr(PANEL.fitOffsetY.value, effective.offsetY),
+      zOffset: toNumberOr(PANEL.fitZOffset.value, effective.zOffset || 0),
+      scale: normalizeVec3(
+        [PANEL.fitScaleX.value, PANEL.fitScaleY.value, PANEL.fitScaleZ.value],
+        effective.scale
+      ),
+      follow: normalizeVec3(effective.follow, [1, 1, 1]),
+      minScale: normalizeVec3(effective.minScale, [0.2, 0.2, 0.2]),
+    };
+
+    const rec = this.meshes.get(partName);
+    if (rec) {
+      rec.config = getModuleVisualConfig(partName, module);
+    }
+    this.applyFrame(this.frameIndex);
+    this.updateMetaPanel();
+    if (!silent) {
+      this.setStatus(`Applied fit: ${partName}`);
+    }
+  }
+
+  resetFitForCurrentPart() {
+    const partName = PANEL.fitPart?.value;
+    if (!partName) return;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return;
+    delete module.fit;
+    const rec = this.meshes.get(partName);
+    if (rec) {
+      rec.config = getModuleVisualConfig(partName, module);
+    }
+    this.applyFrame(this.frameIndex);
+    this.loadFitEditorForPart(partName);
+    this.updateMetaPanel();
+    this.setStatus(`Reset fit: ${partName}`);
+  }
+
+  async saveSuitspecFit() {
+    const path = this.loadedSuitspecPath || PANEL.suitspecPath.value;
+    if (!path || !this.suitspec) {
+      this.setStatus("Save failed: suitspec not loaded", true);
+      return;
+    }
+    try {
+      const res = await fetch("/api/suitspec-save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path,
+          suitspec: this.suitspec,
+        }),
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok || !data?.ok) {
+        const msg = data?.error || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      this.updateMetaPanel();
+      this.setStatus(`Saved fits to ${data.path || path}`);
+    } catch (err) {
+      const detail = String(err?.message || err || "unknown");
+      if (detail.includes("404")) {
+        this.setStatus("Save API not available. Use serve-dashboard on this URL.", true);
+        return;
+      }
+      this.setStatus(`Save failed: ${detail}`, true);
+    }
+  }
+
   setLegend(frame = null) {
     const activeFrame = frame || this.frames[this.frameIndex] || null;
     const frameText = this.frames.length ? `${this.frameIndex + 1}/${this.frames.length}` : "0/0";
     const equipped = activeFrame ? Boolean(activeFrame.equipped) : Boolean(this.sim?.equipped);
+    const fitScore = ((this.fitStats?.score || 0) * 100).toFixed(1);
+    const fitGap = (this.fitStats?.meanGap || 0).toFixed(3);
+    const fitPen = (this.fitStats?.meanPenetration || 0).toFixed(3);
     const lines = [
       "色付きブロック: 各パーツ仮形状 / 白縁: 輪郭",
       `Frame ${frameText} | Equipped: ${equipped ? "YES" : "NO"} | Speed x${this.speed.toFixed(2)}`,
       `Textures: ${this.useTextures ? "ON" : "OFF"} | Relief: ${this.reliefStrength.toFixed(2)} | Theme: ${
         this.darkTheme ? "Dark" : "Bright"
       }`,
+      `FitScore: ${fitScore} | Gap: ${fitGap} | Penetration: ${fitPen}`,
       "Tip: Auto Fitで全体を再センタリング",
     ];
     PANEL.legendText.innerHTML = lines.join("<br>");
@@ -264,6 +833,8 @@ class BodyFitViewer {
     const [spec, sim] = await Promise.all([this.fetchJson(suitspecPath), this.fetchJson(simPath)]);
     this.suitspec = spec;
     this.sim = sim;
+    this.loadedSuitspecPath = suitspecPath;
+    this.loadedSimPath = simPath;
     this.frames = Array.isArray(sim.frames) ? sim.frames : [];
     this.frameIndex = 0;
     this.playbackAccumSec = 0;
@@ -279,17 +850,8 @@ class BodyFitViewer {
         : `Loaded, but no frames found in ${normalizePath(simPath)}`,
       !hasFrames
     );
-    this.setMeta({
-      suitspec: suitspecPath,
-      sim: simPath,
-      modules: this.meshes.size,
-      frames: this.frames.length,
-      segments: Array.isArray(sim.segments) ? sim.segments.length : 0,
-      equip_frame: sim.equip_frame ?? -1,
-      equipped: sim.equipped ?? false,
-      textures: this.useTextures,
-      theme: this.darkTheme ? "dark" : "bright",
-    });
+    this.updateMetaPanel();
+    this.populateFitEditor();
     this.setLegend(this.frames[0] || null);
   }
 
@@ -318,12 +880,7 @@ class BodyFitViewer {
     const modules = this.suitspec?.modules || {};
     for (const [name, module] of Object.entries(modules)) {
       if (!module?.enabled) continue;
-      const config = MODULE_VIS[name] || {
-        shape: "box",
-        source: "chest_core",
-        offsetY: 0,
-        scale: [0.2, 0.2, 0.2],
-      };
+      const config = getModuleVisualConfig(name, module);
       const assetPath = resolveMeshAssetPath(name, module);
       const geometry = await loadModuleGeometry(name, config.shape, assetPath);
       const mesh = createMeshFromGeometry(geometry);
@@ -353,7 +910,8 @@ class BodyFitViewer {
   updateTextureMode(forceRelief = false) {
     PANEL.btnTexture.textContent = this.useTextures ? "Textures: On" : "Textures: Off";
     for (const rec of this.meshes.values()) {
-      rec.outline.visible = !this.useTextures;
+      rec.outline.visible = true;
+      rec.outline.material.opacity = this.useTextures ? 0.22 : 0.85;
       if (!this.useTextures) {
         rec.mesh.material.map = null;
         rec.mesh.material.color.setHex(partColor(rec.partName));
@@ -364,7 +922,7 @@ class BodyFitViewer {
       if (!rec.texturePath) continue;
       if (rec.texture) {
         rec.mesh.material.map = rec.texture;
-        rec.mesh.material.color.setHex(0xffffff);
+        rec.mesh.material.color.setHex(0xe7f0ff);
         rec.mesh.material.needsUpdate = true;
         if (forceRelief || !rec.reliefApplied) {
           applyReliefFromTexture(rec.mesh, rec.texture, this.reliefStrength);
@@ -382,7 +940,7 @@ class BodyFitViewer {
           rec.reliefApplied = false;
           if (this.useTextures) {
             rec.mesh.material.map = tex;
-            rec.mesh.material.color.setHex(0xffffff);
+            rec.mesh.material.color.setHex(0xe7f0ff);
             rec.mesh.material.needsUpdate = true;
             applyReliefFromTexture(rec.mesh, tex, this.reliefStrength);
             rec.reliefApplied = true;
@@ -404,7 +962,7 @@ class BodyFitViewer {
     this.frameIndex = safeIndex;
     PANEL.frameSlider.value = String(safeIndex);
     const frame = this.frames[safeIndex];
-    const segs = frame.segments || {};
+    const segs = withFallbackSegments(frame.segments || {});
 
     for (const [name, rec] of this.meshes.entries()) {
       const t = resolveTransform(name, rec.config, segs);
@@ -422,6 +980,8 @@ class BodyFitViewer {
       this.modelCenter.copy(sphere.center);
       this.modelRadius = Math.max(sphere.radius, 0.35);
     }
+    this.fitStats = this.calculateFitStats();
+    this.updateMetaPanel();
     this.setLegend(frame);
   }
 
@@ -476,6 +1036,7 @@ function createMeshFromGeometry(geometry) {
     color: 0x80a9e0,
     metalness: 0.55,
     roughness: 0.45,
+    side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geometry, material);
   const pos = mesh.geometry.attributes.position;
@@ -645,29 +1206,54 @@ function normalizePath(path) {
   return `/${p}`;
 }
 
+function withFallbackSegments(segments) {
+  const merged = {};
+  for (const [name, pose] of Object.entries(DEFAULT_SEGMENT_POSE)) {
+    merged[name] = pose;
+  }
+  for (const [name, pose] of Object.entries(segments || {})) {
+    merged[name] = pose;
+  }
+  return merged;
+}
+
 function resolveTransform(name, config, segments) {
   const source = config.source;
   const base = segments[source] || null;
   if (!base) return null;
 
   const offset = Number(config.offsetY || 0);
+  const attach = String(config.attach || "center");
+  let anchor = 0;
+  if (attach === "start") anchor = 0.5;
+  if (attach === "end") anchor = -0.5;
+
   const axis = localYAxis(base.rotation_z);
-  const x = base.position_x + axis.x * base.scale_y * offset;
-  const y = base.position_y + axis.y * base.scale_y * offset;
+  const along = base.scale_y * (anchor + offset);
+  const x = base.position_x + axis.x * along;
+  const y = base.position_y + axis.y * along;
   const z = base.position_z + Number(config.zOffset || 0);
+
   const scale = config.scale || [1, 1, 1];
-  const baseScaleX = Math.max(Number(base.scale_x || 1), 0.45);
-  const baseScaleY = Math.max(Number(base.scale_y || 1), 0.45);
-  const baseScaleZ = Math.max(Number(base.scale_z || 1), 0.45);
+  const follow = config.follow || [1, 1, 1];
+  const minScale = config.minScale || [0.24, 0.24, 0.24];
+
+  const baseScaleX = Math.max(Number(base.scale_x || 1), 0.2);
+  const baseScaleY = Math.max(Number(base.scale_y || 1), 0.2);
+  const baseScaleZ = Math.max(Number(base.scale_z || 1), 0.2);
+
+  const fitScaleX = 1 + (baseScaleX - 1) * Number(follow[0] ?? 1);
+  const fitScaleY = 1 + (baseScaleY - 1) * Number(follow[1] ?? 1);
+  const fitScaleZ = 1 + (baseScaleZ - 1) * Number(follow[2] ?? 1);
 
   return {
     position_x: x,
     position_y: y,
     position_z: z,
     rotation_z: base.rotation_z,
-    scale_x: baseScaleX * scale[0],
-    scale_y: baseScaleY * scale[1],
-    scale_z: baseScaleZ * scale[2],
+    scale_x: Math.max(fitScaleX * scale[0], Number(minScale[0] ?? 0.2)),
+    scale_y: Math.max(fitScaleY * scale[1], Number(minScale[1] ?? 0.2)),
+    scale_z: Math.max(fitScaleZ * scale[2], Number(minScale[2] ?? 0.2)),
   };
 }
 
@@ -726,6 +1312,30 @@ function init() {
   PANEL.btnCamSide.onclick = () => viewer.setCameraPreset("side");
   PANEL.btnCamTop.onclick = () => viewer.setCameraPreset("top");
   PANEL.btnFit.onclick = () => viewer.fitCameraToVisible();
+
+  if (PANEL.fitPart) {
+    PANEL.fitPart.onchange = () => viewer.loadFitEditorForPart(PANEL.fitPart.value);
+  }
+  if (PANEL.btnFitApplyCurrent) {
+    PANEL.btnFitApplyCurrent.onclick = () => viewer.applyFitEditorToCurrentPart();
+  }
+  if (PANEL.btnFitResetCurrent) {
+    PANEL.btnFitResetCurrent.onclick = () => viewer.resetFitForCurrentPart();
+  }
+  if (PANEL.btnFitSaveSuitspec) {
+    PANEL.btnFitSaveSuitspec.onclick = () => viewer.saveSuitspecFit();
+  }
+  const liveFitInputs = [
+    PANEL.fitScaleX,
+    PANEL.fitScaleY,
+    PANEL.fitScaleZ,
+    PANEL.fitOffsetY,
+    PANEL.fitZOffset,
+  ];
+  for (const input of liveFitInputs) {
+    if (!input) continue;
+    input.oninput = () => viewer.applyFitEditorToCurrentPart({ silent: true });
+  }
 
   viewer.applyTheme();
   viewer.setCameraPreset("front");

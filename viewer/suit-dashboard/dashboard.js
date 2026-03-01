@@ -5,10 +5,32 @@ const UI = {
   suitPath: document.getElementById("suitPath"),
   fallbackDir: document.getElementById("fallbackDir"),
   textureMode: document.getElementById("textureMode"),
+  uvRefine: document.getElementById("uvRefine"),
   simPath: document.getElementById("simPath"),
   preferFallback: document.getElementById("preferFallback"),
   updateSuitspec: document.getElementById("updateSuitspec"),
+  promptPart: document.getElementById("promptPart"),
+  promptPreview: document.getElementById("promptPreview"),
   partChecks: document.getElementById("partChecks"),
+  fitPart: document.getElementById("fitPart"),
+  fitSource: document.getElementById("fitSource"),
+  fitAttach: document.getElementById("fitAttach"),
+  fitOffsetY: document.getElementById("fitOffsetY"),
+  fitZOffset: document.getElementById("fitZOffset"),
+  fitScaleX: document.getElementById("fitScaleX"),
+  fitScaleY: document.getElementById("fitScaleY"),
+  fitScaleZ: document.getElementById("fitScaleZ"),
+  fitFollowX: document.getElementById("fitFollowX"),
+  fitFollowY: document.getElementById("fitFollowY"),
+  fitFollowZ: document.getElementById("fitFollowZ"),
+  fitMinScaleX: document.getElementById("fitMinScaleX"),
+  fitMinScaleY: document.getElementById("fitMinScaleY"),
+  fitMinScaleZ: document.getElementById("fitMinScaleZ"),
+  btnFitLoad: document.getElementById("btnFitLoad"),
+  btnFitApply: document.getElementById("btnFitApply"),
+  btnFitReset: document.getElementById("btnFitReset"),
+  btnFitSave: document.getElementById("btnFitSave"),
+  fitPreview: document.getElementById("fitPreview"),
   reliefSlider: document.getElementById("reliefSlider"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
@@ -21,6 +43,14 @@ const UI = {
   panelBody: document.getElementById("panelBody"),
   bodyFrontCanvas: document.getElementById("bodyFrontCanvas"),
   bodyFrontMeta: document.getElementById("bodyFrontMeta"),
+  bodyTunePart: document.getElementById("bodyTunePart"),
+  bodyTuneScaleX: document.getElementById("bodyTuneScaleX"),
+  bodyTuneScaleY: document.getElementById("bodyTuneScaleY"),
+  bodyTuneScaleZ: document.getElementById("bodyTuneScaleZ"),
+  bodyTuneOffsetY: document.getElementById("bodyTuneOffsetY"),
+  bodyTuneZOffset: document.getElementById("bodyTuneZOffset"),
+  btnBodyTuneApply: document.getElementById("btnBodyTuneApply"),
+  btnBodyTuneToFit: document.getElementById("btnBodyTuneToFit"),
 };
 
 const textureLoader = new THREE.TextureLoader();
@@ -29,6 +59,8 @@ const meshGeometryCache = new Map();
 const previewCards = [];
 let currentSuitPath = "";
 let currentSuit = null;
+let lastSummary = null;
+let isSyncingTuneControls = false;
 
 const BODY_FRONT_LAYOUT = {
   helmet: { pos: [0.0, 1.30, 0.08], scale: [0.66, 0.66, 0.66] },
@@ -51,6 +83,189 @@ const BODY_FRONT_LAYOUT = {
   right_boot: { pos: [0.28, -1.62, 0.20], scale: [0.92, 0.95, 1.18] },
 };
 
+const FIT_CONTACT_PAIRS = [
+  ["helmet", "chest"],
+  ["chest", "waist"],
+  ["chest", "back"],
+  ["left_shoulder", "left_upperarm"],
+  ["right_shoulder", "right_upperarm"],
+  ["left_upperarm", "left_forearm"],
+  ["right_upperarm", "right_forearm"],
+  ["left_forearm", "left_hand"],
+  ["right_forearm", "right_hand"],
+  ["waist", "left_thigh"],
+  ["waist", "right_thigh"],
+  ["left_thigh", "left_shin"],
+  ["right_thigh", "right_shin"],
+  ["left_shin", "left_boot"],
+  ["right_shin", "right_boot"],
+];
+
+const FIT_BASELINES = {
+  helmet: {
+    source: "chest_core",
+    attach: "start",
+    offsetY: 0.2,
+    zOffset: 0.02,
+    scale: [0.3, 0.32, 0.3],
+    follow: [0.34, 0.42, 0.34],
+    minScale: [0.22, 0.24, 0.22],
+  },
+  chest: {
+    source: "chest_core",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.72, 0.78, 0.66],
+    follow: [0.72, 0.78, 0.72],
+    minScale: [0.48, 0.56, 0.46],
+  },
+  back: {
+    source: "chest_core",
+    attach: "center",
+    offsetY: -0.02,
+    zOffset: -0.1,
+    scale: [0.68, 0.74, 0.6],
+    follow: [0.68, 0.76, 0.68],
+    minScale: [0.46, 0.54, 0.42],
+  },
+  waist: {
+    source: "chest_core",
+    attach: "end",
+    offsetY: -0.08,
+    zOffset: 0.0,
+    scale: [0.52, 0.38, 0.46],
+    follow: [0.62, 0.7, 0.62],
+    minScale: [0.34, 0.28, 0.3],
+  },
+  left_shoulder: {
+    source: "left_upperarm",
+    attach: "start",
+    offsetY: 0.08,
+    zOffset: 0.0,
+    scale: [0.24, 0.24, 0.24],
+    follow: [0.56, 0.5, 0.56],
+    minScale: [0.16, 0.16, 0.16],
+  },
+  right_shoulder: {
+    source: "right_upperarm",
+    attach: "start",
+    offsetY: 0.08,
+    zOffset: 0.0,
+    scale: [0.24, 0.24, 0.24],
+    follow: [0.56, 0.5, 0.56],
+    minScale: [0.16, 0.16, 0.16],
+  },
+  left_upperarm: {
+    source: "left_upperarm",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.94, 1.0, 0.94],
+    follow: [0.88, 0.94, 0.88],
+    minScale: [0.52, 0.56, 0.52],
+  },
+  right_upperarm: {
+    source: "right_upperarm",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.94, 1.0, 0.94],
+    follow: [0.88, 0.94, 0.88],
+    minScale: [0.52, 0.56, 0.52],
+  },
+  left_forearm: {
+    source: "left_forearm",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.9, 1.02, 0.9],
+    follow: [0.9, 0.96, 0.9],
+    minScale: [0.48, 0.56, 0.48],
+  },
+  right_forearm: {
+    source: "right_forearm",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.9, 1.02, 0.9],
+    follow: [0.9, 0.96, 0.9],
+    minScale: [0.48, 0.56, 0.48],
+  },
+  left_hand: {
+    source: "left_forearm",
+    attach: "end",
+    offsetY: -0.08,
+    zOffset: 0.03,
+    scale: [0.2, 0.2, 0.2],
+    follow: [0.38, 0.34, 0.38],
+    minScale: [0.14, 0.14, 0.14],
+  },
+  right_hand: {
+    source: "right_forearm",
+    attach: "end",
+    offsetY: -0.08,
+    zOffset: 0.03,
+    scale: [0.2, 0.2, 0.2],
+    follow: [0.38, 0.34, 0.38],
+    minScale: [0.14, 0.14, 0.14],
+  },
+  left_thigh: {
+    source: "left_thigh",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [1.0, 1.04, 1.0],
+    follow: [0.94, 0.96, 0.94],
+    minScale: [0.56, 0.66, 0.56],
+  },
+  right_thigh: {
+    source: "right_thigh",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [1.0, 1.04, 1.0],
+    follow: [0.94, 0.96, 0.94],
+    minScale: [0.56, 0.66, 0.56],
+  },
+  left_shin: {
+    source: "left_shin",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.96, 1.04, 0.96],
+    follow: [0.92, 0.96, 0.92],
+    minScale: [0.52, 0.64, 0.52],
+  },
+  right_shin: {
+    source: "right_shin",
+    attach: "center",
+    offsetY: 0.0,
+    zOffset: 0.0,
+    scale: [0.96, 1.04, 0.96],
+    follow: [0.92, 0.96, 0.92],
+    minScale: [0.52, 0.64, 0.52],
+  },
+  left_boot: {
+    source: "left_shin",
+    attach: "end",
+    offsetY: -0.14,
+    zOffset: 0.08,
+    scale: [0.28, 0.22, 0.4],
+    follow: [0.58, 0.52, 0.62],
+    minScale: [0.2, 0.16, 0.24],
+  },
+  right_boot: {
+    source: "right_shin",
+    attach: "end",
+    offsetY: -0.14,
+    zOffset: 0.08,
+    scale: [0.28, 0.22, 0.4],
+    follow: [0.58, 0.52, 0.62],
+    minScale: [0.2, 0.16, 0.24],
+  },
+};
+
 function setStatus(text, isError = false) {
   UI.status.textContent = text;
   UI.status.style.color = isError ? "#9c1b2f" : "#17335f";
@@ -67,6 +282,103 @@ function normPath(path) {
 
 function clamp(value, low, high) {
   return Math.max(low, Math.min(high, value));
+}
+
+function aabbGapAndPenetration(a, b) {
+  const gapX = Math.max(0, Math.max(a.min.x - b.max.x, b.min.x - a.max.x));
+  const gapY = Math.max(0, Math.max(a.min.y - b.max.y, b.min.y - a.max.y));
+  const gapZ = Math.max(0, Math.max(a.min.z - b.max.z, b.min.z - a.max.z));
+  const gap = Math.hypot(gapX, gapY, gapZ);
+
+  const overlapX = Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x);
+  const overlapY = Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y);
+  const overlapZ = Math.min(a.max.z, b.max.z) - Math.max(a.min.z, b.min.z);
+  const penetration =
+    overlapX > 0 && overlapY > 0 && overlapZ > 0 ? Math.min(overlapX, overlapY, overlapZ) : 0;
+  return { gap, penetration };
+}
+
+function fitPairScore(gap, penetration) {
+  const gapPenalty = clamp(gap / 0.09, 0, 1);
+  const penetrationPenalty = clamp(penetration / 0.05, 0, 1);
+  const score = clamp(1 - gapPenalty * 0.65 - penetrationPenalty * 0.35, 0, 1);
+  return score;
+}
+
+function numOr(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function vec3Or(input, fallback) {
+  const fb = Array.isArray(fallback) && fallback.length >= 3 ? fallback : [1, 1, 1];
+  if (Array.isArray(input) && input.length >= 3) {
+    return [numOr(input[0], fb[0]), numOr(input[1], fb[1]), numOr(input[2], fb[2])];
+  }
+  if (input && typeof input === "object") {
+    return [numOr(input.x, fb[0]), numOr(input.y, fb[1]), numOr(input.z, fb[2])];
+  }
+  return [...fb];
+}
+
+function normalizeFit(rawFit, fallback) {
+  const base = fallback || {
+    source: "chest_core",
+    attach: "center",
+    offsetY: 0,
+    zOffset: 0,
+    scale: [1, 1, 1],
+    follow: [1, 1, 1],
+    minScale: [0.2, 0.2, 0.2],
+  };
+  const fit = rawFit && typeof rawFit === "object" ? rawFit : {};
+  const attach = String(fit.attach ?? base.attach ?? "center").toLowerCase();
+  const safeAttach = attach === "start" || attach === "end" ? attach : "center";
+  return {
+    source: String(fit.source ?? base.source ?? "chest_core"),
+    attach: safeAttach,
+    offsetY: numOr(fit.offsetY, numOr(base.offsetY, 0)),
+    zOffset: numOr(fit.zOffset, numOr(base.zOffset, 0)),
+    scale: vec3Or(fit.scale, base.scale ?? [1, 1, 1]),
+    follow: vec3Or(fit.follow, base.follow ?? [1, 1, 1]),
+    minScale: vec3Or(fit.minScale, base.minScale ?? [0.2, 0.2, 0.2]),
+  };
+}
+
+function baseFitFor(partName) {
+  return normalizeFit(FIT_BASELINES[partName], null);
+}
+
+function effectiveFitFor(partName, module) {
+  const base = baseFitFor(partName);
+  const override = module?.fit;
+  return normalizeFit(override, base);
+}
+
+function bodyFrontTransformFor(partName, module) {
+  const layout = BODY_FRONT_LAYOUT[partName] || { pos: [0, 0, 0], scale: [1, 1, 1] };
+  const fit = effectiveFitFor(partName, module);
+  return {
+    position: [layout.pos[0], layout.pos[1] + fit.offsetY, layout.pos[2] + fit.zOffset],
+    scale: [
+      Math.max(layout.scale[0] * fit.scale[0], 0.02),
+      Math.max(layout.scale[1] * fit.scale[1], 0.02),
+      Math.max(layout.scale[2] * fit.scale[2], 0.02),
+    ],
+  };
+}
+
+function ensureSelectValue(select, value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return;
+  const hasOption = Array.from(select.options).some((op) => op.value === normalized);
+  if (!hasOption) {
+    const option = document.createElement("option");
+    option.value = normalized;
+    option.textContent = normalized;
+    select.appendChild(option);
+  }
+  select.value = normalized;
 }
 
 function readEnabledModules(suitspec) {
@@ -392,11 +704,18 @@ class PartCardPreview {
       color: 0xe6eefb,
       metalness: 0.68,
       roughness: 0.3,
+      side: THREE.DoubleSide,
     });
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.userData.basePositions = new Float32Array(geometry.attributes.position.array);
     this.scene.add(this.mesh);
+
+    this.wire = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geometry, 18),
+      new THREE.LineBasicMaterial({ color: 0x355e99, transparent: true, opacity: 0.32 })
+    );
+    this.scene.add(this.wire);
 
     this.tick = this.tick.bind(this);
     requestAnimationFrame(this.tick);
@@ -411,6 +730,8 @@ class PartCardPreview {
       this.mesh.geometry.dispose();
       this.mesh.geometry = geometry;
       this.mesh.userData.basePositions = new Float32Array(geometry.attributes.position.array);
+      this.wire.geometry.dispose();
+      this.wire.geometry = new THREE.EdgesGeometry(geometry, 18);
       fitCameraToObject(this.camera, this.controls, this.mesh, 2.15);
     } catch (error) {
       console.warn(`asset mesh fallback for ${this.partName}`, error);
@@ -435,7 +756,7 @@ class PartCardPreview {
 
     if (tex) {
       this.mesh.material.map = tex;
-      this.mesh.material.color.setHex(0xffffff);
+      this.mesh.material.color.setHex(0xe7f0ff);
       this.mesh.material.needsUpdate = true;
       applyRelief(this.mesh, tex, amplitude);
     } else {
@@ -551,6 +872,101 @@ class BodyFrontPreview {
     this.records = [];
   }
 
+  applyTransformToRecord(rec, transform) {
+    const p = transform?.position || [0, 0, 0];
+    const s = transform?.scale || [1, 1, 1];
+    rec.mesh.position.set(p[0], p[1], p[2]);
+    rec.mesh.scale.set(s[0], s[1], s[2]);
+    rec.wire.position.copy(rec.mesh.position);
+    rec.wire.scale.copy(rec.mesh.scale);
+  }
+
+  findRecord(partName) {
+    return this.records.find((rec) => rec.partName === partName) || null;
+  }
+
+  refreshPart(partName, module) {
+    const rec = this.findRecord(partName);
+    if (!rec) return;
+    this.applyTransformToRecord(rec, bodyFrontTransformFor(partName, module));
+    this.root.updateMatrixWorld(true);
+    this.updateMeta();
+    fitCameraToObject(this.camera, this.controls, this.root, 2.6);
+  }
+
+  calculateFitStats() {
+    this.root.updateMatrixWorld(true);
+    const byPart = new Map();
+    for (const rec of this.records) {
+      const box = new THREE.Box3().setFromObject(rec.mesh);
+      byPart.set(rec.partName, box);
+    }
+
+    let totalGap = 0;
+    let totalPenetration = 0;
+    let totalScore = 0;
+    let count = 0;
+    const weakPairs = [];
+
+    for (const [aName, bName] of FIT_CONTACT_PAIRS) {
+      const a = byPart.get(aName);
+      const b = byPart.get(bName);
+      if (!a || !b) continue;
+      const { gap, penetration } = aabbGapAndPenetration(a, b);
+      const score = fitPairScore(gap, penetration);
+      totalGap += gap;
+      totalPenetration += penetration;
+      totalScore += score;
+      count += 1;
+      weakPairs.push({ pair: `${aName}-${bName}`, gap, penetration, score });
+    }
+
+    if (count === 0) {
+      return {
+        pairCount: 0,
+        meanGap: 0,
+        meanPenetration: 0,
+        score: 0,
+        weakest: [],
+      };
+    }
+
+    weakPairs.sort((x, y) => x.score - y.score);
+    return {
+      pairCount: count,
+      meanGap: totalGap / count,
+      meanPenetration: totalPenetration / count,
+      score: totalScore / count,
+      weakest: weakPairs.slice(0, 3),
+    };
+  }
+
+  updateMeta() {
+    const stats = this.calculateFitStats();
+    const weakText =
+      stats.weakest.length === 0
+        ? "-"
+        : stats.weakest
+            .map(
+              (w) =>
+                `${w.pair}: score ${(w.score * 100).toFixed(1)} / gap ${w.gap.toFixed(3)} / pen ${w.penetration.toFixed(3)}`
+            )
+            .join("\n");
+
+    this.metaNode.textContent = [
+      `パーツ数: ${this.records.length}`,
+      `表示: ボディ前景 + 頂点線`,
+      `背景: 白固定`,
+      `反映: fit.scale / fit.offsetY / fit.zOffset`,
+      `接続ペア: ${stats.pairCount}`,
+      `平均すき間: ${stats.meanGap.toFixed(3)}`,
+      `平均食い込み: ${stats.meanPenetration.toFixed(3)}`,
+      `フィットスコア: ${(stats.score * 100).toFixed(1)} / 100`,
+      `要改善ペア:\n${weakText}`,
+      `用途: パーツの接続・密度・前景バランス確認`,
+    ].join("\n");
+  }
+
   async loadSuit(suitspec) {
     this.clear();
 
@@ -570,20 +986,15 @@ class BodyFrontPreview {
         color: 0xeaf1fb,
         metalness: 0.6,
         roughness: 0.34,
+        side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.userData.basePositions = new Float32Array(geometry.attributes.position.array);
-
-      const layout = BODY_FRONT_LAYOUT[name] || { pos: [0, 0, 0], scale: [1, 1, 1] };
-      mesh.position.set(layout.pos[0], layout.pos[1], layout.pos[2]);
-      mesh.scale.set(layout.scale[0], layout.scale[1], layout.scale[2]);
 
       const wire = new THREE.LineSegments(
         new THREE.EdgesGeometry(geometry, 16),
         new THREE.LineBasicMaterial({ color: 0x244c86, transparent: true, opacity: 0.48 })
       );
-      wire.position.copy(mesh.position);
-      wire.scale.copy(mesh.scale);
 
       const group = new THREE.Group();
       group.add(mesh);
@@ -593,21 +1004,18 @@ class BodyFrontPreview {
       const tex = await loadTexture(mod.texture_path || null);
       if (tex) {
         mesh.material.map = tex;
-        mesh.material.color.setHex(0xffffff);
+        mesh.material.color.setHex(0xe8f1ff);
         mesh.material.needsUpdate = true;
         applyRelief(mesh, tex, relief);
       }
 
-      this.records.push({ partName: name, group, mesh, wire, texture: tex });
+      const rec = { partName: name, group, mesh, wire, texture: tex };
+      this.applyTransformToRecord(rec, bodyFrontTransformFor(name, mod));
+      this.records.push(rec);
     }
 
     fitCameraToObject(this.camera, this.controls, this.root, 2.6);
-    this.metaNode.textContent = [
-      `パーツ数: ${this.records.length}`,
-      `表示: ボディ前景 + 頂点線`,
-      `背景: 白固定`,
-      `用途: パーツの接続・密度・前景バランス確認`,
-    ].join("\n");
+    this.updateMeta();
   }
 
   updateRelief(amplitude) {
@@ -644,8 +1052,250 @@ function renderPartChecks(parts) {
   }
 }
 
+function renderFitPartSelector(parts) {
+  const prev = UI.fitPart.value;
+  UI.fitPart.innerHTML = "";
+
+  for (const [name] of parts) {
+    const op = document.createElement("option");
+    op.value = name;
+    op.textContent = name;
+    UI.fitPart.appendChild(op);
+  }
+
+  if (!parts.length) {
+    UI.fitPreview.textContent = "fit対象パーツなし";
+    return;
+  }
+
+  UI.fitPart.value = parts.some(([name]) => name === prev) ? prev : parts[0][0];
+  loadFitEditor(UI.fitPart.value);
+}
+
+function setFitEditorValues(fit) {
+  ensureSelectValue(UI.fitSource, fit.source);
+  ensureSelectValue(UI.fitAttach, fit.attach);
+  UI.fitOffsetY.value = String(fit.offsetY);
+  UI.fitZOffset.value = String(fit.zOffset);
+  UI.fitScaleX.value = String(fit.scale[0]);
+  UI.fitScaleY.value = String(fit.scale[1]);
+  UI.fitScaleZ.value = String(fit.scale[2]);
+  UI.fitFollowX.value = String(fit.follow[0]);
+  UI.fitFollowY.value = String(fit.follow[1]);
+  UI.fitFollowZ.value = String(fit.follow[2]);
+  UI.fitMinScaleX.value = String(fit.minScale[0]);
+  UI.fitMinScaleY.value = String(fit.minScale[1]);
+  UI.fitMinScaleZ.value = String(fit.minScale[2]);
+}
+
+function renderBodyTuneSelector(parts) {
+  const prev = UI.bodyTunePart.value;
+  UI.bodyTunePart.innerHTML = "";
+  for (const [name] of parts) {
+    const op = document.createElement("option");
+    op.value = name;
+    op.textContent = name;
+    UI.bodyTunePart.appendChild(op);
+  }
+  if (!parts.length) return;
+  UI.bodyTunePart.value = parts.some(([name]) => name === prev) ? prev : parts[0][0];
+  loadBodyTuneEditor(UI.bodyTunePart.value);
+}
+
+function setBodyTuneValues(fit) {
+  isSyncingTuneControls = true;
+  UI.bodyTuneScaleX.value = String(fit.scale[0]);
+  UI.bodyTuneScaleY.value = String(fit.scale[1]);
+  UI.bodyTuneScaleZ.value = String(fit.scale[2]);
+  UI.bodyTuneOffsetY.value = String(fit.offsetY);
+  UI.bodyTuneZOffset.value = String(fit.zOffset);
+  isSyncingTuneControls = false;
+}
+
+function loadBodyTuneEditor(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) return;
+  const fit = effectiveFitFor(partName, currentSuit.modules[partName]);
+  setBodyTuneValues(fit);
+}
+
+function readBodyTuneFit(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) return null;
+  const module = currentSuit.modules[partName];
+  const base = effectiveFitFor(partName, module);
+  return normalizeFit(
+    {
+      ...base,
+      scale: [UI.bodyTuneScaleX.value, UI.bodyTuneScaleY.value, UI.bodyTuneScaleZ.value],
+      offsetY: UI.bodyTuneOffsetY.value,
+      zOffset: UI.bodyTuneZOffset.value,
+    },
+    baseFitFor(partName)
+  );
+}
+
+function applyBodyTuneToSuit({ syncFitEditor = true, silent = false } = {}) {
+  const partName = UI.bodyTunePart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) return false;
+  const fit = readBodyTuneFit(partName);
+  if (!fit) return false;
+  currentSuit.modules[partName].fit = fit;
+  bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  if (syncFitEditor) {
+    UI.fitPart.value = partName;
+    setFitEditorValues(fit);
+    renderFitPreview(partName);
+  }
+  if (!silent) {
+    setStatus(`全身プレビュー調整を適用: ${partName}`);
+  }
+  return true;
+}
+
+function renderFitPreview(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    UI.fitPreview.textContent = "fit未設定";
+    return;
+  }
+  const module = currentSuit.modules[partName];
+  const base = baseFitFor(partName);
+  const effective = effectiveFitFor(partName, module);
+  UI.fitPreview.textContent = JSON.stringify(
+    {
+      part: partName,
+      base_fit: base,
+      override_fit: module.fit || null,
+      effective_fit: effective,
+    },
+    null,
+    2
+  );
+}
+
+function loadFitEditor(partName) {
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    UI.fitPreview.textContent = "fit未設定";
+    return;
+  }
+  const module = currentSuit.modules[partName];
+  const effective = effectiveFitFor(partName, module);
+  setFitEditorValues(effective);
+  if (UI.bodyTunePart.value !== partName) {
+    UI.bodyTunePart.value = partName;
+  }
+  setBodyTuneValues(effective);
+  renderFitPreview(partName);
+}
+
+function readFitEditor(partName) {
+  const base = baseFitFor(partName);
+  return normalizeFit(
+    {
+      source: UI.fitSource.value,
+      attach: UI.fitAttach.value,
+      offsetY: UI.fitOffsetY.value,
+      zOffset: UI.fitZOffset.value,
+      scale: [UI.fitScaleX.value, UI.fitScaleY.value, UI.fitScaleZ.value],
+      follow: [UI.fitFollowX.value, UI.fitFollowY.value, UI.fitFollowZ.value],
+      minScale: [UI.fitMinScaleX.value, UI.fitMinScaleY.value, UI.fitMinScaleZ.value],
+    },
+    base
+  );
+}
+
+function applyFitEditorToSuit() {
+  const partName = UI.fitPart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    setStatus("fit適用対象の部位がありません。", true);
+    return false;
+  }
+  const fit = readFitEditor(partName);
+  currentSuit.modules[partName].fit = fit;
+  bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  if (UI.bodyTunePart.value !== partName) {
+    UI.bodyTunePart.value = partName;
+  }
+  setBodyTuneValues(fit);
+  renderFitPreview(partName);
+  setStatus(`fitを適用しました: ${partName}`);
+  return true;
+}
+
+function resetFitForPart() {
+  const partName = UI.fitPart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    setStatus("fit解除対象の部位がありません。", true);
+    return;
+  }
+  delete currentSuit.modules[partName].fit;
+  loadFitEditor(partName);
+  bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  setStatus(`fitを解除しました: ${partName}`);
+}
+
+async function saveCurrentSuit() {
+  if (!currentSuitPath || !currentSuit) {
+    throw new Error("保存対象の SuitSpec がありません。");
+  }
+  const res = await fetch("/api/suitspec-save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: currentSuitPath,
+      suitspec: currentSuit,
+    }),
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    throw new Error(data.error || "SuitSpec保存に失敗しました。");
+  }
+  return data;
+}
+
 function selectedParts() {
   return Array.from(UI.partChecks.querySelectorAll("input[type='checkbox']:checked")).map((el) => el.value);
+}
+
+function renderPromptSelector(parts, suitspec) {
+  UI.promptPart.innerHTML = "";
+  for (const [name] of parts) {
+    const op = document.createElement("option");
+    op.value = name;
+    op.textContent = name;
+    UI.promptPart.appendChild(op);
+  }
+  if (parts.length === 0) {
+    UI.promptPreview.textContent = "対象パーツなし";
+    return;
+  }
+  const selected = UI.promptPart.value || parts[0][0];
+  UI.promptPart.value = selected;
+  updatePromptPreview(selected, suitspec);
+}
+
+function updatePromptPreview(part, suitspec) {
+  if (!part) {
+    UI.promptPreview.textContent = "プロンプト未選択";
+    return;
+  }
+
+  const gen = suitspec?.generation || {};
+  const specPrompt = gen?.part_prompts?.[part] || "(SuitSpec内に未保存)";
+  const runtimePrompt = lastSummary?.prompts?.[part] || null;
+  const refinePrompt = lastSummary?.refine_prompts?.[part] || null;
+
+  const lines = [
+    `[part] ${part}`,
+    "",
+    "[suitspec.prompt]",
+    specPrompt,
+  ];
+  if (runtimePrompt) {
+    lines.push("", "[last generation prompt]", runtimePrompt);
+  }
+  if (refinePrompt) {
+    lines.push("", "[last refine prompt]", refinePrompt);
+  }
+  UI.promptPreview.textContent = lines.join("\n");
 }
 
 function clearPreviews() {
@@ -747,6 +1397,9 @@ async function loadSuit(path) {
 
   const enabled = readEnabledModules(currentSuit);
   renderPartChecks(enabled);
+  renderFitPartSelector(enabled);
+  renderBodyTuneSelector(enabled);
+  renderPromptSelector(enabled, currentSuit);
   renderPartCards(currentSuit);
   await bodyFrontPreview.loadSuit(currentSuit);
 
@@ -763,6 +1416,7 @@ async function runGenerate() {
     suitspec: currentSuitPath,
     parts: selectedParts(),
     texture_mode: UI.textureMode.value,
+    uv_refine: UI.uvRefine.checked,
     fallback_dir: UI.fallbackDir.value.trim() || null,
     prefer_fallback: UI.preferFallback.checked,
     update_suitspec: UI.updateSuitspec.checked,
@@ -783,6 +1437,17 @@ async function runGenerate() {
   }
 
   const parsed = data.parsed || {};
+  lastSummary = null;
+  if (parsed.summary_path) {
+    try {
+      const summaryRes = await fetch(normPath(parsed.summary_path));
+      if (summaryRes.ok) {
+        lastSummary = await summaryRes.json();
+      }
+    } catch {
+      // best effort
+    }
+  }
   setStatus(
     [
       `生成完了`,
@@ -791,6 +1456,7 @@ async function runGenerate() {
       `errors=${parsed.error_count || 0}`,
       `fallback=${parsed.fallback_used_count || 0}`,
       `mode=${UI.textureMode.value}`,
+      `uv_refine=${UI.uvRefine.checked}`,
     ].join("\n")
   );
 
@@ -800,7 +1466,8 @@ async function runGenerate() {
 function openBodyFit() {
   const suit = encodeURIComponent(currentSuitPath || UI.suitPath.value);
   const sim = encodeURIComponent(UI.simPath.value.trim() || "sessions/body-sim.json");
-  window.open(`/viewer/body-fit/?suitspec=${suit}&sim=${sim}`, "_blank");
+  const t = Date.now();
+  window.open(`/viewer/body-fit/?suitspec=${suit}&sim=${sim}&t=${t}`, "_blank");
 }
 
 function bindEvents() {
@@ -831,12 +1498,73 @@ function bindEvents() {
 
   UI.btnOpenBodyFit.onclick = openBodyFit;
 
+  UI.fitPart.onchange = () => {
+    loadFitEditor(UI.fitPart.value);
+  };
+
+  UI.btnFitLoad.onclick = () => {
+    loadFitEditor(UI.fitPart.value);
+    setStatus(`fitを読込しました: ${UI.fitPart.value}`);
+  };
+
+  UI.btnFitApply.onclick = () => {
+    applyFitEditorToSuit();
+  };
+
+  UI.btnFitReset.onclick = () => {
+    resetFitForPart();
+  };
+
+  UI.btnFitSave.onclick = async () => {
+    try {
+      if (!applyFitEditorToSuit()) return;
+      await saveCurrentSuit();
+      setStatus(`fitを保存しました: ${currentSuitPath}`);
+      await loadSuit(currentSuitPath);
+    } catch (err) {
+      setStatus(String(err), true);
+    }
+  };
+
+  UI.bodyTunePart.onchange = () => {
+    const part = UI.bodyTunePart.value;
+    UI.fitPart.value = part;
+    loadFitEditor(part);
+  };
+
+  const onBodyTuneInput = () => {
+    if (isSyncingTuneControls) return;
+    applyBodyTuneToSuit({ syncFitEditor: true, silent: true });
+  };
+
+  UI.bodyTuneScaleX.oninput = onBodyTuneInput;
+  UI.bodyTuneScaleY.oninput = onBodyTuneInput;
+  UI.bodyTuneScaleZ.oninput = onBodyTuneInput;
+  UI.bodyTuneOffsetY.oninput = onBodyTuneInput;
+  UI.bodyTuneZOffset.oninput = onBodyTuneInput;
+
+  UI.btnBodyTuneApply.onclick = () => {
+    applyBodyTuneToSuit({ syncFitEditor: true, silent: false });
+  };
+
+  UI.btnBodyTuneToFit.onclick = () => {
+    const part = UI.bodyTunePart.value;
+    if (!part) return;
+    UI.fitPart.value = part;
+    loadFitEditor(part);
+    setStatus(`Fit編集欄へ同期しました: ${part}`);
+  };
+
   UI.reliefSlider.oninput = () => {
     const amp = Number(UI.reliefSlider.value || "0.05");
     for (const preview of previewCards) {
       preview.updateRelief(amp);
     }
     bodyFrontPreview.updateRelief(amp);
+  };
+
+  UI.promptPart.onchange = () => {
+    updatePromptPreview(UI.promptPart.value, currentSuit);
   };
 
   for (const btn of UI.tabButtons) {

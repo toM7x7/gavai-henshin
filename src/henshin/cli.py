@@ -8,6 +8,7 @@ import http.server
 import json
 import shutil
 import socketserver
+import time
 from pathlib import Path
 
 from .archive import ensure_session_dir, save_session_bundle
@@ -17,6 +18,7 @@ from .dashboard_server import serve_dashboard
 from .forge import create_draft_morphotype, create_draft_suitspec, write_json
 from .gemini_image import (
     GeminiImageError,
+    GeminiReferenceImage,
     extension_for_mime,
     generate_image,
     resolve_api_key,
@@ -24,7 +26,7 @@ from .gemini_image import (
     write_generation_meta,
 )
 from .ids import generate_approval_id, generate_morphotype_id, generate_session_id, generate_suit_id
-from .part_prompts import list_enabled_parts, resolve_part_prompts
+from .part_prompts import build_uv_refine_prompt, list_enabled_parts, resolve_part_prompts
 from .rightarm import CoverScale, RightArmFrame, Vec2, run_rightarm_sequence
 from .transform import ProtocolStateMachine
 from .validators import load_json, validate_file
@@ -204,6 +206,7 @@ def _cmd_generate_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_generate_parts(args: argparse.Namespace) -> int:
+    started_at = time.perf_counter()
     spec = load_json(args.suitspec)
     requested = args.parts or list_enabled_parts(spec)
     if not requested:
@@ -211,15 +214,24 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
         return 2
 
     prompts = resolve_part_prompts(spec, requested, texture_mode=args.texture_mode)
+    concept_prompts: dict[str, str] = {}
+    refine_prompts: dict[str, str] = {}
+    if args.uv_refine and args.texture_mode == "mesh_uv":
+        concept_prompts = resolve_part_prompts(spec, requested, texture_mode="concept")
+        refine_prompts = {part: build_uv_refine_prompt(part, spec) for part in requested}
+
     if args.dry_run:
+        payload: dict[str, object] = {
+            "ok": True,
+            "dry_run": True,
+            "parts": requested,
+            "prompts": prompts,
+        }
+        if refine_prompts:
+            payload["refine_prompts"] = refine_prompts
         print(
             json.dumps(
-                {
-                    "ok": True,
-                    "dry_run": True,
-                    "parts": requested,
-                    "prompts": prompts,
-                },
+                payload,
                 ensure_ascii=False,
                 indent=2,
             )
@@ -256,54 +268,109 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
     session_dir = ensure_session_dir(session_id, root=args.root)
     parts_dir = session_dir / "artifacts" / "parts"
     parts_dir.mkdir(parents=True, exist_ok=True)
+    image_aspect_ratio = "1:1" if args.texture_mode == "mesh_uv" else None
+    image_size = "2K" if args.texture_mode == "mesh_uv" else None
 
     generated: dict[str, dict[str, str]] = {}
     errors: dict[str, str] = {}
     fallback_used: list[str] = []
+    part_durations_sec: dict[str, float] = {}
     for part in requested:
+        part_started_at = time.perf_counter()
         part_error: str | None = None
         used_fallback = False
 
-        if args.prefer_fallback and fallback_dir is not None:
-            fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
-            if fallback_info is not None:
-                generated[part] = fallback_info
-                fallback_used.append(part)
-                used_fallback = True
+        try:
+            if args.prefer_fallback and fallback_dir is not None:
+                fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
+                if fallback_info is not None:
+                    generated[part] = fallback_info
+                    fallback_used.append(part)
+                    used_fallback = True
 
-        if not used_fallback and api_key is not None:
-            try:
-                result = generate_image(
-                    prompt=prompts[part],
-                    model_id=model_id,
-                    api_key=api_key,
-                    timeout_seconds=args.timeout,
-                )
-                ext = extension_for_mime(result.mime_type)
-                image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
-                meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
-                generated[part] = {"image_path": str(image_path), "meta_path": str(meta_path), "source": "gemini"}
-            except GeminiImageError as exc:
-                part_error = str(exc)
+            if not used_fallback and api_key is not None:
+                try:
+                    if args.uv_refine and args.texture_mode == "mesh_uv":
+                        concept = generate_image(
+                            prompt=concept_prompts[part],
+                            model_id=model_id,
+                            api_key=api_key,
+                            aspect_ratio=image_aspect_ratio,
+                            image_size=image_size,
+                            timeout_seconds=args.timeout,
+                        )
+                        concept_ext = extension_for_mime(concept.mime_type)
+                        concept_path = save_image(concept, output_path=parts_dir / f"{part}.concept{concept_ext}")
+                        write_generation_meta(parts_dir / f"{part}.concept.generation.json", result=concept, kind=f"part:{part}:concept")
 
-        if part in generated:
-            continue
+                        try:
+                            result = generate_image(
+                                prompt=refine_prompts[part],
+                                model_id=model_id,
+                                api_key=api_key,
+                                references=[GeminiReferenceImage(mime_type=concept.mime_type, image_bytes=concept.image_bytes)],
+                                aspect_ratio=image_aspect_ratio,
+                                image_size=image_size,
+                                timeout_seconds=args.timeout,
+                            )
+                            source = "gemini_refine"
+                        except GeminiImageError:
+                            result = generate_image(
+                                prompt=prompts[part],
+                                model_id=model_id,
+                                api_key=api_key,
+                                aspect_ratio=image_aspect_ratio,
+                                image_size=image_size,
+                                timeout_seconds=args.timeout,
+                            )
+                            source = "gemini_single_pass_after_refine_fail"
 
-        if fallback_dir is not None:
-            fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
-            if fallback_info is not None:
-                generated[part] = fallback_info
-                fallback_used.append(part)
+                        ext = extension_for_mime(result.mime_type)
+                        image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
+                        meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
+                        generated[part] = {
+                            "image_path": str(image_path),
+                            "meta_path": str(meta_path),
+                            "source": source,
+                            "concept_path": str(concept_path),
+                        }
+                    else:
+                        result = generate_image(
+                            prompt=prompts[part],
+                            model_id=model_id,
+                            api_key=api_key,
+                            aspect_ratio=image_aspect_ratio,
+                            image_size=image_size,
+                            timeout_seconds=args.timeout,
+                        )
+                        ext = extension_for_mime(result.mime_type)
+                        image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
+                        meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
+                        generated[part] = {"image_path": str(image_path), "meta_path": str(meta_path), "source": "gemini"}
+                except GeminiImageError as exc:
+                    part_error = str(exc)
+
+            if part in generated:
                 continue
 
-        if part_error is None:
-            part_error = api_key_error or "Image generation failed and fallback asset not found."
-        errors[part] = part_error
+            if fallback_dir is not None:
+                fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
+                if fallback_info is not None:
+                    generated[part] = fallback_info
+                    fallback_used.append(part)
+                    continue
+
+            if part_error is None:
+                part_error = api_key_error or "Image generation failed and fallback asset not found."
+            errors[part] = part_error
+        finally:
+            part_durations_sec[part] = round(time.perf_counter() - part_started_at, 3)
 
     if args.update_suitspec:
         modules = spec.setdefault("modules", {})
         generation = spec.setdefault("generation", {})
         generation["texture_mode"] = args.texture_mode
+        generation["uv_refine"] = bool(args.uv_refine)
         part_prompts = generation.setdefault("part_prompts", {})
         for part, prompt in prompts.items():
             part_prompts[part] = prompt
@@ -317,12 +384,18 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
         "session_id": session_id,
         "model_id": model_id,
         "texture_mode": args.texture_mode,
+        "uv_refine": bool(args.uv_refine),
+        "aspect_ratio": image_aspect_ratio,
+        "image_size": image_size,
         "requested_parts": requested,
         "prompts": prompts,
+        "refine_prompts": refine_prompts,
         "fallback_dir": str(fallback_dir) if fallback_dir else None,
         "fallback_used": fallback_used,
         "generated": generated,
         "errors": errors,
+        "part_durations_sec": part_durations_sec,
+        "total_elapsed_sec": round(time.perf_counter() - started_at, 3),
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -335,6 +408,7 @@ def _cmd_generate_parts(args: argparse.Namespace) -> int:
                 "generated_count": len(generated),
                 "error_count": len(errors),
                 "fallback_used_count": len(fallback_used),
+                "total_elapsed_sec": summary["total_elapsed_sec"],
                 "summary_path": str(summary_path),
             },
             ensure_ascii=False,
@@ -590,6 +664,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["concept", "mesh_uv"],
         default="mesh_uv",
         help="Prompt mode: concept image or UV-ready mesh texture",
+    )
+    generate_parts.add_argument(
+        "--uv-refine",
+        action="store_true",
+        help="Two-pass generation: concept image -> UV texture refinement using reference image",
     )
     generate_parts.add_argument(
         "--fallback-dir",

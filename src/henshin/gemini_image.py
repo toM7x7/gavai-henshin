@@ -27,6 +27,12 @@ class GeminiImageResult:
     timestamp: str
 
 
+@dataclass(slots=True)
+class GeminiReferenceImage:
+    mime_type: str
+    image_bytes: bytes
+
+
 def _load_dotenv(path: str | Path = ".env") -> dict[str, str]:
     p = Path(path)
     if not p.exists() or not p.is_file():
@@ -61,13 +67,38 @@ def resolve_api_key(explicit: str | None = None, dotenv_path: str | Path = ".env
     raise GeminiImageError("API key is missing. Set GEMINI_API_KEY or pass --api-key.")
 
 
-def build_image_request(prompt: str) -> dict[str, Any]:
-    return {
-        "contents": [{"parts": [{"text": prompt}]}],
+def build_image_request(
+    prompt: str,
+    references: list[GeminiReferenceImage] | None = None,
+    *,
+    aspect_ratio: str | None = None,
+    image_size: str | None = None,
+) -> dict[str, Any]:
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    for ref in references or []:
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": ref.mime_type,
+                    "data": base64.b64encode(ref.image_bytes).decode("ascii"),
+                }
+            }
+        )
+
+    payload: dict[str, Any] = {
+        "contents": [{"parts": parts}],
         "generationConfig": {
             "responseModalities": ["IMAGE", "TEXT"],
         },
     }
+    image_config: dict[str, str] = {}
+    if aspect_ratio:
+        image_config["aspectRatio"] = aspect_ratio
+    if image_size:
+        image_config["imageSize"] = image_size
+    if image_config:
+        payload["generationConfig"]["imageConfig"] = image_config
+    return payload
 
 
 def _extract_image_part(response: dict[str, Any]) -> tuple[bytes, str]:
@@ -99,11 +130,19 @@ def generate_image(
     prompt: str,
     model_id: str,
     api_key: str,
+    references: list[GeminiReferenceImage] | None = None,
+    aspect_ratio: str | None = None,
+    image_size: str | None = None,
     timeout_seconds: int = 60,
     endpoint_base: str = "https://generativelanguage.googleapis.com/v1beta",
 ) -> GeminiImageResult:
     url = f"{endpoint_base}/models/{model_id}:generateContent?key={api_key}"
-    payload = build_image_request(prompt=prompt)
+    payload = build_image_request(
+        prompt=prompt,
+        references=references,
+        aspect_ratio=aspect_ratio,
+        image_size=image_size,
+    )
     request = Request(
         url=url,
         data=json.dumps(payload).encode("utf-8"),

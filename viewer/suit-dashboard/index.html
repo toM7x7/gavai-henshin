@@ -44,12 +44,106 @@
 
         <div class="checks">
           <label><input id="preferFallback" type="checkbox" /> 既存画像を優先</label>
+          <label><input id="uvRefine" type="checkbox" checked /> UV二段階生成</label>
           <label><input id="updateSuitspec" type="checkbox" checked /> SuitSpecへ反映</label>
+        </div>
+
+        <div class="field">
+          <label for="promptPart">現在プロンプト確認</label>
+          <select id="promptPart"></select>
+          <pre id="promptPreview">プロンプト未読み込み</pre>
         </div>
 
         <div class="field">
           <label>対象パーツ</label>
           <div id="partChecks" class="parts"></div>
+        </div>
+
+        <div class="field fit-panel">
+          <label>Fit 調整（部位ごと）</label>
+          <div class="fit-head">
+            <select id="fitPart"></select>
+            <button id="btnFitLoad">読込</button>
+            <button id="btnFitApply">適用</button>
+          </div>
+
+          <div class="fit-grid">
+            <label class="fit-field">
+              <span>source</span>
+              <select id="fitSource">
+                <option value="chest_core">chest_core</option>
+                <option value="left_upperarm">left_upperarm</option>
+                <option value="right_upperarm">right_upperarm</option>
+                <option value="left_forearm">left_forearm</option>
+                <option value="right_forearm">right_forearm</option>
+                <option value="left_thigh">left_thigh</option>
+                <option value="right_thigh">right_thigh</option>
+                <option value="left_shin">left_shin</option>
+                <option value="right_shin">right_shin</option>
+              </select>
+            </label>
+            <label class="fit-field">
+              <span>attach</span>
+              <select id="fitAttach">
+                <option value="start">start</option>
+                <option value="center">center</option>
+                <option value="end">end</option>
+              </select>
+            </label>
+            <label class="fit-field">
+              <span>offsetY</span>
+              <input id="fitOffsetY" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>zOffset</span>
+              <input id="fitZOffset" type="number" step="0.01" />
+            </label>
+
+            <label class="fit-field">
+              <span>scaleX</span>
+              <input id="fitScaleX" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>scaleY</span>
+              <input id="fitScaleY" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>scaleZ</span>
+              <input id="fitScaleZ" type="number" step="0.01" />
+            </label>
+
+            <label class="fit-field">
+              <span>followX</span>
+              <input id="fitFollowX" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>followY</span>
+              <input id="fitFollowY" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>followZ</span>
+              <input id="fitFollowZ" type="number" step="0.01" />
+            </label>
+
+            <label class="fit-field">
+              <span>minScaleX</span>
+              <input id="fitMinScaleX" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>minScaleY</span>
+              <input id="fitMinScaleY" type="number" step="0.01" />
+            </label>
+            <label class="fit-field">
+              <span>minScaleZ</span>
+              <input id="fitMinScaleZ" type="number" step="0.01" />
+            </label>
+          </div>
+
+          <div class="fit-actions">
+            <button id="btnFitReset">部位fitを解除</button>
+            <button id="btnFitSave">SuitSpecへ保存</button>
+          </div>
+          <pre id="fitPreview">fit未設定</pre>
         </div>
 
         <div class="actions">
@@ -77,11 +171,47 @@
 
         <div id="panelBody" class="panel">
           <canvas id="bodyFrontCanvas" class="body-canvas"></canvas>
+          <div class="body-tune">
+            <div class="body-tune-head">
+              <strong>全身プレビュー上でサイズ調整</strong>
+              <small>変更は fit に反映されます（保存は別操作）</small>
+            </div>
+            <div class="body-tune-grid">
+              <label class="body-tune-field">
+                <span>部位</span>
+                <select id="bodyTunePart"></select>
+              </label>
+              <label class="body-tune-field">
+                <span>scaleX</span>
+                <input id="bodyTuneScaleX" type="number" step="0.01" min="0.10" max="3.00" />
+              </label>
+              <label class="body-tune-field">
+                <span>scaleY</span>
+                <input id="bodyTuneScaleY" type="number" step="0.01" min="0.10" max="3.00" />
+              </label>
+              <label class="body-tune-field">
+                <span>scaleZ</span>
+                <input id="bodyTuneScaleZ" type="number" step="0.01" min="0.10" max="3.00" />
+              </label>
+              <label class="body-tune-field">
+                <span>offsetY</span>
+                <input id="bodyTuneOffsetY" type="number" step="0.01" min="-1.00" max="1.00" />
+              </label>
+              <label class="body-tune-field">
+                <span>zOffset</span>
+                <input id="bodyTuneZOffset" type="number" step="0.01" min="-1.00" max="1.00" />
+              </label>
+            </div>
+            <div class="body-tune-actions">
+              <button id="btnBodyTuneApply">全身プレビューに適用</button>
+              <button id="btnBodyTuneToFit">Fit編集欄へ同期</button>
+            </div>
+          </div>
           <div id="bodyFrontMeta" class="body-meta">読み込み待機中...</div>
         </div>
       </section>
     </div>
 
-    <script type="module" src="./dashboard.js?v=20260302a"></script>
+    <script type="module" src="./dashboard.js?v=20260303b"></script>
   </body>
 </html>

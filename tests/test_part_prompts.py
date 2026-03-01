@@ -1,7 +1,7 @@
 import unittest
 
 from henshin.forge import create_draft_suitspec
-from henshin.part_prompts import build_part_prompt, list_enabled_parts, resolve_part_prompts
+from henshin.part_prompts import build_part_prompt, build_uv_refine_prompt, list_enabled_parts, resolve_part_prompts
 
 
 class TestPartPrompts(unittest.TestCase):
@@ -40,6 +40,12 @@ class TestPartPrompts(unittest.TestCase):
         spec = create_draft_suitspec()
         prompts = resolve_part_prompts(spec, ["helmet"], texture_mode="mesh_uv")
         self.assertIn("UV-ready texture atlas", prompts["helmet"])
+
+    def test_build_uv_refine_prompt(self) -> None:
+        spec = create_draft_suitspec()
+        prompt = build_uv_refine_prompt("helmet", spec)
+        self.assertIn("reference concept image", prompt)
+        self.assertIn("UV-ready flat texture sheet", prompt)
 
 
 if __name__ == "__main__":

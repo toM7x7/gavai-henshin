@@ -125,6 +125,28 @@ def build_part_prompt(part: str, suitspec: dict[str, Any], *, texture_mode: Text
     )
 
 
+def build_uv_refine_prompt(part: str, suitspec: dict[str, Any]) -> str:
+    hint = PART_PROMPT_HINTS.get(part, f"{part} armor part")
+    style_text = _base_style_text(suitspec)
+    uv_hint = _uv_layout_hint(part)
+    return (
+        "You are given a reference concept image for one armor module.\n"
+        f"Target module: {part} ({hint}).\n"
+        f"{style_text}\n"
+        "Task:\n"
+        "- Convert the reference visual language into a UV-ready flat texture sheet.\n"
+        "- Keep motifs, panel rhythm, and material logic from the reference while re-laying to UV space.\n"
+        "Output format requirements:\n"
+        "- 1:1 square base-color texture map.\n"
+        "- Resolution target: 2048x2048 equivalent detail density.\n"
+        "- Texture fill ratio target: 82-96%.\n"
+        "- Border seam-safe margin: outer 3-5% edges should stay low-frequency.\n"
+        f"- UV layout intent: {uv_hint}\n"
+        "- No object render, no mannequin, no perspective camera.\n"
+        "- No text, watermark, logos, or frame graphics."
+    )
+
+
 def resolve_part_prompts(
     suitspec: dict[str, Any], parts: list[str], *, texture_mode: TextureMode = "concept"
 ) -> dict[str, str]:

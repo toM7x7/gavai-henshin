@@ -29,6 +29,8 @@ const PANEL = {
   btnArmorToggle: document.getElementById("btnArmorToggle"),
   btnVrmIdleToggle: document.getElementById("btnVrmIdleToggle"),
   btnVrmFocus: document.getElementById("btnVrmFocus"),
+  btnVrmTPose: document.getElementById("btnVrmTPose"),
+  btnVrmAutoFit: document.getElementById("btnVrmAutoFit"),
   vrmIdleAmount: document.getElementById("vrmIdleAmount"),
   vrmIdleSpeed: document.getElementById("vrmIdleSpeed"),
   vrmStatus: document.getElementById("vrmStatus"),
@@ -464,6 +466,7 @@ const FIT_CONTACT_PAIRS = [
 ];
 
 const POSE_IDX = {
+  NOSE: 0,
   LEFT_SHOULDER: 11,
   RIGHT_SHOULDER: 12,
   LEFT_ELBOW: 13,
@@ -561,13 +564,152 @@ const LIVE_SEGMENT_SPECS = [
   },
   {
     name: "chest_core",
-    startJoint: "left_shoulder",
-    endJoint: "right_hip",
+    startJoint: "hips_center",
+    endJoint: "shoulders_center",
     radiusFactor: 0.38,
     radiusMin: 0.05,
     radiusMax: 0.35,
     z: 0.22,
     smoothGain: 18.0,
+  },
+];
+
+const VRM_LIVE_BONE_SPECS = [
+  {
+    bone: "spine",
+    childBone: "chest",
+    startJoint: "hips_center",
+    endJoint: "shoulders_center",
+    smoothGain: 8,
+  },
+  {
+    bone: "chest",
+    childBone: "neck",
+    startJoint: "hips_center",
+    endJoint: "shoulders_center",
+    smoothGain: 10,
+  },
+  {
+    bone: "leftUpperArm",
+    childBone: "leftLowerArm",
+    startJoint: "left_shoulder",
+    endJoint: "left_elbow",
+    smoothGain: 16,
+  },
+  {
+    bone: "leftLowerArm",
+    childBone: "leftHand",
+    startJoint: "left_elbow",
+    endJoint: "left_wrist",
+    smoothGain: 16,
+  },
+  {
+    bone: "rightUpperArm",
+    childBone: "rightLowerArm",
+    startJoint: "right_shoulder",
+    endJoint: "right_elbow",
+    smoothGain: 16,
+  },
+  {
+    bone: "rightLowerArm",
+    childBone: "rightHand",
+    startJoint: "right_elbow",
+    endJoint: "right_wrist",
+    smoothGain: 16,
+  },
+  {
+    bone: "leftUpperLeg",
+    childBone: "leftLowerLeg",
+    startJoint: "left_hip",
+    endJoint: "left_knee",
+    smoothGain: 14,
+  },
+  {
+    bone: "leftLowerLeg",
+    childBone: "leftFoot",
+    startJoint: "left_knee",
+    endJoint: "left_ankle",
+    smoothGain: 14,
+  },
+  {
+    bone: "rightUpperLeg",
+    childBone: "rightLowerLeg",
+    startJoint: "right_hip",
+    endJoint: "right_knee",
+    smoothGain: 14,
+  },
+  {
+    bone: "rightLowerLeg",
+    childBone: "rightFoot",
+    startJoint: "right_knee",
+    endJoint: "right_ankle",
+    smoothGain: 14,
+  },
+  {
+    bone: "neck",
+    childBone: "head",
+    startJoint: "shoulders_center",
+    endJoint: "nose",
+    smoothGain: 8,
+  },
+];
+
+const VRM_TPOSE_BONE_CHAINS = [
+  { bone: "leftUpperArm", childBone: "leftLowerArm", target: [-1, 0, 0], strength: 1.0 },
+  { bone: "leftLowerArm", childBone: "leftHand", target: [-1, 0, 0], strength: 1.0 },
+  { bone: "rightUpperArm", childBone: "rightLowerArm", target: [1, 0, 0], strength: 1.0 },
+  { bone: "rightLowerArm", childBone: "rightHand", target: [1, 0, 0], strength: 1.0 },
+  { bone: "leftUpperLeg", childBone: "leftLowerLeg", target: [0, -1, 0], strength: 0.8 },
+  { bone: "leftLowerLeg", childBone: "leftFoot", target: [0, -1, 0], strength: 0.8 },
+  { bone: "rightUpperLeg", childBone: "rightLowerLeg", target: [0, -1, 0], strength: 0.8 },
+  { bone: "rightLowerLeg", childBone: "rightFoot", target: [0, -1, 0], strength: 0.8 },
+  { bone: "spine", childBone: "chest", target: [0, 1, 0], strength: 0.6 },
+  { bone: "chest", childBone: "neck", target: [0, 1, 0], strength: 0.6 },
+  { bone: "neck", childBone: "head", target: [0, 1, 0], strength: 0.5 },
+];
+
+const VRM_AUTO_CALIBRATE_PARTS = Object.freeze([
+  "chest",
+  "back",
+  "waist",
+  "left_shoulder",
+  "right_shoulder",
+  "left_upperarm",
+  "right_upperarm",
+  "left_forearm",
+  "right_forearm",
+  "left_hand",
+  "right_hand",
+  "left_thigh",
+  "right_thigh",
+  "left_shin",
+  "right_shin",
+  "left_boot",
+  "right_boot",
+]);
+
+const LIVE_POSE_OPTIONS = Object.freeze({
+  minVisibility: 0.52,
+  minPresence: 0.35,
+  minJointCount: 7,
+  smoothGain: 14.0,
+  maxJointJump: 0.38,
+  holdFramesOnMissing: 5,
+  bodyScaleEmaGain: 1.1,
+  bodyScaleCompRange: [0.82, 1.22],
+  minPoseDetectionConfidence: 0.6,
+  minPosePresenceConfidence: 0.6,
+  minTrackingConfidence: 0.6,
+});
+
+const LIVE_POSE_MODEL_CANDIDATES = [
+  {
+    name: "full",
+    path: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+  },
+  {
+    name: "lite",
+    path: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
   },
 ];
 
@@ -758,10 +900,57 @@ function normToWorld(x01, y01, mirror = true) {
   return { x, y };
 }
 
-function extractPoseJointsWorld(landmarks) {
+function normToWorld3(x01, y01, zRaw = 0, mirror = true) {
+  const p2 = normToWorld(x01, y01, mirror);
+  const z = clamp(toNumberOr(zRaw, 0), -1.2, 1.2) * 0.45 + 0.22;
+  return { x: p2.x, y: p2.y, z };
+}
+
+function midpoint3(a, b) {
+  if (!a || !b) return null;
+  return {
+    x: (a.x + b.x) * 0.5,
+    y: (a.y + b.y) * 0.5,
+    z: (toNumberOr(a.z, 0.22) + toNumberOr(b.z, 0.22)) * 0.5,
+  };
+}
+
+function distance3(a, b) {
+  if (!a || !b) return 0;
+  const dz = toNumberOr(a.z, 0.22) - toNumberOr(b.z, 0.22);
+  return Math.hypot(a.x - b.x, a.y - b.y, dz);
+}
+
+function meanFinite(values, fallback = 0) {
+  const valid = (values || []).filter((v) => Number.isFinite(v) && v > 0);
+  if (!valid.length) return fallback;
+  return valid.reduce((sum, v) => sum + v, 0) / valid.length;
+}
+
+function estimateLiveBodyScale(joints) {
+  const shoulderWidth = distance3(joints.left_shoulder, joints.right_shoulder);
+  const hipWidth = distance3(joints.left_hip, joints.right_hip);
+  const torsoHeight = distance3(joints.shoulders_center, joints.hips_center);
+  const measures = [shoulderWidth, hipWidth, torsoHeight].filter((v) => Number.isFinite(v) && v > 0.05);
+  if (!measures.length) return 0;
+  return measures.reduce((sum, v) => sum + v, 0) / measures.length;
+}
+
+function isReliableLandmark(landmark, minVisibility, minPresence) {
+  if (!landmark) return false;
+  if (!Number.isFinite(landmark.x) || !Number.isFinite(landmark.y)) return false;
+  if (Number.isFinite(landmark.visibility) && landmark.visibility < minVisibility) return false;
+  if (Number.isFinite(landmark.presence) && landmark.presence < minPresence) return false;
+  return true;
+}
+
+function extractPoseJointsWorld(landmarks, options = {}) {
+  const minVisibility = toNumberOr(options.minVisibility, LIVE_POSE_OPTIONS.minVisibility);
+  const minPresence = toNumberOr(options.minPresence, LIVE_POSE_OPTIONS.minPresence);
   const pick = (index) => landmarks?.[index] || null;
   const joints = {};
 
+  const nose = pick(POSE_IDX.NOSE);
   const lShoulder = pick(POSE_IDX.LEFT_SHOULDER);
   const rShoulder = pick(POSE_IDX.RIGHT_SHOULDER);
   const lElbow = pick(POSE_IDX.LEFT_ELBOW);
@@ -775,19 +964,207 @@ function extractPoseJointsWorld(landmarks) {
   const lAnkle = pick(POSE_IDX.LEFT_ANKLE);
   const rAnkle = pick(POSE_IDX.RIGHT_ANKLE);
 
-  if (lShoulder) joints.left_shoulder = normToWorld(lShoulder.x, lShoulder.y, true);
-  if (rShoulder) joints.right_shoulder = normToWorld(rShoulder.x, rShoulder.y, true);
-  if (lElbow) joints.left_elbow = normToWorld(lElbow.x, lElbow.y, true);
-  if (rElbow) joints.right_elbow = normToWorld(rElbow.x, rElbow.y, true);
-  if (lWrist) joints.left_wrist = normToWorld(lWrist.x, lWrist.y, true);
-  if (rWrist) joints.right_wrist = normToWorld(rWrist.x, rWrist.y, true);
-  if (lHip) joints.left_hip = normToWorld(lHip.x, lHip.y, true);
-  if (rHip) joints.right_hip = normToWorld(rHip.x, rHip.y, true);
-  if (lKnee) joints.left_knee = normToWorld(lKnee.x, lKnee.y, true);
-  if (rKnee) joints.right_knee = normToWorld(rKnee.x, rKnee.y, true);
-  if (lAnkle) joints.left_ankle = normToWorld(lAnkle.x, lAnkle.y, true);
-  if (rAnkle) joints.right_ankle = normToWorld(rAnkle.x, rAnkle.y, true);
+  if (isReliableLandmark(nose, minVisibility, minPresence)) {
+    joints.nose = normToWorld3(nose.x, nose.y, nose.z, true);
+  }
+  if (isReliableLandmark(lShoulder, minVisibility, minPresence)) {
+    joints.left_shoulder = normToWorld3(lShoulder.x, lShoulder.y, lShoulder.z, true);
+  }
+  if (isReliableLandmark(rShoulder, minVisibility, minPresence)) {
+    joints.right_shoulder = normToWorld3(rShoulder.x, rShoulder.y, rShoulder.z, true);
+  }
+  if (isReliableLandmark(lElbow, minVisibility, minPresence)) {
+    joints.left_elbow = normToWorld3(lElbow.x, lElbow.y, lElbow.z, true);
+  }
+  if (isReliableLandmark(rElbow, minVisibility, minPresence)) {
+    joints.right_elbow = normToWorld3(rElbow.x, rElbow.y, rElbow.z, true);
+  }
+  if (isReliableLandmark(lWrist, minVisibility, minPresence)) {
+    joints.left_wrist = normToWorld3(lWrist.x, lWrist.y, lWrist.z, true);
+  }
+  if (isReliableLandmark(rWrist, minVisibility, minPresence)) {
+    joints.right_wrist = normToWorld3(rWrist.x, rWrist.y, rWrist.z, true);
+  }
+  if (isReliableLandmark(lHip, minVisibility, minPresence)) {
+    joints.left_hip = normToWorld3(lHip.x, lHip.y, lHip.z, true);
+  }
+  if (isReliableLandmark(rHip, minVisibility, minPresence)) {
+    joints.right_hip = normToWorld3(rHip.x, rHip.y, rHip.z, true);
+  }
+  if (isReliableLandmark(lKnee, minVisibility, minPresence)) {
+    joints.left_knee = normToWorld3(lKnee.x, lKnee.y, lKnee.z, true);
+  }
+  if (isReliableLandmark(rKnee, minVisibility, minPresence)) {
+    joints.right_knee = normToWorld3(rKnee.x, rKnee.y, rKnee.z, true);
+  }
+  if (isReliableLandmark(lAnkle, minVisibility, minPresence)) {
+    joints.left_ankle = normToWorld3(lAnkle.x, lAnkle.y, lAnkle.z, true);
+  }
+  if (isReliableLandmark(rAnkle, minVisibility, minPresence)) {
+    joints.right_ankle = normToWorld3(rAnkle.x, rAnkle.y, rAnkle.z, true);
+  }
+
+  const shouldersCenter = midpoint3(joints.left_shoulder, joints.right_shoulder);
+  if (shouldersCenter) {
+    joints.shoulders_center = shouldersCenter;
+  }
+  const hipsCenter = midpoint3(joints.left_hip, joints.right_hip);
+  if (hipsCenter) {
+    joints.hips_center = hipsCenter;
+  }
+  if (!joints.nose && joints.shoulders_center) {
+    joints.nose = {
+      x: joints.shoulders_center.x,
+      y: joints.shoulders_center.y + 0.28,
+      z: joints.shoulders_center.z + 0.02,
+    };
+  }
   return joints;
+}
+
+function createDefaultLiveState() {
+  return {
+    active: false,
+    video: null,
+    stream: null,
+    landmarker: null,
+    lastVideoTime: -1,
+    lastNowMs: performance.now(),
+    fps: 0,
+    bodyScaleRef: null,
+    poseModel: null,
+    poseQuality: "idle",
+    poseReliableJoints: 0,
+  };
+}
+
+class LiveCameraPipeline {
+  constructor(modules = []) {
+    this.modules = [];
+    this.setModules(modules);
+  }
+
+  setModules(modules) {
+    this.modules = [];
+    const seen = new Set();
+    for (const raw of modules || []) {
+      if (!raw || typeof raw !== "object") continue;
+      const name = String(raw.name || "").trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      this.modules.push(raw);
+    }
+  }
+
+  listModuleNames() {
+    return this.modules.map((mod) => mod.name);
+  }
+
+  async runStart(ctx) {
+    for (const mod of this.modules) {
+      if (typeof mod.onStart !== "function") continue;
+      try {
+        await mod.onStart(ctx);
+      } catch (error) {
+        throw new Error(`[${mod.name}] ${String(error?.message || error || "onStart failed")}`);
+      }
+    }
+  }
+
+  runUpdate(ctx) {
+    for (const mod of this.modules) {
+      if (typeof mod.onUpdate !== "function") continue;
+      try {
+        mod.onUpdate(ctx);
+      } catch (error) {
+        throw new Error(`[${mod.name}] ${String(error?.message || error || "onUpdate failed")}`);
+      }
+    }
+  }
+
+  runStop(ctx) {
+    for (let i = this.modules.length - 1; i >= 0; i -= 1) {
+      const mod = this.modules[i];
+      if (typeof mod.onStop !== "function") continue;
+      try {
+        mod.onStop(ctx);
+      } catch (error) {
+        throw new Error(`[${mod.name}] ${String(error?.message || error || "onStop failed")}`);
+      }
+    }
+  }
+}
+
+function createPoseLandmarkerPipelineModule(viewer) {
+  const wasmBase = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+
+  return {
+    name: "pose-landmarker",
+    async onStart(ctx) {
+      const visionTasks = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const vision = await visionTasks.FilesetResolver.forVisionTasks(wasmBase);
+      let landmarker = null;
+      let selectedModel = null;
+      let lastError = null;
+      for (const candidate of LIVE_POSE_MODEL_CANDIDATES) {
+        try {
+          landmarker = await visionTasks.PoseLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: candidate.path },
+            runningMode: "VIDEO",
+            numPoses: 1,
+            minPoseDetectionConfidence: LIVE_POSE_OPTIONS.minPoseDetectionConfidence,
+            minPosePresenceConfidence: LIVE_POSE_OPTIONS.minPosePresenceConfidence,
+            minTrackingConfidence: LIVE_POSE_OPTIONS.minTrackingConfidence,
+          });
+          selectedModel = candidate.name;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (!landmarker) {
+        throw lastError || new Error("pose landmarker model initialization failed");
+      }
+      ctx.live.landmarker = landmarker;
+      ctx.live.poseModel = selectedModel;
+      ctx.live.poseQuality = "warming";
+      ctx.live.poseReliableJoints = 0;
+      viewer?.refreshLiveTrackingStatus?.();
+    },
+    onUpdate(ctx) {
+      if (!ctx.live.landmarker || !ctx.video) return;
+      const result = ctx.live.landmarker.detectForVideo(ctx.video, ctx.nowMs);
+      const landmarks = result?.landmarks?.[0] || null;
+      ctx.poseLandmarks = landmarks;
+      if (!Array.isArray(landmarks) || landmarks.length === 0) {
+        ctx.live.poseQuality = "missing";
+        ctx.live.poseReliableJoints = 0;
+        viewer?.refreshLiveTrackingStatus?.();
+      }
+    },
+    onStop(ctx) {
+      try {
+        ctx.live.landmarker?.close?.();
+      } catch {
+        // ignore close errors during teardown
+      }
+      ctx.live.landmarker = null;
+    },
+  };
+}
+
+function createPoseSegmentsPipelineModule(viewer) {
+  return {
+    name: "pose-segments",
+    onUpdate(ctx) {
+      const landmarks = ctx.poseLandmarks;
+      if (!Array.isArray(landmarks) || landmarks.length === 0) return;
+      const liveSegments = viewer.buildLiveSegmentsFromLandmarks(landmarks, ctx.dtSec);
+      if (!liveSegments || Object.keys(liveSegments).length === 0) return;
+      ctx.liveSegments = liveSegments;
+      viewer.applySegments(liveSegments, null);
+    },
+  };
 }
 
 class BodyFitViewer {
@@ -863,16 +1240,18 @@ class BodyFitViewer {
       pairs: [],
       weakest: [],
     };
-    this.live = {
-      active: false,
-      video: null,
-      stream: null,
-      landmarker: null,
-      lastVideoTime: -1,
-      lastNowMs: performance.now(),
-      fps: 0,
-    };
+    this.live = createDefaultLiveState();
+    this.livePipeline = new LiveCameraPipeline();
+    this.livePipelineActive = false;
+    this.livePipelineError = "";
+    this.livePipeline.setModules([
+      createPoseLandmarkerPipelineModule(this),
+      createPoseSegmentsPipelineModule(this),
+    ]);
     this.liveFollowers = new Map();
+    this.liveJointTrackers = new Map();
+    this.lastLiveSegments = null;
+    this.lastLiveJoints = null;
     this.vrm = {
       model: null,
       skeleton: null,
@@ -892,6 +1271,9 @@ class BodyFitViewer {
       boneCount: 0,
       missingAnchorParts: [],
       resolvedAnchors: {},
+      liveRig: [],
+      liveRigReady: false,
+      liveDriven: false,
       error: "",
     };
     this.armorVisible = true;
@@ -964,12 +1346,21 @@ class BodyFitViewer {
       vrm_bone_count: this.vrm.boneCount || 0,
       vrm_missing_anchor_parts: this.vrm.missingAnchorParts || [],
       vrm_resolved_anchors: this.vrm.resolvedAnchors || {},
+      vrm_live_rig_ready: this.vrm.liveRigReady,
+      vrm_live_driven: this.vrm.liveDriven,
       vrm_error: this.vrm.error || null,
       three_revision: THREE.REVISION,
       three_target: VRM_RUNTIME_TARGETS.threeVersion,
       three_vrm_target: VRM_RUNTIME_TARGETS.threeVrmVersion,
       live_active: this.live?.active || false,
       live_fps: round3(this.live?.fps || 0),
+      live_body_scale_ref: round3(this.live?.bodyScaleRef || 0),
+      live_pose_model: this.live?.poseModel || null,
+      live_pose_quality: this.live?.poseQuality || "idle",
+      live_pose_reliable_joints: this.live?.poseReliableJoints || 0,
+      live_pipeline_active: this.livePipelineActive,
+      live_pipeline_modules: this.livePipeline.listModuleNames(),
+      live_pipeline_error: this.livePipelineError || null,
     });
   }
 
@@ -977,6 +1368,80 @@ class BodyFitViewer {
     if (!PANEL.liveStatus) return;
     PANEL.liveStatus.textContent = text;
     PANEL.liveStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  refreshLiveTrackingStatus() {
+    if (!this.live?.active) return;
+    const model = this.live.poseModel || "-";
+    const quality = this.live.poseQuality || "idle";
+    const joints = this.live.poseReliableJoints || 0;
+    const isLow = quality === "low" || quality === "missing";
+    const text = isLow
+      ? `Live: low confidence (${joints} joints, model=${model})`
+      : `Live: webcam active (${quality}, joints=${joints}, model=${model})`;
+    this.updateLiveStatus(text, isLow);
+  }
+
+  formatLivePipelineError(detail) {
+    const raw = String(detail || "unknown");
+    if (/notallowederror|permission denied|permission dismissed|securityerror/i.test(raw)) {
+      return "Camera permission was denied. Allow camera access and retry.";
+    }
+    if (/failed to fetch|networkerror|err_network|err_internet|err_connection|err_blocked/i.test(raw)) {
+      return `${raw} (pose model download/import failed. Check network, firewall, ad-blocker, or host model files locally)`;
+    }
+    if (/no live pipeline modules configured/i.test(raw)) {
+      return "No live pipeline modules configured.";
+    }
+    return raw;
+  }
+
+  listLivePipelineModules() {
+    return this.livePipeline.listModuleNames();
+  }
+
+  async startLivePipelineModules() {
+    if (!this.listLivePipelineModules().length) {
+      throw new Error("No live pipeline modules configured");
+    }
+    this.livePipelineError = "";
+    await this.livePipeline.runStart({
+      viewer: this,
+      live: this.live,
+      video: this.live.video,
+    });
+    this.livePipelineActive = true;
+  }
+
+  stopLivePipelineModules() {
+    if (!this.livePipelineActive && !this.live?.landmarker) return;
+    try {
+      this.livePipeline.runStop({
+        viewer: this,
+        live: this.live,
+        video: this.live.video,
+      });
+      this.livePipelineError = "";
+    } catch (error) {
+      this.livePipelineError = String(error?.message || error || "pipeline stop failed");
+      console.warn("live pipeline stop warning:", error);
+    } finally {
+      this.livePipelineActive = false;
+    }
+  }
+
+  updateLivePipelineModules(nowMs, dtSec, video) {
+    const ctx = {
+      viewer: this,
+      live: this.live,
+      video,
+      nowMs,
+      dtSec,
+      poseLandmarks: null,
+      liveSegments: null,
+    };
+    this.livePipeline.runUpdate(ctx);
+    return ctx;
   }
 
   updateBridgeButton() {
@@ -1107,6 +1572,9 @@ class BodyFitViewer {
     this.vrm.hasRestPose = false;
     this.vrm.missingAnchorParts = [];
     this.vrm.resolvedAnchors = {};
+    this.vrm.liveRig = [];
+    this.vrm.liveRigReady = false;
+    this.vrm.liveDriven = false;
     this.vrm.error = "";
     this.updateVrmStatus("VRM: cleared");
     this.updateMetaPanel();
@@ -1164,6 +1632,480 @@ class BodyFitViewer {
       if (bone) return bone;
     }
     return null;
+  }
+
+  buildVrmLiveRig() {
+    if (!this.vrm.model) {
+      this.vrm.liveRig = [];
+      this.vrm.liveRigReady = false;
+      this.vrm.liveDriven = false;
+      return;
+    }
+    this.vrm.model.updateMatrixWorld(true);
+    const liveRig = [];
+    for (const spec of VRM_LIVE_BONE_SPECS) {
+      const bone = this.resolveVrmBone(spec.bone);
+      if (!bone) continue;
+
+      let restDirWorld = null;
+      const childBone = this.resolveVrmBone(spec.childBone);
+      if (childBone) {
+        const bonePos = bone.getWorldPosition(new THREE.Vector3());
+        const childPos = childBone.getWorldPosition(new THREE.Vector3());
+        const delta = childPos.sub(bonePos);
+        if (delta.lengthSq() > 1e-8) {
+          restDirWorld = delta.normalize();
+        }
+      }
+
+      if (!restDirWorld) {
+        restDirWorld = new THREE.Vector3(0, -1, 0).applyQuaternion(
+          bone.getWorldQuaternion(new THREE.Quaternion())
+        );
+      }
+
+      const parentQuat = bone.parent
+        ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
+        : new THREE.Quaternion();
+      const restDirParent = restDirWorld
+        .clone()
+        .applyQuaternion(parentQuat.clone().invert())
+        .normalize();
+      liveRig.push({
+        spec,
+        bone,
+        bindQuat: bone.quaternion.clone(),
+        restDirParent,
+        smoothGain: toNumberOr(spec.smoothGain, 12),
+      });
+    }
+    this.vrm.liveRig = liveRig;
+    this.vrm.liveRigReady = liveRig.length > 0;
+    this.vrm.liveDriven = false;
+  }
+
+  updateVrmFromLiveJoints(joints, dtSec) {
+    if (!this.vrm.model || !this.vrm.liveRigReady || !Array.isArray(this.vrm.liveRig)) {
+      this.vrm.liveDriven = false;
+      return;
+    }
+    if (!joints || typeof joints !== "object") {
+      this.vrm.liveDriven = false;
+      return;
+    }
+
+    let updates = 0;
+    for (const entry of this.vrm.liveRig) {
+      const start = joints[entry.spec.startJoint];
+      const end = joints[entry.spec.endJoint];
+      if (!start || !end) continue;
+
+      const targetWorld = new THREE.Vector3(
+        end.x - start.x,
+        end.y - start.y,
+        toNumberOr(end.z, 0.22) - toNumberOr(start.z, 0.22)
+      );
+      if (!Number.isFinite(targetWorld.lengthSq()) || targetWorld.lengthSq() < 1e-8) continue;
+      targetWorld.normalize();
+
+      const parentQuat = entry.bone.parent
+        ? entry.bone.parent.getWorldQuaternion(new THREE.Quaternion())
+        : new THREE.Quaternion();
+      const targetParent = targetWorld.applyQuaternion(parentQuat.clone().invert()).normalize();
+      if (!Number.isFinite(targetParent.x)) continue;
+
+      const deltaQuat = new THREE.Quaternion().setFromUnitVectors(entry.restDirParent, targetParent);
+      const desiredQuat = deltaQuat.multiply(entry.bindQuat.clone());
+      const alpha = clamp(toNumberOr(dtSec, 0.016) * entry.smoothGain, 0, 1);
+      entry.bone.quaternion.slerp(desiredQuat, alpha);
+      updates += 1;
+    }
+
+    this.vrm.model.updateMatrixWorld(true);
+    this.vrm.liveDriven = updates > 0;
+  }
+
+  getVrmBoneWorldPosition(name) {
+    const bone = this.resolveVrmBone(name);
+    if (!bone) return null;
+    return bone.getWorldPosition(new THREE.Vector3());
+  }
+
+  measurePartWorldSize(group) {
+    if (!group) return new THREE.Vector3(0.22, 0.22, 0.22);
+    const box = new THREE.Box3().setFromObject(group);
+    if (box.isEmpty()) return new THREE.Vector3(0.22, 0.22, 0.22);
+    const size = box.getSize(new THREE.Vector3());
+    return new THREE.Vector3(
+      Math.max(size.x, 0.02),
+      Math.max(size.y, 0.02),
+      Math.max(size.z, 0.02)
+    );
+  }
+
+  rotateVrmBoneChainTowardWorldDir(boneName, childBoneName, targetDirArr, strength = 1) {
+    const bone = this.resolveVrmBone(boneName);
+    const childBone = this.resolveVrmBone(childBoneName);
+    if (!bone || !childBone) return false;
+
+    this.vrm.model?.updateMatrixWorld(true);
+    const bonePos = bone.getWorldPosition(new THREE.Vector3());
+    const childPos = childBone.getWorldPosition(new THREE.Vector3());
+    const currentDir = childPos.sub(bonePos);
+    if (!Number.isFinite(currentDir.lengthSq()) || currentDir.lengthSq() < 1e-8) return false;
+    currentDir.normalize();
+
+    const targetDir = new THREE.Vector3(
+      toNumberOr(targetDirArr?.[0], 0),
+      toNumberOr(targetDirArr?.[1], 0),
+      toNumberOr(targetDirArr?.[2], 0)
+    );
+    if (!Number.isFinite(targetDir.lengthSq()) || targetDir.lengthSq() < 1e-8) return false;
+    targetDir.normalize();
+
+    const deltaWorld = new THREE.Quaternion().setFromUnitVectors(currentDir, targetDir);
+    const parentWorldQuat = bone.parent
+      ? bone.parent.getWorldQuaternion(new THREE.Quaternion())
+      : new THREE.Quaternion();
+    const boneWorldQuat = bone.getWorldQuaternion(new THREE.Quaternion());
+    const desiredWorldQuat = deltaWorld.multiply(boneWorldQuat);
+    const desiredLocalQuat = parentWorldQuat.clone().invert().multiply(desiredWorldQuat);
+    bone.quaternion.slerp(desiredLocalQuat, clamp(strength, 0, 1));
+    bone.updateMatrixWorld(true);
+    return true;
+  }
+
+  applyVrmTPose({ silent = false } = {}) {
+    if (!this.vrm.model) {
+      if (!silent) this.setStatus("Apply T-Pose failed: VRM is not loaded", true);
+      return false;
+    }
+
+    let applied = 0;
+    for (const chain of VRM_TPOSE_BONE_CHAINS) {
+      const ok = this.rotateVrmBoneChainTowardWorldDir(
+        chain.bone,
+        chain.childBone,
+        chain.target,
+        chain.strength
+      );
+      if (ok) applied += 1;
+    }
+
+    this.vrm.model.updateMatrixWorld(true);
+    this.buildVrmLiveRig();
+    this.vrm.liveDriven = false;
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    } else {
+      this.applySegments({}, null);
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+    if (!silent) {
+      this.setStatus(`Applied VRM T-pose (${applied}/${VRM_TPOSE_BONE_CHAINS.length} chains)`);
+    }
+    return applied > 0;
+  }
+
+  estimateVrmBodyMetrics() {
+    const p = (name) => this.getVrmBoneWorldPosition(name);
+    const dist = (a, b, fallback = 0) => (a && b ? a.distanceTo(b) : fallback);
+
+    const leftShoulder = p("leftShoulder") || p("leftUpperArm");
+    const rightShoulder = p("rightShoulder") || p("rightUpperArm");
+    const leftHip = p("leftUpperLeg");
+    const rightHip = p("rightUpperLeg");
+    const hips = p("hips");
+    const upperChest = p("upperChest");
+    const chest = p("chest");
+    const neck = p("neck");
+    const head = p("head");
+
+    const shouldersCenter =
+      leftShoulder && rightShoulder
+        ? leftShoulder.clone().lerp(rightShoulder, 0.5)
+        : upperChest || chest || neck || null;
+    const hipsCenter =
+      leftHip && rightHip ? leftHip.clone().lerp(rightHip, 0.5) : hips || null;
+    const torsoTop = upperChest || chest || neck || shouldersCenter || null;
+
+    const shoulderWidth = dist(leftShoulder, rightShoulder, 0.44);
+    const hipWidth = dist(leftHip, rightHip, shoulderWidth * 0.75);
+    const torsoLen = dist(hipsCenter, torsoTop, 0.62);
+    const headLen = dist(neck, head, torsoLen * 0.3);
+    const upperArmLen = meanFinite(
+      [
+        dist(p("leftUpperArm"), p("leftLowerArm"), 0),
+        dist(p("rightUpperArm"), p("rightLowerArm"), 0),
+      ],
+      0.36
+    );
+    const foreArmLen = meanFinite(
+      [
+        dist(p("leftLowerArm"), p("leftHand"), 0),
+        dist(p("rightLowerArm"), p("rightHand"), 0),
+      ],
+      upperArmLen * 0.92
+    );
+    const thighLen = meanFinite(
+      [
+        dist(p("leftUpperLeg"), p("leftLowerLeg"), 0),
+        dist(p("rightUpperLeg"), p("rightLowerLeg"), 0),
+      ],
+      0.5
+    );
+    const shinLen = meanFinite(
+      [
+        dist(p("leftLowerLeg"), p("leftFoot"), 0),
+        dist(p("rightLowerLeg"), p("rightFoot"), 0),
+      ],
+      thighLen * 0.92
+    );
+    const handLen = meanFinite(
+      [
+        dist(p("leftHand"), p("leftMiddleProximal"), 0),
+        dist(p("rightHand"), p("rightMiddleProximal"), 0),
+      ],
+      foreArmLen * 0.34
+    );
+    const footLen = meanFinite(
+      [dist(p("leftFoot"), p("leftToes"), 0), dist(p("rightFoot"), p("rightToes"), 0)],
+      shinLen * 0.4
+    );
+
+    return {
+      shoulderWidth,
+      hipWidth,
+      torsoLen,
+      torsoLenRatio: clamp(torsoLen / 0.62, 0.6, 1.6),
+      headLen,
+      upperArmLen,
+      foreArmLen,
+      thighLen,
+      shinLen,
+      handLen,
+      footLen,
+    };
+  }
+
+  estimateAutoFitTargetSize(partName, metrics, fallbackSize) {
+    const fb = fallbackSize || new THREE.Vector3(0.22, 0.22, 0.22);
+    const target = fb.clone();
+    const shoulderWidth = Math.max(metrics.shoulderWidth || 0.44, 0.2);
+    const hipWidth = Math.max(metrics.hipWidth || shoulderWidth * 0.75, 0.16);
+    const torsoLen = Math.max(metrics.torsoLen || 0.62, 0.2);
+    const headLen = Math.max(metrics.headLen || torsoLen * 0.3, 0.12);
+    const upperArmLen = Math.max(metrics.upperArmLen || 0.36, 0.12);
+    const foreArmLen = Math.max(metrics.foreArmLen || upperArmLen * 0.92, 0.1);
+    const thighLen = Math.max(metrics.thighLen || 0.5, 0.14);
+    const shinLen = Math.max(metrics.shinLen || thighLen * 0.92, 0.14);
+    const handLen = Math.max(metrics.handLen || foreArmLen * 0.34, 0.06);
+    const footLen = Math.max(metrics.footLen || shinLen * 0.4, 0.08);
+
+    switch (partName) {
+      case "helmet":
+        target.set(headLen * 0.9, headLen * 1.0, headLen * 0.92);
+        break;
+      case "chest":
+        target.set(shoulderWidth * 0.88, torsoLen * 0.44, (shoulderWidth + hipWidth) * 0.36);
+        break;
+      case "back":
+        target.set(shoulderWidth * 0.84, torsoLen * 0.42, (shoulderWidth + hipWidth) * 0.32);
+        break;
+      case "waist":
+        target.set(hipWidth * 0.95, torsoLen * 0.24, hipWidth * 0.58);
+        break;
+      case "left_shoulder":
+      case "right_shoulder":
+        target.set(upperArmLen * 0.26, upperArmLen * 0.26, upperArmLen * 0.26);
+        break;
+      case "left_upperarm":
+      case "right_upperarm":
+        target.set(upperArmLen * 0.22, upperArmLen * 0.94, upperArmLen * 0.22);
+        break;
+      case "left_forearm":
+      case "right_forearm":
+        target.set(foreArmLen * 0.2, foreArmLen * 0.98, foreArmLen * 0.2);
+        break;
+      case "left_hand":
+      case "right_hand":
+        target.set(handLen * 0.62, handLen * 0.48, handLen * 0.82);
+        break;
+      case "left_thigh":
+      case "right_thigh":
+        target.set(thighLen * 0.24, thighLen * 1.0, thighLen * 0.24);
+        break;
+      case "left_shin":
+      case "right_shin":
+        target.set(shinLen * 0.2, shinLen * 1.0, shinLen * 0.2);
+        break;
+      case "left_boot":
+      case "right_boot":
+        target.set(footLen * 0.44, footLen * 0.28, footLen * 0.95);
+        break;
+      default:
+        break;
+    }
+    return target;
+  }
+
+  autoFitArmorToCurrentVrm({ forceTPose = true, silent = false } = {}) {
+    if (!this.vrm.model) {
+      if (!silent) this.setStatus("Auto-fit failed: VRM is not loaded", true);
+      return;
+    }
+    if (!this.suitspec || this.meshes.size === 0) {
+      if (!silent) this.setStatus("Auto-fit failed: suitspec/body-fit is not loaded", true);
+      return;
+    }
+
+    if (forceTPose) {
+      this.applyVrmTPose({ silent: true });
+    }
+
+    const metrics = this.estimateVrmBodyMetrics();
+    const previousMode = normalizeVrmAttachMode(this.vrm.attachMode);
+    this.vrm.attachMode = VRM_ATTACH_MODES.BODY;
+    this.updateVrmAttachButton();
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    } else {
+      this.applySegments({}, null);
+    }
+
+    const modules = this.suitspec?.modules || {};
+    let updatedParts = 0;
+    for (const [partName, rec] of this.meshes.entries()) {
+      const module = modules[partName];
+      if (!module || !module.enabled) continue;
+
+      const effective = getModuleVisualConfig(partName, module);
+      const currentSize = this.measurePartWorldSize(rec.group);
+      const targetSize = this.estimateAutoFitTargetSize(partName, metrics, currentSize);
+
+      const ratioX = clamp(targetSize.x / Math.max(currentSize.x, 0.001), 0.65, 1.55);
+      const ratioY = clamp(targetSize.y / Math.max(currentSize.y, 0.001), 0.65, 1.55);
+      const ratioZ = clamp(targetSize.z / Math.max(currentSize.z, 0.001), 0.65, 1.55);
+
+      const nextScale = [
+        clamp(round3(effective.scale[0] * ratioX), 0.05, 3.0),
+        clamp(round3(effective.scale[1] * ratioY), 0.05, 3.0),
+        clamp(round3(effective.scale[2] * ratioZ), 0.05, 3.0),
+      ];
+
+      let nextOffsetY = toNumberOr(effective.offsetY, 0);
+      if (partName === "chest" || partName === "back") {
+        nextOffsetY += clamp((metrics.torsoLenRatio - 1) * 0.05, -0.08, 0.08);
+      } else if (partName === "waist") {
+        nextOffsetY += clamp((1 - metrics.torsoLenRatio) * 0.04, -0.07, 0.07);
+      }
+
+      module.fit = {
+        shape: effective.shape,
+        source: effective.source,
+        attach: effective.attach,
+        offsetY: round3(nextOffsetY),
+        zOffset: round3(toNumberOr(effective.zOffset, 0)),
+        scale: nextScale,
+        follow: normalizeVec3(effective.follow, [1, 1, 1]),
+        minScale: normalizeVec3(effective.minScale, [0.2, 0.2, 0.2]),
+      };
+
+      rec.config = getModuleVisualConfig(partName, module);
+      updatedParts += 1;
+    }
+    const calibratedParts = this.calibrateVrmAnchorsFromCurrentPose({
+      partNames: VRM_AUTO_CALIBRATE_PARTS,
+      overrideExisting: true,
+      silent: true,
+    });
+
+    this.vrm.attachMode = previousMode;
+    this.updateVrmAttachButton();
+    if (this.frames.length) {
+      this.applyFrame(this.frameIndex);
+    } else {
+      this.applySegments({}, null);
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+    this.populateFitEditor();
+
+    if (!silent) {
+      const torsoRatio = metrics.torsoLenRatio.toFixed(2);
+      this.setStatus(
+        `Auto-fit applied to ${updatedParts} parts, anchor-calibrated ${calibratedParts} parts (torso ratio=${torsoRatio})`
+      );
+    }
+  }
+
+  calibrateVrmAnchorsFromCurrentPose({
+    partNames = null,
+    overrideExisting = false,
+    silent = false,
+  } = {}) {
+    if (!this.vrm.model || !this.suitspec || this.meshes.size === 0) {
+      if (!silent) this.setStatus("VRM anchor auto-calibration skipped: missing VRM or suitspec", true);
+      return 0;
+    }
+    this.vrm.model.updateMatrixWorld(true);
+    this.root.updateMatrixWorld(true);
+
+    const modules = this.suitspec.modules || {};
+    const targetParts = Array.isArray(partNames) && partNames.length ? new Set(partNames) : null;
+    let updated = 0;
+
+    for (const [partName, rec] of this.meshes.entries()) {
+      if (!rec?.group?.visible) continue;
+      if (targetParts && !targetParts.has(partName)) continue;
+      const module = modules[partName];
+      if (!module || !module.enabled) continue;
+      if (!overrideExisting && module.vrm_anchor && typeof module.vrm_anchor === "object") continue;
+
+      const effective = effectiveVrmAnchorFor(partName, module);
+      const bone = this.resolveVrmBoneForPart(partName, module, effective.bone);
+      if (!bone) continue;
+
+      const bodyPos = rec.group.getWorldPosition(new THREE.Vector3());
+      const bodyQuat = rec.group.getWorldQuaternion(new THREE.Quaternion());
+      const bonePos = bone.getWorldPosition(new THREE.Vector3());
+      const boneQuat = bone.getWorldQuaternion(new THREE.Quaternion());
+      const invBone = boneQuat.clone().invert();
+
+      const localOffset = bodyPos.sub(bonePos).applyQuaternion(invBone);
+      const localQuat = invBone.multiply(bodyQuat).normalize();
+      const euler = new THREE.Euler().setFromQuaternion(localQuat, "XYZ");
+      const rotationDeg = [
+        round3(THREE.MathUtils.radToDeg(euler.x)),
+        round3(THREE.MathUtils.radToDeg(euler.y)),
+        round3(THREE.MathUtils.radToDeg(euler.z)),
+      ];
+
+      module.vrm_anchor = {
+        bone: String(effective.bone || "chest"),
+        offset: [round3(localOffset.x), round3(localOffset.y), round3(localOffset.z)],
+        rotation: rotationDeg,
+        scale: normalizeVec3(effective.scale, [1, 1, 1]),
+      };
+      updated += 1;
+    }
+
+    if (updated > 0) {
+      for (const [partName, rec] of this.meshes.entries()) {
+        const module = modules[partName];
+        if (!module) continue;
+        rec.config = getModuleVisualConfig(partName, module);
+      }
+      this.populateVrmAnchorEditor();
+      this.updateMetaPanel();
+      this.setLegend();
+    }
+
+    if (!silent) {
+      this.setStatus(`VRM anchor auto-calibrated: ${updated} parts`);
+    }
+    return updated;
   }
 
   applyArmorToVrmBones() {
@@ -1330,13 +2272,16 @@ class BodyFitViewer {
     this.vrm.boneMap = this.buildBoneMap(model);
     this.vrm.path = rawPath;
     this.vrm.boneCount = this.countModelBones(model);
+    this.buildVrmLiveRig();
     this.captureVrmRestPose();
     this.applyVrmIdlePose(0, true);
     this.vrm.error = "";
     this.updateVrmButton();
     this.updateVrmAttachButton();
     this.populateVrmAnchorEditor();
-    this.updateVrmStatus(`VRM loaded: ${rawPath} (bones=${this.vrm.boneCount}, source=${source})`);
+    this.updateVrmStatus(
+      `VRM loaded: ${rawPath} (bones=${this.vrm.boneCount}, liveRig=${this.vrm.liveRig.length}, source=${source})`
+    );
     if (this.frames.length) {
       this.applyFrame(this.frameIndex);
     }
@@ -1447,6 +2392,8 @@ class BodyFitViewer {
 
   resetLiveFollowers() {
     this.liveFollowers.clear();
+    this.liveJointTrackers.clear();
+    this.lastLiveSegments = null;
     for (const spec of LIVE_SEGMENT_SPECS) {
       const fallback = DEFAULT_SEGMENT_POSE[spec.name] || {
         position_x: 0,
@@ -1461,8 +2408,92 @@ class BodyFitViewer {
     }
   }
 
+  smoothLiveJoints(rawJoints, dtSec) {
+    const alpha = clamp(toNumberOr(dtSec, 0.016) * LIVE_POSE_OPTIONS.smoothGain, 0.08, 0.55);
+    const maxJump = LIVE_POSE_OPTIONS.maxJointJump;
+    const holdFrames = LIVE_POSE_OPTIONS.holdFramesOnMissing;
+    const present = new Set();
+    const out = {};
+
+    for (const [name, raw] of Object.entries(rawJoints || {})) {
+      if (!raw || typeof raw !== "object") continue;
+      if (!Number.isFinite(raw.x) || !Number.isFinite(raw.y)) continue;
+      present.add(name);
+      const next = new THREE.Vector3(
+        toNumberOr(raw.x, 0),
+        toNumberOr(raw.y, 0),
+        toNumberOr(raw.z, 0.22)
+      );
+      const tracker = this.liveJointTrackers.get(name);
+      if (!tracker) {
+        this.liveJointTrackers.set(name, { vec: next.clone(), missing: 0 });
+        out[name] = { x: next.x, y: next.y, z: next.z };
+        continue;
+      }
+
+      const prev = tracker.vec;
+      const dist = prev.distanceTo(next);
+      if (Number.isFinite(dist) && dist > maxJump) {
+        const t = maxJump / dist;
+        next.copy(prev).lerp(next, clamp(t, 0.1, 1));
+      }
+
+      prev.lerp(next, alpha);
+      tracker.missing = 0;
+      out[name] = { x: prev.x, y: prev.y, z: prev.z };
+    }
+
+    for (const [name, tracker] of this.liveJointTrackers.entries()) {
+      if (present.has(name)) continue;
+      tracker.missing += 1;
+      if (tracker.missing <= holdFrames) {
+        const v = tracker.vec;
+        out[name] = { x: v.x, y: v.y, z: v.z };
+      } else {
+        this.liveJointTrackers.delete(name);
+      }
+    }
+
+    return out;
+  }
+
   buildLiveSegmentsFromLandmarks(landmarks, dtSec) {
-    const joints = extractPoseJointsWorld(landmarks);
+    const rawJoints = extractPoseJointsWorld(landmarks, LIVE_POSE_OPTIONS);
+    const joints = this.smoothLiveJoints(rawJoints, dtSec);
+    const reliableJointCount = Object.values(rawJoints).filter(
+      (joint) => joint && Number.isFinite(joint.x) && Number.isFinite(joint.y)
+    ).length;
+    const hasTorsoAnchors = Boolean(
+      rawJoints.left_shoulder && rawJoints.right_shoulder && rawJoints.left_hip && rawJoints.right_hip
+    );
+    this.live.poseReliableJoints = reliableJointCount;
+    this.lastLiveJoints = joints;
+
+    if (reliableJointCount < LIVE_POSE_OPTIONS.minJointCount || !hasTorsoAnchors) {
+      this.live.poseQuality = "low";
+      this.vrm.liveDriven = false;
+      this.refreshLiveTrackingStatus();
+      if (this.lastLiveSegments) {
+        return { ...this.lastLiveSegments };
+      }
+      return {};
+    }
+
+    this.live.poseQuality = reliableJointCount >= 10 ? "good" : "fair";
+    const bodyScale = estimateLiveBodyScale(joints);
+    if (!Number.isFinite(this.live.bodyScaleRef) || this.live.bodyScaleRef <= 0) {
+      this.live.bodyScaleRef = bodyScale > 0 ? bodyScale : 1;
+    } else if (bodyScale > 0) {
+      const ema = clamp(toNumberOr(dtSec, 0.016) * LIVE_POSE_OPTIONS.bodyScaleEmaGain, 0.01, 0.08);
+      this.live.bodyScaleRef += (bodyScale - this.live.bodyScaleRef) * ema;
+    }
+    const bodyScaleCompRaw =
+      bodyScale > 0 && this.live.bodyScaleRef > 0 ? this.live.bodyScaleRef / bodyScale : 1;
+    const bodyScaleComp = clamp(
+      bodyScaleCompRaw,
+      LIVE_POSE_OPTIONS.bodyScaleCompRange[0],
+      LIVE_POSE_OPTIONS.bodyScaleCompRange[1]
+    );
     const segments = {};
 
     for (const spec of LIVE_SEGMENT_SPECS) {
@@ -1476,9 +2507,11 @@ class BodyFitViewer {
 
       const dx = end.x - start.x;
       const dy = end.y - start.y;
-      const length = Math.hypot(dx, dy);
+      const dz = toNumberOr(end.z, spec.z) - toNumberOr(start.z, spec.z);
+      const length = Math.hypot(dx, dy, dz) * bodyScaleComp;
       const midpointX = (start.x + end.x) * 0.5;
       const midpointY = (start.y + end.y) * 0.5;
+      const midpointZ = (toNumberOr(start.z, spec.z) + toNumberOr(end.z, spec.z)) * 0.5;
       const angle = Math.atan2(dy, dx);
       const rotationZ = angle - Math.PI / 2;
       const radius = clamp(length * spec.radiusFactor, spec.radiusMin, spec.radiusMax);
@@ -1487,7 +2520,7 @@ class BodyFitViewer {
       const next = {
         position_x: prev.position_x + (midpointX - prev.position_x) * lerp,
         position_y: prev.position_y + (midpointY - prev.position_y) * lerp,
-        position_z: spec.z,
+        position_z: prev.position_z + (midpointZ - prev.position_z) * lerp,
         rotation_z: prev.rotation_z + (rotationZ - prev.rotation_z) * lerp,
         scale_x: prev.scale_x + (radius - prev.scale_x) * lerp,
         scale_y: prev.scale_y + (length - prev.scale_y) * lerp,
@@ -1496,6 +2529,10 @@ class BodyFitViewer {
       this.liveFollowers.set(spec.name, next);
       segments[spec.name] = next;
     }
+
+    this.updateVrmFromLiveJoints(joints, dtSec);
+    this.lastLiveSegments = { ...segments };
+    this.refreshLiveTrackingStatus();
     return segments;
   }
 
@@ -1539,8 +2576,8 @@ class BodyFitViewer {
     }
 
     try {
-      this.setStatus("Starting webcam + pose model...");
-      this.updateLiveStatus("Live: loading model...");
+      this.setStatus("Starting webcam + live pipeline...");
+      this.updateLiveStatus("Live: opening webcam...");
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 960 }, height: { ideal: 540 } },
@@ -1549,49 +2586,37 @@ class BodyFitViewer {
       const video = PANEL.liveVideo || document.createElement("video");
       video.srcObject = stream;
       await video.play();
-
-      const visionTasks = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-      const vision = await visionTasks.FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-      );
-      const modelAssetPath =
-        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
-      const landmarker = await visionTasks.PoseLandmarker.createFromOptions(vision, {
-        baseOptions: { modelAssetPath },
-        runningMode: "VIDEO",
-        numPoses: 1,
-      });
-
       this.live = {
+        ...createDefaultLiveState(),
         active: true,
         video,
         stream,
-        landmarker,
-        lastVideoTime: -1,
-        lastNowMs: performance.now(),
-        fps: 0,
       };
+      this.updateLiveStatus("Live: starting modules...");
+      await this.startLivePipelineModules();
       this.resetLiveFollowers();
+      this.lastLiveJoints = null;
+      this.vrm.liveDriven = false;
       this.playing = false;
       PANEL.btnPlay.textContent = "Play";
       this.updateLiveStatus("Live: webcam active");
-      this.setStatus("Live webcam started");
+      this.setStatus(
+        `Live webcam started (${this.listLivePipelineModules().join(", ")}, model=${this.live.poseModel || "-"})`
+      );
       this.updateMetaPanel();
     } catch (err) {
       this.stopLive({ silent: true });
-      const detail = String(err?.message || err || "unknown");
+      const detail = this.formatLivePipelineError(err?.message || err || "unknown");
+      this.livePipelineError = detail;
       this.updateLiveStatus("Live: start failed", true);
       this.setStatus(`Live start failed: ${detail}`, true);
+      this.updateMetaPanel();
     }
   }
 
   stopLive({ silent = false } = {}) {
     const live = this.live;
-    try {
-      live.landmarker?.close?.();
-    } catch {
-      // ignore
-    }
+    this.stopLivePipelineModules();
     if (live.stream) {
       for (const track of live.stream.getTracks()) {
         track.stop();
@@ -1602,15 +2627,11 @@ class BodyFitViewer {
       live.video.srcObject = null;
     }
 
-    this.live = {
-      active: false,
-      video: null,
-      stream: null,
-      landmarker: null,
-      lastVideoTime: -1,
-      lastNowMs: performance.now(),
-      fps: 0,
-    };
+    this.live = createDefaultLiveState();
+    this.lastLiveJoints = null;
+    this.liveJointTrackers.clear();
+    this.lastLiveSegments = null;
+    this.vrm.liveDriven = false;
     this.updateLiveStatus("Live: inactive");
     this.updateMetaPanel();
     if (this.frames.length) {
@@ -1622,28 +2643,26 @@ class BodyFitViewer {
   }
 
   updateLivePose(nowMs) {
-    if (!this.live.active || !this.live.landmarker || !this.live.video) return;
+    if (!this.live.active || !this.live.video) return;
     const video = this.live.video;
     if (video.readyState < 2) return;
     if (video.currentTime === this.live.lastVideoTime) return;
     this.live.lastVideoTime = video.currentTime;
 
-    let result = null;
-    try {
-      result = this.live.landmarker.detectForVideo(video, nowMs);
-    } catch (err) {
-      this.updateLiveStatus("Live: detect error", true);
-      this.setStatus(`Live detect failed: ${String(err?.message || err || "unknown")}`, true);
-      return;
-    }
-    const landmarks = result?.landmarks?.[0];
     const dtSec = clamp((nowMs - this.live.lastNowMs) / 1000, 0.001, 0.1);
     this.live.lastNowMs = nowMs;
     this.live.fps = dtSec > 0 ? 1 / dtSec : 0;
 
-    if (!landmarks || landmarks.length === 0) return;
-    const liveSegments = this.buildLiveSegmentsFromLandmarks(landmarks, dtSec);
-    this.applySegments(liveSegments, null);
+    try {
+      this.updateLivePipelineModules(nowMs, dtSec, video);
+      this.livePipelineError = "";
+    } catch (err) {
+      const detail = this.formatLivePipelineError(err?.message || err || "unknown");
+      this.livePipelineError = detail;
+      this.updateLiveStatus("Live: pipeline error", true);
+      this.setStatus(`Live detect failed: ${detail}`, true);
+      this.updateMetaPanel();
+    }
   }
 
   calculateFitStats() {
@@ -2011,6 +3030,14 @@ class BodyFitViewer {
         this.vrm.instance?.humanoid ? "YES" : "NO"
       } | Bones: ${this.vrm.boneCount || 0} | Visible: ${this.vrm.visible ? "ON" : "OFF"} | Missing: ${
         (this.vrm.missingAnchorParts || []).length
+      } | LiveDrive: ${this.vrm.liveDriven ? "ON" : "OFF"}`,
+      `Live: ${this.live.active ? "ON" : "OFF"} | FPS: ${(this.live?.fps || 0).toFixed(
+        1
+      )} | Pipeline: ${this.livePipelineActive ? "ON" : "OFF"} | Modules: ${
+        this.listLivePipelineModules().join(", ") || "-"
+      }`,
+      `PoseModel: ${this.live?.poseModel || "-"} | PoseQuality: ${this.live?.poseQuality || "idle"} | ReliableJoints: ${
+        this.live?.poseReliableJoints || 0
       }`,
       `FitScore: ${fitScore} | Gap: ${fitGap} | Penetration: ${fitPen}`,
       "Tip: Attach=Hybrid は骨追従+BodySimフォールバック、Attach=VRM は骨主軸です。",
@@ -2135,7 +3162,9 @@ class BodyFitViewer {
       try {
         if (this.vrm.model && this.vrm.path === vrmPath) {
           this.alignVrmModelToArmor(this.vrm.model);
-          this.updateVrmStatus(`VRM loaded: ${vrmPath} (bones=${this.vrm.boneCount})`);
+          this.updateVrmStatus(
+            `VRM loaded: ${vrmPath} (bones=${this.vrm.boneCount}, liveRig=${this.vrm.liveRig.length})`
+          );
         } else {
           await this.loadVrmModel(vrmPath, { silent: true });
         }
@@ -2667,6 +3696,12 @@ function init() {
   }
   if (PANEL.btnVrmFocus) {
     PANEL.btnVrmFocus.onclick = () => viewer.fitCameraToVrm();
+  }
+  if (PANEL.btnVrmTPose) {
+    PANEL.btnVrmTPose.onclick = () => viewer.applyVrmTPose();
+  }
+  if (PANEL.btnVrmAutoFit) {
+    PANEL.btnVrmAutoFit.onclick = () => viewer.autoFitArmorToCurrentVrm({ forceTPose: true });
   }
 
   if (PANEL.fitPart) {

@@ -70,3 +70,16 @@
 - 2026-03-02: suit-dashboardにUV展開確認タブとボディ前景タブを追加。mesh_uvプロンプトを定量指標付きに強化。
 
 - 2026-03-01: 優先バックログを追加（速度改善・非表示対策・足手モデリング品質）。generate-parts に全体/パーツ別の時間計測を追加。
+
+## 2026-03-03
+
+### Implemented
+- Added 8thwall-aware policy as a continuous stack consideration for future work.
+- Integrated 8thwall-style camera pipeline module architecture into viewer/body-fit live pipeline.
+- Added reference: docs/8thwall-element-integration.md
+
+### Notes
+- This is architectural adoption of the 8thwall pipeline pattern (not a direct XR8 runtime embed yet).
+
+### Next
+- Keep documenting 8thwall usage/decision on each related feature update.

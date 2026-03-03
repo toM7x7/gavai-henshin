@@ -1,6 +1,6 @@
 ﻿# Body Fit Viewer 手順
 
-更新日: 2026-03-01
+更新日: 2026-03-03
 
 ## 1. 目的
 
@@ -32,10 +32,13 @@ python -m henshin serve-dashboard --port 8010 --root .
 
 1. `Load` を押して `suitspec` と `sim` を読込
 2. `Load VRM` を押して `viewer/assets/vrm/default.vrm` を読込
-3. `Attach` を押して `Hybrid` か `VRM` に切替
-4. `VRM Bones: On` で骨表示
-5. `VRM Anchor Editor` で `Part` を選び `Load Anchor` -> `Apply Anchor`
-6. `Save SuitSpec` で永続化
+3. `Apply T-Pose` を押してVRMを基準姿勢にそろえる
+4. `Auto Fit Armor` を押して鎧サイズをVRM体型へ自動補正する
+   - この操作で `chest/腕` を中心に `vrm_anchor` の offset/rotation も自動キャリブレーションされます
+5. `Attach` を押して `Hybrid` か `VRM` に切替
+6. `VRM Bones: On` で骨表示
+7. 必要に応じて `VRM Anchor Editor` で微調整（`Load Anchor` -> `Apply Anchor`）
+8. `Save SuitSpec` で永続化
 
 ## 3.1 VRM単体の確認（推奨）
 
@@ -47,6 +50,13 @@ python -m henshin serve-dashboard --port 8010 --root .
 ## 4. 画面メモ（重要）
 
 - `meta` に `vrm_bone_count > 0` が出ていれば、骨取得は成功です。
+- `meta` に `vrm_live_rig_ready=true` が出ていれば、VRMライブ駆動の準備は完了です。
+- `meta` の `vrm_live_driven` は、ライブ入力時にVRM骨が実際に駆動されているかの指標です。
+- `meta` の `live_pose_model` は実際に使われているPoseモデル（`full`/`lite`）です。
+- `meta` の `live_pose_quality` と `live_pose_reliable_joints` で、追跡品質の健全性を確認できます。
+- `live_pose_quality=low` は「有効関節が不足」または「胴体4点(左右肩・左右腰)が欠けた」状態です。
+- `live_pose_quality=missing` は「landmark未検出」です。
+- `meta.live_pipeline_error` が空でない場合、WebCam開始失敗の原因文字列が入ります。
 - `meta` の `vrm_missing_anchor_parts` が空なら、骨未解決部位はありません。
 - `meta` の `vrm_resolved_anchors` で、部位 -> 実際に使われた骨名を確認できます。
 - `meta` の `vrm_attach_mode` で現在モード（`body`/`hybrid`/`vrm`）を確認できます。
@@ -68,3 +78,11 @@ python -m henshin serve-dashboard --port 8010 --root .
 1. `helmet/chest` の当たり精度をさらに上げる
 2. `BodySim` と `VRM` の切替時に、部位ごとの初期オフセット最適化を追加
 3. Live入力（WebCam / mocopi）の平滑化・遅延メトリクス表示を強化
+
+## 7. Webcam追跡が不安定なとき
+
+1. カメラから 1.5m - 2.5m 離れ、全身が画面内に収まる構図にする
+2. 背景と服のコントラストを確保し、逆光を避ける
+3. `meta` の `live_pose_reliable_joints` が 7 未満になっていないか確認する
+4. `Live` ステータスが `low confidence` のときは、前フレーム保持になるため大きな追従更新は止まる
+5. 初期姿勢は一度 `Apply T-Pose` -> `Auto Fit Armor` を行ってから `Start WebCam` を押す

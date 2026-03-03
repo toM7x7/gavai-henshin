@@ -28,3 +28,8 @@
 - Unity実装本体
 - mocopi実機連携本体
 - 画像生成APIの実呼び出し
+
+## WebAR Stack Note (2026-03-03)
+- 8thwall is a first-class candidate stack for WebAR and live camera pipeline features in this repository.
+- Current implementation already adopts an 8thwall-style camera pipeline module structure in viewer/body-fit.
+- Future related architecture changes should include a short 8thwall decision note in docs.

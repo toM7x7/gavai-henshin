@@ -55,3 +55,9 @@
 - [ ] Backlog: Blender連携（OBJ/GLTFエクスポート + UV手修正ワークフロー）は本筋後に実施
 
 - [ ] Priority Backlog 参照: docs/priority-backlog.md（速度改善 / 非表示対策 / 足手モデリング品質）
+
+## 8thwall Policy (2026-03-03)
+- 8thwall is treated as a standing technology option across future development phases.
+- For WebAR/camera-pipeline/tracking work, each design pass must include an explicit 8thwall evaluation.
+- Current usage: viewer/body-fit live input already uses an 8thwall-style camera pipeline module architecture.
+- Rule: when specs or implementation are updated, document the 8thwall usage/decision in docs.

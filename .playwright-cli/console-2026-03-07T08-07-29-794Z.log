@@ -1,0 +1,25 @@
+Total messages: 5 (Errors: 2, Warnings: 3)
+
+[WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+[WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+[WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+TypeError: Cannot read properties of null (reading 'trim')
+    at onFirstUse (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20109:54)
+    at WebGLProgram.getUniforms (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20204:4)
+    at setProgram (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:30118:31)
+    at WebGLRenderer.renderBufferDirect (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28954:20)
+    at renderObject (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29792:11)
+    at renderObjects (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29761:6)
+    at renderScene (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29613:36)
+    at WebGLRenderer.render (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29431:5)
+    at PartCardPreview.tick (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260307d:689:19)
+TypeError: Cannot read properties of null (reading 'trim')
+    at onFirstUse (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20109:54)
+    at WebGLProgram.getUniforms (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20204:4)
+    at setProgram (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:30118:31)
+    at WebGLRenderer.renderBufferDirect (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28954:20)
+    at renderObject (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29792:11)
+    at renderObjects (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29761:6)
+    at renderScene (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29613:36)
+    at WebGLRenderer.render (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29431:5)
+    at PartCardPreview.tick (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260307d:689:19)

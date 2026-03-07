@@ -33,3 +33,15 @@
 - 8thwall is a first-class candidate stack for WebAR and live camera pipeline features in this repository.
 - Current implementation already adopts an 8thwall-style camera pipeline module structure in viewer/body-fit.
 - Future related architecture changes should include a short 8thwall decision note in docs.
+
+## Concept-Driven Refactor Note (2026-03-07)
+- Browser-side armor canon is now centralized in `viewer/shared/armor-canon.js`.
+- Live pose pipeline primitives are now separated into `viewer/body-fit/body-fit-live.js`.
+- `viewer/body-fit` and `viewer/suit-dashboard` should consume shared part/anchor definitions instead of redefining them locally.
+- See `docs/concept-driven-refactor.md` for the rationale and next seams.
+
+## Body Fit Frontend Refactor Note (2026-03-07)
+- `viewer/body-fit/viewer.js` remains the scene orchestrator and UI wiring layer.
+- `viewer/body-fit/body-fit-live.js` is now the live re-henshin signal layer: pose extraction, pose quality gates, and camera pipeline modules.
+- Current hotspot after this refactor is still the static armor/VRM lexicon inside `viewer/body-fit/viewer.js`; that is the next safe extraction target.
+- `viewer/suit-dashboard/dashboard.js` is the second large frontend hotspot and should follow the same split strategy once body-fit live tracking stabilizes.

@@ -1,0 +1,5 @@
+[    1016ms] ReferenceError: VRM_HUMANOID_BONES is not defined
+    at populateVrmBoneOptions (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260303c:242:22)
+    at init (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260303c:1929:3)
+    at http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260303c:1954:1
+[    1323ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8010/favicon.ico:0

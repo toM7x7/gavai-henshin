@@ -11,6 +11,12 @@
 3. VRM 骨格を重ねた配置確認（Attach: BodySim / Hybrid / VRM）
 4. 接続ブリッジ（隙間可視化）の確認
 
+## 1.1 コード構成
+
+- `viewer/body-fit/viewer.js` は scene / VRM / fit editor / UI 操作のオーケストレーションです。
+- `viewer/body-fit/body-fit-live.js` は WebCam / MediaPipe / pose quality 判定の live 入力専用モジュールです。
+- 今後の追加改修で live 系を触る場合は、まず `body-fit-live.js` を確認してください。
+
 ## 2. 起動
 
 ```powershell

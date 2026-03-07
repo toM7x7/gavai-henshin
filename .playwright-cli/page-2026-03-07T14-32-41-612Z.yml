@@ -1,0 +1,189 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - heading "Suit Dashboard" [level=1] [ref=e4]
+    - paragraph [ref=e5]: メッシュUV向け生成・3Dプレビュー・UV展開確認
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: SuitSpec
+      - generic [ref=e9]:
+        - combobox "SuitSpec" [ref=e10]
+        - button "更新" [ref=e11] [cursor=pointer]
+        - button "読込" [ref=e12] [cursor=pointer]
+    - generic [ref=e13]:
+      - generic [ref=e14]: Fallback Dir
+      - textbox "Fallback Dir" [ref=e15]: sessions/S-20260228-JBJK/artifacts/parts
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 生成モード
+        - combobox "生成モード" [ref=e19]:
+          - option "mesh_uv（展開図向け）" [selected]
+          - option "concept（イメージ）"
+      - generic [ref=e20]:
+        - generic [ref=e21]: Body Sim
+        - textbox "Body Sim" [ref=e22]: sessions/body-sim.json
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - checkbox "既存画像を優先" [ref=e25]
+        - text: 既存画像を優先
+      - generic [ref=e26]:
+        - checkbox "UV二段階生成" [checked] [ref=e27]
+        - text: UV二段階生成
+      - generic [ref=e28]:
+        - checkbox "SuitSpecへ反映" [checked] [ref=e29]
+        - text: SuitSpecへ反映
+    - generic [ref=e30]:
+      - generic [ref=e31]: 現在プロンプト確認
+      - combobox "現在プロンプト確認" [ref=e32]
+      - generic [ref=e33]: プロンプト未読み込み
+    - generic [ref=e35]: 対象パーツ
+    - generic [ref=e37]:
+      - generic [ref=e38]: Fit 調整（部位ごと）
+      - generic [ref=e39]:
+        - combobox [ref=e40]
+        - button "読込" [ref=e41] [cursor=pointer]
+        - button "適用" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - text: source
+          - combobox "source" [ref=e45]:
+            - option "chest_core" [selected]
+            - option "left_upperarm"
+            - option "right_upperarm"
+            - option "left_forearm"
+            - option "right_forearm"
+            - option "left_thigh"
+            - option "right_thigh"
+            - option "left_shin"
+            - option "right_shin"
+        - generic [ref=e46]:
+          - text: attach
+          - combobox "attach" [ref=e47]:
+            - option "start" [selected]
+            - option "center"
+            - option "end"
+        - generic [ref=e48]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e49]
+        - generic [ref=e50]:
+          - text: zOffset
+          - spinbutton "zOffset" [ref=e51]
+        - generic [ref=e52]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e53]
+        - generic [ref=e54]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e55]
+        - generic [ref=e56]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e57]
+        - generic [ref=e58]:
+          - text: followX
+          - spinbutton "followX" [ref=e59]
+        - generic [ref=e60]:
+          - text: followY
+          - spinbutton "followY" [ref=e61]
+        - generic [ref=e62]:
+          - text: followZ
+          - spinbutton "followZ" [ref=e63]
+        - generic [ref=e64]:
+          - text: minScaleX
+          - spinbutton "minScaleX" [ref=e65]
+        - generic [ref=e66]:
+          - text: minScaleY
+          - spinbutton "minScaleY" [ref=e67]
+        - generic [ref=e68]:
+          - text: minScaleZ
+          - spinbutton "minScaleZ" [ref=e69]
+      - generic [ref=e70]:
+        - button "部位fitを解除" [ref=e71] [cursor=pointer]
+        - button "SuitSpecへ保存" [ref=e72] [cursor=pointer]
+      - generic [ref=e73]: fit未設定
+    - generic [ref=e74]:
+      - generic [ref=e75]: VRM 配置（部位 -> 骨アンカー）
+      - generic [ref=e76]:
+        - combobox [ref=e77]
+        - button "読込" [ref=e78] [cursor=pointer]
+        - button "適用" [ref=e79] [cursor=pointer]
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - text: attachment_slot
+          - textbox "attachment_slot" [ref=e82]
+        - generic [ref=e83]:
+          - text: bone
+          - combobox "bone" [ref=e84]:
+            - option "hips" [selected]
+            - option "spine"
+            - option "chest"
+            - option "upperChest"
+            - option "neck"
+            - option "head"
+            - option "leftShoulder"
+            - option "rightShoulder"
+            - option "leftUpperArm"
+            - option "rightUpperArm"
+            - option "leftLowerArm"
+            - option "rightLowerArm"
+            - option "leftHand"
+            - option "rightHand"
+            - option "leftUpperLeg"
+            - option "rightUpperLeg"
+            - option "leftLowerLeg"
+            - option "rightLowerLeg"
+            - option "leftFoot"
+            - option "rightFoot"
+        - generic [ref=e85]:
+          - text: offsetX
+          - spinbutton "offsetX" [ref=e86]
+        - generic [ref=e87]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e88]
+        - generic [ref=e89]:
+          - text: offsetZ
+          - spinbutton "offsetZ" [ref=e90]
+        - generic [ref=e91]:
+          - text: rotX(deg)
+          - spinbutton "rotX(deg)" [ref=e92]
+        - generic [ref=e93]:
+          - text: rotY(deg)
+          - spinbutton "rotY(deg)" [ref=e94]
+        - generic [ref=e95]:
+          - text: rotZ(deg)
+          - spinbutton "rotZ(deg)" [ref=e96]
+        - generic [ref=e97]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e98]
+        - generic [ref=e99]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e100]
+        - generic [ref=e101]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e102]
+      - generic [ref=e103]:
+        - button "部位anchorを解除" [ref=e104] [cursor=pointer]
+        - button "SuitSpecへ保存" [ref=e105] [cursor=pointer]
+      - generic [ref=e107]:
+        - checkbox "全身プレビューにアンカー表示" [checked] [ref=e108]
+        - text: 全身プレビューにアンカー表示
+      - generic [ref=e109]: vrm_anchor未設定
+    - generic [ref=e110]:
+      - generic [ref=e111]: VRM モデル（既定ファイル運用）
+      - generic [ref=e112]:
+        - textbox "viewer/assets/vrm/default.vrm" [ref=e113]
+        - button "VRM読込" [ref=e114] [cursor=pointer]
+        - button "VRM解除" [ref=e115] [cursor=pointer]
+      - paragraph [ref=e116]:
+        - text: "既定:"
+        - code [ref=e117]: viewer/assets/vrm/default.vrm
+        - text: （.glb/.gltf も可）
+      - generic [ref=e118]: "VRM: 未読込"
+    - generic [ref=e119]:
+      - button "生成実行" [ref=e120] [cursor=pointer]
+      - button "Auto Fit + Save" [ref=e121] [cursor=pointer]
+      - button "Body Fit を開く" [ref=e122] [cursor=pointer]
+    - generic [ref=e123]:
+      - generic [ref=e124]: Mesh Relief
+      - slider "Mesh Relief" [ref=e125]: "0.05"
+    - generic [ref=e126]: 準備中...
+  - generic [ref=e128]:
+    - button "パーツカード" [ref=e129] [cursor=pointer]
+    - button "ボディ前景" [ref=e130] [cursor=pointer]

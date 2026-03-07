@@ -1,0 +1,163 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - heading "Body Fit Viewer" [level=1] [ref=e4]
+    - paragraph [ref=e5]: suitspec と body-sim を読み込み、全身プレビュー上で各パーツのフィットを調整します。
+    - generic [ref=e6]:
+      - text: SuitSpec JSON
+      - textbox "SuitSpec JSON" [ref=e7]: examples/suitspec.sample.json
+    - generic [ref=e8]:
+      - text: Body Sim JSON
+      - textbox "Body Sim JSON" [ref=e9]: sessions/body-sim.json
+    - generic [ref=e10]:
+      - button "Load" [ref=e11] [cursor=pointer]
+      - button "Play" [ref=e12] [cursor=pointer]
+      - button "Prev" [ref=e13] [cursor=pointer]
+      - button "Next" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - 'button "Textures: On" [ref=e16] [cursor=pointer]'
+      - 'button "Theme: White" [ref=e17] [cursor=pointer]'
+    - generic [ref=e18]:
+      - text: Mesh Relief
+      - slider "Mesh Relief" [ref=e19]: "0.05"
+    - generic [ref=e20]:
+      - button "Cam Front" [ref=e21] [cursor=pointer]
+      - button "Cam Side" [ref=e22] [cursor=pointer]
+      - button "Cam Top" [ref=e23] [cursor=pointer]
+      - button "Auto Fit" [ref=e24] [cursor=pointer]
+    - generic [ref=e25]:
+      - text: Frame
+      - slider "Frame" [ref=e26]: "0"
+    - generic [ref=e27]:
+      - text: Speed
+      - slider "Speed" [ref=e28]: "1"
+    - generic [ref=e29]:
+      - heading "VRM Skeleton" [level=2] [ref=e30]
+      - paragraph [ref=e31]: VRM を重ねて骨ベースでパーツ位置を確認します。
+      - generic [ref=e32]:
+        - text: VRM Path
+        - textbox "VRM Path" [ref=e33]: viewer/assets/vrm/default.vrm
+      - generic [ref=e34]:
+        - button "Load VRM" [ref=e35] [cursor=pointer]
+        - button "Clear VRM" [ref=e36] [cursor=pointer]
+        - 'button "VRM Bones: On" [ref=e37] [cursor=pointer]'
+      - generic [ref=e38]:
+        - 'button "Armor: On" [ref=e39] [cursor=pointer]'
+        - 'button "VRM Idle: Off" [ref=e40] [cursor=pointer]'
+        - button "Focus VRM" [ref=e41] [cursor=pointer]
+      - generic [ref=e42]:
+        - button "Apply T-Pose" [ref=e43] [cursor=pointer]
+        - button "Auto Fit Armor" [ref=e44] [cursor=pointer]
+        - button "Auto Fit + Save" [ref=e45] [cursor=pointer]
+      - generic [ref=e46]:
+        - text: VRM Idle Amount
+        - slider "VRM Idle Amount" [ref=e47]: "0.35"
+      - generic [ref=e48]:
+        - text: VRM Idle Speed
+        - slider "VRM Idle Speed" [ref=e49]: "1"
+      - generic [ref=e50]:
+        - 'button "Attach: Hybrid" [ref=e51] [cursor=pointer]'
+        - generic [ref=e52]: クリックで BodySim / Hybrid / VRM を切り替えます。
+      - generic [ref=e53]: "VRM loading: viewer/assets/vrm/default.vrm (100%)"
+    - generic [ref=e54]:
+      - heading "Live Input (PoC)" [level=2] [ref=e55]
+      - paragraph [ref=e56]: Webカメラから姿勢を推定して body-fit にリアルタイム反映します。
+      - generic [ref=e57]:
+        - button "Start WebCam" [ref=e58] [cursor=pointer]
+        - button "Stop Live" [ref=e59] [cursor=pointer]
+      - generic [ref=e60]: "Live: inactive"
+    - generic [ref=e62]:
+      - heading "Fit Editor" [level=2] [ref=e63]
+      - paragraph [ref=e64]: 全身表示を見ながら、各パーツのサイズと位置を調整できます。
+      - generic [ref=e65]:
+        - text: Part
+        - combobox "Part" [ref=e66]
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e69]
+        - generic [ref=e70]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e71]
+        - generic [ref=e72]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e73]
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e76]
+        - generic [ref=e77]:
+          - text: zOffset
+          - spinbutton "zOffset" [ref=e78]
+      - generic [ref=e79]:
+        - button "Suggest" [ref=e80] [cursor=pointer]
+        - button "Apply" [ref=e81] [cursor=pointer]
+        - button "Reset Part" [ref=e82] [cursor=pointer]
+        - button "Save SuitSpec" [ref=e83] [cursor=pointer]
+      - generic [ref=e84]:
+        - 'button "Bridges: On" [ref=e85] [cursor=pointer]'
+        - generic [ref=e86]:
+          - text: bridge thickness
+          - slider "bridge thickness" [ref=e87]: "0.1"
+      - paragraph [ref=e88]: Suggest は現在のスコアを元に仮値を提示します。
+      - separator [ref=e89]
+      - heading "VRM Anchor Editor" [level=2] [ref=e90]
+      - paragraph [ref=e91]: Attach が Hybrid / VRM の時に、部位アンカーを全身プレビューで直接調整します。
+      - generic [ref=e92]:
+        - text: Part
+        - combobox "Part" [ref=e93]
+      - generic [ref=e94]:
+        - text: Bone
+        - combobox "Bone" [ref=e95]
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - text: offsetX
+          - spinbutton "offsetX" [ref=e98]
+        - generic [ref=e99]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e100]
+        - generic [ref=e101]:
+          - text: offsetZ
+          - spinbutton "offsetZ" [ref=e102]
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - text: rotX
+          - spinbutton "rotX" [ref=e105]
+        - generic [ref=e106]:
+          - text: rotY
+          - spinbutton "rotY" [ref=e107]
+        - generic [ref=e108]:
+          - text: rotZ
+          - spinbutton "rotZ" [ref=e109]
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e112]
+        - generic [ref=e113]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e114]
+        - generic [ref=e115]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e116]
+      - generic [ref=e117]:
+        - button "Load Anchor" [ref=e118] [cursor=pointer]
+        - button "Apply Anchor" [ref=e119] [cursor=pointer]
+        - button "Reset Anchor" [ref=e120] [cursor=pointer]
+      - paragraph [ref=e121]: Load Anchor で現在値を読み込み、Apply Anchor で反映します。
+    - generic [ref=e122]: Loading JSON...
+    - generic [ref=e123]: "{ \"suitspec\": \"examples/suitspec.sample.json\", \"sim\": \"sessions/body-sim.json\", \"modules\": 18, \"fit_overrides\": 0, \"frames\": 7, \"segments\": 9, \"equip_frame\": 6, \"equipped\": true, \"textures\": true, \"theme\": \"bright\", \"fit_score\": 72.613, \"fit_pair_count\": 15, \"fit_mean_gap\": 0.011, \"fit_mean_penetration\": 0.141, \"fit_weak_pairs\": [ { \"pair\": \"chest-back\", \"score\": 35, \"gap\": 0.162, \"penetration\": 0 }, { \"pair\": \"left_upperarm-left_forearm\", \"score\": 65, \"gap\": 0, \"penetration\": 0.305 }, { \"pair\": \"right_upperarm-right_forearm\", \"score\": 65, \"gap\": 0, \"penetration\": 0.305 } ], \"bridge_enabled\": true, \"bridge_thickness\": 0.1, \"bridge_visible_count\": 15, \"armor_visible\": true, \"vrm_path\": null, \"vrm_source\": null, \"vrm_humanoid_available\": false, \"vrm_bones_visible\": true, \"vrm_attach_mode\": \"hybrid\", \"vrm_attach_armor\": true, \"vrm_idle_enabled\": false, \"vrm_idle_amount\": 0.35, \"vrm_idle_speed\": 1, \"vrm_bone_count\": 0, \"vrm_missing_anchor_parts\": [], \"vrm_resolved_anchors\": {}, \"vrm_live_rig_ready\": false, \"vrm_live_driven\": false, \"vrm_error\": null, \"three_revision\": \"180\", \"three_target\": \"0.180.0\", \"three_vrm_target\": \"3.4.4\", \"live_active\": false, \"live_fps\": 0, \"live_body_scale_ref\": 0, \"live_pose_model\": null, \"live_pose_quality\": \"idle\", \"live_pose_reliable_joints\": 0, \"live_pipeline_active\": false, \"live_pipeline_modules\": [ \"pose-landmarker\", \"pose-segments\" ], \"live_pipeline_error\": null, \"auto_fit_summary\": null }"
+  - main [ref=e124]:
+    - generic [ref=e126]:
+      - heading "Display Guide" [level=2] [ref=e127]
+      - paragraph [ref=e128]:
+        - text: "表示ガイド: パーツ形状 / テクスチャ / 接続ブリッジ / VRM骨組み"
+        - text: "Frame 1/7 | Equipped: NO | Speed x1.00"
+        - text: "Textures: ON | Relief: 0.05 | Theme: Bright"
+        - text: "Bridges: ON | Visible: 15 | Thickness: 0.10"
+        - text: "ArmorVisible: ON | VRM Idle: OFF x1.00"
+        - text: "AttachMode: Hybrid"
+        - text: "VRM: OFF | Source: - | Humanoid: NO | Bones: 0 | Visible: ON | Missing: 0 | LiveDrive: OFF"
+        - text: "Live: OFF | FPS: 0.0 | Pipeline: OFF | Modules: pose-landmarker, pose-segments"
+        - text: "PoseModel: - | PoseQuality: idle | ReliableJoints: 0"
+        - text: "FitScore: 72.6 | Gap: 0.011 | Penetration: 0.141"
+        - text: "AutoFit: Auto-fit: unavailable"
+        - text: "Tip: Attach=Hybrid は骨追従+BodySimフォールバック、Attach=VRM は骨主軸です。"

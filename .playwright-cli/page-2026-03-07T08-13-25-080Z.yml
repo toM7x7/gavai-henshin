@@ -1,0 +1,466 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - heading "Suit Dashboard" [level=1] [ref=e4]
+    - paragraph [ref=e5]: メッシュUV向け生成・3Dプレビュー・UV展開確認
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: SuitSpec
+      - generic [ref=e9]:
+        - combobox "SuitSpec" [ref=e10]:
+          - option "examples/suitspec.sample.json" [selected]
+          - option "sessions/S-20260228-BICX/suitspec.json"
+          - option "sessions/S-20260228-IEO5/suitspec.json"
+          - option "sessions/S-20260228-YB5P/suitspec.json"
+        - button "更新" [ref=e11] [cursor=pointer]
+        - button "読込" [ref=e12] [cursor=pointer]
+    - generic [ref=e13]:
+      - generic [ref=e14]: Fallback Dir
+      - textbox "Fallback Dir" [ref=e15]: sessions/S-20260228-JBJK/artifacts/parts
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 生成モード
+        - combobox "生成モード" [ref=e19]:
+          - option "mesh_uv（展開図向け）" [selected]
+          - option "concept（イメージ）"
+      - generic [ref=e20]:
+        - generic [ref=e21]: Body Sim
+        - textbox "Body Sim" [ref=e22]: sessions/body-sim.json
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - checkbox "既存画像を優先" [ref=e25]
+        - text: 既存画像を優先
+      - generic [ref=e26]:
+        - checkbox "UV二段階生成" [checked] [ref=e27]
+        - text: UV二段階生成
+      - generic [ref=e28]:
+        - checkbox "SuitSpecへ反映" [checked] [ref=e29]
+        - text: SuitSpecへ反映
+    - generic [ref=e30]:
+      - generic [ref=e31]: 現在プロンプト確認
+      - combobox "現在プロンプト確認" [ref=e32]:
+        - option "helmet" [selected]
+        - option "chest"
+        - option "back"
+        - option "left_shoulder"
+        - option "right_shoulder"
+        - option "left_upperarm"
+        - option "right_upperarm"
+        - option "left_forearm"
+        - option "right_forearm"
+        - option "waist"
+        - option "left_thigh"
+        - option "right_thigh"
+        - option "left_shin"
+        - option "right_shin"
+        - option "left_boot"
+        - option "right_boot"
+        - option "left_hand"
+        - option "right_hand"
+      - generic [ref=e33]: "[part] helmet [suitspec.prompt] Generate a UV-ready texture atlas for one armor module. Target module: helmet (helmet shell with visor aperture, no face, no neck). Style tags: metal, visor, audit. Palette primary=#1E2A3A, secondary=#A8B3C6, emissive=#3AC7FF. Hard-surface industrial hero armor, clean panel lines, production-ready concept sheet. Output format requirements: - 1:1 square texture map (base-color/albedo style), no perspective view. - Resolution target: 2048x2048 equivalent detail density. - Flat texture sheet only. Do NOT draw standalone objects, mannequins, or scene background. - Texture fill ratio target: 82-96% of the canvas should contain intended material/panel information. - Border seam-safe margin: outer 3-5% edges should be low-frequency detail only. - Do not leave large blank white regions (>10% contiguous area). - Maintain consistent material language across the whole sheet. - UV layout intent: Visor band and frontal silhouette should occupy center U range (0.30-0.70). Top crown detail should concentrate in upper V range (0.58-0.92). Back-seam area near U<0.06 and U>0.94 must stay low-frequency. - Keep directional panel lines continuous across UV seams (U wrap continuity). - No text, watermark, logos, or frame graphics."
+    - generic [ref=e34]:
+      - generic [ref=e35]: 対象パーツ
+      - generic [ref=e36]:
+        - generic [ref=e130]:
+          - checkbox "helmet" [checked] [ref=e131]
+          - text: helmet
+        - generic [ref=e132]:
+          - checkbox "chest" [checked] [ref=e133]
+          - text: chest
+        - generic [ref=e134]:
+          - checkbox "back" [checked] [ref=e135]
+          - text: back
+        - generic [ref=e136]:
+          - checkbox "left_shoulder" [checked] [ref=e137]
+          - text: left_shoulder
+        - generic [ref=e138]:
+          - checkbox "right_shoulder" [checked] [ref=e139]
+          - text: right_shoulder
+        - generic [ref=e140]:
+          - checkbox "left_upperarm" [checked] [ref=e141]
+          - text: left_upperarm
+        - generic [ref=e142]:
+          - checkbox "right_upperarm" [checked] [ref=e143]
+          - text: right_upperarm
+        - generic [ref=e144]:
+          - checkbox "left_forearm" [checked] [ref=e145]
+          - text: left_forearm
+        - generic [ref=e146]:
+          - checkbox "right_forearm" [checked] [ref=e147]
+          - text: right_forearm
+        - generic [ref=e148]:
+          - checkbox "waist" [checked] [ref=e149]
+          - text: waist
+        - generic [ref=e150]:
+          - checkbox "left_thigh" [checked] [ref=e151]
+          - text: left_thigh
+        - generic [ref=e152]:
+          - checkbox "right_thigh" [checked] [ref=e153]
+          - text: right_thigh
+        - generic [ref=e154]:
+          - checkbox "left_shin" [checked] [ref=e155]
+          - text: left_shin
+        - generic [ref=e156]:
+          - checkbox "right_shin" [checked] [ref=e157]
+          - text: right_shin
+        - generic [ref=e158]:
+          - checkbox "left_boot" [checked] [ref=e159]
+          - text: left_boot
+        - generic [ref=e160]:
+          - checkbox "right_boot" [checked] [ref=e161]
+          - text: right_boot
+        - generic [ref=e162]:
+          - checkbox "left_hand" [checked] [ref=e163]
+          - text: left_hand
+        - generic [ref=e164]:
+          - checkbox "right_hand" [checked] [ref=e165]
+          - text: right_hand
+    - generic [ref=e37]:
+      - generic [ref=e38]: Fit 調整（部位ごと）
+      - generic [ref=e39]:
+        - combobox [ref=e40]:
+          - option "helmet" [selected]
+          - option "chest"
+          - option "back"
+          - option "left_shoulder"
+          - option "right_shoulder"
+          - option "left_upperarm"
+          - option "right_upperarm"
+          - option "left_forearm"
+          - option "right_forearm"
+          - option "waist"
+          - option "left_thigh"
+          - option "right_thigh"
+          - option "left_shin"
+          - option "right_shin"
+          - option "left_boot"
+          - option "right_boot"
+          - option "left_hand"
+          - option "right_hand"
+        - button "読込" [ref=e41] [cursor=pointer]
+        - button "適用" [ref=e42] [cursor=pointer]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - text: source
+          - combobox "source" [ref=e45]:
+            - option "chest_core" [selected]
+            - option "left_upperarm"
+            - option "right_upperarm"
+            - option "left_forearm"
+            - option "right_forearm"
+            - option "left_thigh"
+            - option "right_thigh"
+            - option "left_shin"
+            - option "right_shin"
+        - generic [ref=e46]:
+          - text: attach
+          - combobox "attach" [ref=e47]:
+            - option "start" [selected]
+            - option "center"
+            - option "end"
+        - generic [ref=e48]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e49]: "0.2"
+        - generic [ref=e50]:
+          - text: zOffset
+          - spinbutton "zOffset" [ref=e51]: "0.02"
+        - generic [ref=e52]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e53]: "0.3"
+        - generic [ref=e54]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e55]: "0.32"
+        - generic [ref=e56]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e57]: "0.3"
+        - generic [ref=e58]:
+          - text: followX
+          - spinbutton "followX" [ref=e59]: "0.34"
+        - generic [ref=e60]:
+          - text: followY
+          - spinbutton "followY" [ref=e61]: "0.42"
+        - generic [ref=e62]:
+          - text: followZ
+          - spinbutton "followZ" [ref=e63]: "0.34"
+        - generic [ref=e64]:
+          - text: minScaleX
+          - spinbutton "minScaleX" [ref=e65]: "0.22"
+        - generic [ref=e66]:
+          - text: minScaleY
+          - spinbutton "minScaleY" [ref=e67]: "0.24"
+        - generic [ref=e68]:
+          - text: minScaleZ
+          - spinbutton "minScaleZ" [ref=e69]: "0.22"
+      - generic [ref=e70]:
+        - button "部位fitを解除" [ref=e71] [cursor=pointer]
+        - button "SuitSpecへ保存" [ref=e72] [cursor=pointer]
+      - generic [ref=e73]: "{ \"part\": \"helmet\", \"base_fit\": { \"shape\": \"sphere\", \"source\": \"chest_core\", \"attach\": \"start\", \"offsetY\": 0.2, \"zOffset\": 0.02, \"scale\": [ 0.3, 0.32, 0.3 ], \"follow\": [ 0.34, 0.42, 0.34 ], \"minScale\": [ 0.22, 0.24, 0.22 ] }, \"override_fit\": null, \"effective_fit\": { \"shape\": \"sphere\", \"source\": \"chest_core\", \"attach\": \"start\", \"offsetY\": 0.2, \"zOffset\": 0.02, \"scale\": [ 0.3, 0.32, 0.3 ], \"follow\": [ 0.34, 0.42, 0.34 ], \"minScale\": [ 0.22, 0.24, 0.22 ] } }"
+    - generic [ref=e74]:
+      - generic [ref=e75]: VRM 配置（部位 -> 骨アンカー）
+      - generic [ref=e76]:
+        - combobox [ref=e77]:
+          - option "helmet" [selected]
+          - option "chest"
+          - option "back"
+          - option "left_shoulder"
+          - option "right_shoulder"
+          - option "left_upperarm"
+          - option "right_upperarm"
+          - option "left_forearm"
+          - option "right_forearm"
+          - option "waist"
+          - option "left_thigh"
+          - option "right_thigh"
+          - option "left_shin"
+          - option "right_shin"
+          - option "left_boot"
+          - option "right_boot"
+          - option "left_hand"
+          - option "right_hand"
+        - button "読込" [ref=e78] [cursor=pointer]
+        - button "適用" [ref=e79] [cursor=pointer]
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - text: attachment_slot
+          - textbox "attachment_slot" [ref=e82]: helmet
+        - generic [ref=e83]:
+          - text: bone
+          - combobox "bone" [ref=e84]:
+            - option "hips"
+            - option "spine"
+            - option "chest"
+            - option "upperChest"
+            - option "neck"
+            - option "head" [selected]
+            - option "leftShoulder"
+            - option "rightShoulder"
+            - option "leftUpperArm"
+            - option "rightUpperArm"
+            - option "leftLowerArm"
+            - option "rightLowerArm"
+            - option "leftHand"
+            - option "rightHand"
+            - option "leftUpperLeg"
+            - option "rightUpperLeg"
+            - option "leftLowerLeg"
+            - option "rightLowerLeg"
+            - option "leftFoot"
+            - option "rightFoot"
+        - generic [ref=e85]:
+          - text: offsetX
+          - spinbutton "offsetX" [ref=e86]: "0"
+        - generic [ref=e87]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e88]: "0.08"
+        - generic [ref=e89]:
+          - text: offsetZ
+          - spinbutton "offsetZ" [ref=e90]: "0.12"
+        - generic [ref=e91]:
+          - text: rotX(deg)
+          - spinbutton "rotX(deg)" [ref=e92]: "0"
+        - generic [ref=e93]:
+          - text: rotY(deg)
+          - spinbutton "rotY(deg)" [ref=e94]: "0"
+        - generic [ref=e95]:
+          - text: rotZ(deg)
+          - spinbutton "rotZ(deg)" [ref=e96]: "0"
+        - generic [ref=e97]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e98]: "1"
+        - generic [ref=e99]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e100]: "1"
+        - generic [ref=e101]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e102]: "1"
+      - generic [ref=e103]:
+        - button "部位anchorを解除" [ref=e104] [cursor=pointer]
+        - button "SuitSpecへ保存" [ref=e105] [cursor=pointer]
+      - generic [ref=e107]:
+        - checkbox "全身プレビューにアンカー表示" [checked] [ref=e108]
+        - text: 全身プレビューにアンカー表示
+      - generic [ref=e109]: "{ \"part\": \"helmet\", \"attachment_slot\": \"helmet\", \"base_anchor\": { \"bone\": \"head\", \"offset\": [ 0, 0.08, 0.12 ], \"rotation\": [ 0, 0, 0 ], \"scale\": [ 1, 1, 1 ] }, \"override_anchor\": null, \"effective_anchor\": { \"bone\": \"head\", \"offset\": [ 0, 0.08, 0.12 ], \"rotation\": [ 0, 0, 0 ], \"scale\": [ 1, 1, 1 ] } }"
+    - generic [ref=e110]:
+      - generic [ref=e111]: VRM モデル（既定ファイル運用）
+      - generic [ref=e112]:
+        - textbox "viewer/assets/vrm/default.vrm" [ref=e113]
+        - button "VRM読込" [ref=e114] [cursor=pointer]
+        - button "VRM解除" [ref=e115] [cursor=pointer]
+      - paragraph [ref=e116]:
+        - text: "既定:"
+        - code [ref=e117]: viewer/assets/vrm/default.vrm
+        - text: （.glb/.gltf も可）
+      - generic [ref=e118]: "VRM: 読込済み path: viewer/assets/vrm/default.vrm bones: 59"
+    - generic [ref=e119]:
+      - button "生成実行" [ref=e120] [cursor=pointer]
+      - button "Body Fit を開く" [ref=e121] [cursor=pointer]
+    - generic [ref=e122]:
+      - generic [ref=e123]: Mesh Relief
+      - slider "Mesh Relief" [ref=e124]: "0.05"
+    - generic [ref=e125]: "読込完了: examples/suitspec.sample.json 有効パーツ: 18"
+  - generic [ref=e126]:
+    - generic [ref=e127]:
+      - button "パーツカード" [ref=e128] [cursor=pointer]
+      - button "ボディ前景" [ref=e129] [cursor=pointer]
+    - generic [ref=e167]:
+      - article [ref=e168]:
+        - generic [ref=e169]:
+          - heading "helmet" [level=3] [ref=e170]
+          - generic [ref=e171]: texture ok
+        - generic [ref=e172]:
+          - button "3D" [ref=e173] [cursor=pointer]
+          - button "UV" [ref=e174] [cursor=pointer]
+        - generic [ref=e177]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e178]: sessions\S-20260301-4Z3W\artifacts\parts\helmet.generated.jpg
+      - article [ref=e179]:
+        - generic [ref=e180]:
+          - heading "chest" [level=3] [ref=e181]
+          - generic [ref=e182]: texture ok
+        - generic [ref=e183]:
+          - button "3D" [ref=e184] [cursor=pointer]
+          - button "UV" [ref=e185] [cursor=pointer]
+        - generic [ref=e188]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e189]: sessions\S-20260301-4Z3W\artifacts\parts\chest.generated.jpg
+      - article [ref=e190]:
+        - generic [ref=e191]:
+          - heading "back" [level=3] [ref=e192]
+          - generic [ref=e193]: texture ok
+        - generic [ref=e194]:
+          - button "3D" [ref=e195] [cursor=pointer]
+          - button "UV" [ref=e196] [cursor=pointer]
+        - generic [ref=e199]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e200]: sessions\S-20260301-4Z3W\artifacts\parts\back.generated.jpg
+      - article [ref=e201]:
+        - generic [ref=e202]:
+          - heading "left_shoulder" [level=3] [ref=e203]
+          - generic [ref=e204]: texture ok
+        - generic [ref=e205]:
+          - button "3D" [ref=e206] [cursor=pointer]
+          - button "UV" [ref=e207] [cursor=pointer]
+        - generic [ref=e210]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e211]: sessions\S-20260301-4Z3W\artifacts\parts\left_shoulder.generated.jpg
+      - article [ref=e212]:
+        - generic [ref=e213]:
+          - heading "right_shoulder" [level=3] [ref=e214]
+          - generic [ref=e215]: texture ok
+        - generic [ref=e216]:
+          - button "3D" [ref=e217] [cursor=pointer]
+          - button "UV" [ref=e218] [cursor=pointer]
+        - generic [ref=e221]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e222]: sessions\S-20260301-4Z3W\artifacts\parts\right_shoulder.generated.jpg
+      - article [ref=e223]:
+        - generic [ref=e224]:
+          - heading "left_upperarm" [level=3] [ref=e225]
+          - generic [ref=e226]: texture ok
+        - generic [ref=e227]:
+          - button "3D" [ref=e228] [cursor=pointer]
+          - button "UV" [ref=e229] [cursor=pointer]
+        - generic [ref=e232]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e233]: sessions\S-20260301-4Z3W\artifacts\parts\left_upperarm.generated.jpg
+      - article [ref=e234]:
+        - generic [ref=e235]:
+          - heading "right_upperarm" [level=3] [ref=e236]
+          - generic [ref=e237]: texture ok
+        - generic [ref=e238]:
+          - button "3D" [ref=e239] [cursor=pointer]
+          - button "UV" [ref=e240] [cursor=pointer]
+        - generic [ref=e243]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e244]: sessions\S-20260301-4Z3W\artifacts\parts\right_upperarm.generated.jpg
+      - article [ref=e245]:
+        - generic [ref=e246]:
+          - heading "left_forearm" [level=3] [ref=e247]
+          - generic [ref=e248]: texture ok
+        - generic [ref=e249]:
+          - button "3D" [ref=e250] [cursor=pointer]
+          - button "UV" [ref=e251] [cursor=pointer]
+        - generic [ref=e254]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e255]: sessions\S-20260301-4Z3W\artifacts\parts\left_forearm.generated.jpg
+      - article [ref=e256]:
+        - generic [ref=e257]:
+          - heading "right_forearm" [level=3] [ref=e258]
+          - generic [ref=e259]: texture ok
+        - generic [ref=e260]:
+          - button "3D" [ref=e261] [cursor=pointer]
+          - button "UV" [ref=e262] [cursor=pointer]
+        - generic [ref=e265]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e266]: sessions\S-20260301-4Z3W\artifacts\parts\right_forearm.generated.jpg
+      - article [ref=e267]:
+        - generic [ref=e268]:
+          - heading "waist" [level=3] [ref=e269]
+          - generic [ref=e270]: texture ok
+        - generic [ref=e271]:
+          - button "3D" [ref=e272] [cursor=pointer]
+          - button "UV" [ref=e273] [cursor=pointer]
+        - generic [ref=e276]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e277]: sessions\S-20260301-4Z3W\artifacts\parts\waist.generated.jpg
+      - article [ref=e278]:
+        - generic [ref=e279]:
+          - heading "left_thigh" [level=3] [ref=e280]
+          - generic [ref=e281]: texture ok
+        - generic [ref=e282]:
+          - button "3D" [ref=e283] [cursor=pointer]
+          - button "UV" [ref=e284] [cursor=pointer]
+        - generic [ref=e287]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e288]: sessions\S-20260301-4Z3W\artifacts\parts\left_thigh.generated.jpg
+      - article [ref=e289]:
+        - generic [ref=e290]:
+          - heading "right_thigh" [level=3] [ref=e291]
+          - generic [ref=e292]: texture ok
+        - generic [ref=e293]:
+          - button "3D" [ref=e294] [cursor=pointer]
+          - button "UV" [ref=e295] [cursor=pointer]
+        - generic [ref=e298]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e299]: sessions\S-20260301-4Z3W\artifacts\parts\right_thigh.generated.jpg
+      - article [ref=e300]:
+        - generic [ref=e301]:
+          - heading "left_shin" [level=3] [ref=e302]
+          - generic [ref=e303]: texture ok
+        - generic [ref=e304]:
+          - button "3D" [ref=e305] [cursor=pointer]
+          - button "UV" [ref=e306] [cursor=pointer]
+        - generic [ref=e309]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e310]: sessions\S-20260301-4Z3W\artifacts\parts\left_shin.generated.jpg
+      - article [ref=e311]:
+        - generic [ref=e312]:
+          - heading "right_shin" [level=3] [ref=e313]
+          - generic [ref=e314]: texture ok
+        - generic [ref=e315]:
+          - button "3D" [ref=e316] [cursor=pointer]
+          - button "UV" [ref=e317] [cursor=pointer]
+        - generic [ref=e320]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e321]: sessions\S-20260301-4Z3W\artifacts\parts\right_shin.generated.jpg
+      - article [ref=e322]:
+        - generic [ref=e323]:
+          - heading "left_boot" [level=3] [ref=e324]
+          - generic [ref=e325]: texture ok
+        - generic [ref=e326]:
+          - button "3D" [ref=e327] [cursor=pointer]
+          - button "UV" [ref=e328] [cursor=pointer]
+        - generic [ref=e331]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e332]: sessions\S-20260301-4Z3W\artifacts\parts\left_boot.generated.jpg
+      - article [ref=e333]:
+        - generic [ref=e334]:
+          - heading "right_boot" [level=3] [ref=e335]
+          - generic [ref=e336]: texture ok
+        - generic [ref=e337]:
+          - button "3D" [ref=e338] [cursor=pointer]
+          - button "UV" [ref=e339] [cursor=pointer]
+        - generic [ref=e342]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e343]: sessions\S-20260301-4Z3W\artifacts\parts\right_boot.generated.jpg
+      - article [ref=e344]:
+        - generic [ref=e345]:
+          - heading "left_hand" [level=3] [ref=e346]
+          - generic [ref=e347]: texture ok
+        - generic [ref=e348]:
+          - button "3D" [ref=e349] [cursor=pointer]
+          - button "UV" [ref=e350] [cursor=pointer]
+        - generic [ref=e353]: "UV占有: 100.0% | テクスチャ充填: 59.6% | 外周充填: 0.0% | 一致度: 59.6%"
+        - generic [ref=e354]: sessions\S-20260301-4Z3W\artifacts\parts\left_hand.generated.jpg
+      - article [ref=e355]:
+        - generic [ref=e356]:
+          - heading "right_hand" [level=3] [ref=e357]
+          - generic [ref=e358]: texture ok
+        - generic [ref=e359]:
+          - button "3D" [ref=e360] [cursor=pointer]
+          - button "UV" [ref=e361] [cursor=pointer]
+        - generic [ref=e364]: "UV占有: 100.0% | テクスチャ充填: 100.0% | 外周充填: 100.0% | 一致度: 100.0%"
+        - generic [ref=e365]: sessions\S-20260301-4Z3W\artifacts\parts\right_hand.generated.jpg

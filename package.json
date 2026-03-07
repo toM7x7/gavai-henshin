@@ -1,0 +1,10 @@
+{
+  "name": "gavai-henshin",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "python tools/run_henshin.py serve-dashboard --port 8010 --root .",
+    "dev:viewer": "python tools/run_henshin.py serve-viewer --port 8000 --root .",
+    "test": "python tools/run_henshin.py validate --kind suitspec --path examples/suitspec.sample.json"
+  }
+}

@@ -1,0 +1,25 @@
+[    1209ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+[    1228ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+[    1254ms] [WARNING] WARNING: Too many active WebGL contexts. Oldest context will be lost. @ http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28433
+[    1285ms] TypeError: Cannot read properties of null (reading 'trim')
+    at onFirstUse (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20109:54)
+    at WebGLProgram.getUniforms (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20204:4)
+    at setProgram (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:30118:31)
+    at WebGLRenderer.renderBufferDirect (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28954:20)
+    at renderObject (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29792:11)
+    at renderObjects (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29761:6)
+    at renderScene (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29613:36)
+    at WebGLRenderer.render (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29431:5)
+    at PartCardPreview.tick (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260307d:689:19)
+[    1288ms] TypeError: Cannot read properties of null (reading 'trim')
+    at onFirstUse (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20109:54)
+    at WebGLProgram.getUniforms (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:20204:4)
+    at setProgram (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:30118:31)
+    at WebGLRenderer.renderBufferDirect (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:28954:20)
+    at renderObject (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29792:11)
+    at renderObjects (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29761:6)
+    at renderScene (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29613:36)
+    at WebGLRenderer.render (http://localhost:8010/viewer/body-fit/vendor/three/build/three.module.js:29431:5)
+    at PartCardPreview.tick (http://localhost:8010/viewer/suit-dashboard/dashboard.js?v=20260307d:689:19)
+[    4733ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8010/viewer/body-fit/vendor/three/examples/jsm/loaders/GLTFLoader.js:0
+[    5634ms] [WARNING] WARNING: Multiple instances of Three.js being imported. @ https://cdn.jsdelivr.net/npm/three@0.173.0/+esm:17

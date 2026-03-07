@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Suit Dashboard</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -231,6 +232,7 @@
 
         <div class="actions">
           <button id="btnGenerate" class="primary">生成実行</button>
+          <button id="btnAutoFitSave">Auto Fit + Save</button>
           <button id="btnOpenBodyFit">Body Fit を開く</button>
         </div>
 
@@ -295,6 +297,15 @@
       </section>
     </div>
 
-    <script type="module" src="./dashboard.js?v=20260303c"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../body-fit/vendor/three/build/three.module.js",
+          "three/addons/": "../body-fit/vendor/three/examples/jsm/",
+          "three/examples/jsm/": "../body-fit/vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./dashboard.js?v=20260307h"></script>
   </body>
 </html>

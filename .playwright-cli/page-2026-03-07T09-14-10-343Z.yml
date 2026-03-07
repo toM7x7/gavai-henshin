@@ -1,0 +1,276 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - heading "Body Fit Viewer" [level=1] [ref=e4]
+    - paragraph [ref=e5]: suitspec と body-sim を読み込み、全身プレビュー上で各パーツのフィットを調整します。
+    - generic [ref=e6]:
+      - text: SuitSpec JSON
+      - textbox "SuitSpec JSON" [ref=e7]: examples/suitspec.sample.json
+    - generic [ref=e8]:
+      - text: Body Sim JSON
+      - textbox "Body Sim JSON" [ref=e9]: sessions/body-sim.json
+    - generic [ref=e10]:
+      - button "Load" [ref=e11] [cursor=pointer]
+      - button "Play" [ref=e12] [cursor=pointer]
+      - button "Prev" [ref=e13] [cursor=pointer]
+      - button "Next" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - 'button "Textures: On" [ref=e16] [cursor=pointer]'
+      - 'button "Theme: White" [ref=e17] [cursor=pointer]'
+    - generic [ref=e18]:
+      - text: Mesh Relief
+      - slider "Mesh Relief" [ref=e19]: "0.05"
+    - generic [ref=e20]:
+      - button "Cam Front" [ref=e21] [cursor=pointer]
+      - button "Cam Side" [ref=e22] [cursor=pointer]
+      - button "Cam Top" [ref=e23] [cursor=pointer]
+      - button "Auto Fit" [ref=e24] [cursor=pointer]
+    - generic [ref=e25]:
+      - text: Frame
+      - slider "Frame" [ref=e26]: "0"
+    - generic [ref=e27]:
+      - text: Speed
+      - slider "Speed" [ref=e28]: "1"
+    - generic [ref=e29]:
+      - heading "VRM Skeleton" [level=2] [ref=e30]
+      - paragraph [ref=e31]: VRM を重ねて骨ベースでパーツ位置を確認します。
+      - generic [ref=e32]:
+        - text: VRM Path
+        - textbox "VRM Path" [ref=e33]: viewer/assets/vrm/default.vrm
+      - generic [ref=e34]:
+        - button "Load VRM" [ref=e35] [cursor=pointer]
+        - button "Clear VRM" [ref=e36] [cursor=pointer]
+        - 'button "VRM Bones: On" [ref=e37] [cursor=pointer]'
+      - generic [ref=e38]:
+        - 'button "Armor: On" [ref=e39] [cursor=pointer]'
+        - 'button "VRM Idle: Off" [ref=e40] [cursor=pointer]'
+        - button "Focus VRM" [ref=e41] [cursor=pointer]
+      - generic [ref=e42]:
+        - button "Apply T-Pose" [ref=e43] [cursor=pointer]
+        - button "Auto Fit Armor" [active] [ref=e44] [cursor=pointer]
+      - generic [ref=e45]:
+        - text: VRM Idle Amount
+        - slider "VRM Idle Amount" [ref=e46]: "0.35"
+      - generic [ref=e47]:
+        - text: VRM Idle Speed
+        - slider "VRM Idle Speed" [ref=e48]: "1"
+      - generic [ref=e49]:
+        - 'button "Attach: Hybrid" [ref=e50] [cursor=pointer]'
+        - generic [ref=e51]: クリックで BodySim / Hybrid / VRM を切り替えます。
+      - generic [ref=e52]: "VRM loaded: viewer/assets/vrm/default.vrm (bones=59, liveRig=11, source=three-vrm)"
+    - generic [ref=e53]:
+      - heading "Live Input (PoC)" [level=2] [ref=e54]
+      - paragraph [ref=e55]: Webカメラから姿勢を推定して body-fit にリアルタイム反映します。
+      - generic [ref=e56]:
+        - button "Start WebCam" [ref=e57] [cursor=pointer]
+        - button "Stop Live" [ref=e58] [cursor=pointer]
+      - generic [ref=e59]: "Live: inactive"
+    - generic [ref=e61]:
+      - heading "Fit Editor" [level=2] [ref=e62]
+      - paragraph [ref=e63]: 全身表示を見ながら、各パーツのサイズと位置を調整できます。
+      - generic [ref=e64]:
+        - text: Part
+        - combobox "Part" [ref=e65]:
+          - option "helmet" [selected]
+          - option "chest"
+          - option "back"
+          - option "left_shoulder"
+          - option "right_shoulder"
+          - option "left_upperarm"
+          - option "right_upperarm"
+          - option "left_forearm"
+          - option "right_forearm"
+          - option "waist"
+          - option "left_thigh"
+          - option "right_thigh"
+          - option "left_shin"
+          - option "right_shin"
+          - option "left_boot"
+          - option "right_boot"
+          - option "left_hand"
+          - option "right_hand"
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e68]: "0.195"
+        - generic [ref=e69]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e70]: "0.208"
+        - generic [ref=e71]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e72]: "0.195"
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e75]: "0.2"
+        - generic [ref=e76]:
+          - text: zOffset
+          - spinbutton "zOffset" [ref=e77]: "0.02"
+      - generic [ref=e78]:
+        - button "Suggest" [ref=e79] [cursor=pointer]
+        - button "Apply" [ref=e80] [cursor=pointer]
+        - button "Reset Part" [ref=e81] [cursor=pointer]
+        - button "Save SuitSpec" [ref=e82] [cursor=pointer]
+      - generic [ref=e83]:
+        - 'button "Bridges: On" [ref=e84] [cursor=pointer]'
+        - generic [ref=e85]:
+          - text: bridge thickness
+          - slider "bridge thickness" [ref=e86]: "0.1"
+      - paragraph [ref=e87]: Suggest は現在のスコアを元に仮値を提示します。
+      - separator [ref=e88]
+      - heading "VRM Anchor Editor" [level=2] [ref=e89]
+      - paragraph [ref=e90]: Attach が Hybrid / VRM の時に、部位アンカーを全身プレビューで直接調整します。
+      - generic [ref=e91]:
+        - text: Part
+        - combobox "Part" [ref=e92]:
+          - option "helmet" [selected]
+          - option "chest"
+          - option "back"
+          - option "left_shoulder"
+          - option "right_shoulder"
+          - option "left_upperarm"
+          - option "right_upperarm"
+          - option "left_forearm"
+          - option "right_forearm"
+          - option "waist"
+          - option "left_thigh"
+          - option "right_thigh"
+          - option "left_shin"
+          - option "right_shin"
+          - option "left_boot"
+          - option "right_boot"
+          - option "left_hand"
+          - option "right_hand"
+      - generic [ref=e93]:
+        - text: Bone
+        - combobox "Bone" [ref=e94]:
+          - option "chest"
+          - option "head" [selected]
+          - option "hips"
+          - option "J_Adj_L_FaceEye"
+          - option "J_Adj_R_FaceEye"
+          - option "J_Bip_C_Chest"
+          - option "J_Bip_C_Head"
+          - option "J_Bip_C_Hips"
+          - option "J_Bip_C_Neck"
+          - option "J_Bip_C_Spine"
+          - option "J_Bip_C_UpperChest"
+          - option "J_Bip_L_Foot"
+          - option "J_Bip_L_Hand"
+          - option "J_Bip_L_Index1"
+          - option "J_Bip_L_Index2"
+          - option "J_Bip_L_Index3"
+          - option "J_Bip_L_Little1"
+          - option "J_Bip_L_Little2"
+          - option "J_Bip_L_Little3"
+          - option "J_Bip_L_LowerArm"
+          - option "J_Bip_L_LowerLeg"
+          - option "J_Bip_L_Middle1"
+          - option "J_Bip_L_Middle2"
+          - option "J_Bip_L_Middle3"
+          - option "J_Bip_L_Ring1"
+          - option "J_Bip_L_Ring2"
+          - option "J_Bip_L_Ring3"
+          - option "J_Bip_L_Shoulder"
+          - option "J_Bip_L_Thumb1"
+          - option "J_Bip_L_Thumb2"
+          - option "J_Bip_L_Thumb3"
+          - option "J_Bip_L_ToeBase"
+          - option "J_Bip_L_UpperArm"
+          - option "J_Bip_L_UpperLeg"
+          - option "J_Bip_R_Foot"
+          - option "J_Bip_R_Hand"
+          - option "J_Bip_R_Index1"
+          - option "J_Bip_R_Index2"
+          - option "J_Bip_R_Index3"
+          - option "J_Bip_R_Little1"
+          - option "J_Bip_R_Little2"
+          - option "J_Bip_R_Little3"
+          - option "J_Bip_R_LowerArm"
+          - option "J_Bip_R_LowerLeg"
+          - option "J_Bip_R_Middle1"
+          - option "J_Bip_R_Middle2"
+          - option "J_Bip_R_Middle3"
+          - option "J_Bip_R_Ring1"
+          - option "J_Bip_R_Ring2"
+          - option "J_Bip_R_Ring3"
+          - option "J_Bip_R_Shoulder"
+          - option "J_Bip_R_Thumb1"
+          - option "J_Bip_R_Thumb2"
+          - option "J_Bip_R_Thumb3"
+          - option "J_Bip_R_ToeBase"
+          - option "J_Bip_R_UpperArm"
+          - option "J_Bip_R_UpperLeg"
+          - option "J_Sec_L_Bust1"
+          - option "J_Sec_L_Bust2"
+          - option "J_Sec_R_Bust1"
+          - option "J_Sec_R_Bust2"
+          - option "leftFoot"
+          - option "leftHand"
+          - option "leftLowerArm"
+          - option "leftLowerLeg"
+          - option "leftShoulder"
+          - option "leftUpperArm"
+          - option "leftUpperLeg"
+          - option "neck"
+          - option "rightFoot"
+          - option "rightHand"
+          - option "rightLowerArm"
+          - option "rightLowerLeg"
+          - option "rightShoulder"
+          - option "rightUpperArm"
+          - option "rightUpperLeg"
+          - option "Root"
+          - option "spine"
+          - option "upperChest"
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - text: offsetX
+          - spinbutton "offsetX" [ref=e97]: "0"
+        - generic [ref=e98]:
+          - text: offsetY
+          - spinbutton "offsetY" [ref=e99]: "0.08"
+        - generic [ref=e100]:
+          - text: offsetZ
+          - spinbutton "offsetZ" [ref=e101]: "0.12"
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - text: rotX
+          - spinbutton "rotX" [ref=e104]: "0"
+        - generic [ref=e105]:
+          - text: rotY
+          - spinbutton "rotY" [ref=e106]: "0"
+        - generic [ref=e107]:
+          - text: rotZ
+          - spinbutton "rotZ" [ref=e108]: "0"
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - text: scaleX
+          - spinbutton "scaleX" [ref=e111]: "1"
+        - generic [ref=e112]:
+          - text: scaleY
+          - spinbutton "scaleY" [ref=e113]: "1"
+        - generic [ref=e114]:
+          - text: scaleZ
+          - spinbutton "scaleZ" [ref=e115]: "1"
+      - generic [ref=e116]:
+        - button "Load Anchor" [ref=e117] [cursor=pointer]
+        - button "Apply Anchor" [ref=e118] [cursor=pointer]
+        - button "Reset Anchor" [ref=e119] [cursor=pointer]
+      - paragraph [ref=e120]: slot=helmet bone=head offset=[0, 0.08, 0.12] rot=[0, 0, 0] scale=[1, 1, 1]
+    - generic [ref=e121]: Auto-fit applied to 18 parts, anchor-calibrated 17 parts (torso ratio=0.60)
+    - generic [ref=e122]: "{ \"suitspec\": \"examples/suitspec.sample.json\", \"sim\": \"sessions/body-sim.json\", \"modules\": 18, \"fit_overrides\": 18, \"frames\": 7, \"segments\": 9, \"equip_frame\": 6, \"equipped\": true, \"textures\": true, \"theme\": \"bright\", \"fit_score\": 64.269, \"fit_pair_count\": 15, \"fit_mean_gap\": 0.012, \"fit_mean_penetration\": 0.124, \"fit_weak_pairs\": [ { \"pair\": \"chest-back\", \"score\": 35, \"gap\": 0.144, \"penetration\": 0 }, { \"pair\": \"chest-waist\", \"score\": 65, \"gap\": 0, \"penetration\": 0.112 }, { \"pair\": \"left_shoulder-left_upperarm\", \"score\": 65, \"gap\": 0, \"penetration\": 0.096 } ], \"bridge_enabled\": true, \"bridge_thickness\": 0.1, \"bridge_visible_count\": 15, \"armor_visible\": true, \"vrm_path\": \"viewer/assets/vrm/default.vrm\", \"vrm_source\": \"three-vrm\", \"vrm_humanoid_available\": true, \"vrm_bones_visible\": true, \"vrm_attach_mode\": \"hybrid\", \"vrm_attach_armor\": true, \"vrm_idle_enabled\": false, \"vrm_idle_amount\": 0.35, \"vrm_idle_speed\": 1, \"vrm_bone_count\": 59, \"vrm_missing_anchor_parts\": [], \"vrm_resolved_anchors\": { \"helmet\": \"Normalized_J_Bip_C_Head\", \"chest\": \"Normalized_J_Bip_C_UpperChest\", \"back\": \"Normalized_J_Bip_C_UpperChest\", \"left_shoulder\": \"Normalized_J_Bip_L_Shoulder\", \"right_shoulder\": \"Normalized_J_Bip_R_Shoulder\", \"left_upperarm\": \"Normalized_J_Bip_L_UpperArm\", \"right_upperarm\": \"Normalized_J_Bip_R_UpperArm\", \"left_forearm\": \"Normalized_J_Bip_L_LowerArm\", \"right_forearm\": \"Normalized_J_Bip_R_LowerArm\", \"waist\": \"Normalized_J_Bip_C_Hips\", \"left_thigh\": \"Normalized_J_Bip_L_UpperLeg\", \"right_thigh\": \"Normalized_J_Bip_R_UpperLeg\", \"left_shin\": \"Normalized_J_Bip_L_LowerLeg\", \"right_shin\": \"Normalized_J_Bip_R_LowerLeg\", \"left_boot\": \"Normalized_J_Bip_L_Foot\", \"right_boot\": \"Normalized_J_Bip_R_Foot\", \"left_hand\": \"Normalized_J_Bip_L_Hand\", \"right_hand\": \"Normalized_J_Bip_R_Hand\" }, \"vrm_live_rig_ready\": true, \"vrm_live_driven\": false, \"vrm_error\": null, \"three_revision\": \"180\", \"three_target\": \"0.180.0\", \"three_vrm_target\": \"3.4.4\", \"live_active\": false, \"live_fps\": 0, \"live_body_scale_ref\": 0, \"live_pose_model\": null, \"live_pose_quality\": \"idle\", \"live_pose_reliable_joints\": 0, \"live_pipeline_active\": false, \"live_pipeline_modules\": [ \"pose-landmarker\", \"pose-segments\" ], \"live_pipeline_error\": null }"
+  - main [ref=e123]:
+    - generic [ref=e125]:
+      - heading "Display Guide" [level=2] [ref=e126]
+      - paragraph [ref=e127]:
+        - text: "表示ガイド: パーツ形状 / テクスチャ / 接続ブリッジ / VRM骨組み"
+        - text: "Frame 1/7 | Equipped: NO | Speed x1.00"
+        - text: "Textures: ON | Relief: 0.05 | Theme: Bright"
+        - text: "Bridges: ON | Visible: 15 | Thickness: 0.10"
+        - text: "ArmorVisible: ON | VRM Idle: OFF x1.00"
+        - text: "AttachMode: Hybrid"
+        - text: "VRM: ON | Source: three-vrm | Humanoid: YES | Bones: 59 | Visible: ON | Missing: 0 | LiveDrive: OFF"
+        - text: "Live: OFF | FPS: 0.0 | Pipeline: OFF | Modules: pose-landmarker, pose-segments"
+        - text: "PoseModel: - | PoseQuality: idle | ReliableJoints: 0"
+        - text: "FitScore: 64.3 | Gap: 0.012 | Penetration: 0.124"
+        - text: "Tip: Attach=Hybrid は骨追従+BodySimフォールバック、Attach=VRM は骨主軸です。"

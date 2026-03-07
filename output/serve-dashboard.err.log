@@ -1,0 +1,139 @@
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/body-fit/ HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/body-fit/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/body-fit/viewer.js?v=20260304f HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/body-fit/vrm-loader.js?v=20260304a HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/body-fit/body-fit-live.js?v=20260307a HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:33] "GET /viewer/shared/armor-canon.js HTTP/1.1" 304 -
+127.0.0.1 - - [07/Mar/2026 18:13:34] "GET /examples/suitspec.sample.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:34] "GET /sessions/body-sim.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:34] "HEAD /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:34] "GET /sessions/S-20260301-4Z3W/artifacts/parts/helmet.generated.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:36] "GET /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:55] "GET /examples/suitspec.sample.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:55] "GET /sessions/body-sim.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:58] "HEAD /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 18:13:58] "GET /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:06] "GET /viewer/suit-dashboard/ HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59351)
+Traceback (most recent call last):
+  File "C:\Python313\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 223, in factory
+    return DashboardHandler(*args, directory=directory, root=root, **kwargs)
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 158, in __init__
+    super().__init__(*args, directory=directory, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\http\server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 424, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 190, in do_GET
+    super().do_GET()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\http\server.py", line 878, in copyfile
+    shutil.copyfileobj(source, outputfile)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+    ~~~~~~~~~~^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 840, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 確立された接続がホスト コンピューターのソウトウェアによって中止されました。
+----------------------------------------
+127.0.0.1 - - [07/Mar/2026 21:10:06] "GET /viewer/suit-dashboard/ HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 55839)
+Traceback (most recent call last):
+  File "C:\Python313\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 223, in factory
+    return DashboardHandler(*args, directory=directory, root=root, **kwargs)
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 158, in __init__
+    super().__init__(*args, directory=directory, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\http\server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 424, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "C:\dev\codex\gavai-henshin\src\henshin\dashboard_server.py", line 190, in do_GET
+    super().do_GET()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Python313\Lib\http\server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\http\server.py", line 878, in copyfile
+    shutil.copyfileobj(source, outputfile)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+    ~~~~~~~~~~^^^^^
+  File "C:\Python313\Lib\socketserver.py", line 840, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] 確立された接続がホスト コンピューターのソウトウェアによって中止されました。
+----------------------------------------
+127.0.0.1 - - [07/Mar/2026 21:10:27] "HEAD /viewer/suit-dashboard/ HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:27] "GET /viewer/suit-dashboard/ HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:27] "GET /viewer/suit-dashboard/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /viewer/suit-dashboard/dashboard.js?v=20260307e HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /viewer/body-fit/vendor/three/build/three.module.js HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /viewer/body-fit/vendor/three/examples/jsm/controls/OrbitControls.js HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /viewer/shared/armor-canon.js HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "HEAD /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /api/suitspecs HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:28] "GET /api/suitspec?path=examples%2Fsuitspec.sample.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/helmet.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/chest.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/back.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_shoulder.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_shoulder.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_upperarm.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_upperarm.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_forearm.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_forearm.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/waist.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_thigh.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_thigh.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_shin.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_shin.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_boot.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_boot.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/left_hand.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:29] "GET /viewer/assets/meshes/right_hand.mesh.json HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:31] "HEAD /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -
+127.0.0.1 - - [07/Mar/2026 21:10:31] "GET /viewer/assets/vrm/default.vrm HTTP/1.1" 200 -

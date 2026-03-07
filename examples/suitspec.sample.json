@@ -13,92 +13,830 @@
     "helmet": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/helmet.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\helmet.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\helmet.generated.jpg",
+      "fit": {
+        "shape": "sphere",
+        "source": "chest_core",
+        "attach": "start",
+        "offsetY": 0.199,
+        "zOffset": 0.02,
+        "scale": [
+          0.166,
+          0.132,
+          0.155
+        ],
+        "follow": [
+          0.34,
+          0.42,
+          0.34
+        ],
+        "minScale": [
+          0.22,
+          0.24,
+          0.22
+        ]
+      },
+      "attachment_slot": "helmet",
+      "vrm_anchor": {
+        "bone": "head",
+        "offset": [
+          0,
+          -0.05,
+          0.012
+        ],
+        "rotation": [
+          -0.871,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "chest": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/chest.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\chest.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\chest.generated.jpg",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": -0.031,
+        "zOffset": 0,
+        "scale": [
+          0.479,
+          0.483,
+          0.439
+        ],
+        "follow": [
+          0.72,
+          0.78,
+          0.72
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      },
+      "attachment_slot": "chest",
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [
+          0,
+          -0.209,
+          -0.078
+        ],
+        "rotation": [
+          12.274,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "back": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/back.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\back.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\back.generated.jpg",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": 0.078,
+        "zOffset": -0.1,
+        "scale": [
+          0.451,
+          0.458,
+          0.419
+        ],
+        "follow": [
+          0.68,
+          0.76,
+          0.68
+        ],
+        "minScale": [
+          0.46,
+          0.54,
+          0.42
+        ]
+      },
+      "attachment_slot": "back",
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [
+          0,
+          -0.102,
+          -0.157
+        ],
+        "rotation": [
+          12.274,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_shoulder": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_shoulder.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_shoulder.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_shoulder.generated.jpg",
+      "fit": {
+        "shape": "sphere",
+        "source": "left_upperarm",
+        "attach": "start",
+        "offsetY": 0.166,
+        "zOffset": 0,
+        "scale": [
+          0.103,
+          0.091,
+          0.104
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "minScale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "attachment_slot": "left_shoulder",
+      "vrm_anchor": {
+        "bone": "leftShoulder",
+        "offset": [
+          -0.186,
+          -0.062,
+          0.002
+        ],
+        "rotation": [
+          -7.033,
+          -0.998,
+          108.425
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_shoulder": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_shoulder.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_shoulder.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_shoulder.generated.jpg",
+      "fit": {
+        "shape": "sphere",
+        "source": "right_upperarm",
+        "attach": "start",
+        "offsetY": 0.166,
+        "zOffset": 0,
+        "scale": [
+          0.103,
+          0.091,
+          0.104
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "minScale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "attachment_slot": "right_shoulder",
+      "vrm_anchor": {
+        "bone": "rightShoulder",
+        "offset": [
+          0.186,
+          -0.062,
+          0.002
+        ],
+        "rotation": [
+          -7.033,
+          0.998,
+          -108.425
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_upperarm": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_upperarm.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_upperarm.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_upperarm.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_upperarm",
+        "attach": "center",
+        "offsetY": -0.084,
+        "zOffset": 0,
+        "scale": [
+          0.261,
+          0.473,
+          0.261
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "minScale": [
+          0.52,
+          0.56,
+          0.52
+        ]
+      },
+      "attachment_slot": "left_upperarm",
+      "vrm_anchor": {
+        "bone": "leftUpperArm",
+        "offset": [
+          0.283,
+          -0.017,
+          0.005
+        ],
+        "rotation": [
+          -10.788,
+          0,
+          -79.612
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_upperarm": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_upperarm.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_upperarm.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_upperarm.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_upperarm",
+        "attach": "center",
+        "offsetY": -0.084,
+        "zOffset": 0,
+        "scale": [
+          0.261,
+          0.473,
+          0.261
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "minScale": [
+          0.52,
+          0.56,
+          0.52
+        ]
+      },
+      "attachment_slot": "right_upperarm",
+      "vrm_anchor": {
+        "bone": "rightUpperArm",
+        "offset": [
+          -0.283,
+          -0.017,
+          0.005
+        ],
+        "rotation": [
+          -10.788,
+          0,
+          79.612
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_forearm": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_forearm.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_forearm.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_forearm.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_forearm",
+        "attach": "center",
+        "offsetY": -0.12,
+        "zOffset": 0,
+        "scale": [
+          0.249,
+          1.351,
+          0.249
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.48
+        ]
+      },
+      "attachment_slot": "left_forearm",
+      "vrm_anchor": {
+        "bone": "leftLowerArm",
+        "offset": [
+          0.164,
+          0,
+          0
+        ],
+        "rotation": [
+          -10.788,
+          -0.003,
+          -90
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_forearm": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_forearm.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_forearm.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_forearm.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_forearm",
+        "attach": "center",
+        "offsetY": -0.12,
+        "zOffset": 0,
+        "scale": [
+          0.249,
+          1.351,
+          0.249
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.48
+        ]
+      },
+      "attachment_slot": "right_forearm",
+      "vrm_anchor": {
+        "bone": "rightLowerArm",
+        "offset": [
+          -0.164,
+          0,
+          0
+        ],
+        "rotation": [
+          -10.788,
+          0.003,
+          90
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "waist": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/waist.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\waist.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\waist.generated.jpg",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "end",
+        "offsetY": -0.051,
+        "zOffset": 0,
+        "scale": [
+          0.2,
+          0.115,
+          0.14
+        ],
+        "follow": [
+          0.62,
+          0.7,
+          0.62
+        ],
+        "minScale": [
+          0.34,
+          0.28,
+          0.3
+        ]
+      },
+      "attachment_slot": "waist",
+      "vrm_anchor": {
+        "bone": "hips",
+        "offset": [
+          0,
+          -0.117,
+          0.007
+        ],
+        "rotation": [
+          -7.212,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_thigh": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_thigh.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_thigh.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_thigh.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_thigh",
+        "attach": "center",
+        "offsetY": -0.12,
+        "zOffset": 0,
+        "scale": [
+          0.278,
+          0.357,
+          0.278
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "minScale": [
+          0.56,
+          0.66,
+          0.56
+        ]
+      },
+      "attachment_slot": "left_thigh",
+      "vrm_anchor": {
+        "bone": "leftUpperLeg",
+        "offset": [
+          0,
+          -0.255,
+          0
+        ],
+        "rotation": [
+          -0.24,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_thigh": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_thigh.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_thigh.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_thigh.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_thigh",
+        "attach": "center",
+        "offsetY": -0.12,
+        "zOffset": 0,
+        "scale": [
+          0.278,
+          0.357,
+          0.278
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "minScale": [
+          0.56,
+          0.66,
+          0.56
+        ]
+      },
+      "attachment_slot": "right_thigh",
+      "vrm_anchor": {
+        "bone": "rightUpperLeg",
+        "offset": [
+          0,
+          -0.255,
+          0
+        ],
+        "rotation": [
+          -0.24,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_shin": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_shin.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_shin.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_shin.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_shin",
+        "attach": "center",
+        "offsetY": -0.089,
+        "zOffset": 0,
+        "scale": [
+          0.329,
+          0.47,
+          0.32
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "minScale": [
+          0.52,
+          0.64,
+          0.52
+        ]
+      },
+      "attachment_slot": "left_shin",
+      "vrm_anchor": {
+        "bone": "leftLowerLeg",
+        "offset": [
+          0,
+          -0.324,
+          0.002
+        ],
+        "rotation": [
+          -0.871,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_shin": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_shin.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_shin.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_shin.generated.jpg",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_shin",
+        "attach": "center",
+        "offsetY": -0.089,
+        "zOffset": 0,
+        "scale": [
+          0.329,
+          0.47,
+          0.32
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "minScale": [
+          0.52,
+          0.64,
+          0.52
+        ]
+      },
+      "attachment_slot": "right_shin",
+      "vrm_anchor": {
+        "bone": "rightLowerLeg",
+        "offset": [
+          0,
+          -0.324,
+          0.002
+        ],
+        "rotation": [
+          -0.871,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_boot": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_boot.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_boot.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_boot.generated.jpg",
+      "fit": {
+        "shape": "box",
+        "source": "left_shin",
+        "attach": "end",
+        "offsetY": -0.162,
+        "zOffset": 0.08,
+        "scale": [
+          0.34,
+          0.083,
+          0.35
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "minScale": [
+          0.2,
+          0.16,
+          0.24
+        ]
+      },
+      "attachment_slot": "left_boot",
+      "vrm_anchor": {
+        "bone": "leftFoot",
+        "offset": [
+          0,
+          0.911,
+          0.125
+        ],
+        "rotation": [
+          2.628,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_boot": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_boot.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_boot.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_boot.generated.jpg",
+      "fit": {
+        "shape": "box",
+        "source": "right_shin",
+        "attach": "end",
+        "offsetY": -0.162,
+        "zOffset": 0.08,
+        "scale": [
+          0.34,
+          0.083,
+          0.35
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "minScale": [
+          0.2,
+          0.16,
+          0.24
+        ]
+      },
+      "attachment_slot": "right_boot",
+      "vrm_anchor": {
+        "bone": "rightFoot",
+        "offset": [
+          0,
+          0.911,
+          0.125
+        ],
+        "rotation": [
+          2.628,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "left_hand": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/left_hand.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_hand.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\left_hand.generated.jpg",
+      "fit": {
+        "shape": "sphere",
+        "source": "left_forearm",
+        "attach": "end",
+        "offsetY": -0.116,
+        "zOffset": 0.03,
+        "scale": [
+          0.118,
+          0.196,
+          0.187
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "minScale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "attachment_slot": "left_hand",
+      "vrm_anchor": {
+        "bone": "leftHand",
+        "offset": [
+          -0.481,
+          0.006,
+          0.029
+        ],
+        "rotation": [
+          -10.788,
+          -0.003,
+          -90
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     },
     "right_hand": {
       "enabled": true,
       "asset_ref": "viewer/assets/meshes/right_hand.mesh.json",
-      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_hand.generated.jpg"
+      "texture_path": "sessions\\S-20260301-4Z3W\\artifacts\\parts\\right_hand.generated.jpg",
+      "fit": {
+        "shape": "sphere",
+        "source": "right_forearm",
+        "attach": "end",
+        "offsetY": -0.116,
+        "zOffset": 0.03,
+        "scale": [
+          0.118,
+          0.196,
+          0.187
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "minScale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "attachment_slot": "right_hand",
+      "vrm_anchor": {
+        "bone": "rightHand",
+        "offset": [
+          0.481,
+          0.006,
+          0.029
+        ],
+        "rotation": [
+          -10.788,
+          0.003,
+          90
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
     }
   },
   "palette": {

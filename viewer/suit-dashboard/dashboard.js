@@ -23,12 +23,26 @@ import {
 
 const UI = {
   suitPath: document.getElementById("suitPath"),
+  emotionDrive: document.getElementById("emotionDrive"),
+  emotionScene: document.getElementById("emotionScene"),
+  emotionProtectTarget: document.getElementById("emotionProtectTarget"),
+  emotionVow: document.getElementById("emotionVow"),
+  operatorProtectArchetype: document.getElementById("operatorProtectArchetype"),
+  operatorTemperamentBias: document.getElementById("operatorTemperamentBias"),
+  operatorColorMood: document.getElementById("operatorColorMood"),
+  operatorProfileNote: document.getElementById("operatorProfileNote"),
+  generationBrief: document.getElementById("generationBrief"),
+  selectedPartsSummary: document.getElementById("selectedPartsSummary"),
   fallbackDir: document.getElementById("fallbackDir"),
   textureMode: document.getElementById("textureMode"),
+  providerProfile: document.getElementById("providerProfile"),
+  trackingSource: document.getElementById("trackingSource"),
   uvRefine: document.getElementById("uvRefine"),
   simPath: document.getElementById("simPath"),
+  useCache: document.getElementById("useCache"),
   preferFallback: document.getElementById("preferFallback"),
   updateSuitspec: document.getElementById("updateSuitspec"),
+  heroRender: document.getElementById("heroRender"),
   promptPart: document.getElementById("promptPart"),
   promptPreview: document.getElementById("promptPreview"),
   partChecks: document.getElementById("partChecks"),
@@ -74,36 +88,101 @@ const UI = {
   btnVrmModelClear: document.getElementById("btnVrmModelClear"),
   vrmModelStatus: document.getElementById("vrmModelStatus"),
   reliefSlider: document.getElementById("reliefSlider"),
+  stageSummary: document.getElementById("stageSummary"),
+  stageScanline: document.getElementById("stageScanline"),
+  stageMeta: document.getElementById("stageMeta"),
+  stageParts: document.getElementById("stageParts"),
+  eventLog: document.getElementById("eventLog"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
   btnRefreshSuits: document.getElementById("btnRefreshSuits"),
   btnLoadSuit: document.getElementById("btnLoadSuit"),
   btnGenerate: document.getElementById("btnGenerate"),
+  btnCancelGenerate: document.getElementById("btnCancelGenerate"),
   btnAutoFitSave: document.getElementById("btnAutoFitSave"),
   btnOpenBodyFit: document.getElementById("btnOpenBodyFit"),
+  advancedSettings: document.getElementById("advancedSettings"),
   tabButtons: Array.from(document.querySelectorAll(".tab-btn")),
   panelParts: document.getElementById("panelParts"),
   panelBody: document.getElementById("panelBody"),
   bodyFrontCanvas: document.getElementById("bodyFrontCanvas"),
+  bodyStageOverlay: document.getElementById("bodyStageOverlay"),
+  bodyStageOverlayText: document.getElementById("bodyStageOverlayText"),
+  heroPosterPanel: document.getElementById("heroPosterPanel"),
+  heroPosterMeta: document.getElementById("heroPosterMeta"),
+  heroPosterImage: document.getElementById("heroPosterImage"),
   bodyFrontMeta: document.getElementById("bodyFrontMeta"),
+  bodyTuneStatus: document.getElementById("bodyTuneStatus"),
   bodyTunePart: document.getElementById("bodyTunePart"),
   bodyTuneScaleX: document.getElementById("bodyTuneScaleX"),
   bodyTuneScaleY: document.getElementById("bodyTuneScaleY"),
   bodyTuneScaleZ: document.getElementById("bodyTuneScaleZ"),
   bodyTuneOffsetY: document.getElementById("bodyTuneOffsetY"),
   bodyTuneZOffset: document.getElementById("bodyTuneZOffset"),
-  btnBodyTuneApply: document.getElementById("btnBodyTuneApply"),
+  btnBodyTunePrevPart: document.getElementById("btnBodyTunePrevPart"),
+  btnBodyTuneNextPart: document.getElementById("btnBodyTuneNextPart"),
+  btnBodyTuneSave: document.getElementById("btnBodyTuneSave"),
+  btnBodyTuneSaveNext: document.getElementById("btnBodyTuneSaveNext"),
+  btnBodyTuneReset: document.getElementById("btnBodyTuneReset"),
   btnBodyTuneToFit: document.getElementById("btnBodyTuneToFit"),
+  bodyTuneStepButtons: Array.from(document.querySelectorAll("[data-body-step-target]")),
 };
 
 const textureLoader = new THREE.TextureLoader();
 const meshGeometryCache = new Map();
 
 const previewCards = [];
+const previewCardMap = new Map();
 let currentSuitPath = "";
 let currentSuit = null;
 let lastSummary = null;
 let isSyncingTuneControls = false;
+let generationRun = null;
+let hasUnsavedSuitChanges = false;
+
+const OPERATOR_PROFILE_DEFAULTS = {
+  protect_archetype: "citizens",
+  temperament_bias: "calm",
+  color_mood: "industrial_gray",
+  note: "",
+};
+
+const OPERATOR_PROFILE_LABELS = {
+  protect_archetype: {
+    one_person: "たった一人",
+    companions: "仲間",
+    citizens: "人々",
+    truth: "真実",
+    future: "未来",
+    legacy: "継承",
+  },
+  temperament_bias: {
+    calm: "静かに守る",
+    straight: "まっすぐ進む",
+    fierce: "激しく押し切る",
+    gentle: "やさしく支える",
+    stoic: "黙って耐える",
+    noble: "高潔に立つ",
+  },
+  color_mood: {
+    clear_white: "澄んだ白",
+    midnight_blue: "深い青",
+    industrial_gray: "機械グレー",
+    abyssal_teal: "深海ティール",
+    burnt_red: "焼けた赤",
+    signal_amber: "信号アンバー",
+  },
+};
+
+function apiPath(path) {
+  return path;
+}
+
+async function fetchJson(path, options = undefined) {
+  const res = await fetch(apiPath(path), options);
+  const data = await res.json();
+  return { res, data };
+}
 
 const BODY_FRONT_LAYOUT = {
   helmet: { pos: [0.0, 1.30, 0.08], scale: [0.66, 0.66, 0.66] },
@@ -137,6 +216,188 @@ let gltfLoaderModulePromise = null;
 function setStatus(text, isError = false) {
   UI.status.textContent = text;
   UI.status.style.color = isError ? "#9c1b2f" : "#17335f";
+}
+
+function bodyTunePartNames() {
+  return Array.from(UI.bodyTunePart?.options || []).map((option) => option.value);
+}
+
+function bodyTunePartIndex(partName = UI.bodyTunePart?.value) {
+  return bodyTunePartNames().indexOf(partName);
+}
+
+function updateBodyTuneNavigation() {
+  const names = bodyTunePartNames();
+  const index = bodyTunePartIndex();
+  if (UI.btnBodyTunePrevPart) UI.btnBodyTunePrevPart.disabled = index <= 0;
+  if (UI.btnBodyTuneNextPart) UI.btnBodyTuneNextPart.disabled = index < 0 || index >= names.length - 1;
+  const disabled = !names.length;
+  if (UI.btnBodyTuneSave) UI.btnBodyTuneSave.disabled = disabled;
+  if (UI.btnBodyTuneSaveNext) UI.btnBodyTuneSaveNext.disabled = disabled;
+  if (UI.btnBodyTuneReset) UI.btnBodyTuneReset.disabled = disabled;
+}
+
+function updateBodyTuneStatus(message = "") {
+  if (!UI.bodyTuneStatus) return;
+  const partName = UI.bodyTunePart?.value || "";
+  const state = hasUnsavedSuitChanges ? "SuitSpec未保存" : "保存済み";
+  const lead = partName ? `調整中: ${partName} | ${state}` : "調整対象なし";
+  const detail =
+    message ||
+    (partName
+      ? hasUnsavedSuitChanges
+        ? "見た目には反映済みです。保存で確定します。"
+        : "数値を動かすと即時にプレビューへ反映されます。"
+      : "SuitSpecを読み込むと調整できます。");
+  UI.bodyTuneStatus.textContent = `${lead}\n${detail}`;
+  updateBodyTuneNavigation();
+}
+
+function markSuitDirty(message = "") {
+  hasUnsavedSuitChanges = true;
+  updateBodyTuneStatus(message);
+}
+
+function markSuitSaved(message = "") {
+  hasUnsavedSuitChanges = false;
+  updateBodyTuneStatus(message);
+}
+
+function setBodyTunePart(partName, { announce = false } = {}) {
+  if (!partName || !currentSuit?.modules?.[partName]) return false;
+  UI.bodyTunePart.value = partName;
+  UI.fitPart.value = partName;
+  UI.vrmPart.value = partName;
+  loadFitEditor(partName);
+  if (announce) {
+    setStatus(`フィッティング対象を切り替えました: ${partName}`);
+  }
+  return true;
+}
+
+function moveBodyTunePart(direction) {
+  const names = bodyTunePartNames();
+  const index = bodyTunePartIndex();
+  if (index < 0) return false;
+  const nextIndex = clamp(index + direction, 0, names.length - 1);
+  if (nextIndex === index) return false;
+  return setBodyTunePart(names[nextIndex], { announce: true });
+}
+
+function decimalPlaces(stepValue) {
+  const step = String(stepValue || "");
+  if (!step.includes(".")) return 0;
+  return step.split(".")[1].length;
+}
+
+function nudgeNumberInput(input, delta) {
+  if (!input) return;
+  const current = Number(input.value || "0");
+  if (!Number.isFinite(current)) return;
+  let value = current + delta;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  if (Number.isFinite(min)) value = Math.max(min, value);
+  if (Number.isFinite(max)) value = Math.min(max, value);
+  input.value = value.toFixed(decimalPlaces(input.step));
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function appendEventLog(text) {
+  if (!UI.eventLog) return;
+  const lines = String(UI.eventLog.textContent || "")
+    .split("\n")
+    .filter(Boolean)
+    .slice(-10);
+  lines.push(text);
+  UI.eventLog.textContent = lines.join("\n");
+  UI.eventLog.scrollTop = UI.eventLog.scrollHeight;
+}
+
+function eventLabel(type) {
+  const map = {
+    job_started: "ジョブ開始",
+    wave_started: "Wave開始",
+    part_started: "部位生成開始",
+    part_completed: "部位生成完了",
+    part_failed: "部位生成失敗",
+    hero_started: "ポスター生成開始",
+    hero_completed: "ポスター生成完了",
+    hero_failed: "ポスター生成失敗",
+    provider_progress: "生成進行",
+    job_completed: "ジョブ完了",
+    job_failed: "ジョブ失敗",
+    job_cancelled: "ジョブ停止",
+  };
+  return map[type] || type || "ログ";
+}
+
+function setStageSummary(summary, meta = "") {
+  if (UI.stageSummary) UI.stageSummary.textContent = summary;
+  if (UI.stageMeta) UI.stageMeta.textContent = meta;
+}
+
+function setBodyStageOverlay(visible, text = "") {
+  if (!UI.bodyStageOverlay) return;
+  UI.bodyStageOverlay.classList.toggle("hidden", !visible);
+  if (UI.bodyStageOverlayText) {
+    UI.bodyStageOverlayText.textContent = text || "装甲プロトコル起動中";
+  }
+}
+
+function clearHeroPoster() {
+  if (UI.heroPosterPanel) UI.heroPosterPanel.classList.add("hidden");
+  if (UI.heroPosterImage) UI.heroPosterImage.removeAttribute("src");
+  if (UI.heroPosterMeta) UI.heroPosterMeta.textContent = "未生成";
+}
+
+function showHeroPoster(url, meta = "") {
+  if (!url || !UI.heroPosterPanel || !UI.heroPosterImage) return;
+  UI.heroPosterPanel.classList.remove("hidden");
+  UI.heroPosterImage.src = normPath(url);
+  if (UI.heroPosterMeta) UI.heroPosterMeta.textContent = meta || "生成完了";
+}
+
+function updateCardState(partName, state) {
+  const card = previewCardMap.get(partName)?.card;
+  if (!card) return;
+  card.classList.remove("is-hidden", "is-running", "is-completed", "is-failed");
+  if (state) {
+    card.classList.add(`is-${state}`);
+  }
+}
+
+function renderStageParts(requestedParts) {
+  if (!UI.stageParts) return;
+  UI.stageParts.innerHTML = "";
+  for (const part of requestedParts || []) {
+    const chip = document.createElement("div");
+    chip.className = "stage-chip pending";
+    chip.dataset.part = part;
+    chip.textContent = part;
+    UI.stageParts.appendChild(chip);
+  }
+}
+
+function setStagePartStatus(partName, state) {
+  const chip = UI.stageParts?.querySelector(`[data-part="${partName}"]`);
+  if (!chip) return;
+  chip.classList.remove("pending", "running", "completed", "failed");
+  chip.classList.add(state || "pending");
+}
+
+function stopGenerationRun() {
+  if (generationRun?.eventSource) {
+    generationRun.eventSource.close();
+  }
+  if (generationRun?.fallbackTimer) {
+    clearTimeout(generationRun.fallbackTimer);
+  }
+  generationRun = null;
+  UI.stageScanline?.classList.remove("running");
+  if (UI.btnGenerate) UI.btnGenerate.disabled = false;
+  if (UI.btnCancelGenerate) UI.btnCancelGenerate.disabled = true;
 }
 
 function normPath(path) {
@@ -674,6 +935,11 @@ class PartCardPreview {
     this.updateUvDebug();
   }
 
+  async updateTexturePath(path) {
+    this.texturePath = path || null;
+    await this.loadTextureAndRelief(this.reliefAmplitude);
+  }
+
   updateRelief(amplitude) {
     this.reliefAmplitude = amplitude;
     if (this.mesh) {
@@ -1004,7 +1270,7 @@ class BodyFrontPreview {
   updateAnchorForPart(partName, module) {
     const rec = this.findRecord(partName);
     const marker = this.ensureAnchorMarker(partName);
-    if (!rec || !module) {
+    if (!rec || !module || !rec.group.visible) {
       marker.sphere.visible = false;
       marker.line.visible = false;
       marker.axes.visible = false;
@@ -1076,10 +1342,37 @@ class BodyFrontPreview {
     fitCameraToObject(this.camera, this.controls, this.root, 2.6);
   }
 
+  setPartVisible(partName, visible) {
+    const rec = this.findRecord(partName);
+    if (!rec) return;
+    rec.group.visible = Boolean(visible);
+    this.updateAnchorForPart(partName, currentSuit?.modules?.[partName]);
+    this.updateMeta();
+  }
+
+  async updatePartTexture(partName, module) {
+    const rec = this.findRecord(partName);
+    if (!rec) return;
+    rec.texture?.dispose?.();
+    rec.texture = await loadTexture(module?.texture_path || null);
+    if (rec.texture) {
+      rec.mesh.material.map = rec.texture;
+      rec.mesh.material.color.setHex(0xe8f1ff);
+      rec.mesh.material.needsUpdate = true;
+      applyRelief(rec.mesh, rec.texture, Number(UI.reliefSlider.value || "0.05"));
+    } else {
+      rec.mesh.material.map = null;
+      rec.mesh.material.needsUpdate = true;
+      restoreBase(rec.mesh);
+    }
+    this.refreshPart(partName, module);
+  }
+
   calculateFitStats() {
     this.root.updateMatrixWorld(true);
     const byPart = new Map();
     for (const rec of this.records) {
+      if (!rec.group.visible) continue;
       const box = new THREE.Box3().setFromObject(rec.mesh);
       byPart.set(rec.partName, box);
     }
@@ -1265,10 +1558,14 @@ function renderPartChecks(parts) {
     checked.type = "checkbox";
     checked.value = name;
     checked.checked = true;
+    checked.addEventListener("change", () => {
+      updateSelectedPartsSummary();
+    });
     label.appendChild(checked);
     label.append(` ${name}`);
     UI.partChecks.appendChild(label);
   }
+  updateSelectedPartsSummary();
 }
 
 function renderFitPartSelector(parts) {
@@ -1351,7 +1648,10 @@ function renderBodyTuneSelector(parts) {
     op.textContent = name;
     UI.bodyTunePart.appendChild(op);
   }
-  if (!parts.length) return;
+  if (!parts.length) {
+    updateBodyTuneStatus();
+    return;
+  }
   UI.bodyTunePart.value = parts.some(([name]) => name === prev) ? prev : parts[0][0];
   loadBodyTuneEditor(UI.bodyTunePart.value);
 }
@@ -1370,6 +1670,7 @@ function loadBodyTuneEditor(partName) {
   if (!partName || !currentSuit?.modules?.[partName]) return;
   const fit = effectiveFitFor(partName, currentSuit.modules[partName]);
   setBodyTuneValues(fit);
+  updateBodyTuneStatus();
 }
 
 function readBodyTuneFit(partName) {
@@ -1399,6 +1700,7 @@ function applyBodyTuneToSuit({ syncFitEditor = true, silent = false } = {}) {
     setFitEditorValues(fit);
     renderFitPreview(partName);
   }
+  markSuitDirty(`${partName} の見た目に反映中です。保存で確定します。`);
   if (!silent) {
     setStatus(`全身プレビュー調整を適用: ${partName}`);
   }
@@ -1526,6 +1828,7 @@ function applyFitEditorToSuit() {
   }
   setBodyTuneValues(fit);
   renderFitPreview(partName);
+  markSuitDirty(`${partName} の詳細fitを更新しました。保存で確定します。`);
   setStatus(`fitを適用しました: ${partName}`);
   return true;
 }
@@ -1539,6 +1842,7 @@ function resetFitForPart() {
   delete currentSuit.modules[partName].fit;
   loadFitEditor(partName);
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  markSuitDirty(`${partName} のfitを解除しました。保存で確定します。`);
   setStatus(`fitを解除しました: ${partName}`);
 }
 
@@ -1553,6 +1857,7 @@ function applyVrmEditorToSuit({ silent = false } = {}) {
   currentSuit.modules[partName].vrm_anchor = anchor;
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
   renderVrmPreview(partName);
+  markSuitDirty(`${partName} のアンカーを更新しました。保存で確定します。`);
   if (!silent) {
     setStatus(`vrm_anchorを適用しました: ${partName} (slot=${slot})`);
   }
@@ -1569,6 +1874,7 @@ function resetVrmAnchorForPart() {
   delete currentSuit.modules[partName].attachment_slot;
   loadVrmEditor(partName);
   bodyFrontPreview.refreshPart(partName, currentSuit.modules[partName]);
+  markSuitDirty(`${partName} のアンカーを解除しました。保存で確定します。`);
   setStatus(`vrm_anchorを解除しました: ${partName}`);
 }
 
@@ -1576,7 +1882,8 @@ async function saveCurrentSuit() {
   if (!currentSuitPath || !currentSuit) {
     throw new Error("保存対象の SuitSpec がありません。");
   }
-  const res = await fetch("/api/suitspec-save", {
+  syncOperatorProfileToSuit();
+  const data = await fetchJson("/api/suitspec-save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -1584,11 +1891,34 @@ async function saveCurrentSuit() {
       suitspec: currentSuit,
     }),
   });
-  const data = await res.json();
   if (!data.ok) {
     throw new Error(data.error || "SuitSpec保存に失敗しました。");
   }
   return data;
+}
+
+async function saveBodyTunePart({ moveNext = false } = {}) {
+  const partName = UI.bodyTunePart.value;
+  if (!partName || !currentSuit?.modules?.[partName]) {
+    throw new Error("保存対象の部位がありません。");
+  }
+  const names = bodyTunePartNames();
+  const currentIndex = bodyTunePartIndex(partName);
+  const nextPart = moveNext && currentIndex >= 0 ? names[Math.min(currentIndex + 1, names.length - 1)] : partName;
+  applyBodyTuneToSuit({ syncFitEditor: true, silent: true });
+  await saveCurrentSuit();
+  await loadSuit(currentSuitPath);
+  setBodyTunePart(nextPart || partName);
+  markSuitSaved(
+    nextPart && nextPart !== partName
+      ? `${partName} を保存しました。次は ${nextPart} を調整できます。`
+      : `${partName} を保存しました。`
+  );
+  setStatus(
+    nextPart && nextPart !== partName
+      ? `${partName} を保存し、次の部位 ${nextPart} を開きました。`
+      : `${partName} のフィットを保存しました。`
+  );
 }
 
 function buildBodyFrontMeshMap() {
@@ -1647,12 +1977,33 @@ async function autoFitCurrentSuitToVrm() {
   }
   await saveCurrentSuit();
   await loadSuit(currentSuitPath);
-  setStatus(`Auto Fit + Save 完了: ${formatAutoFitSummary(result.summary)}`);
+  setStatus(`自動フィット保存が完了しました: ${formatAutoFitSummary(result.summary)}`);
   return result;
 }
 
 function selectedParts() {
   return Array.from(UI.partChecks.querySelectorAll("input[type='checkbox']:checked")).map((el) => el.value);
+}
+
+function updateSelectedPartsSummary() {
+  if (!UI.selectedPartsSummary) return;
+  const all = Array.from(UI.partChecks.querySelectorAll("input[type='checkbox']")).map((el) => el.value);
+  const selected = selectedParts();
+  if (all.length === 0) {
+    UI.selectedPartsSummary.textContent = "対象パーツを準備中";
+    return;
+  }
+  if (selected.length === 0) {
+    UI.selectedPartsSummary.textContent = "対象パーツが未選択です";
+    return;
+  }
+  if (selected.length === all.length) {
+    UI.selectedPartsSummary.textContent = `全身 ${all.length} 部位を生成`;
+    return;
+  }
+  const preview = selected.slice(0, 3).join(" / ");
+  const suffix = selected.length > 3 ? " / ..." : "";
+  UI.selectedPartsSummary.textContent = `${selected.length} / ${all.length} 部位: ${preview}${suffix}`;
 }
 
 function renderPromptSelector(parts, suitspec) {
@@ -1672,6 +2023,97 @@ function renderPromptSelector(parts, suitspec) {
   updatePromptPreview(selected, suitspec);
 }
 
+function currentEmotionProfile({ forRequest = false } = {}) {
+  const protectTarget = (UI.emotionProtectTarget?.value || "").trim();
+  const vow = (UI.emotionVow?.value || "").trim();
+  const scene = UI.emotionScene?.value || "urban_night";
+  const profile = {
+    drive: UI.emotionDrive?.value || "protect",
+  };
+  if (protectTarget) profile.protect_target = protectTarget;
+  if (!forRequest || scene !== "urban_night") profile.scene = scene;
+  if (vow) profile.vow = vow;
+  return profile;
+}
+
+function currentOperatorProfile({ forRequest = false } = {}) {
+  const note = (UI.operatorProfileNote?.value || "").trim();
+  const profile = {
+    protect_archetype: UI.operatorProtectArchetype?.value || OPERATOR_PROFILE_DEFAULTS.protect_archetype,
+    temperament_bias: UI.operatorTemperamentBias?.value || OPERATOR_PROFILE_DEFAULTS.temperament_bias,
+    color_mood: UI.operatorColorMood?.value || OPERATOR_PROFILE_DEFAULTS.color_mood,
+  };
+  if (!forRequest || note) {
+    profile.note = note;
+  }
+  return profile;
+}
+
+function applyOperatorProfileToUi(profile = null) {
+  const resolved = {
+    ...OPERATOR_PROFILE_DEFAULTS,
+    ...(profile || {}),
+  };
+  if (UI.operatorProtectArchetype) UI.operatorProtectArchetype.value = resolved.protect_archetype;
+  if (UI.operatorTemperamentBias) UI.operatorTemperamentBias.value = resolved.temperament_bias;
+  if (UI.operatorColorMood) UI.operatorColorMood.value = resolved.color_mood;
+  if (UI.operatorProfileNote) UI.operatorProfileNote.value = resolved.note || "";
+}
+
+function syncOperatorProfileToSuit() {
+  if (!currentSuit) return null;
+  const profile = currentOperatorProfile({ forRequest: true });
+  currentSuit.operator_profile = profile;
+  return profile;
+}
+
+function formatEmotionPreview(profile) {
+  if (!profile) return "";
+  const lines = [];
+  if (profile.drive_label) lines.push(`胸の感情: ${profile.drive_label}`);
+  else if (profile.drive) lines.push(`胸の感情: ${profile.drive}`);
+  if (profile.scene_label) lines.push(`立つ場所: ${profile.scene_label}`);
+  else if (profile.scene) lines.push(`立つ場所: ${profile.scene}`);
+  if (profile.protect_target) lines.push(`守りたいもの: ${profile.protect_target}`);
+  if (profile.vow) lines.push(`誓い: ${profile.vow}`);
+  if (profile.note) lines.push(`補足: ${profile.note}`);
+  return lines.join("\n");
+}
+
+function formatOperatorProfilePreview(profile) {
+  if (!profile) return "";
+  const protect = profile.protect_archetype_label || OPERATOR_PROFILE_LABELS.protect_archetype[profile.protect_archetype] || profile.protect_archetype;
+  const temperament =
+    profile.temperament_bias_label || OPERATOR_PROFILE_LABELS.temperament_bias[profile.temperament_bias] || profile.temperament_bias;
+  const colorMood = profile.color_mood_label || OPERATOR_PROFILE_LABELS.color_mood[profile.color_mood] || profile.color_mood;
+  const lines = [
+    `守る対象: ${protect}`,
+    `性格: ${temperament}`,
+    `色気分: ${colorMood}`,
+  ];
+  if (profile.note) lines.push(`補足: ${profile.note}`);
+  if (profile.identity_seed) lines.push(`identity_seed: ${profile.identity_seed}`);
+  return lines.join("\n");
+}
+
+function formatPreviewBlock(value) {
+  if (!value || typeof value !== "object") return String(value ?? "");
+  return Object.entries(value)
+    .map(([key, item]) => {
+      if (Array.isArray(item)) {
+        const rendered = item
+          .map((entry) => (entry && typeof entry === "object" ? JSON.stringify(entry) : String(entry)))
+          .join(", ");
+        return `${key}: ${rendered}`;
+      }
+      if (item && typeof item === "object") {
+        return `${key}: ${JSON.stringify(item)}`;
+      }
+      return `${key}: ${item}`;
+    })
+    .join("\n");
+}
+
 function updatePromptPreview(part, suitspec) {
   if (!part) {
     UI.promptPreview.textContent = "プロンプト未選択";
@@ -1682,18 +2124,74 @@ function updatePromptPreview(part, suitspec) {
   const specPrompt = gen?.part_prompts?.[part] || "(SuitSpec内に未保存)";
   const runtimePrompt = lastSummary?.prompts?.[part] || null;
   const refinePrompt = lastSummary?.refine_prompts?.[part] || null;
+  const designDna = lastSummary?.design_dna || null;
+  const uvContract = lastSummary?.uv_contracts?.[part] || null;
+  const runtimeOperatorProfile = lastSummary?.operator_profile_resolved || null;
+  const runtimeUserArmorProfile = lastSummary?.user_armor_profile || null;
+  const runtimeOperatorDefaults = lastSummary?.operator_resolved_defaults || null;
+  const runtimeEmotionProfile = lastSummary?.emotion_profile_resolved || lastSummary?.emotion_profile || null;
+  const runtimeEmotionDirectives = lastSummary?.emotion_directives || null;
+  const runtimeStyleVariation = lastSummary?.style_variation || null;
+  const runtimeResolvedDefaults = lastSummary?.resolved_defaults || null;
+  const runtimeUvGuide = lastSummary?.uv_guides?.[part] || null;
+  const runtimeReferenceStack = lastSummary?.generated?.[part]?.reference_stack || null;
+  const generationBrief = (UI.generationBrief?.value || "").trim();
+  const liveEmotionProfile = currentEmotionProfile();
+  const liveOperatorProfile = currentOperatorProfile();
 
   const lines = [
-    `[part] ${part}`,
+    `[部位] ${part}`,
     "",
-    "[suitspec.prompt]",
+    "[現在の感情入力]",
+    formatEmotionPreview(liveEmotionProfile),
+    "",
+    "[現在のユーザー固有プロフィール]",
+    formatOperatorProfilePreview(liveOperatorProfile),
+    "",
+    "[SuitSpec の既定プロンプト]",
     specPrompt,
   ];
+  if (generationBrief) {
+    lines.push("", "[今回の生成指示]", generationBrief);
+  }
+  if (designDna) {
+    lines.push("", "[スーツ設計DNA]", formatPreviewBlock(designDna));
+  }
+  if (runtimeOperatorProfile) {
+    lines.push("", "[直近のユーザー固有プロフィール]", formatOperatorProfilePreview(runtimeOperatorProfile));
+  }
+  if (runtimeUserArmorProfile) {
+    lines.push("", "[直近のユーザー固有武装DNA]", formatPreviewBlock(runtimeUserArmorProfile));
+  }
+  if (runtimeOperatorDefaults && Object.keys(runtimeOperatorDefaults).length > 0) {
+    lines.push("", "[補完された武装核の既定値]", formatPreviewBlock(runtimeOperatorDefaults));
+  }
+  if (uvContract) {
+    lines.push("", "[UV契約]", formatPreviewBlock(uvContract));
+  }
+  if (runtimeEmotionProfile) {
+    lines.push("", "[直近の感情入力]", formatEmotionPreview(runtimeEmotionProfile));
+  }
+  if (runtimeEmotionDirectives) {
+    lines.push("", "[感情から変換された設計指示]", formatPreviewBlock(runtimeEmotionDirectives));
+  }
+  if (runtimeStyleVariation) {
+    lines.push("", "[感情から導いた今回差分]", formatPreviewBlock(runtimeStyleVariation));
+  }
+  if (runtimeResolvedDefaults && Object.keys(runtimeResolvedDefaults).length > 0) {
+    lines.push("", "[補完された既定値]", formatPreviewBlock(runtimeResolvedDefaults));
+  }
+  if (runtimeUvGuide) {
+    lines.push("", "[UVガイド参照]", formatPreviewBlock(runtimeUvGuide));
+  }
+  if (runtimeReferenceStack?.length) {
+    lines.push("", "[参照スタック]", formatPreviewBlock(runtimeReferenceStack));
+  }
   if (runtimePrompt) {
-    lines.push("", "[last generation prompt]", runtimePrompt);
+    lines.push("", "[直近の実行プロンプト]", runtimePrompt);
   }
   if (refinePrompt) {
-    lines.push("", "[last refine prompt]", refinePrompt);
+    lines.push("", "[直近の仕上げプロンプト]", refinePrompt);
   }
   UI.promptPreview.textContent = lines.join("\n");
 }
@@ -1703,6 +2201,7 @@ function clearPreviews() {
     preview.dispose();
   }
   previewCards.splice(0, previewCards.length);
+  previewCardMap.clear();
   UI.cards.innerHTML = "";
 }
 
@@ -1723,7 +2222,7 @@ function renderPartCards(suitspec) {
     card.innerHTML = `
       <div class="card-head">
         <h3>${name}</h3>
-        <small>${mod.texture_path ? "texture ok" : "texture missing"}</small>
+        <small>${mod.texture_path ? "テクスチャあり" : "テクスチャ未設定"}</small>
       </div>
       <div class="view-tabs">
         <button class="view-btn" data-view="mesh">3D</button>
@@ -1744,6 +2243,7 @@ function renderPartCards(suitspec) {
       module: mod,
     });
     previewCards.push(preview);
+    previewCardMap.set(name, { preview, card });
 
     for (const btn of card.querySelectorAll(".view-btn")) {
       btn.onclick = () => {
@@ -1759,6 +2259,34 @@ function renderPartCards(suitspec) {
   }
 }
 
+async function applyGeneratedPart(partName, previewUrl) {
+  if (!currentSuit?.modules?.[partName]) return;
+  currentSuit.modules[partName].texture_path = previewUrl.replace(/^\//, "");
+  const previewInfo = previewCardMap.get(partName);
+  if (previewInfo?.preview) {
+    await previewInfo.preview.updateTexturePath(currentSuit.modules[partName].texture_path);
+  }
+  await bodyFrontPreview.updatePartTexture(partName, currentSuit.modules[partName]);
+  bodyFrontPreview.setPartVisible(partName, true);
+  updateCardState(partName, "completed");
+  setStagePartStatus(partName, "completed");
+}
+
+function hideRequestedParts(parts) {
+  for (const part of parts || []) {
+    bodyFrontPreview.setPartVisible(part, false);
+    updateCardState(part, "hidden");
+    setStagePartStatus(part, "pending");
+  }
+}
+
+function revealFallbackShell(parts) {
+  for (const part of parts || []) {
+    bodyFrontPreview.setPartVisible(part, true);
+    updateCardState(part, "running");
+  }
+}
+
 function activateTab(tab) {
   const isParts = tab === "parts";
   UI.panelParts.classList.toggle("active", isParts);
@@ -1769,8 +2297,7 @@ function activateTab(tab) {
 }
 
 async function loadSuitList() {
-  const res = await fetch("/api/suitspecs");
-  const data = await res.json();
+  const { data } = await fetchJson("/api/suitspecs");
   if (!data.ok) throw new Error(data.error || "SuitSpec一覧の取得に失敗しました。");
 
   const options = data.items || [];
@@ -1794,12 +2321,12 @@ async function loadSuitList() {
 }
 
 async function loadSuit(path) {
-  const res = await fetch(`/api/suitspec?path=${encodeURIComponent(path)}`);
-  const data = await res.json();
+  const { data } = await fetchJson(`/api/suitspec?path=${encodeURIComponent(path)}`);
   if (!data.ok) throw new Error(data.error || "SuitSpec読込に失敗しました。");
 
   currentSuitPath = path;
   currentSuit = data.suitspec;
+  applyOperatorProfileToUi(currentSuit?.operator_profile || null);
 
   const enabled = readEnabledModules(currentSuit);
   renderPartChecks(enabled);
@@ -1825,7 +2352,204 @@ async function loadSuit(path) {
     setVrmModelStatus("VRM: 未読込");
   }
 
+  markSuitSaved("部位を選んで数値を動かすと、プレビューへ即時反映されます。");
   setStatus(`読込完了: ${path}\n有効パーツ: ${enabled.length}`);
+}
+
+function stageLabel(stage) {
+  const map = {
+    scan: "生成準備",
+    core_materialization: "主要パーツ生成",
+    full_assembly: "全身生成",
+    hero_finish: "仕上げ",
+    complete: "完了",
+    error: "エラー",
+  };
+  return map[stage] || stage || "待機中";
+}
+
+function refreshGenerationMeta(event = null) {
+  if (!generationRun) return;
+  const nextPart =
+    generationRun.requestedParts.find((part) => !generationRun.completed.has(part) && !generationRun.failed.has(part)) || "-";
+  const wave = event?.wave_index || "-";
+  const queuePosition = event?.queue_position ?? "-";
+  const meta = [
+    `ジョブ: ${generationRun.jobId || "-"}`,
+    `進行: ${stageLabel(generationRun.stage)}`,
+    `Wave: ${wave}`,
+    `完了: ${generationRun.completed.size}/${generationRun.requestedParts.length}`,
+    `次の部位: ${nextPart}`,
+    `待機列: ${queuePosition}`,
+  ].join("\n");
+  setStageSummary(stageLabel(generationRun.stage), meta);
+}
+
+function beginGenerationState(requestedParts) {
+  stopGenerationRun();
+  generationRun = {
+    jobId: "",
+    requestedParts: requestedParts.slice(),
+    completed: new Set(),
+    failed: new Set(),
+    stage: "scan",
+    eventSource: null,
+    fallbackRevealed: false,
+    fallbackTimer: null,
+  };
+  renderStageParts(requestedParts);
+  clearHeroPoster();
+  UI.stageScanline?.classList.add("running");
+  if (UI.btnGenerate) UI.btnGenerate.disabled = true;
+  if (UI.btnCancelGenerate) UI.btnCancelGenerate.disabled = false;
+  setBodyStageOverlay(true, "装甲プロトコル起動中");
+  setStageSummary("生成準備", `完了: 0/${requestedParts.length}\n次の部位: ${requestedParts[0] || "-"}`);
+  UI.eventLog.textContent = "生成準備を開始しました";
+  hideRequestedParts(requestedParts);
+  const coreParts = ["helmet", "chest", "left_shoulder", "right_shoulder"].filter((part) => requestedParts.includes(part));
+  generationRun.fallbackTimer = window.setTimeout(() => {
+    if (!generationRun || generationRun.completed.size > 0 || generationRun.fallbackRevealed) return;
+    generationRun.fallbackRevealed = true;
+    revealFallbackShell(coreParts);
+    appendEventLog("8秒経過: ベースシェルを先行表示");
+    setBodyStageOverlay(true, "ベースシェルを先行表示");
+  }, 8000);
+}
+
+async function completeGenerationRun(finalEvent, failed = false) {
+  if (!generationRun) return;
+  UI.stageScanline?.classList.remove("running");
+  if (generationRun.fallbackTimer) {
+    clearTimeout(generationRun.fallbackTimer);
+  }
+  lastSummary = null;
+  if (finalEvent?.summary_path) {
+    try {
+      const summaryRes = await fetch(normPath(finalEvent.summary_path));
+      if (summaryRes.ok) {
+        lastSummary = await summaryRes.json();
+      }
+    } catch {
+      // best effort
+    }
+  }
+  if (lastSummary?.hero_result?.preview_url) {
+    showHeroPoster(lastSummary.hero_result.preview_url, lastSummary.hero_result.provider || "hero");
+  }
+  if (failed) {
+    revealFallbackShell(generationRun.requestedParts);
+  }
+  if (!failed && UI.updateSuitspec.checked) {
+    await loadSuit(currentSuitPath);
+  } else {
+    updatePromptPreview(UI.promptPart.value, currentSuit);
+    bodyFrontPreview.updateMeta();
+  }
+  if (!failed) {
+    setStatus(
+      [
+        "生成完了",
+        `ジョブID: ${finalEvent?.job_id || generationRun.jobId || "-"}`,
+        `生成済み: ${finalEvent?.generated_count || generationRun.completed.size}`,
+        `エラー: ${finalEvent?.error_count || generationRun.failed.size}`,
+        `Fallback: ${finalEvent?.fallback_used_count || 0}`,
+        `Cache: ${finalEvent?.cache_hit_count || 0}`,
+      ].join("\n")
+    );
+  }
+  stopGenerationRun();
+}
+
+async function handleGenerationEvent(event) {
+  if (!generationRun) return;
+  generationRun.stage = event.stage || generationRun.stage;
+  refreshGenerationMeta(event);
+  if (event.log) {
+    appendEventLog(`${eventLabel(event.type)}: ${event.log}`);
+  }
+
+  switch (event.type) {
+    case "job_started":
+      generationRun.jobId = event.job_id;
+      appendEventLog(`ジョブ開始: ${event.job_id}`);
+      break;
+    case "wave_started":
+      setBodyStageOverlay(true, event.wave_index === 1 ? "主役パーツを形成中" : "装甲を全身へ展開中");
+      break;
+    case "part_started":
+      setStagePartStatus(event.part, "running");
+      updateCardState(event.part, "running");
+      break;
+    case "part_completed":
+      generationRun.completed.add(event.part);
+      if (event.preview_url) {
+        await applyGeneratedPart(event.part, event.preview_url);
+      } else {
+        bodyFrontPreview.setPartVisible(event.part, true);
+      }
+      setBodyStageOverlay(generationRun.completed.size === 0, "装甲素材を形成中");
+      break;
+    case "part_failed":
+      generationRun.failed.add(event.part);
+      setStagePartStatus(event.part, "failed");
+      updateCardState(event.part, "failed");
+      break;
+    case "hero_started":
+      setBodyStageOverlay(true, "ヒーローポスターを生成中");
+      break;
+    case "hero_completed":
+      showHeroPoster(event.preview_url, "生成完了");
+      setBodyStageOverlay(false, "");
+      appendEventLog("ヒーローポスターを生成しました");
+      break;
+    case "job_completed":
+      setBodyStageOverlay(false, "");
+      await completeGenerationRun(event, false);
+      break;
+    case "job_failed":
+      setBodyStageOverlay(false, "");
+      setStatus(`生成失敗\n${event.log || "不明なエラー"}`, true);
+      await completeGenerationRun(event, true);
+      break;
+    case "job_cancelled":
+      setBodyStageOverlay(false, "");
+      setStatus("生成をキャンセルしました。", true);
+      await completeGenerationRun(event, true);
+      break;
+    default:
+      break;
+  }
+}
+
+async function openGenerationStream(jobId) {
+  if (!generationRun) return;
+  const source = new EventSource(apiPath(`/api/generation-jobs/${jobId}/events`));
+  generationRun.eventSource = source;
+  source.onmessage = (msg) => {
+    const event = JSON.parse(msg.data);
+    handleGenerationEvent(event).catch((err) => {
+      appendEventLog(`イベント処理エラー: ${String(err)}`);
+    });
+  };
+  source.onerror = () => {
+    appendEventLog("イベント接続を再試行しています");
+  };
+}
+
+async function cancelGenerate() {
+  if (!generationRun?.jobId) {
+    setStatus("停止対象の生成ジョブがありません。", true);
+    return;
+  }
+  const { data } = await fetchJson(`/api/generation-jobs/${generationRun.jobId}/cancel`, {
+    method: "POST",
+  });
+  if (!data.ok) {
+    setStatus(`停止要求に失敗\n${data.error || "不明なエラー"}`, true);
+    return;
+  }
+  appendEventLog(`停止要求を送信: ${generationRun.jobId}`);
+  setStatus(`停止要求を送信しました\nジョブID: ${generationRun.jobId}`);
 }
 
 async function runGenerate() {
@@ -1834,55 +2558,52 @@ async function runGenerate() {
     return;
   }
 
+  const requestedParts = selectedParts();
+  if (requestedParts.length === 0) {
+    setStatus("対象パーツを選択してください。", true);
+    return;
+  }
   const body = {
     suitspec: currentSuitPath,
-    parts: selectedParts(),
+    parts: requestedParts,
     texture_mode: UI.textureMode.value,
     uv_refine: UI.uvRefine.checked,
     fallback_dir: UI.fallbackDir.value.trim() || null,
     prefer_fallback: UI.preferFallback.checked,
     update_suitspec: UI.updateSuitspec.checked,
+    provider_profile: UI.providerProfile.value,
+    priority_mode: "web_service",
+    use_cache: UI.useCache.checked,
+    hero_render: UI.heroRender.checked,
+    tracking_source: UI.trackingSource.value,
+    generation_brief: UI.generationBrief.value.trim() || null,
+    emotion_profile: currentEmotionProfile({ forRequest: true }),
+    operator_profile_override: currentOperatorProfile({ forRequest: true }),
+    max_parallel: 4,
+    retry_count: 1,
   };
 
-  setStatus("生成中...");
+  beginGenerationState(requestedParts);
+  setStatus("生成ジョブを作成中...");
 
-  const res = await fetch("/api/generate-parts", {
+  const { data } = await fetchJson("/api/generation-jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
 
   if (!data.ok) {
-    setStatus(`生成失敗\n${data.stderr || data.error || "unknown"}`, true);
+    revealFallbackShell(requestedParts);
+    stopGenerationRun();
+    setBodyStageOverlay(false, "");
+    setStatus(`生成開始失敗\n${data.error || "不明なエラー"}`, true);
     return;
   }
 
-  const parsed = data.parsed || {};
-  lastSummary = null;
-  if (parsed.summary_path) {
-    try {
-      const summaryRes = await fetch(normPath(parsed.summary_path));
-      if (summaryRes.ok) {
-        lastSummary = await summaryRes.json();
-      }
-    } catch {
-      // best effort
-    }
-  }
-  setStatus(
-    [
-      `生成完了`,
-      `session_id=${parsed.session_id || "-"}`,
-      `generated=${parsed.generated_count || 0}`,
-      `errors=${parsed.error_count || 0}`,
-      `fallback=${parsed.fallback_used_count || 0}`,
-      `mode=${UI.textureMode.value}`,
-      `uv_refine=${UI.uvRefine.checked}`,
-    ].join("\n")
-  );
-
-  await loadSuit(currentSuitPath);
+  generationRun.jobId = data.job_id;
+  appendEventLog(`ジョブ受付: ${data.job_id}`);
+  refreshGenerationMeta();
+  await openGenerationStream(data.job_id);
 }
 
 function openBodyFit() {
@@ -1919,12 +2640,20 @@ function bindEvents() {
     }
   };
 
+  UI.btnCancelGenerate.onclick = async () => {
+    try {
+      await cancelGenerate();
+    } catch (err) {
+      setStatus(String(err), true);
+    }
+  };
+
   if (UI.btnAutoFitSave) {
     UI.btnAutoFitSave.onclick = async () => {
       try {
         await autoFitCurrentSuitToVrm();
       } catch (err) {
-        setStatus(String(err?.message || err || "Auto-fit failed"), true);
+        setStatus(String(err?.message || err || "自動フィットに失敗しました"), true);
       }
     };
   }
@@ -2001,9 +2730,7 @@ function bindEvents() {
 
   UI.bodyTunePart.onchange = () => {
     const part = UI.bodyTunePart.value;
-    UI.fitPart.value = part;
-    UI.vrmPart.value = part;
-    loadFitEditor(part);
+    setBodyTunePart(part);
   };
 
   const onBodyTuneInput = () => {
@@ -2017,17 +2744,66 @@ function bindEvents() {
   UI.bodyTuneOffsetY.oninput = onBodyTuneInput;
   UI.bodyTuneZOffset.oninput = onBodyTuneInput;
 
-  UI.btnBodyTuneApply.onclick = () => {
-    applyBodyTuneToSuit({ syncFitEditor: true, silent: false });
-  };
+  if (UI.btnBodyTunePrevPart) {
+    UI.btnBodyTunePrevPart.onclick = () => {
+      moveBodyTunePart(-1);
+    };
+  }
+
+  if (UI.btnBodyTuneNextPart) {
+    UI.btnBodyTuneNextPart.onclick = () => {
+      moveBodyTunePart(1);
+    };
+  }
+
+  if (UI.btnBodyTuneSave) {
+    UI.btnBodyTuneSave.onclick = async () => {
+      try {
+        await saveBodyTunePart({ moveNext: false });
+      } catch (err) {
+        setStatus(String(err?.message || err || "フィット保存に失敗しました"), true);
+      }
+    };
+  }
+
+  if (UI.btnBodyTuneSaveNext) {
+    UI.btnBodyTuneSaveNext.onclick = async () => {
+      try {
+        await saveBodyTunePart({ moveNext: true });
+      } catch (err) {
+        setStatus(String(err?.message || err || "フィット保存に失敗しました"), true);
+      }
+    };
+  }
+
+  if (UI.btnBodyTuneReset) {
+    UI.btnBodyTuneReset.onclick = () => {
+      const part = UI.bodyTunePart.value;
+      if (!part) return;
+      UI.fitPart.value = part;
+      resetFitForPart();
+      loadBodyTuneEditor(part);
+    };
+  }
 
   UI.btnBodyTuneToFit.onclick = () => {
     const part = UI.bodyTunePart.value;
     if (!part) return;
     UI.fitPart.value = part;
     loadFitEditor(part);
-    setStatus(`Fit編集欄へ同期しました: ${part}`);
+    if (UI.advancedSettings) UI.advancedSettings.open = true;
+    UI.advancedSettings?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus(`詳細調整を開きました: ${part}`);
   };
+
+  for (const button of UI.bodyTuneStepButtons || []) {
+    button.onclick = () => {
+      const target = button.dataset.bodyStepTarget;
+      const delta = Number(button.dataset.bodyStepDelta || "0");
+      const input = document.getElementById(target);
+      nudgeNumberInput(input, delta);
+    };
+  }
 
   if (UI.vrmAnchorVisible) {
     UI.vrmAnchorVisible.onchange = () => {
@@ -2070,6 +2846,38 @@ function bindEvents() {
     updatePromptPreview(UI.promptPart.value, currentSuit);
   };
 
+  if (UI.generationBrief) {
+    UI.generationBrief.oninput = () => {
+      updatePromptPreview(UI.promptPart.value, currentSuit);
+    };
+  }
+  for (const key of [
+    "operatorProtectArchetype",
+    "operatorTemperamentBias",
+    "operatorColorMood",
+    "operatorProfileNote",
+  ]) {
+    if (UI[key]) {
+      const handler = () => {
+        syncOperatorProfileToSuit();
+        markSuitDirty("武装核を更新しました。保存すると恒常プロフィールとして固定されます。");
+        updatePromptPreview(UI.promptPart.value, currentSuit);
+      };
+      UI[key].oninput = handler;
+      UI[key].onchange = handler;
+    }
+  }
+  for (const key of ["emotionDrive", "emotionScene", "emotionProtectTarget", "emotionVow"]) {
+    if (UI[key]) {
+      UI[key].oninput = () => {
+        updatePromptPreview(UI.promptPart.value, currentSuit);
+      };
+      UI[key].onchange = () => {
+        updatePromptPreview(UI.promptPart.value, currentSuit);
+      };
+    }
+  }
+
   for (const btn of UI.tabButtons) {
     btn.onclick = () => activateTab(btn.dataset.tab || "parts");
   }
@@ -2079,6 +2887,9 @@ async function init() {
   populateVrmBoneOptions();
   bindEvents();
   activateTab("parts");
+  clearHeroPoster();
+  if (UI.btnCancelGenerate) UI.btnCancelGenerate.disabled = true;
+  if (UI.eventLog) UI.eventLog.textContent = "進行ログを待機中...";
 
   try {
     const detected = await discoverDefaultVrmPath();

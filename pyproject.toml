@@ -8,7 +8,9 @@ authors = [
   { name = "gavai-henshin team" }
 ]
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+  "Pillow>=10.0.0",
+]
 
 [project.scripts]
 henshin = "henshin.cli:main"

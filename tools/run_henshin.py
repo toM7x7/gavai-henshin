@@ -4,15 +4,13 @@ import sys
 from pathlib import Path
 
 
-def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
-    src_dir = repo_root / "src"
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
 
-    from henshin.cli import main as henshin_main
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
-    return int(henshin_main())
+from henshin.cli import main  # noqa: E402
 
 
 if __name__ == "__main__":

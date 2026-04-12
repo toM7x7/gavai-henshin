@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { loadVrmScene, VRM_RUNTIME_TARGETS } from "./vrm-loader.js?v=20260304a";
 import {
   LIVE_POSE_OPTIONS,
@@ -9,7 +10,11 @@ import {
   createPoseSegmentsPipelineModule,
   estimateLiveBodyScale,
   extractPoseJointsWorld,
-} from "./body-fit-live.js?v=20260307a";
+} from "./body-fit-live.js?v=20260412a";
+import {
+  createBoneInferenceSnapshot,
+  inferCanonicalJointsFromBoneResolver,
+} from "../shared/bone-inference.js?v=20260412a";
 import {
   FIT_CONTACT_PAIRS,
   VRM_BONE_ALIASES,
@@ -22,12 +27,23 @@ import {
 } from "../shared/armor-canon.js";
 import {
   applyAutoFitResultToSuitSpec,
+  evaluateArmorFitToVrm,
   fitArmorToVrm,
   formatAutoFitSummary,
-} from "../shared/auto-fit-engine.js?v=20260307b";
+} from "../shared/auto-fit-engine.js?v=20260412b";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";
+const DEFAULT_DEPOSITION_DURATION = 2.8;
+
+const DEPOSITION_PROFILES = {
+  uplift: { label: "高揚", shellColor: 0xffca57, highlightColor: 0xfff4b7, glowColor: 0xfff0d8, auraOpacity: 0.28, ringSpeed: 1.35, shellCount: 620, glowCount: 260, shellSize: 0.072, glowSize: 0.13 },
+  drive: { label: "闘志", shellColor: 0xff5a4a, highlightColor: 0xffb08d, glowColor: 0xffd7d0, auraOpacity: 0.26, ringSpeed: 1.55, shellCount: 640, glowCount: 280, shellSize: 0.075, glowSize: 0.14 },
+  grief: { label: "哀傷", shellColor: 0x4da6ff, highlightColor: 0xa9ddff, glowColor: 0xd9f1ff, auraOpacity: 0.2, ringSpeed: 0.9, shellCount: 560, glowCount: 240, shellSize: 0.068, glowSize: 0.12 },
+  tension: { label: "緊張", shellColor: 0x8e63ff, highlightColor: 0xd1c2ff, glowColor: 0xf3efff, auraOpacity: 0.22, ringSpeed: 1.1, shellCount: 700, glowCount: 220, shellSize: 0.062, glowSize: 0.11 },
+  guard: { label: "守護", shellColor: 0x4fd7a4, highlightColor: 0xbff5df, glowColor: 0xe5fff5, auraOpacity: 0.25, ringSpeed: 1.0, shellCount: 600, glowCount: 260, shellSize: 0.07, glowSize: 0.13 },
+  embrace: { label: "受容", shellColor: 0xff6fbd, highlightColor: 0xffc7ea, glowColor: 0xffeef8, auraOpacity: 0.24, ringSpeed: 0.95, shellCount: 580, glowCount: 280, shellSize: 0.074, glowSize: 0.135 },
+};
 
 const PANEL = {
   suitspecPath: document.getElementById("suitspecPath"),
@@ -40,7 +56,9 @@ const PANEL = {
   btnTheme: document.getElementById("btnTheme"),
   btnCamFront: document.getElementById("btnCamFront"),
   btnCamSide: document.getElementById("btnCamSide"),
+  btnCamBack: document.getElementById("btnCamBack"),
   btnCamTop: document.getElementById("btnCamTop"),
+  btnCamPov: document.getElementById("btnCamPov"),
   btnFit: document.getElementById("btnFit"),
   frameSlider: document.getElementById("frameSlider"),
   speedSlider: document.getElementById("speedSlider"),
@@ -59,8 +77,14 @@ const PANEL = {
   vrmIdleAmount: document.getElementById("vrmIdleAmount"),
   vrmIdleSpeed: document.getElementById("vrmIdleSpeed"),
   vrmStatus: document.getElementById("vrmStatus"),
+  btnDepositionPlay: document.getElementById("btnDepositionPlay"),
+  btnDepositionReset: document.getElementById("btnDepositionReset"),
+  depositionProfile: document.getElementById("depositionProfile"),
+  depositionDuration: document.getElementById("depositionDuration"),
+  depositionStatus: document.getElementById("depositionStatus"),
   btnLiveStart: document.getElementById("btnLiveStart"),
   btnLiveStop: document.getElementById("btnLiveStop"),
+  liveViewMode: document.getElementById("liveViewMode"),
   liveStatus: document.getElementById("liveStatus"),
   liveVideo: document.getElementById("liveVideo"),
   fitPart: document.getElementById("fitPart"),
@@ -69,6 +93,20 @@ const PANEL = {
   fitScaleZ: document.getElementById("fitScaleZ"),
   fitOffsetY: document.getElementById("fitOffsetY"),
   fitZOffset: document.getElementById("fitZOffset"),
+  fitNudgeStep: document.getElementById("fitNudgeStep"),
+  fitNudgeControls: document.getElementById("fitNudgeControls"),
+  fitAssistSummary: document.getElementById("fitAssistSummary"),
+  fitAssistCurrent: document.getElementById("fitAssistCurrent"),
+  fitAssistList: document.getElementById("fitAssistList"),
+  btnFitRefreshCheck: document.getElementById("btnFitRefreshCheck"),
+  btnFitPrevIssue: document.getElementById("btnFitPrevIssue"),
+  btnFitNextIssue: document.getElementById("btnFitNextIssue"),
+  btnFitFocusPart: document.getElementById("btnFitFocusPart"),
+  btnGizmoToggle: document.getElementById("btnGizmoToggle"),
+  btnGizmoMove: document.getElementById("btnGizmoMove"),
+  btnGizmoScale: document.getElementById("btnGizmoScale"),
+  btnGizmoSpace: document.getElementById("btnGizmoSpace"),
+  fitGizmoHint: document.getElementById("fitGizmoHint"),
   vrmEditPart: document.getElementById("vrmEditPart"),
   vrmEditBone: document.getElementById("vrmEditBone"),
   vrmEditOffsetX: document.getElementById("vrmEditOffsetX"),
@@ -93,6 +131,14 @@ const PANEL = {
   status: document.getElementById("status"),
   meta: document.getElementById("meta"),
   legendText: document.getElementById("legendText"),
+};
+
+const FIT_FIELD_LABELS = {
+  fitScaleX: "scaleX",
+  fitScaleY: "scaleY",
+  fitScaleZ: "scaleZ",
+  fitOffsetY: "offsetY",
+  fitZOffset: "zOffset",
 };
 
 const textureLoader = new THREE.TextureLoader();
@@ -454,6 +500,20 @@ function round3(value) {
   return Math.round(Number(value || 0) * 1000) / 1000;
 }
 
+function roundMetricMap(metrics) {
+  if (!metrics || typeof metrics !== "object") return null;
+  return Object.fromEntries(
+    Object.entries(metrics).map(([key, value]) => [key, round3(value)])
+  );
+}
+
+function splitFitPairName(pairName) {
+  return String(pairName || "")
+    .split("-")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function aabbGapAndPenetration(a, b) {
   const gapX = Math.max(0, Math.max(a.min.x - b.max.x, b.min.x - a.max.x));
   const gapY = Math.max(0, Math.max(a.min.y - b.max.y, b.min.y - a.max.y));
@@ -513,6 +573,11 @@ class BodyFitViewer {
     this.controls.target.set(0, 0, 0.2);
     this.controls.maxDistance = 5.0;
     this.controls.minDistance = 1.0;
+    this.transformControls = new TransformControls(this.camera, this.canvas);
+    this.transformControls.visible = false;
+    this.transformControls.setMode("translate");
+    this.transformControls.setSpace("local");
+    this.scene.add(this.transformControls);
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
@@ -532,6 +597,8 @@ class BodyFitViewer {
     );
     this.floor.position.set(0, -1.0, -0.15);
     this.scene.add(this.floor);
+    this.depositionFx = createDepositionFxRig();
+    this.scene.add(this.depositionFx.group);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
     keyLight.position.set(2, 3, 4);
@@ -555,6 +622,7 @@ class BodyFitViewer {
     this.bridgeVisibleCount = 0;
     this.bridgeMeshes = new Map();
     this.darkTheme = false;
+    this.cameraPreset = "front";
     this.modelCenter = new THREE.Vector3(0, 0, 0.2);
     this.modelRadius = 0.85;
     this.loadedSuitspecPath = "";
@@ -568,6 +636,13 @@ class BodyFitViewer {
       weakest: [],
     };
     this.autoFitSummary = null;
+    this.fitAssistDirty = false;
+    this.gizmo = {
+      enabled: true,
+      mode: "translate",
+      space: "local",
+      dragging: false,
+    };
     this.live = createDefaultLiveState();
     this.livePipeline = new LiveCameraPipeline();
     this.livePipelineActive = false;
@@ -580,6 +655,7 @@ class BodyFitViewer {
     this.liveJointTrackers = new Map();
     this.lastLiveSegments = null;
     this.lastLiveJoints = null;
+    this.liveViewMode = this.normalizeLiveViewMode(PANEL.liveViewMode?.value || "auto");
     this.vrm = {
       model: null,
       skeleton: null,
@@ -602,9 +678,19 @@ class BodyFitViewer {
       liveRig: [],
       liveRigReady: false,
       liveDriven: false,
+      bodyInference: null,
       error: "",
     };
     this.armorVisible = true;
+    this.deposition = {
+      active: false,
+      progress: 1,
+      durationSec: clamp(Number(PANEL.depositionDuration?.value || DEFAULT_DEPOSITION_DURATION), 1.2, 6.0),
+      profileMode: String(PANEL.depositionProfile?.value || "auto"),
+      resolvedKey: "guard",
+      palette: buildDepositionPalette(DEPOSITION_PROFILES.guard),
+      startedAtMs: 0,
+    };
 
     this.lastTime = performance.now();
     this.updateBridgeButton();
@@ -612,7 +698,20 @@ class BodyFitViewer {
     this.updateVrmButton();
     this.updateVrmAttachButton();
     this.updateVrmIdleButton();
+    this.updateGizmoButtons();
     this.updateVrmStatus("VRM: not loaded");
+    this.updateDepositionStatus("Deposition: idle");
+    this.transformControls.addEventListener("dragging-changed", (event) => {
+      this.gizmo.dragging = Boolean(event.value);
+      this.controls.enabled = !this.gizmo.dragging;
+      if (!this.gizmo.dragging) {
+        this.commitGizmoEdit();
+      }
+    });
+    this.transformControls.addEventListener("objectChange", () => {
+      if (!this.gizmo.dragging) return;
+      this.previewGizmoEdit();
+    });
     this.resize();
     window.addEventListener("resize", () => this.resize());
     requestAnimationFrame((t) => this.tick(t));
@@ -636,6 +735,7 @@ class BodyFitViewer {
   }
 
   updateMetaPanel() {
+    const effectiveLiveView = this.getEffectiveLiveMirror() ? "mirror" : "world";
     const sim = this.sim || {};
     this.setMeta({
       suitspec: this.loadedSuitspecPath || PANEL.suitspecPath.value,
@@ -672,6 +772,13 @@ class BodyFitViewer {
       vrm_idle_amount: round3(this.vrm.idleAmount),
       vrm_idle_speed: round3(this.vrm.idleSpeed),
       vrm_bone_count: this.vrm.boneCount || 0,
+      vrm_body_metrics: roundMetricMap(this.vrm.bodyInference?.metrics),
+      vrm_reliable_joints: this.vrm.bodyInference?.reliableJointCount || 0,
+      vrm_quality: this.vrm.bodyInference?.qualityLabel || null,
+      vrm_quality_score: round3(this.vrm.bodyInference?.qualityScore || 0),
+      vrm_fit_readiness: this.vrm.bodyInference?.fitReadiness || null,
+      vrm_fit_readiness_score: round3(this.vrm.bodyInference?.fitReadinessScore || 0),
+      vrm_shape_profile: this.vrm.bodyInference?.shapeProfile || null,
       vrm_missing_anchor_parts: this.vrm.missingAnchorParts || [],
       vrm_resolved_anchors: this.vrm.resolvedAnchors || {},
       vrm_live_rig_ready: this.vrm.liveRigReady,
@@ -683,12 +790,26 @@ class BodyFitViewer {
       live_active: this.live?.active || false,
       live_fps: round3(this.live?.fps || 0),
       live_body_scale_ref: round3(this.live?.bodyScaleRef || 0),
+      live_body_metrics: roundMetricMap(this.live?.bodyInference?.metrics),
+      live_quality_score: round3(this.live?.bodyInference?.qualityScore || 0),
+      live_fit_readiness: this.live?.bodyInference?.fitReadiness || null,
+      live_fit_readiness_score: round3(this.live?.bodyInference?.fitReadinessScore || 0),
+      live_shape_profile: this.live?.bodyInference?.shapeProfile || null,
       live_pose_model: this.live?.poseModel || null,
       live_pose_quality: this.live?.poseQuality || "idle",
       live_pose_reliable_joints: this.live?.poseReliableJoints || 0,
+      live_view_mode: this.liveViewMode,
+      live_view_effective: effectiveLiveView,
+      live_view_mirrored: this.getEffectiveLiveMirror(),
+      camera_preset: this.cameraPreset,
       live_pipeline_active: this.livePipelineActive,
       live_pipeline_modules: this.livePipeline.listModuleNames(),
       live_pipeline_error: this.livePipelineError || null,
+      deposition_active: this.deposition.active,
+      deposition_progress: round3(this.deposition.progress || 0),
+      deposition_duration_sec: round3(this.deposition.durationSec || DEFAULT_DEPOSITION_DURATION),
+      deposition_profile_mode: this.deposition.profileMode,
+      deposition_profile_resolved: this.deposition.resolvedKey,
       auto_fit_summary: this.autoFitSummary
         ? {
             fit_score: round3(this.autoFitSummary.fitScore || 0),
@@ -696,9 +817,484 @@ class BodyFitViewer {
             missing_anchors: this.autoFitSummary.missingAnchors || [],
             reasons: this.autoFitSummary.reasons || [],
             weak_parts: this.autoFitSummary.weakParts || [],
+            weak_pairs: this.autoFitSummary.weakPairs || [],
+            surface_violations: this.autoFitSummary.surfaceViolations || [],
+            hero_overflow: this.autoFitSummary.heroOverflow || [],
+            min_scale_locks: this.autoFitSummary.minScaleLocks || [],
+            symmetry_delta: this.autoFitSummary.symmetryDelta || [],
           }
         : null,
     });
+  }
+
+  getSelectedFitPart() {
+    return String(PANEL.fitPart?.value || "");
+  }
+
+  buildVrmBoneInferenceSnapshot() {
+    if (!this.vrm.model) {
+      this.vrm.bodyInference = null;
+      return null;
+    }
+    const snapshot = createBoneInferenceSnapshot({
+      joints: inferCanonicalJointsFromBoneResolver((boneName) => this.resolveVrmBone(boneName), {
+        preferLimbRoots: true,
+      }),
+      source: "vrm",
+    });
+    this.vrm.bodyInference = snapshot;
+    return snapshot;
+  }
+
+  buildLiveBoneInferenceSnapshot(joints) {
+    return createBoneInferenceSnapshot({
+      joints,
+      source: "live",
+      options: {
+        fallbackBodyScale: toNumberOr(this.live?.bodyScaleRef, 0),
+        syntheticTorsoDropRatio: LIVE_POSE_OPTIONS.syntheticTorsoDropRatio,
+        syntheticHipWidthRatio: LIVE_POSE_OPTIONS.syntheticHipWidthRatio,
+      },
+    });
+  }
+
+  buildFitAssistItems() {
+    const summary = this.autoFitSummary;
+    if (!summary) return [];
+
+    const items = new Map();
+    const ensureItem = (partName) => {
+      const name = String(partName || "").trim();
+      if (!name) return null;
+      if (!items.has(name)) {
+        items.set(name, {
+          part: name,
+          score: null,
+          critical: false,
+          pairs: [],
+          surface: [],
+          hero: [],
+          minScaleAxes: [],
+        });
+      }
+      return items.get(name);
+    };
+
+    for (const weak of summary.weakParts || []) {
+      const item = ensureItem(weak.part);
+      if (!item) continue;
+      item.score = Number.isFinite(Number(weak.score)) ? Number(weak.score) : null;
+      item.critical = Boolean(weak.critical);
+    }
+
+    for (const pair of summary.weakPairs || []) {
+      for (const partName of splitFitPairName(pair.pair)) {
+        const item = ensureItem(partName);
+        if (!item) continue;
+        item.pairs.push(String(pair.pair));
+      }
+    }
+
+    for (const violation of summary.surfaceViolations || []) {
+      const item = ensureItem(violation.part);
+      if (!item) continue;
+      item.surface.push(`${violation.metric}:${violation.kind}`);
+    }
+
+    for (const overflow of summary.heroOverflow || []) {
+      const item = ensureItem(overflow.part);
+      if (!item) continue;
+      item.hero.push(String(overflow.metric || "hero"));
+    }
+
+    for (const lock of summary.minScaleLocks || []) {
+      const item = ensureItem(lock.part);
+      if (!item) continue;
+      item.minScaleAxes = Array.isArray(lock.axes) ? lock.axes.slice() : [];
+    }
+
+    const severityOf = (item) => {
+      let severity = 0;
+      severity += item.surface.length * 100;
+      severity += item.hero.length * 80;
+      severity += item.minScaleAxes.length * 12;
+      if (item.critical && item.score != null && item.score < 58) severity += 60;
+      if (item.score != null) severity += Math.max(0, 100 - item.score);
+      return severity;
+    };
+
+    return Array.from(items.values()).sort((a, b) => {
+      const severityDelta = severityOf(b) - severityOf(a);
+      if (severityDelta !== 0) return severityDelta;
+      const scoreA = a.score == null ? 999 : a.score;
+      const scoreB = b.score == null ? 999 : b.score;
+      return scoreA - scoreB;
+    });
+  }
+
+  renderFitAssistPanel() {
+    if (!PANEL.fitAssistSummary || !PANEL.fitAssistCurrent || !PANEL.fitAssistList) return;
+
+    const selectedPart = this.getSelectedFitPart();
+    const summary = this.autoFitSummary;
+    const items = this.buildFitAssistItems();
+
+    if (!this.vrm.model) {
+      PANEL.fitAssistSummary.textContent =
+        "1. VRM を読み込む 2. Auto Fit Armor 3. Needs Attention を上から修正 4. Refresh Check 5. Save SuitSpec";
+    } else if (!summary) {
+      PANEL.fitAssistSummary.textContent =
+        "VRM 基準の判定は未実行です。Auto Fit Armor か Refresh Check で最初の診断を作ってください。";
+    } else if (this.fitAssistDirty) {
+      PANEL.fitAssistSummary.textContent =
+        "手動編集後の未評価状態です。今の数値を信じる前に Refresh Check を押してください。";
+    } else if (summary.canSave) {
+      PANEL.fitAssistSummary.textContent =
+        "Ready to save。必要なら気になる部位だけ微調整し、最後に Save SuitSpec を押してください。";
+    } else {
+      PANEL.fitAssistSummary.textContent = `Needs Attention: ${items.length} parts | ${formatAutoFitSummary(summary)}`;
+    }
+
+    const current = items.find((item) => item.part === selectedPart) || null;
+    if (!selectedPart) {
+      PANEL.fitAssistCurrent.textContent = "Current: -";
+    } else if (!current) {
+      PANEL.fitAssistCurrent.textContent = `Current: ${selectedPart}\nこの部位は直近の診断では強い問題としては出ていません。`;
+    } else {
+      const lines = [`Current: ${current.part}`];
+      if (current.score != null) {
+        lines.push(`score=${current.score.toFixed(1)}${current.critical ? " critical" : ""}`);
+      }
+      if (current.pairs.length) {
+        lines.push(`weak pairs=${current.pairs.slice(0, 3).join(", ")}`);
+      }
+      if (current.surface.length) {
+        lines.push(`surface=${current.surface.slice(0, 3).join(", ")}`);
+      }
+      if (current.hero.length) {
+        lines.push(`hero=${current.hero.slice(0, 3).join(", ")}`);
+      }
+      if (current.minScaleAxes.length) {
+        lines.push(`minScale lock=${current.minScaleAxes.join(", ")}`);
+      }
+      PANEL.fitAssistCurrent.textContent = lines.join("\n");
+    }
+
+    PANEL.fitAssistList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "fit-assist-item empty";
+      empty.disabled = true;
+      empty.textContent = summary?.canSave
+        ? "Blocking issue はありません。必要なら見た目だけ追い込んで保存してください。"
+        : "強い問題を検出できませんでした。Refresh Check で再判定してください。";
+      PANEL.fitAssistList.appendChild(empty);
+      return;
+    }
+
+    for (const item of items) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "fit-assist-item";
+      const blocking = item.surface.length || item.hero.length || (item.critical && item.score != null && item.score < 58);
+      if (blocking) button.classList.add("blocking");
+      if (item.part === selectedPart) button.classList.add("active");
+
+      const title = document.createElement("strong");
+      title.textContent =
+        item.score != null ? `${item.part} | score ${item.score.toFixed(1)}` : item.part;
+      const detail = document.createElement("span");
+      const detailParts = [];
+      if (item.pairs.length) detailParts.push(`pair ${item.pairs.slice(0, 2).join(", ")}`);
+      if (item.surface.length) detailParts.push(`surface ${item.surface.slice(0, 2).join(", ")}`);
+      if (item.hero.length) detailParts.push(`hero ${item.hero.slice(0, 2).join(", ")}`);
+      if (item.minScaleAxes.length) detailParts.push(`minScale ${item.minScaleAxes.join(", ")}`);
+      detail.textContent = detailParts.join(" | ") || "detail unavailable";
+      button.append(title, detail);
+      button.onclick = () => this.selectFitPart(item.part, { focusCamera: true });
+      PANEL.fitAssistList.appendChild(button);
+    }
+  }
+
+  updateFitSelectionVisuals() {
+    const selectedPart = this.getSelectedFitPart();
+    const baseColor = this.darkTheme ? 0xeaf2ff : 0x0f2342;
+    const activeColor = this.darkTheme ? 0xffd296 : 0xd46a00;
+    for (const [partName, rec] of this.meshes.entries()) {
+      const active = partName === selectedPart;
+      rec.outline.material.color.setHex(active ? activeColor : baseColor);
+      rec.outline.material.opacity = active ? 0.96 : this.useTextures ? 0.22 : 0.85;
+    }
+  }
+
+  fitCameraToPart(partName) {
+    const rec = this.meshes.get(partName);
+    if (!rec?.group) return false;
+    const box = new THREE.Box3().setFromObject(rec.group);
+    if (box.isEmpty()) return false;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const distance = Math.max(sphere.radius * 4.2, 0.55);
+    const viewDir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
+    if (viewDir.lengthSq() < 0.00001) viewDir.set(0, 0.1, 1);
+    viewDir.normalize();
+    this.controls.target.copy(sphere.center);
+    this.camera.position.copy(sphere.center).addScaledVector(viewDir, distance);
+    this.updateCameraRange(distance);
+    this.controls.update();
+    return true;
+  }
+
+  selectFitPart(partName, { focusCamera = false } = {}) {
+    const target = String(partName || "").trim();
+    if (!target) return false;
+    const fitOptions = Array.from(PANEL.fitPart?.options || []);
+    if (fitOptions.length && !fitOptions.some((option) => option.value === target)) return false;
+    if (PANEL.fitPart) PANEL.fitPart.value = target;
+    this.loadFitEditorForPart(target);
+    if (PANEL.vrmEditPart) {
+      const anchorOptions = Array.from(PANEL.vrmEditPart.options || []);
+      if (anchorOptions.some((option) => option.value === target)) {
+        PANEL.vrmEditPart.value = target;
+        this.loadVrmAnchorEditorForPart(target);
+      }
+    }
+    if (focusCamera) {
+      this.fitCameraToPart(target);
+    }
+    this.updateTransformGizmo();
+    return true;
+  }
+
+  refreshFitAssistCheck() {
+    return this.evaluateCurrentFitAgainstVrm({ forceTPose: true, silent: false });
+  }
+
+  selectAdjacentFitIssue(direction = 1) {
+    const issues = this.buildFitAssistItems();
+    const list = issues.length ? issues.map((item) => item.part) : this.listEditableParts();
+    if (!list.length) return false;
+    const current = this.getSelectedFitPart();
+    const currentIndex = list.indexOf(current);
+    const index = currentIndex >= 0 ? currentIndex : direction > 0 ? -1 : 1;
+    const next = list[(index + direction + list.length) % list.length];
+    return this.selectFitPart(next, { focusCamera: true });
+  }
+
+  getFitNudgeStep() {
+    return clamp(Number(PANEL.fitNudgeStep?.value || 0.01), 0.001, 0.25);
+  }
+
+  nudgeCurrentFitField(fieldId, direction) {
+    const input = PANEL[fieldId];
+    if (!input) return false;
+    const current = toNumberOr(input.value, 0);
+    const step = this.getFitNudgeStep();
+    const min = input.min === "" ? -Infinity : Number(input.min);
+    const max = input.max === "" ? Infinity : Number(input.max);
+    const next = round3(clamp(current + step * direction, min, max));
+    input.value = String(next);
+    this.applyFitEditorToCurrentPart({ silent: true });
+    this.setStatus(`Nudge: ${this.getSelectedFitPart() || "-"} ${FIT_FIELD_LABELS[fieldId] || fieldId} ${next}`);
+    return true;
+  }
+
+  getGizmoEditTargetMode() {
+    return normalizeVrmAttachMode(this.vrm.attachMode) === VRM_ATTACH_MODES.BODY ? "fit" : "anchor";
+  }
+
+  getCurrentDisplaySegments() {
+    if (this.frames.length) {
+      return withFallbackSegments(this.frames[this.frameIndex]?.segments || {});
+    }
+    if (this.vrm.model) {
+      return withFallbackSegments(this.buildSegmentsFromCurrentVrmPose());
+    }
+    return withFallbackSegments({});
+  }
+
+  captureFitFromCurrentGroup(partName) {
+    const module = this.suitspec?.modules?.[partName];
+    const rec = this.meshes.get(partName);
+    if (!module || !rec?.group) return null;
+    const effective = getModuleVisualConfig(partName, module);
+    const segments = this.getCurrentDisplaySegments();
+    const base = segments[effective.source];
+    if (!base) return null;
+
+    const attach = String(effective.attach || "center");
+    let anchor = 0;
+    if (attach === "start") anchor = 0.5;
+    if (attach === "end") anchor = -0.5;
+
+    const axis = localYAxis(base.rotation_z);
+    const deltaX = rec.group.position.x - Number(base.position_x || 0);
+    const deltaY = rec.group.position.y - Number(base.position_y || 0);
+    const along = deltaX * axis.x + deltaY * axis.y;
+    const baseScaleX = Math.max(Number(base.scale_x || 1), 0.2);
+    const baseScaleY = Math.max(Number(base.scale_y || 1), 0.2);
+    const baseScaleZ = Math.max(Number(base.scale_z || 1), 0.2);
+    const fitScaleX = 1 + (baseScaleX - 1) * Number(effective.follow[0] ?? 1);
+    const fitScaleY = 1 + (baseScaleY - 1) * Number(effective.follow[1] ?? 1);
+    const fitScaleZ = 1 + (baseScaleZ - 1) * Number(effective.follow[2] ?? 1);
+
+    return {
+      shape: effective.shape,
+      source: effective.source,
+      attach: effective.attach,
+      offsetY: round3(along / Math.max(baseScaleY, 0.2) - anchor),
+      zOffset: round3(rec.group.position.z - Number(base.position_z || 0)),
+      scale: [
+        round3(clamp(rec.group.scale.x / Math.max(fitScaleX, 0.001), 0.05, 3)),
+        round3(clamp(rec.group.scale.y / Math.max(fitScaleY, 0.001), 0.05, 3)),
+        round3(clamp(rec.group.scale.z / Math.max(fitScaleZ, 0.001), 0.05, 3)),
+      ],
+      follow: normalizeVec3(effective.follow, [1, 1, 1]),
+      minScale: normalizeVec3(effective.minScale, [0.2, 0.2, 0.2]),
+    };
+  }
+
+  captureAnchorFromCurrentGroup(partName) {
+    const module = this.suitspec?.modules?.[partName];
+    const rec = this.meshes.get(partName);
+    if (!module || !rec?.group) return null;
+    const effective = effectiveVrmAnchorFor(partName, module);
+    const bone = this.resolveVrmBoneForPart(partName, module, effective.bone);
+    if (!bone) return null;
+
+    const bonePos = bone.getWorldPosition(new THREE.Vector3());
+    const boneQuat = bone.getWorldQuaternion(new THREE.Quaternion());
+    const invBone = boneQuat.clone().invert();
+    const groupPos = rec.group.getWorldPosition(new THREE.Vector3());
+    const localOffset = groupPos.sub(bonePos).applyQuaternion(invBone);
+    const baseScale = rec.lastTransform
+      ? [rec.lastTransform.scale_x, rec.lastTransform.scale_y, rec.lastTransform.scale_z]
+      : [1, 1, 1];
+
+    return {
+      bone: String(effective.bone || "chest"),
+      offset: [round3(localOffset.x), round3(localOffset.y), round3(localOffset.z)],
+      rotation: normalizeVec3(effective.rotation, [0, 0, 0]).map((value) => round3(value)),
+      scale: [
+        round3(Math.max(0.01, rec.group.scale.x / Math.max(Number(baseScale[0] || 1), 0.001))),
+        round3(Math.max(0.01, rec.group.scale.y / Math.max(Number(baseScale[1] || 1), 0.001))),
+        round3(Math.max(0.01, rec.group.scale.z / Math.max(Number(baseScale[2] || 1), 0.001))),
+      ],
+    };
+  }
+
+  previewGizmoEdit() {
+    const partName = this.getSelectedFitPart();
+    if (!partName) return false;
+    if (this.getGizmoEditTargetMode() === "fit") {
+      const fit = this.captureFitFromCurrentGroup(partName);
+      if (!fit) return false;
+      PANEL.fitScaleX.value = String(fit.scale[0]);
+      PANEL.fitScaleY.value = String(fit.scale[1]);
+      PANEL.fitScaleZ.value = String(fit.scale[2]);
+      PANEL.fitOffsetY.value = String(fit.offsetY);
+      PANEL.fitZOffset.value = String(fit.zOffset || 0);
+      return true;
+    }
+    const anchor = this.captureAnchorFromCurrentGroup(partName);
+    if (!anchor) return false;
+    if (PANEL.vrmEditPart) PANEL.vrmEditPart.value = partName;
+    if (PANEL.vrmEditBone) PANEL.vrmEditBone.value = anchor.bone;
+    if (PANEL.vrmEditOffsetX) PANEL.vrmEditOffsetX.value = String(anchor.offset[0]);
+    if (PANEL.vrmEditOffsetY) PANEL.vrmEditOffsetY.value = String(anchor.offset[1]);
+    if (PANEL.vrmEditOffsetZ) PANEL.vrmEditOffsetZ.value = String(anchor.offset[2]);
+    if (PANEL.vrmEditScaleX) PANEL.vrmEditScaleX.value = String(anchor.scale[0]);
+    if (PANEL.vrmEditScaleY) PANEL.vrmEditScaleY.value = String(anchor.scale[1]);
+    if (PANEL.vrmEditScaleZ) PANEL.vrmEditScaleZ.value = String(anchor.scale[2]);
+    this.updateVrmAnchorPreview(anchor, normalizeAttachmentSlot(partName, this.suitspec?.modules?.[partName]));
+    return true;
+  }
+
+  commitGizmoEdit() {
+    const partName = this.getSelectedFitPart();
+    if (!partName || !this.gizmo.enabled) return false;
+    const modules = this.suitspec?.modules || {};
+    const module = modules[partName];
+    if (!module) return false;
+
+    if (this.getGizmoEditTargetMode() === "fit") {
+      const fit = this.captureFitFromCurrentGroup(partName);
+      if (!fit) return false;
+      module.fit = fit;
+      const rec = this.meshes.get(partName);
+      if (rec) rec.config = getModuleVisualConfig(partName, module);
+      this.fitAssistDirty = true;
+      this.applyFrame(this.frameIndex);
+      this.loadFitEditorForPart(partName);
+      this.setStatus(`Gizmo fit applied: ${partName}`);
+      return true;
+    }
+
+    const slot = normalizeAttachmentSlot(partName, module);
+    const anchor = this.captureAnchorFromCurrentGroup(partName);
+    if (!anchor) return false;
+    module.attachment_slot = slot;
+    module.vrm_anchor = anchor;
+    this.fitAssistDirty = true;
+    this.applyFrame(this.frameIndex);
+    this.loadVrmAnchorEditorForPart(partName);
+    this.setStatus(`Gizmo anchor applied: ${partName}`);
+    return true;
+  }
+
+  updateGizmoButtons() {
+    if (PANEL.btnGizmoToggle) PANEL.btnGizmoToggle.textContent = `Gizmo: ${this.gizmo.enabled ? "On" : "Off"}`;
+    if (PANEL.btnGizmoMove) PANEL.btnGizmoMove.classList.toggle("active", this.gizmo.mode === "translate");
+    if (PANEL.btnGizmoScale) PANEL.btnGizmoScale.classList.toggle("active", this.gizmo.mode === "scale");
+    if (PANEL.btnGizmoSpace) PANEL.btnGizmoSpace.textContent = `Space: ${this.gizmo.space === "local" ? "Local" : "World"}`;
+    if (PANEL.btnGizmoSpace) PANEL.btnGizmoSpace.classList.toggle("active", this.gizmo.space === "world");
+    if (PANEL.fitGizmoHint) {
+      const target = this.getGizmoEditTargetMode() === "fit" ? "fit" : "anchor";
+      const mode = this.gizmo.mode === "translate" ? "Move" : "Scale";
+      PANEL.fitGizmoHint.textContent =
+        `Selected part に ${mode} gizmo を表示中。Attach=${VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "Hybrid"} なので ${target} を更新します。`;
+    }
+  }
+
+  updateTransformGizmo() {
+    if (!this.transformControls) return;
+    this.updateGizmoButtons();
+    const partName = this.getSelectedFitPart();
+    const rec = this.meshes.get(partName);
+    const canAttach = Boolean(this.gizmo.enabled && rec?.group?.visible);
+    this.transformControls.enabled = canAttach;
+    this.transformControls.visible = canAttach;
+    if (!canAttach) {
+      this.transformControls.detach();
+      return;
+    }
+
+    if (this.transformControls.object !== rec.group) {
+      this.transformControls.attach(rec.group);
+    }
+    const editMode = this.getGizmoEditTargetMode();
+    this.transformControls.setMode(this.gizmo.mode);
+    const space = editMode === "fit" && this.gizmo.mode === "translate" ? "local" : this.gizmo.space;
+    this.transformControls.setSpace(space);
+    this.transformControls.showX = !(editMode === "fit" && this.gizmo.mode === "translate");
+    this.transformControls.showY = true;
+    this.transformControls.showZ = true;
+    this.transformControls.size = editMode === "fit" ? 0.72 : 0.82;
+  }
+
+  setGizmoEnabled(enabled) {
+    this.gizmo.enabled = Boolean(enabled);
+    this.updateTransformGizmo();
+  }
+
+  setGizmoMode(mode) {
+    this.gizmo.mode = mode === "scale" ? "scale" : "translate";
+    this.updateTransformGizmo();
+  }
+
+  cycleGizmoSpace() {
+    this.gizmo.space = this.gizmo.space === "local" ? "world" : "local";
+    this.updateTransformGizmo();
   }
 
   updateLiveStatus(text, isError = false) {
@@ -707,15 +1303,51 @@ class BodyFitViewer {
     PANEL.liveStatus.style.color = isError ? "#b41f2f" : "#264b7f";
   }
 
+  normalizeLiveViewMode(mode) {
+    const value = String(mode || "auto").trim().toLowerCase();
+    return value === "mirror" || value === "world" ? value : "auto";
+  }
+
+  getEffectiveLiveMirror() {
+    if (this.liveViewMode === "mirror") return true;
+    if (this.liveViewMode === "world") return false;
+    return this.cameraPreset === "front";
+  }
+
+  getEffectiveLiveViewLabel() {
+    return this.getEffectiveLiveMirror() ? "mirror" : "world";
+  }
+
+  updateLiveVideoPresentation() {
+    if (!PANEL.liveVideo) return;
+    PANEL.liveVideo.classList.toggle("mirrored", this.getEffectiveLiveMirror());
+  }
+
+  setLiveViewMode(mode) {
+    this.liveViewMode = this.normalizeLiveViewMode(mode);
+    if (PANEL.liveViewMode) {
+      PANEL.liveViewMode.value = this.liveViewMode;
+    }
+    this.updateLiveVideoPresentation();
+    this.refreshLiveTrackingStatus();
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
   refreshLiveTrackingStatus() {
     if (!this.live?.active) return;
     const model = this.live.poseModel || "-";
     const quality = this.live.poseQuality || "idle";
     const joints = this.live.poseReliableJoints || 0;
+    const readiness = this.live?.bodyInference?.fitReadiness || "unknown";
+    const viewMode =
+      this.liveViewMode === "auto"
+        ? `auto/${this.getEffectiveLiveViewLabel()}`
+        : this.liveViewMode;
     const isLow = quality === "low" || quality === "missing";
     const text = isLow
-      ? `Live: low confidence (${joints} joints, model=${model})`
-      : `Live: webcam active (${quality}, joints=${joints}, model=${model})`;
+      ? `Live: low confidence (${joints} joints, model=${model}, readiness=${readiness}, view=${viewMode})`
+      : `Live: webcam active (${quality}, joints=${joints}, readiness=${readiness}, model=${model}, view=${viewMode})`;
     this.updateLiveStatus(text, isLow);
   }
 
@@ -818,6 +1450,365 @@ class BodyFitViewer {
     PANEL.vrmStatus.style.color = isError ? "#b41f2f" : "#264b7f";
   }
 
+  updateDepositionStatus(text, isError = false) {
+    if (!PANEL.depositionStatus) return;
+    PANEL.depositionStatus.textContent = text;
+    PANEL.depositionStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  resolveDepositionProfileKey() {
+    const mode = String(PANEL.depositionProfile?.value || this.deposition.profileMode || "auto");
+    this.deposition.profileMode = mode;
+    if (mode !== "auto" && DEPOSITION_PROFILES[mode]) return mode;
+    const hue = hueFromHex(this.suitspec?.palette?.primary);
+    if (hue == null) return "guard";
+    if (hue < 20 || hue >= 345) return "drive";
+    if (hue < 70) return "uplift";
+    if (hue < 180) return "guard";
+    if (hue < 250) return "grief";
+    if (hue < 305) return "tension";
+    return "embrace";
+  }
+
+  playDepositionMock() {
+    if (!this.meshes.size) {
+      this.setStatus("Load SuitSpec before playing deposition", true);
+      this.updateDepositionStatus("Deposition: no armor loaded", true);
+      return;
+    }
+    this.deposition.durationSec = clamp(
+      Number(PANEL.depositionDuration?.value || this.suitspec?.effects?.deposition_seconds || DEFAULT_DEPOSITION_DURATION),
+      1.2,
+      6.0
+    );
+    this.deposition.resolvedKey = this.resolveDepositionProfileKey();
+    const profile = DEPOSITION_PROFILES[this.deposition.resolvedKey] || DEPOSITION_PROFILES.guard;
+    this.deposition.palette = buildDepositionPalette(profile);
+    const bounds = this.getDepositionBounds();
+    if (!bounds) {
+      this.setStatus("Deposition bounds unavailable", true);
+      this.updateDepositionStatus("Deposition: bounds unavailable", true);
+      return;
+    }
+    this.prepareDepositionParticles(bounds, profile, this.deposition.palette);
+    this.deposition.startedAtMs = performance.now();
+    this.deposition.progress = 0;
+    this.deposition.active = true;
+    this.depositionFx.group.visible = true;
+    this.updateDepositionStatus(
+      `Deposition: playing ${DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey}`
+    );
+    this.setStatus(
+      this.vrm.model
+        ? `Deposition mock started (${DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey})`
+        : `Deposition mock started (${DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey}, armor-only)`
+    );
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  resetDepositionMock({ silent = false, keepStatus = false } = {}) {
+    this.deposition.active = false;
+    this.deposition.progress = 1;
+    this.depositionFx.group.visible = false;
+    this.resetDepositionVisuals();
+    if (!keepStatus) {
+      this.updateDepositionStatus("Deposition: idle");
+    }
+    if (!silent) {
+      this.setStatus("Deposition mock reset");
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  finishDepositionMock() {
+    this.deposition.active = false;
+    this.deposition.progress = 1;
+    this.depositionFx.group.visible = false;
+    this.resetDepositionVisuals();
+    const label = DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey;
+    this.updateDepositionStatus(`Deposition: complete (${label})`);
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  resetDepositionVisuals() {
+    if (this.depositionFx?.shellParticles?.points?.material) {
+      this.depositionFx.shellParticles.points.material.opacity = 0;
+    }
+    if (this.depositionFx?.glowParticles?.points?.material) {
+      this.depositionFx.glowParticles.points.material.opacity = 0;
+    }
+    for (const rec of this.meshes.values()) {
+      const material = rec.mesh.material;
+      material.transparent = false;
+      material.opacity = 1;
+      material.emissive?.setHex?.(0x000000);
+      material.emissiveIntensity = 0;
+      material.metalness = 0.55;
+      material.roughness = 0.45;
+      material.needsUpdate = true;
+      rec.outline.visible = true;
+      rec.outline.material.opacity = this.useTextures ? 0.22 : 0.85;
+      if (rec.lastTransform) {
+        rec.group.scale.set(rec.lastTransform.scale_x, rec.lastTransform.scale_y, rec.lastTransform.scale_z);
+      }
+    }
+  }
+
+  getDepositionBounds() {
+    this.root.updateMatrixWorld(true);
+    if (this.vrm.model) this.vrm.model.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    let hasVisible = false;
+    if (this.armorVisible) {
+      for (const rec of this.meshes.values()) {
+        if (!rec.group.visible) continue;
+        box.expandByObject(rec.group);
+        hasVisible = true;
+      }
+    }
+    if (this.vrm.model) {
+      box.expandByObject(this.vrm.model);
+      hasVisible = true;
+    }
+    if (!hasVisible || box.isEmpty()) return null;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    return {
+      box,
+      center: sphere.center,
+      radius: Math.max(sphere.radius, 0.35),
+      minY: box.min.y,
+      maxY: box.max.y,
+      minZ: box.min.z,
+      maxZ: box.max.z,
+      height: Math.max(box.max.y - box.min.y, 1.0),
+      width: Math.max(box.max.x - box.min.x, 0.5),
+    };
+  }
+
+  prepareDepositionParticles(bounds, profile, palette = buildDepositionPalette(profile)) {
+    const fx = this.depositionFx;
+    fx.group.visible = true;
+    fx.group.position.set(0, 0, 0);
+    seedDepositionParticleSystem(
+      fx.shellParticles,
+      {
+        count: profile.shellCount,
+        size: profile.shellSize,
+        shellColor: palette.particleShell,
+        highlightColor: palette.particleHighlight,
+      },
+      (i) => this.randomDepositionSource(bounds, this.deposition.resolvedKey, i, "shell"),
+      () => this.sampleDepositionTarget(bounds, this.deposition.resolvedKey, "shell")
+    );
+    seedDepositionParticleSystem(
+      fx.glowParticles,
+      {
+        count: profile.glowCount,
+        size: profile.glowSize,
+        shellColor: palette.particleHighlight,
+        highlightColor: palette.particleGlow,
+      },
+      (i) => this.randomDepositionSource(bounds, this.deposition.resolvedKey, i, "glow"),
+      () => this.sampleDepositionTarget(bounds, this.deposition.resolvedKey, "glow")
+    );
+  }
+
+  randomDepositionSource(bounds, profileKey, index, kind) {
+    const randA = hash01(index * 13.17 + 0.31);
+    const randB = hash01(index * 17.13 + 0.73);
+    const randC = hash01(index * 19.91 + 0.19);
+    let angle = randA * Math.PI * 2;
+    let radius = bounds.radius * (kind === "glow" ? 1.02 + randB * 0.38 : 1.18 + randB * 0.82);
+    let y = lerp(bounds.minY - bounds.height * 0.08, bounds.maxY + bounds.height * 0.08, randC);
+
+    switch (profileKey) {
+      case "uplift":
+        y = lerp(bounds.minY - bounds.height * 0.34, bounds.maxY * 0.18, randC);
+        break;
+      case "drive":
+        angle = lerp(-0.42, 0.42, randA) + Math.PI;
+        radius = bounds.radius * (1.1 + randB * 0.55);
+        break;
+      case "grief":
+        y = lerp(bounds.maxY + bounds.height * 0.12, bounds.minY + bounds.height * 0.2, randC);
+        break;
+      case "tension":
+        radius = bounds.radius * (1.24 + randB * 0.92);
+        break;
+      case "guard":
+        radius = bounds.radius * (1.3 + randB * 0.5);
+        break;
+      case "embrace":
+        angle = randA * Math.PI * 2;
+        radius = bounds.radius * (1.22 + randB * 0.42);
+        y = lerp(bounds.minY - bounds.height * 0.02, bounds.maxY + bounds.height * 0.04, randC);
+        break;
+      default:
+        break;
+    }
+
+    return {
+      x: bounds.center.x + Math.cos(angle) * radius,
+      y,
+      z: bounds.center.z + Math.sin(angle) * radius,
+    };
+  }
+
+  sampleDepositionTarget(bounds, profileKey, kind) {
+    const armorPoint = this.sampleArmorSurfacePoint();
+    if (armorPoint) return armorPoint;
+
+    const angle = hash01(Math.random() * 97.17) * Math.PI * 2;
+    const y = lerp(bounds.minY, bounds.maxY, Math.random());
+    const radius = kind === "glow" ? bounds.radius * 0.36 : bounds.radius * 0.5;
+    return {
+      x: bounds.center.x + Math.cos(angle) * radius,
+      y,
+      z: bounds.center.z + Math.sin(angle) * radius,
+    };
+  }
+
+  sampleArmorSurfacePoint() {
+    const visible = [];
+    for (const rec of this.meshes.values()) {
+      if (!rec.group.visible) continue;
+      const pos = rec.mesh.geometry?.attributes?.position;
+      if (!pos || !pos.count) continue;
+      visible.push(rec);
+    }
+    if (!visible.length) return null;
+    const rec = visible[Math.floor(Math.random() * visible.length)];
+    const pos = rec.mesh.geometry.attributes.position;
+    const idx = Math.floor(Math.random() * pos.count);
+    const point = new THREE.Vector3(pos.getX(idx), pos.getY(idx), pos.getZ(idx));
+    rec.mesh.localToWorld(point);
+    return { x: point.x, y: point.y, z: point.z };
+  }
+
+  updateDepositionEffect(now, dt) {
+    if (!this.deposition.active) return;
+    const profile = DEPOSITION_PROFILES[this.deposition.resolvedKey] || DEPOSITION_PROFILES.guard;
+    const palette = this.deposition.palette || buildDepositionPalette(profile);
+    const bounds = this.getDepositionBounds();
+    if (!bounds) return;
+
+    const elapsed = Math.max(0, (now - this.deposition.startedAtMs) / 1000);
+    const progress = clamp(elapsed / Math.max(this.deposition.durationSec, 0.1), 0, 1);
+    this.deposition.progress = progress;
+
+    this.applyDepositionFxRig(bounds, profile, palette, progress, dt);
+    updateDepositionParticleSystem(
+      this.depositionFx.shellParticles,
+      bounds,
+      progress,
+      dt,
+      this.deposition.resolvedKey,
+      profile,
+      palette,
+      false
+    );
+    updateDepositionParticleSystem(
+      this.depositionFx.glowParticles,
+      bounds,
+      progress,
+      dt,
+      this.deposition.resolvedKey,
+      profile,
+      palette,
+      true
+    );
+    this.applyDepositionToArmor(bounds, profile, palette, progress);
+
+    if (progress >= 1) {
+      this.finishDepositionMock();
+    }
+  }
+
+  applyDepositionFxRig(bounds, profile, palette, progress, dt) {
+    const fx = this.depositionFx;
+    const radius = Math.max(bounds.radius * 0.72, 0.35);
+    const height = Math.max(bounds.height * 1.05, 1.2);
+    const pulse = 0.82 + 0.18 * Math.sin(progress * Math.PI * (2.5 + profile.ringSpeed));
+    const scanY = -height * 0.48 + progress * height * 0.96;
+    const aura = palette.aura;
+    const color = palette.ringPrimary;
+    const highlight = palette.ringAccent;
+    const glow = palette.core;
+    const center = bounds.center;
+
+    fx.group.visible = true;
+    fx.group.position.set(0, 0, 0);
+
+    fx.aura.material.color.copy(aura);
+    fx.aura.material.opacity = profile.auraOpacity * (0.55 + 0.45 * Math.sin(progress * Math.PI));
+    fx.aura.scale.set(radius * 1.35 * pulse, height, radius * 1.35 * pulse);
+    fx.aura.position.copy(center);
+
+    fx.auraWire.material.color.copy(highlight);
+    fx.auraWire.material.opacity = 0.2 + 0.35 * (1 - Math.abs(progress - 0.55) * 1.25);
+    fx.auraWire.scale.copy(fx.aura.scale);
+    fx.auraWire.position.copy(center);
+
+    fx.ringLower.material.color.copy(color);
+    fx.ringLower.material.opacity = 0.4 + 0.32 * (1 - progress);
+    fx.ringLower.position.set(center.x, center.y + scanY, center.z);
+    fx.ringLower.scale.setScalar(radius * (0.85 + 0.15 * pulse));
+
+    fx.ringUpper.material.color.copy(highlight);
+    fx.ringUpper.material.opacity = 0.18 + 0.3 * smoothstep(0.12, 0.72, progress);
+    fx.ringUpper.position.set(center.x, center.y + scanY - 0.12 * height, center.z);
+    fx.ringUpper.scale.setScalar(radius * (0.65 + 0.2 * (1 - progress)));
+
+    fx.core.material.color.copy(glow);
+    fx.core.material.opacity = 0.14 + 0.35 * Math.exp(-Math.pow((progress - 0.58) / 0.22, 2));
+    fx.core.scale.setScalar(radius * (0.34 + 0.28 * Math.sin(progress * Math.PI)));
+    fx.core.position.copy(center);
+  }
+
+  applyDepositionToArmor(bounds, profile, palette, progress) {
+    const color = palette.ringPrimary;
+    const glow = palette.core;
+    const center = bounds.center;
+
+    for (const rec of this.meshes.values()) {
+      if (!rec.group.visible) continue;
+      const material = rec.mesh.material;
+      const phase = computeDepositionPhase(rec.group.position, center, bounds, this.deposition.resolvedKey);
+      const reveal = smoothstep(phase - 0.1, phase + 0.16, progress);
+      const shimmer = 1 - clamp(Math.abs(progress - phase) / 0.16, 0, 1);
+      const shimmerPow = shimmer * shimmer;
+      const opacity = clamp(0.02 + reveal * 1.08, 0.02, 1);
+
+      material.transparent = opacity < 0.999 || progress < 1;
+      material.opacity = opacity;
+      material.metalness = clamp(0.18 + reveal * 0.7, 0.18, 0.9);
+      material.roughness = clamp(0.78 - reveal * 0.44, 0.22, 0.78);
+      material.emissive.copy(glow).multiplyScalar(0.18 + shimmerPow * 1.85);
+      material.emissiveIntensity = 0.22 + shimmerPow * 0.95;
+      material.needsUpdate = true;
+
+      if (!this.useTextures) {
+        material.color.copy(color).lerp(new THREE.Color(partColor(rec.partName)), 0.25 + reveal * 0.75);
+      }
+
+      rec.outline.visible = true;
+      rec.outline.material.opacity = clamp(0.08 + shimmerPow * 0.75 + reveal * 0.15, 0.08, 0.95);
+      rec.outline.material.color.copy(glow);
+
+      if (rec.lastTransform) {
+        const overshoot = 1 + shimmerPow * 0.1;
+        rec.group.scale.set(
+          rec.lastTransform.scale_x * overshoot,
+          rec.lastTransform.scale_y * overshoot,
+          rec.lastTransform.scale_z * overshoot
+        );
+      }
+    }
+  }
+
   setVrmVisible(enabled) {
     this.vrm.visible = Boolean(enabled);
     if (this.vrm.skeleton) this.vrm.skeleton.visible = this.vrm.visible;
@@ -863,10 +1854,12 @@ class BodyFitViewer {
   setVrmAttachMode(mode) {
     this.vrm.attachMode = normalizeVrmAttachMode(mode);
     this.updateVrmAttachButton();
+    this.updateGizmoButtons();
     if (this.frames.length) {
       this.applyFrame(this.frameIndex);
     }
     this.updateMetaPanel();
+    this.updateTransformGizmo();
     this.setLegend();
   }
 
@@ -905,6 +1898,7 @@ class BodyFitViewer {
     this.vrm.path = "";
     this.vrm.source = null;
     this.vrm.boneCount = 0;
+    this.vrm.bodyInference = null;
     this.vrm.idleTimeSec = 0;
     this.vrm.hasRestPose = false;
     this.vrm.missingAnchorParts = [];
@@ -917,6 +1911,8 @@ class BodyFitViewer {
     this.updateMetaPanel();
     this.updateVrmAttachButton();
     this.populateVrmAnchorEditor();
+    this.renderFitAssistPanel();
+    this.updateTransformGizmo();
     this.setLegend();
   }
 
@@ -1147,84 +2143,7 @@ class BodyFitViewer {
   }
 
   estimateVrmBodyMetrics() {
-    const p = (name) => this.getVrmBoneWorldPosition(name);
-    const dist = (a, b, fallback = 0) => (a && b ? a.distanceTo(b) : fallback);
-
-    const leftShoulder = p("leftShoulder") || p("leftUpperArm");
-    const rightShoulder = p("rightShoulder") || p("rightUpperArm");
-    const leftHip = p("leftUpperLeg");
-    const rightHip = p("rightUpperLeg");
-    const hips = p("hips");
-    const upperChest = p("upperChest");
-    const chest = p("chest");
-    const neck = p("neck");
-    const head = p("head");
-
-    const shouldersCenter =
-      leftShoulder && rightShoulder
-        ? leftShoulder.clone().lerp(rightShoulder, 0.5)
-        : upperChest || chest || neck || null;
-    const hipsCenter =
-      leftHip && rightHip ? leftHip.clone().lerp(rightHip, 0.5) : hips || null;
-    const torsoTop = upperChest || chest || neck || shouldersCenter || null;
-
-    const shoulderWidth = dist(leftShoulder, rightShoulder, 0.44);
-    const hipWidth = dist(leftHip, rightHip, shoulderWidth * 0.75);
-    const torsoLen = dist(hipsCenter, torsoTop, 0.62);
-    const headLen = dist(neck, head, torsoLen * 0.3);
-    const upperArmLen = meanFinite(
-      [
-        dist(p("leftUpperArm"), p("leftLowerArm"), 0),
-        dist(p("rightUpperArm"), p("rightLowerArm"), 0),
-      ],
-      0.36
-    );
-    const foreArmLen = meanFinite(
-      [
-        dist(p("leftLowerArm"), p("leftHand"), 0),
-        dist(p("rightLowerArm"), p("rightHand"), 0),
-      ],
-      upperArmLen * 0.92
-    );
-    const thighLen = meanFinite(
-      [
-        dist(p("leftUpperLeg"), p("leftLowerLeg"), 0),
-        dist(p("rightUpperLeg"), p("rightLowerLeg"), 0),
-      ],
-      0.5
-    );
-    const shinLen = meanFinite(
-      [
-        dist(p("leftLowerLeg"), p("leftFoot"), 0),
-        dist(p("rightLowerLeg"), p("rightFoot"), 0),
-      ],
-      thighLen * 0.92
-    );
-    const handLen = meanFinite(
-      [
-        dist(p("leftHand"), p("leftMiddleProximal"), 0),
-        dist(p("rightHand"), p("rightMiddleProximal"), 0),
-      ],
-      foreArmLen * 0.34
-    );
-    const footLen = meanFinite(
-      [dist(p("leftFoot"), p("leftToes"), 0), dist(p("rightFoot"), p("rightToes"), 0)],
-      shinLen * 0.4
-    );
-
-    return {
-      shoulderWidth,
-      hipWidth,
-      torsoLen,
-      torsoLenRatio: clamp(torsoLen / 0.62, 0.6, 1.6),
-      headLen,
-      upperArmLen,
-      foreArmLen,
-      thighLen,
-      shinLen,
-      handLen,
-      footLen,
-    };
+    return this.buildVrmBoneInferenceSnapshot()?.metrics || null;
   }
 
   estimateAutoFitTargetSize(partName, metrics, fallbackSize) {
@@ -1322,6 +2241,43 @@ class BodyFitViewer {
     }
   }
 
+  evaluateCurrentFitAgainstVrm({ forceTPose = true, silent = false } = {}) {
+    if (!this.vrm.model) {
+      if (!silent) this.setStatus("Fit evaluation failed: VRM is not loaded", true);
+      return null;
+    }
+    if (!this.suitspec || this.meshes.size === 0) {
+      if (!silent) this.setStatus("Fit evaluation failed: suitspec/body-fit is not loaded", true);
+      return null;
+    }
+
+    try {
+      const result = evaluateArmorFitToVrm({
+        vrmModel: this.vrm.model,
+        meshes: this.meshes,
+        suitspec: this.suitspec,
+        options: {
+          forceTPose,
+          resolveBone: (boneName) => this.resolveVrmBone(boneName),
+        },
+      });
+      this.autoFitSummary = result.summary || null;
+      this.fitAssistDirty = false;
+      this.updateMetaPanel();
+      this.renderFitAssistPanel();
+      this.setLegend();
+      if (!silent) {
+        this.setStatus(formatAutoFitSummary(result.summary), !result.summary?.canSave);
+      }
+      return result;
+    } catch (err) {
+      if (!silent) {
+        this.setStatus(`Fit evaluation failed: ${String(err?.message || err || "unknown")}`, true);
+      }
+      return null;
+    }
+  }
+
   applyAutoFitResult(result) {
     if (!result || !this.suitspec) return false;
     applyAutoFitResultToSuitSpec(this.suitspec, result);
@@ -1331,6 +2287,7 @@ class BodyFitViewer {
       rec.config = getModuleVisualConfig(partName, module);
     }
     this.autoFitSummary = result.summary || null;
+    this.fitAssistDirty = false;
     this.vrm.model?.updateMatrixWorld(true);
     this.buildVrmLiveRig();
     if (this.frames.length) {
@@ -1340,8 +2297,9 @@ class BodyFitViewer {
       this.applySegments(vrmPoseSegments, null);
     }
     this.updateMetaPanel();
-    this.setLegend();
     this.populateFitEditor();
+    this.renderFitAssistPanel();
+    this.setLegend();
     return true;
   }
 
@@ -1590,6 +2548,7 @@ class BodyFitViewer {
     this.vrm.path = rawPath;
     this.vrm.boneCount = this.countModelBones(model);
     this.buildVrmLiveRig();
+    this.buildVrmBoneInferenceSnapshot();
     this.captureVrmRestPose();
     this.applyVrmIdlePose(0, true);
     this.vrm.error = "";
@@ -1603,6 +2562,8 @@ class BodyFitViewer {
       this.applyFrame(this.frameIndex);
     }
     this.updateMetaPanel();
+    this.renderFitAssistPanel();
+    this.updateTransformGizmo();
     this.setLegend();
     if (!silent) {
       if (source === "gltf-fallback") {
@@ -1775,86 +2736,7 @@ class BodyFitViewer {
   }
 
   completeUpperBodyLiveJoints(joints) {
-    const out = { ...(joints || {}) };
-    const shouldersCenter =
-      out.shoulders_center ||
-      (out.left_shoulder && out.right_shoulder
-        ? {
-            x: (out.left_shoulder.x + out.right_shoulder.x) * 0.5,
-            y: (out.left_shoulder.y + out.right_shoulder.y) * 0.5,
-            z: (toNumberOr(out.left_shoulder.z, 0.22) + toNumberOr(out.right_shoulder.z, 0.22)) * 0.5,
-          }
-        : null);
-    if (!shouldersCenter) return out;
-    out.shoulders_center = shouldersCenter;
-
-    const shoulderWidth =
-      out.left_shoulder && out.right_shoulder
-        ? Math.hypot(
-            out.left_shoulder.x - out.right_shoulder.x,
-            out.left_shoulder.y - out.right_shoulder.y,
-            toNumberOr(out.left_shoulder.z, 0.22) - toNumberOr(out.right_shoulder.z, 0.22)
-          )
-        : Math.max(toNumberOr(this.live?.bodyScaleRef, 0.28), 0.28);
-    const torsoBasis = Math.max(toNumberOr(this.live?.bodyScaleRef, 0), shoulderWidth, 0.28);
-    const torsoDrop = clamp(torsoBasis * LIVE_POSE_OPTIONS.syntheticTorsoDropRatio, 0.26, 0.78);
-    const hipHalfWidth = clamp(shoulderWidth * LIVE_POSE_OPTIONS.syntheticHipWidthRatio * 0.5, 0.08, 0.24);
-
-    if (!out.hips_center) {
-      if (out.left_hip && out.right_hip) {
-        out.hips_center = {
-          x: (out.left_hip.x + out.right_hip.x) * 0.5,
-          y: (out.left_hip.y + out.right_hip.y) * 0.5,
-          z: (toNumberOr(out.left_hip.z, 0.22) + toNumberOr(out.right_hip.z, 0.22)) * 0.5,
-        };
-      } else if (out.left_hip) {
-        out.hips_center = {
-          x: out.left_hip.x + hipHalfWidth,
-          y: out.left_hip.y,
-          z: toNumberOr(out.left_hip.z, 0.22),
-        };
-      } else if (out.right_hip) {
-        out.hips_center = {
-          x: out.right_hip.x - hipHalfWidth,
-          y: out.right_hip.y,
-          z: toNumberOr(out.right_hip.z, 0.22),
-        };
-      } else {
-        out.hips_center = {
-          x: shouldersCenter.x,
-          y: shouldersCenter.y - torsoDrop,
-          z: toNumberOr(shouldersCenter.z, 0.22) - 0.02,
-        };
-      }
-    }
-
-    if (out.hips_center) {
-      const hipsCenter = out.hips_center;
-      if (!out.left_hip) {
-        out.left_hip = {
-          x: hipsCenter.x - hipHalfWidth,
-          y: hipsCenter.y,
-          z: toNumberOr(hipsCenter.z, 0.22),
-        };
-      }
-      if (!out.right_hip) {
-        out.right_hip = {
-          x: hipsCenter.x + hipHalfWidth,
-          y: hipsCenter.y,
-          z: toNumberOr(hipsCenter.z, 0.22),
-        };
-      }
-    }
-
-    if (!out.nose) {
-      out.nose = {
-        x: shouldersCenter.x,
-        y: shouldersCenter.y + torsoDrop * 0.58,
-        z: toNumberOr(shouldersCenter.z, 0.22) + 0.02,
-      };
-    }
-
-    return out;
+    return this.buildLiveBoneInferenceSnapshot(joints).joints;
   }
 
   buildSegmentPoseFromEndpoints(spec, start, end, prev, lerp, lengthScale = 1) {
@@ -1911,32 +2793,8 @@ class BodyFitViewer {
   }
 
   buildSegmentsFromCurrentVrmPose() {
-    const pick = (...names) => {
-      for (const name of names) {
-        const pos = this.getVrmBoneWorldPosition(name);
-        if (pos) {
-          return { x: pos.x, y: pos.y, z: pos.z };
-        }
-      }
-      return null;
-    };
-
-    const joints = {
-      left_shoulder: pick("leftShoulder", "leftUpperArm"),
-      right_shoulder: pick("rightShoulder", "rightUpperArm"),
-      left_elbow: pick("leftLowerArm"),
-      right_elbow: pick("rightLowerArm"),
-      left_wrist: pick("leftHand"),
-      right_wrist: pick("rightHand"),
-      left_hip: pick("leftUpperLeg"),
-      right_hip: pick("rightUpperLeg"),
-      left_knee: pick("leftLowerLeg"),
-      right_knee: pick("rightLowerLeg"),
-      left_ankle: pick("leftFoot"),
-      right_ankle: pick("rightFoot"),
-      nose: pick("head"),
-    };
-    return this.buildSegmentsFromJointMap(this.completeUpperBodyLiveJoints(joints), {
+    const inference = this.buildVrmBoneInferenceSnapshot();
+    return this.buildSegmentsFromJointMap(inference?.joints || {}, {
       followerMap: null,
       lerpOverride: 1,
       lengthScale: 1,
@@ -1944,29 +2802,27 @@ class BodyFitViewer {
   }
 
   buildLiveSegmentsFromLandmarks(landmarks, dtSec) {
-    const rawJoints = extractPoseJointsWorld(landmarks, LIVE_POSE_OPTIONS);
+    const rawJoints = extractPoseJointsWorld(landmarks, {
+      ...LIVE_POSE_OPTIONS,
+      mirror: this.getEffectiveLiveMirror(),
+    });
+    const rawInference = this.buildLiveBoneInferenceSnapshot(rawJoints);
     const smoothedJoints = this.smoothLiveJoints(rawJoints, dtSec);
-    const joints = this.completeUpperBodyLiveJoints(smoothedJoints);
-    const reliableJointCount = Object.values(rawJoints).filter(
-      (joint) => joint && Number.isFinite(joint.x) && Number.isFinite(joint.y)
-    ).length;
-    const hasMeasuredTorsoAnchors = Boolean(
-      rawJoints.left_shoulder && rawJoints.right_shoulder && rawJoints.left_hip && rawJoints.right_hip
-    );
-    const hasSolvedTorsoAnchors = Boolean(
-      joints.left_shoulder && joints.right_shoulder && joints.left_hip && joints.right_hip
-    );
-    const hasUpperBodyAnchors = Boolean(
-      rawJoints.left_shoulder &&
-        rawJoints.right_shoulder &&
-        (rawJoints.left_elbow || rawJoints.right_elbow || rawJoints.left_wrist || rawJoints.right_wrist)
-    );
+    const smoothedInference = this.buildLiveBoneInferenceSnapshot(smoothedJoints);
+    const joints = smoothedInference.joints;
+    const reliableJointCount = rawInference.reliableJointCount;
+    const hasMeasuredTorsoAnchors = rawInference.hasMeasuredTorsoAnchors;
+    const hasSolvedTorsoAnchors = smoothedInference.hasSolvedTorsoAnchors;
+    const hasUpperBodyAnchors = rawInference.hasUpperBodyAnchors;
+    const fitReadiness = smoothedInference.fitReadiness || "insufficient";
     this.live.poseReliableJoints = reliableJointCount;
+    this.live.bodyInference = smoothedInference;
     this.lastLiveJoints = joints;
 
     const canUseUpperBodyFallback =
       hasUpperBodyAnchors && reliableJointCount >= LIVE_POSE_OPTIONS.minUpperBodyJointCount;
     if (
+      ((fitReadiness !== "fit-ready" && fitReadiness !== "upper-body-only") && !canUseUpperBodyFallback) ||
       (!hasSolvedTorsoAnchors && !canUseUpperBodyFallback) ||
       reliableJointCount < LIVE_POSE_OPTIONS.minUpperBodyJointCount
     ) {
@@ -1979,7 +2835,11 @@ class BodyFitViewer {
       return {};
     }
 
-    this.live.poseQuality = hasMeasuredTorsoAnchors ? (reliableJointCount >= 10 ? "good" : "fair") : "upper";
+    this.live.poseQuality =
+      fitReadiness === "upper-body-only"
+        ? "upper"
+        : smoothedInference.qualityLabel ||
+          (hasMeasuredTorsoAnchors ? (reliableJointCount >= 10 ? "good" : "fair") : "upper");
     const bodyScale = estimateLiveBodyScale(joints);
     if (!Number.isFinite(this.live.bodyScaleRef) || this.live.bodyScaleRef <= 0) {
       this.live.bodyScaleRef = bodyScale > 0 ? bodyScale : 1;
@@ -2014,6 +2874,7 @@ class BodyFitViewer {
         rec.group.visible = false;
         continue;
       }
+      rec.lastTransform = { ...t };
       rec.group.visible = true;
       rec.group.position.set(t.position_x, t.position_y, t.position_z);
       rec.group.rotation.set(0, 0, t.rotation_z);
@@ -2027,10 +2888,13 @@ class BodyFitViewer {
     if (this.vrm.model && !this.playing && !this.live.active) {
       this.alignVrmModelToArmor(this.vrm.model);
     }
-    this.applyArmorToVrmBones();
+    if (!this.gizmo.dragging) {
+      this.applyArmorToVrmBones();
+    }
     this.fitStats = this.calculateFitStats();
     this.updateBridges();
     this.updateMetaPanel();
+    this.updateTransformGizmo();
     this.setLegend(frame);
   }
 
@@ -2054,6 +2918,7 @@ class BodyFitViewer {
         audio: false,
       });
       const video = PANEL.liveVideo || document.createElement("video");
+      this.updateLiveVideoPresentation();
       video.srcObject = stream;
       await video.play();
       this.live = {
@@ -2062,6 +2927,7 @@ class BodyFitViewer {
         video,
         stream,
       };
+      this.updateLiveVideoPresentation();
       this.updateLiveStatus("Live: starting modules...");
       await this.startLivePipelineModules();
       this.resetLiveFollowers();
@@ -2206,6 +3072,7 @@ class BodyFitViewer {
     PANEL.fitPart.value = parts.includes(prev) ? prev : parts[0];
     this.loadFitEditorForPart(PANEL.fitPart.value);
     this.populateVrmAnchorEditor(parts);
+    this.renderFitAssistPanel();
   }
 
   populateVrmAnchorEditor(parts = null) {
@@ -2338,12 +3205,18 @@ class BodyFitViewer {
     const modules = this.suitspec?.modules || {};
     const module = modules[partName];
     if (!module) return;
+    if (PANEL.fitPart && PANEL.fitPart.value !== partName) {
+      PANEL.fitPart.value = partName;
+    }
     const fit = getModuleVisualConfig(partName, module);
     PANEL.fitScaleX.value = String(round3(fit.scale[0]));
     PANEL.fitScaleY.value = String(round3(fit.scale[1]));
     PANEL.fitScaleZ.value = String(round3(fit.scale[2]));
     PANEL.fitOffsetY.value = String(round3(fit.offsetY));
     PANEL.fitZOffset.value = String(round3(fit.zOffset || 0));
+    this.updateFitSelectionVisuals();
+    this.renderFitAssistPanel();
+    this.updateTransformGizmo();
   }
 
   suggestFitForCurrentPart() {
@@ -2382,6 +3255,8 @@ class BodyFitViewer {
     PANEL.fitOffsetY.value = String(nextOffsetY);
 
     this.applyFitEditorToCurrentPart({ silent: true });
+    this.fitAssistDirty = true;
+    this.renderFitAssistPanel();
     this.setStatus(
       `Suggest applied: ${partName} <- ${worst.pair} (score ${(worst.score * 100).toFixed(1)}, gap ${gap.toFixed(
         3
@@ -2415,8 +3290,10 @@ class BodyFitViewer {
     if (rec) {
       rec.config = getModuleVisualConfig(partName, module);
     }
+    this.fitAssistDirty = true;
     this.applyFrame(this.frameIndex);
     this.updateMetaPanel();
+    this.renderFitAssistPanel();
     if (!silent) {
       this.setStatus(`Applied fit: ${partName}`);
     }
@@ -2433,9 +3310,11 @@ class BodyFitViewer {
     if (rec) {
       rec.config = getModuleVisualConfig(partName, module);
     }
+    this.fitAssistDirty = true;
     this.applyFrame(this.frameIndex);
     this.loadFitEditorForPart(partName);
     this.updateMetaPanel();
+    this.renderFitAssistPanel();
     this.setStatus(`Reset fit: ${partName}`);
   }
 
@@ -2445,10 +3324,17 @@ class BodyFitViewer {
       this.setStatus("Save failed: suitspec not loaded", true);
       return;
     }
-    if (requireAutoFitGate && this.autoFitSummary && !this.autoFitSummary.canSave) {
-      this.setStatus(formatAutoFitSummary(this.autoFitSummary), true);
+    if (!this.vrm.model) {
+      this.setStatus("Save failed: VRM fit validation requires a loaded VRM baseline", true);
       return;
     }
+    const evaluation = this.evaluateCurrentFitAgainstVrm({ forceTPose: true, silent: true });
+    if (!evaluation) return;
+    if (!evaluation.summary?.canSave) {
+      this.setStatus(formatAutoFitSummary(evaluation.summary), true);
+      return;
+    }
+    applyAutoFitResultToSuitSpec(this.suitspec, evaluation);
     try {
       const res = await fetch("/api/suitspec-save", {
         method: "POST",
@@ -2469,7 +3355,7 @@ class BodyFitViewer {
         throw new Error(msg);
       }
       this.updateMetaPanel();
-      this.setStatus(`Saved fits to ${data.path || path}`);
+      this.setStatus(`Saved fits to ${data.path || path} | ${formatAutoFitSummary(evaluation.summary)}`);
     } catch (err) {
       const detail = String(err?.message || err || "unknown");
       if (detail.includes("404")) {
@@ -2487,8 +3373,13 @@ class BodyFitViewer {
     const fitScore = ((this.fitStats?.score || 0) * 100).toFixed(1);
     const fitGap = (this.fitStats?.meanGap || 0).toFixed(3);
     const fitPen = (this.fitStats?.meanPenetration || 0).toFixed(3);
+    const liveViewText =
+      this.liveViewMode === "auto"
+        ? `auto=>${this.getEffectiveLiveViewLabel()}`
+        : this.getEffectiveLiveViewLabel();
+    const depositionLabel = DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey || "auto";
     const lines = [
-      "表示ガイド: パーツ形状 / テクスチャ / 接続ブリッジ / VRM骨組み",
+      "陦ｨ遉ｺ繧ｬ繧､繝・ 繝代・繝・ｽ｢迥ｶ / 繝・け繧ｹ繝√Ε / 謗･邯壹ヶ繝ｪ繝・ず / VRM鬪ｨ邨・∩",
       `Frame ${frameText} | Equipped: ${equipped ? "YES" : "NO"} | Speed x${this.speed.toFixed(2)}`,
       `Textures: ${this.useTextures ? "ON" : "OFF"} | Relief: ${this.reliefStrength.toFixed(2)} | Theme: ${
         this.darkTheme ? "Dark" : "Bright"
@@ -2510,12 +3401,19 @@ class BodyFitViewer {
       )} | Pipeline: ${this.livePipelineActive ? "ON" : "OFF"} | Modules: ${
         this.listLivePipelineModules().join(", ") || "-"
       }`,
+      `LiveView: ${liveViewText} | CameraPreset: ${this.cameraPreset}`,
       `PoseModel: ${this.live?.poseModel || "-"} | PoseQuality: ${this.live?.poseQuality || "idle"} | ReliableJoints: ${
         this.live?.poseReliableJoints || 0
+      } | FitReady: ${this.live?.bodyInference?.fitReadiness || "-"}`,
+      `VRM Inference: ${this.vrm.bodyInference?.qualityLabel || "-"} | FitReady: ${
+        this.vrm.bodyInference?.fitReadiness || "-"
       }`,
+      `Deposition: ${this.deposition.active ? "PLAYING" : "IDLE"} | Profile: ${depositionLabel} | Progress: ${(
+        (this.deposition.progress || 0) * 100
+      ).toFixed(0)}% | Duration: ${this.deposition.durationSec.toFixed(1)}s`,
       `FitScore: ${fitScore} | Gap: ${fitGap} | Penetration: ${fitPen}`,
       `AutoFit: ${formatAutoFitSummary(this.autoFitSummary)}`,
-      "Tip: Attach=Hybrid は骨追従+BodySimフォールバック、Attach=VRM は骨主軸です。",
+      "Tip: Attach=Hybrid は VRM 骨と BodySim の中間、Attach=VRM は VRM 骨優先です。",
     ];
     PANEL.legendText.innerHTML = lines.join("<br>");
   }
@@ -2563,27 +3461,61 @@ class BodyFitViewer {
   }
 
   setCameraPreset(preset) {
+    this.cameraPreset = ["front", "side", "back", "top", "pov"].includes(preset) ? preset : "front";
     const center = this.modelCenter.clone();
     const radius = Math.max(this.modelRadius, 0.35);
     const distance = Math.max(radius * 2.8, 1.45);
     const yBias = radius * 0.15;
 
-    switch (preset) {
+    switch (this.cameraPreset) {
       case "front":
         this.camera.position.copy(center).add(new THREE.Vector3(0, yBias, distance));
         break;
       case "side":
         this.camera.position.copy(center).add(new THREE.Vector3(distance, radius * 0.08, 0));
         break;
+      case "back":
+        this.camera.position.copy(center).add(new THREE.Vector3(0, yBias, -distance));
+        break;
       case "top":
         this.camera.position.copy(center).add(new THREE.Vector3(0.01, distance, 0.01));
         break;
+      case "pov": {
+        const headBone = this.resolveVrmBone("head") || this.resolveVrmBone("neck");
+        const headPos =
+          this.getVrmBoneWorldPosition("head") ||
+          this.getVrmBoneWorldPosition("neck") ||
+          center.clone().add(new THREE.Vector3(0, radius * 0.68, 0));
+        const headQuat = headBone ? headBone.getWorldQuaternion(new THREE.Quaternion()) : null;
+        const forward = new THREE.Vector3(0, 0, 1);
+        const up = new THREE.Vector3(0, 1, 0);
+        if (headQuat) {
+          forward.applyQuaternion(headQuat).normalize();
+          up.applyQuaternion(headQuat).normalize();
+        }
+        const eyePos = headPos
+          .clone()
+          .addScaledVector(up, Math.max(radius * 0.08, 0.04))
+          .addScaledVector(forward, Math.max(radius * 0.04, 0.02));
+        const target = headPos.clone().addScaledVector(forward, Math.max(radius * 0.9, 0.75));
+        this.camera.position.copy(eyePos);
+        this.controls.target.copy(target);
+        this.updateCameraRange(Math.max(radius * 1.4, 0.95));
+        this.updateLiveVideoPresentation();
+        this.updateMetaPanel();
+        this.setLegend();
+        this.controls.update();
+        return;
+      }
       default:
         this.camera.position.copy(center).add(new THREE.Vector3(0, yBias, distance));
         break;
     }
     this.controls.target.copy(center);
     this.updateCameraRange(distance);
+    this.updateLiveVideoPresentation();
+    this.updateMetaPanel();
+    this.setLegend();
     this.controls.update();
   }
 
@@ -2612,6 +3544,7 @@ class BodyFitViewer {
     for (const rec of this.meshes.values()) {
       rec.outline.material.color.setHex(outlineColor);
     }
+    this.updateFitSelectionVisuals();
     this.setLegend();
   }
 
@@ -2624,11 +3557,28 @@ class BodyFitViewer {
     this.suitspec = spec;
     this.sim = sim;
     this.autoFitSummary = null;
+    this.fitAssistDirty = false;
     this.loadedSuitspecPath = suitspecPath;
     this.loadedSimPath = simPath;
     this.frames = Array.isArray(sim.frames) ? sim.frames : [];
     this.frameIndex = 0;
     this.playbackAccumSec = 0;
+    const durationFromSpec = Number(spec?.effects?.deposition_seconds);
+    if (PANEL.depositionDuration && Number.isFinite(durationFromSpec)) {
+      PANEL.depositionDuration.value = String(clamp(durationFromSpec, 1.2, 6.0));
+    }
+    this.deposition.durationSec = clamp(
+      Number(PANEL.depositionDuration?.value || durationFromSpec || DEFAULT_DEPOSITION_DURATION),
+      1.2,
+      6.0
+    );
+    this.deposition.resolvedKey = this.resolveDepositionProfileKey();
+    this.deposition.palette = buildDepositionPalette(
+      DEPOSITION_PROFILES[this.deposition.resolvedKey] || DEPOSITION_PROFILES.guard
+    );
+    this.updateDepositionStatus(
+      `Deposition: ready (${DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey})`
+    );
     await this.buildMeshes();
     PANEL.frameSlider.max = String(Math.max(0, this.frames.length - 1));
     PANEL.frameSlider.value = "0";
@@ -2675,6 +3625,7 @@ class BodyFitViewer {
   }
 
   clearMeshes() {
+    this.resetDepositionMock({ silent: true, keepStatus: true });
     this.clearBridges();
     for (const rec of this.meshes.values()) {
       this.root.remove(rec.group);
@@ -2713,6 +3664,7 @@ class BodyFitViewer {
         assetPath,
         texturePath: module.texture_path || null,
         texture: null,
+        lastTransform: null,
       });
     }
     this.updateTextureMode();
@@ -2764,6 +3716,7 @@ class BodyFitViewer {
         }
       );
     }
+    this.updateFitSelectionVisuals();
     this.setLegend();
   }
 
@@ -2802,10 +3755,11 @@ class BodyFitViewer {
     }
     if (this.vrm.model) {
       this.applyVrmIdlePose(dt, false);
-      if (normalizeVrmAttachMode(this.vrm.attachMode) !== VRM_ATTACH_MODES.BODY) {
+      if (!this.gizmo.dragging && normalizeVrmAttachMode(this.vrm.attachMode) !== VRM_ATTACH_MODES.BODY) {
         this.applyArmorToVrmBones();
       }
     }
+    this.updateDepositionEffect(now, dt);
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -2920,8 +3874,380 @@ function createOutline(mesh, color) {
   return new THREE.LineSegments(edges, mat);
 }
 
+function createDepositionFxRig() {
+  const group = new THREE.Group();
+  group.visible = false;
+  const shellTexture = createSoftParticleTexture("#ffffff", 0.95);
+  const glowTexture = createSoftParticleTexture("#ffffff", 0.82);
+
+  const auraMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const aura = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 40, 1, true), auraMaterial);
+
+  const auraWire = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.02, 1.02, 1, 24, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      wireframe: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+
+  const ringLower = new THREE.Mesh(
+    new THREE.TorusGeometry(1, 0.045, 10, 72),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  ringLower.rotation.x = Math.PI / 2;
+
+  const ringUpper = new THREE.Mesh(
+    new THREE.TorusGeometry(1, 0.025, 10, 72),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  ringUpper.rotation.x = Math.PI / 2;
+
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.26, 24, 18),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+
+  group.add(aura);
+  group.add(auraWire);
+  group.add(ringLower);
+  group.add(ringUpper);
+  group.add(core);
+  const shellParticles = createDepositionParticleSystem(720, 0.072, shellTexture, 0.88, {
+    blending: THREE.NormalBlending,
+  });
+  const glowParticles = createDepositionParticleSystem(320, 0.132, glowTexture, 0.68, {
+    blending: THREE.AdditiveBlending,
+  });
+  group.add(shellParticles.points);
+  group.add(glowParticles.points);
+  return { group, aura, auraWire, ringLower, ringUpper, core, shellParticles, glowParticles };
+}
+
 function clamp(value, low, high) {
   return Math.max(low, Math.min(high, value));
+}
+
+function smoothstep(edge0, edge1, value) {
+  if (edge0 === edge1) return value < edge0 ? 0 : 1;
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function hash01(value) {
+  const s = Math.sin(value * 12.9898 + 78.233) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+function inverseLerp(a, b, value) {
+  if (a === b) return 0;
+  return clamp((value - a) / (b - a), 0, 1);
+}
+
+function hueFromHex(hex) {
+  if (typeof hex !== "string" || !hex.trim()) return null;
+  const color = new THREE.Color();
+  try {
+    color.set(hex.trim());
+  } catch {
+    return null;
+  }
+  const hsl = { h: 0, s: 0, l: 0 };
+  color.getHSL(hsl);
+  if (!Number.isFinite(hsl.h)) return null;
+  return hsl.h * 360;
+}
+
+function computeDepositionPhase(position, center, bounds, profileKey) {
+  const heightNorm = inverseLerp(bounds.minY, bounds.maxY, position.y);
+  const radial = Math.hypot(position.x - center.x, position.z - center.z);
+  const radialNorm = clamp(radial / Math.max(bounds.radius, 0.0001), 0, 1);
+  const frontNorm = inverseLerp(bounds.minZ, bounds.maxZ, position.z);
+
+  switch (profileKey) {
+    case "uplift":
+      return 0.08 + heightNorm * 0.76;
+    case "drive":
+      return 0.06 + (1 - frontNorm) * 0.44 + heightNorm * 0.3;
+    case "grief":
+      return 0.12 + (1 - heightNorm) * 0.72;
+    case "tension":
+      return 0.1 + heightNorm * 0.34 + radialNorm * 0.4 + Math.round(heightNorm * 4) * 0.03;
+    case "guard":
+      return 0.08 + (1 - radialNorm) * 0.72;
+    case "embrace":
+      return 0.08 + radialNorm * 0.66 + (1 - heightNorm) * 0.08;
+    default:
+      return 0.1 + heightNorm * 0.68;
+  }
+}
+
+function buildDepositionPalette(profile) {
+  const ringPrimary = normalizeDepositionColor(new THREE.Color(profile.shellColor), {
+    minLightness: 0.52,
+    maxLightness: 0.76,
+    minSaturation: 0.62,
+  });
+  const ringAccent = normalizeDepositionColor(
+    new THREE.Color(profile.highlightColor).lerp(new THREE.Color(profile.shellColor), 0.08),
+    {
+      minLightness: 0.72,
+      maxLightness: 0.9,
+      minSaturation: 0.34,
+    }
+  );
+  const aura = normalizeDepositionColor(ringPrimary.clone().lerp(ringAccent, 0.22), {
+    minLightness: 0.58,
+    maxLightness: 0.82,
+    minSaturation: 0.42,
+  });
+  const core = normalizeDepositionColor(new THREE.Color(profile.glowColor).lerp(ringAccent, 0.24), {
+    minLightness: 0.82,
+    maxLightness: 0.96,
+    minSaturation: 0.2,
+  });
+  const particleShell = normalizeDepositionColor(ringPrimary.clone().lerp(ringAccent, 0.36), {
+    minLightness: 0.64,
+    maxLightness: 0.88,
+    minSaturation: 0.5,
+  });
+  const particleHighlight = normalizeDepositionColor(ringAccent.clone().lerp(core, 0.14), {
+    minLightness: 0.76,
+    maxLightness: 0.93,
+    minSaturation: 0.26,
+  });
+  const particleGlow = normalizeDepositionColor(core.clone().lerp(ringAccent, 0.2), {
+    minLightness: 0.84,
+    maxLightness: 0.98,
+    minSaturation: 0.16,
+  });
+  return { ringPrimary, ringAccent, aura, core, particleShell, particleHighlight, particleGlow };
+}
+
+function normalizeDepositionColor(color, { minLightness = 0.58, maxLightness = 0.9, minSaturation = 0.35 } = {}) {
+  const hsl = { h: 0, s: 0, l: 0 };
+  color.getHSL(hsl);
+  hsl.s = clamp(Math.max(hsl.s, minSaturation), 0, 1);
+  hsl.l = clamp(hsl.l, minLightness, maxLightness);
+  return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l);
+}
+
+function createSoftParticleTexture(color = "#ffffff", inner = 0.9) {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.06, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(Math.max(0.2, inner * 0.35), color);
+  gradient.addColorStop(inner, "rgba(255,255,255,0.12)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function createDepositionParticleSystem(maxCount, size, map, opacity, { blending = THREE.AdditiveBlending } = {}) {
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(maxCount * 3);
+  const colors = new Float32Array(maxCount * 3);
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.setDrawRange(0, 0);
+  const material = new THREE.PointsMaterial({
+    size,
+    map,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    vertexColors: true,
+    blending,
+    sizeAttenuation: true,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  points.renderOrder = 4;
+  return {
+    points,
+    maxCount,
+    count: 0,
+    positions,
+    colors,
+    source: new Float32Array(maxCount * 3),
+    target: new Float32Array(maxCount * 3),
+    phase: new Float32Array(maxCount),
+    swirl: new Float32Array(maxCount),
+    lift: new Float32Array(maxCount),
+    orbit: new Float32Array(maxCount),
+    jitter: new Float32Array(maxCount),
+  };
+}
+
+function seedDepositionParticleSystem(system, config, sourceFn, targetFn) {
+  const count = Math.min(system.maxCount, Math.max(0, config.count || system.maxCount));
+  system.count = count;
+  system.points.geometry.setDrawRange(0, count);
+  system.points.material.size = config.size || system.points.material.size;
+  const shell = new THREE.Color(config.shellColor || 0xffffff);
+  const highlight = new THREE.Color(config.highlightColor || 0xffffff);
+
+  for (let i = 0; i < count; i++) {
+    const src = sourceFn(i);
+    const dst = targetFn(i);
+    const base = i * 3;
+    system.positions[base + 0] = src.x;
+    system.positions[base + 1] = src.y;
+    system.positions[base + 2] = src.z;
+    system.source[base + 0] = src.x;
+    system.source[base + 1] = src.y;
+    system.source[base + 2] = src.z;
+    system.target[base + 0] = dst.x;
+    system.target[base + 1] = dst.y;
+    system.target[base + 2] = dst.z;
+    system.phase[i] = hash01(i * 0.73 + 0.91);
+    system.swirl[i] = 0.4 + hash01(i * 1.97 + 0.17) * 1.6;
+    system.lift[i] = -1 + hash01(i * 2.31 + 0.51) * 2;
+    system.orbit[i] = hash01(i * 3.11 + 0.13) * Math.PI * 2;
+    system.jitter[i] = 0.55 + hash01(i * 2.71 + 0.87) * 0.85;
+    const mix = hash01(i * 1.17 + 0.21);
+    const col = shell.clone().lerp(highlight, mix);
+    system.colors[base + 0] = col.r;
+    system.colors[base + 1] = col.g;
+    system.colors[base + 2] = col.b;
+  }
+
+  for (let i = count; i < system.maxCount; i++) {
+    const base = i * 3;
+    system.positions[base + 0] = 9999;
+    system.positions[base + 1] = 9999;
+    system.positions[base + 2] = 9999;
+  }
+
+  system.points.geometry.attributes.position.needsUpdate = true;
+  system.points.geometry.attributes.color.needsUpdate = true;
+}
+
+function updateDepositionParticleSystem(system, bounds, progress, dt, profileKey, profile, palette, isGlow = false) {
+  if (!system || !system.count) return;
+  const positions = system.positions;
+  const source = system.source;
+  const target = system.target;
+  const profileColor = isGlow ? palette.particleGlow : palette.particleHighlight;
+  const accentColor = isGlow ? palette.particleHighlight : palette.particleShell;
+  const width = Math.max(bounds.width, 0.5);
+  const height = Math.max(bounds.height, 1.0);
+
+  for (let i = 0; i < system.count; i++) {
+    const base = i * 3;
+    const phase = system.phase[i];
+    const enterWindow = isGlow ? 0.09 : 0.18;
+    const reveal = smoothstep(phase - enterWindow, phase + (isGlow ? 0.11 : 0.2), progress);
+    const trail = 1 - reveal;
+    const sx = source[base + 0];
+    const sy = source[base + 1];
+    const sz = source[base + 2];
+    const tx = target[base + 0];
+    const ty = target[base + 1];
+    const tz = target[base + 2];
+    const angle = system.orbit[i] + progress * Math.PI * (1.5 + system.swirl[i] * 0.45);
+    const swirlAmp = (isGlow ? 0.05 : 0.12) * bounds.radius * trail * system.jitter[i];
+    const verticalAmp = (isGlow ? 0.04 : 0.09) * height * trail * system.lift[i];
+    const profileOffset = depositionProfileVector(profileKey, tx, ty, tz, bounds, trail, i, isGlow);
+    positions[base + 0] = lerp(sx, tx, reveal) + Math.cos(angle) * swirlAmp + profileOffset.x;
+    positions[base + 1] = lerp(sy, ty, reveal) + Math.sin(progress * Math.PI * 2 + system.orbit[i]) * verticalAmp + profileOffset.y;
+    positions[base + 2] = lerp(sz, tz, reveal) + Math.sin(angle) * swirlAmp + profileOffset.z;
+
+    const mix = smoothstep(0.02, 0.88, reveal);
+    const col = accentColor.clone().lerp(profileColor, mix);
+    system.colors[base + 0] = col.r;
+    system.colors[base + 1] = col.g;
+    system.colors[base + 2] = col.b;
+  }
+
+  system.points.material.opacity = isGlow
+    ? 0.1 + 0.6 * Math.sin(progress * Math.PI)
+    : 0.12 + 0.78 * (1 - smoothstep(0.82, 1.0, progress));
+  system.points.material.size = isGlow
+    ? profile.glowSize * (0.9 + 0.55 * Math.sin(progress * Math.PI))
+    : profile.shellSize * (0.92 + 0.3 * (1 - progress));
+  system.points.geometry.attributes.position.needsUpdate = true;
+  system.points.geometry.attributes.color.needsUpdate = true;
+}
+
+function depositionProfileVector(profileKey, tx, ty, tz, bounds, trail, index, isGlow) {
+  const radial = Math.max(bounds.radius, 0.35);
+  const hash = hash01(index * 4.17 + 0.37);
+  switch (profileKey) {
+    case "uplift":
+      return { x: 0, y: trail * heightUnit(bounds) * (isGlow ? 0.04 : 0.12), z: 0 };
+    case "drive":
+      return { x: 0, y: trail * 0.03, z: -trail * radial * (0.1 + hash * 0.08) };
+    case "grief":
+      return { x: 0, y: -trail * heightUnit(bounds) * (isGlow ? 0.06 : 0.16), z: 0 };
+    case "tension":
+      return {
+        x: (hash - 0.5) * trail * radial * (isGlow ? 0.05 : 0.09),
+        y: 0,
+        z: ((hash01(index * 5.31 + 0.19) - 0.5) * trail * radial * (isGlow ? 0.05 : 0.09)),
+      };
+    case "guard": {
+      const dirX = tx - bounds.center.x;
+      const dirZ = tz - bounds.center.z;
+      const len = Math.hypot(dirX, dirZ) || 1;
+      return { x: (dirX / len) * trail * radial * 0.08, y: 0, z: (dirZ / len) * trail * radial * 0.08 };
+    }
+    case "embrace": {
+      const dirX = tx - bounds.center.x;
+      const dirZ = tz - bounds.center.z;
+      const len = Math.hypot(dirX, dirZ) || 1;
+      return { x: -(dirX / len) * trail * radial * 0.07, y: trail * 0.02, z: -(dirZ / len) * trail * radial * 0.07 };
+    }
+    default:
+      return { x: 0, y: 0, z: 0 };
+  }
+}
+
+function heightUnit(bounds) {
+  return Math.max(bounds.height, 1.0);
 }
 
 function restoreBaseGeometry(mesh) {
@@ -3088,18 +4414,26 @@ function init() {
   const viewer = new BodyFitViewer(document.getElementById("canvas"));
   viewer.setVrmAttachMode(params.get("attach") || VRM_ATTACH_MODES.HYBRID);
 
+  viewer.pendingLoad = Promise.resolve();
+  const loadIntoViewer = async (suitspecPath, simPath) => {
+    viewer.pendingLoad = Promise.resolve(viewer.pendingLoad)
+      .catch(() => null)
+      .then(() => viewer.load(suitspecPath, simPath));
+    return viewer.pendingLoad;
+  };
+
   PANEL.btnLoad.onclick = async () => {
     try {
-      await viewer.load(PANEL.suitspecPath.value, PANEL.simPath.value);
+      await loadIntoViewer(PANEL.suitspecPath.value, PANEL.simPath.value);
     } catch (err) {
       const details = formatLoadError(err);
       viewer.setStatus(`Load failed: ${details}`, true);
-      viewer.setMeta({
-        error: String(details),
-        suitspec: PANEL.suitspecPath.value,
-        sim: PANEL.simPath.value,
-        tip: "python -m henshin serve-dashboard --port 8010 で起動し、URLは /viewer/body-fit/ を開いてください。",
-      });
+        viewer.setMeta({
+          error: String(details),
+          suitspec: PANEL.suitspecPath.value,
+          sim: PANEL.simPath.value,
+          tip: "python tools/run_henshin.py serve-viewer --port 8000 --root . で viewer を起動し、/viewer/body-fit/ を開いてください。",
+        });
     }
   };
 
@@ -3130,8 +4464,17 @@ function init() {
   };
   PANEL.btnCamFront.onclick = () => viewer.setCameraPreset("front");
   PANEL.btnCamSide.onclick = () => viewer.setCameraPreset("side");
+  if (PANEL.btnCamBack) {
+    PANEL.btnCamBack.onclick = () => viewer.setCameraPreset("back");
+  }
   PANEL.btnCamTop.onclick = () => viewer.setCameraPreset("top");
+  if (PANEL.btnCamPov) {
+    PANEL.btnCamPov.onclick = () => viewer.setCameraPreset("pov");
+  }
   PANEL.btnFit.onclick = () => viewer.fitCameraToVisible();
+  if (PANEL.liveViewMode) {
+    PANEL.liveViewMode.onchange = () => viewer.setLiveViewMode(PANEL.liveViewMode.value);
+  }
   if (PANEL.btnLiveStart) {
     PANEL.btnLiveStart.onclick = () => viewer.startLiveWebcam();
   }
@@ -3180,9 +4523,101 @@ function init() {
       await viewer.autoFitAndSaveCurrentVrm({ forceTPose: true });
     };
   }
+  if (PANEL.btnDepositionPlay) {
+    PANEL.btnDepositionPlay.onclick = () => viewer.playDepositionMock();
+  }
+  if (PANEL.btnDepositionReset) {
+    PANEL.btnDepositionReset.onclick = () => viewer.resetDepositionMock();
+  }
+  if (PANEL.depositionProfile) {
+    PANEL.depositionProfile.onchange = () => {
+      viewer.deposition.profileMode = PANEL.depositionProfile.value;
+      const resolved = viewer.resolveDepositionProfileKey();
+      viewer.deposition.resolvedKey = resolved;
+      viewer.deposition.palette = buildDepositionPalette(DEPOSITION_PROFILES[resolved] || DEPOSITION_PROFILES.guard);
+      viewer.updateDepositionStatus(`Deposition: ready (${DEPOSITION_PROFILES[resolved]?.label || resolved})`);
+      viewer.updateMetaPanel();
+      viewer.setLegend();
+    };
+  }
+  window.__HENSHIN_BODY_FIT__ = {
+    ready: true,
+    viewer,
+    runFitRegression: async ({
+      suitspecPath = PANEL.suitspecPath.value,
+      simPath = PANEL.simPath.value,
+      vrmPath = PANEL.vrmPath?.value || DEFAULT_VRM_PATH,
+      attachMode = VRM_ATTACH_MODES.VRM,
+      mode = "auto_fit",
+      forceTPose = true,
+    } = {}) => {
+      if (PANEL.suitspecPath) PANEL.suitspecPath.value = suitspecPath;
+      if (PANEL.simPath) PANEL.simPath.value = simPath;
+      if (PANEL.vrmPath) PANEL.vrmPath.value = vrmPath;
+      viewer.setVrmAttachMode(attachMode);
+      await loadIntoViewer(suitspecPath, simPath);
+      const result =
+        mode === "current"
+          ? viewer.evaluateCurrentFitAgainstVrm({ forceTPose, silent: true })
+          : viewer.autoFitArmorToCurrentVrm({ forceTPose, silent: true });
+      if (!result) {
+        return {
+          ok: false,
+          mode,
+          suitspecPath,
+          simPath,
+          vrmPath,
+          error: viewer.autoFitSummary?.reasons?.join(" | ") || "Fit regression failed",
+        };
+      }
+      return {
+        ok: Boolean(result.summary?.canSave),
+        mode,
+        suitspecPath,
+        simPath,
+        vrmPath,
+        summary: result.summary || null,
+        metrics: result.metrics || null,
+        fitByPart: result.fitByPart || {},
+        anchorByPart: result.anchorByPart || {},
+        surfaceModel: result.surfaceModel || null,
+      };
+    },
+  };
+  if (PANEL.depositionDuration) {
+    PANEL.depositionDuration.oninput = () => {
+      viewer.deposition.durationSec = clamp(Number(PANEL.depositionDuration.value || DEFAULT_DEPOSITION_DURATION), 1.2, 6.0);
+      viewer.updateMetaPanel();
+      viewer.setLegend();
+    };
+  }
 
   if (PANEL.fitPart) {
     PANEL.fitPart.onchange = () => viewer.loadFitEditorForPart(PANEL.fitPart.value);
+  }
+  if (PANEL.btnFitRefreshCheck) {
+    PANEL.btnFitRefreshCheck.onclick = () => viewer.refreshFitAssistCheck();
+  }
+  if (PANEL.btnFitPrevIssue) {
+    PANEL.btnFitPrevIssue.onclick = () => viewer.selectAdjacentFitIssue(-1);
+  }
+  if (PANEL.btnFitNextIssue) {
+    PANEL.btnFitNextIssue.onclick = () => viewer.selectAdjacentFitIssue(1);
+  }
+  if (PANEL.btnFitFocusPart) {
+    PANEL.btnFitFocusPart.onclick = () => viewer.fitCameraToPart(viewer.getSelectedFitPart());
+  }
+  if (PANEL.btnGizmoToggle) {
+    PANEL.btnGizmoToggle.onclick = () => viewer.setGizmoEnabled(!viewer.gizmo.enabled);
+  }
+  if (PANEL.btnGizmoMove) {
+    PANEL.btnGizmoMove.onclick = () => viewer.setGizmoMode("translate");
+  }
+  if (PANEL.btnGizmoScale) {
+    PANEL.btnGizmoScale.onclick = () => viewer.setGizmoMode("scale");
+  }
+  if (PANEL.btnGizmoSpace) {
+    PANEL.btnGizmoSpace.onclick = () => viewer.cycleGizmoSpace();
   }
   if (PANEL.vrmEditPart) {
     PANEL.vrmEditPart.onchange = () => viewer.loadVrmAnchorEditorForPart(PANEL.vrmEditPart.value);
@@ -3230,6 +4665,16 @@ function init() {
     if (!input) continue;
     input.oninput = () => viewer.applyFitEditorToCurrentPart({ silent: true });
   }
+  if (PANEL.fitNudgeControls) {
+    PANEL.fitNudgeControls.onclick = (event) => {
+      const button = event.target?.closest?.("[data-fit-nudge]");
+      if (!button) return;
+      const [fieldId, directionRaw] = String(button.dataset.fitNudge || "").split(":");
+      const direction = Number(directionRaw);
+      if (!fieldId || !Number.isFinite(direction) || direction === 0) return;
+      viewer.nudgeCurrentFitField(fieldId, direction);
+    };
+  }
 
   const liveVrmAnchorInputs = [
     PANEL.vrmEditBone,
@@ -3270,21 +4715,32 @@ function init() {
   viewer.updateVrmAttachButton();
   viewer.updateVrmIdleButton();
   viewer.setCameraPreset("front");
+  viewer.setLiveViewMode(PANEL.liveViewMode?.value || "auto");
   viewer.setLegend();
   viewer.updateLiveStatus("Live: inactive");
   window.addEventListener("beforeunload", () => viewer.stopLive({ silent: true }));
-  PANEL.btnLoad.click();
+  void loadIntoViewer(PANEL.suitspecPath.value, PANEL.simPath.value).catch((err) => {
+    const details = formatLoadError(err);
+    viewer.setStatus(`Load failed: ${details}`, true);
+    viewer.setMeta({
+      error: String(details),
+      suitspec: PANEL.suitspecPath.value,
+      sim: PANEL.simPath.value,
+      tip: "python tools/run_henshin.py serve-viewer --port 8000 --root . で viewer を起動し、/viewer/body-fit/ を開いてください。",
+    });
+  });
 }
 
 function formatLoadError(error) {
   const raw = String(error?.message || error || "Unknown error");
   if (!raw.includes("Failed to load JSON")) return raw;
   if (raw.includes("(404)")) {
-    return `${raw} / examples/... や sessions/... の相対パスを確認してください。`;
+    return `${raw} / examples/... や sessions/... のパスを確認してください。`;
   }
-  return `${raw} / ローカルHTTPサーバー起動中か確認してください。`;
+  return `${raw} / ローカルHTTPサーバーで viewer を配信しているか確認してください。`;
 }
 
 init();
+
 
 

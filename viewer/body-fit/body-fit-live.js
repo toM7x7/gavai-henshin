@@ -1,18 +1,10 @@
-export const POSE_IDX = {
-  NOSE: 0,
-  LEFT_SHOULDER: 11,
-  RIGHT_SHOULDER: 12,
-  LEFT_ELBOW: 13,
-  RIGHT_ELBOW: 14,
-  LEFT_WRIST: 15,
-  RIGHT_WRIST: 16,
-  LEFT_HIP: 23,
-  RIGHT_HIP: 24,
-  LEFT_KNEE: 25,
-  RIGHT_KNEE: 26,
-  LEFT_ANKLE: 27,
-  RIGHT_ANKLE: 28,
-};
+import {
+  POSE_LANDMARK_IDX,
+  estimateBodyScaleFromJoints,
+  inferCanonicalJointsFromPoseLandmarks,
+} from "../shared/bone-inference.js";
+
+export const POSE_IDX = POSE_LANDMARK_IDX;
 
 export const LIVE_POSE_OPTIONS = Object.freeze({
   minVisibility: 0.52,
@@ -80,12 +72,7 @@ function distance3(a, b) {
 }
 
 export function estimateLiveBodyScale(joints) {
-  const shoulderWidth = distance3(joints.left_shoulder, joints.right_shoulder);
-  const hipWidth = distance3(joints.left_hip, joints.right_hip);
-  const torsoHeight = distance3(joints.shoulders_center, joints.hips_center);
-  const measures = [shoulderWidth, hipWidth, torsoHeight].filter((v) => Number.isFinite(v) && v > 0.05);
-  if (!measures.length) return 0;
-  return measures.reduce((sum, v) => sum + v, 0) / measures.length;
+  return estimateBodyScaleFromJoints(joints);
 }
 
 function isReliableLandmark(landmark, minVisibility, minPresence) {
@@ -97,81 +84,11 @@ function isReliableLandmark(landmark, minVisibility, minPresence) {
 }
 
 export function extractPoseJointsWorld(landmarks, options = {}) {
-  const minVisibility = toNumberOr(options.minVisibility, LIVE_POSE_OPTIONS.minVisibility);
-  const minPresence = toNumberOr(options.minPresence, LIVE_POSE_OPTIONS.minPresence);
-  const pick = (index) => landmarks?.[index] || null;
-  const joints = {};
-
-  const nose = pick(POSE_IDX.NOSE);
-  const lShoulder = pick(POSE_IDX.LEFT_SHOULDER);
-  const rShoulder = pick(POSE_IDX.RIGHT_SHOULDER);
-  const lElbow = pick(POSE_IDX.LEFT_ELBOW);
-  const rElbow = pick(POSE_IDX.RIGHT_ELBOW);
-  const lWrist = pick(POSE_IDX.LEFT_WRIST);
-  const rWrist = pick(POSE_IDX.RIGHT_WRIST);
-  const lHip = pick(POSE_IDX.LEFT_HIP);
-  const rHip = pick(POSE_IDX.RIGHT_HIP);
-  const lKnee = pick(POSE_IDX.LEFT_KNEE);
-  const rKnee = pick(POSE_IDX.RIGHT_KNEE);
-  const lAnkle = pick(POSE_IDX.LEFT_ANKLE);
-  const rAnkle = pick(POSE_IDX.RIGHT_ANKLE);
-
-  if (isReliableLandmark(nose, minVisibility, minPresence)) {
-    joints.nose = normToWorld3(nose.x, nose.y, nose.z, true);
-  }
-  if (isReliableLandmark(lShoulder, minVisibility, minPresence)) {
-    joints.left_shoulder = normToWorld3(lShoulder.x, lShoulder.y, lShoulder.z, true);
-  }
-  if (isReliableLandmark(rShoulder, minVisibility, minPresence)) {
-    joints.right_shoulder = normToWorld3(rShoulder.x, rShoulder.y, rShoulder.z, true);
-  }
-  if (isReliableLandmark(lElbow, minVisibility, minPresence)) {
-    joints.left_elbow = normToWorld3(lElbow.x, lElbow.y, lElbow.z, true);
-  }
-  if (isReliableLandmark(rElbow, minVisibility, minPresence)) {
-    joints.right_elbow = normToWorld3(rElbow.x, rElbow.y, rElbow.z, true);
-  }
-  if (isReliableLandmark(lWrist, minVisibility, minPresence)) {
-    joints.left_wrist = normToWorld3(lWrist.x, lWrist.y, lWrist.z, true);
-  }
-  if (isReliableLandmark(rWrist, minVisibility, minPresence)) {
-    joints.right_wrist = normToWorld3(rWrist.x, rWrist.y, rWrist.z, true);
-  }
-  if (isReliableLandmark(lHip, minVisibility, minPresence)) {
-    joints.left_hip = normToWorld3(lHip.x, lHip.y, lHip.z, true);
-  }
-  if (isReliableLandmark(rHip, minVisibility, minPresence)) {
-    joints.right_hip = normToWorld3(rHip.x, rHip.y, rHip.z, true);
-  }
-  if (isReliableLandmark(lKnee, minVisibility, minPresence)) {
-    joints.left_knee = normToWorld3(lKnee.x, lKnee.y, lKnee.z, true);
-  }
-  if (isReliableLandmark(rKnee, minVisibility, minPresence)) {
-    joints.right_knee = normToWorld3(rKnee.x, rKnee.y, rKnee.z, true);
-  }
-  if (isReliableLandmark(lAnkle, minVisibility, minPresence)) {
-    joints.left_ankle = normToWorld3(lAnkle.x, lAnkle.y, lAnkle.z, true);
-  }
-  if (isReliableLandmark(rAnkle, minVisibility, minPresence)) {
-    joints.right_ankle = normToWorld3(rAnkle.x, rAnkle.y, rAnkle.z, true);
-  }
-
-  const shouldersCenter = midpoint3(joints.left_shoulder, joints.right_shoulder);
-  if (shouldersCenter) {
-    joints.shoulders_center = shouldersCenter;
-  }
-  const hipsCenter = midpoint3(joints.left_hip, joints.right_hip);
-  if (hipsCenter) {
-    joints.hips_center = hipsCenter;
-  }
-  if (!joints.nose && joints.shoulders_center) {
-    joints.nose = {
-      x: joints.shoulders_center.x,
-      y: joints.shoulders_center.y + 0.28,
-      z: joints.shoulders_center.z + 0.02,
-    };
-  }
-  return joints;
+  return inferCanonicalJointsFromPoseLandmarks(landmarks, {
+    minVisibility: toNumberOr(options.minVisibility, LIVE_POSE_OPTIONS.minVisibility),
+    minPresence: toNumberOr(options.minPresence, LIVE_POSE_OPTIONS.minPresence),
+    mirror: options.mirror !== false,
+  });
 }
 
 export function createDefaultLiveState() {
@@ -184,6 +101,7 @@ export function createDefaultLiveState() {
     lastNowMs: performance.now(),
     fps: 0,
     bodyScaleRef: null,
+    bodyInference: null,
     poseModel: null,
     poseQuality: "idle",
     poseReliableJoints: 0,

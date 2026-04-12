@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -11,7 +11,9 @@
     <div id="app">
       <aside class="panel">
         <h1>Body Fit Viewer</h1>
-        <p class="hint">suitspec と body-sim を読み込み、全身プレビュー上で各パーツのフィットを調整します。</p>
+        <p class="hint">
+          SuitSpec と body-sim を読み込み、全身プレビュー上で各パーツの fit と VRM 追従を確認します。
+        </p>
 
         <label>
           SuitSpec JSON
@@ -43,8 +45,13 @@
         <div class="row row4">
           <button id="btnCamFront">Cam Front</button>
           <button id="btnCamSide">Cam Side</button>
+          <button id="btnCamBack">Cam Back</button>
+          <button id="btnCamPov">Cam POV</button>
+        </div>
+
+        <div class="row row2">
           <button id="btnCamTop">Cam Top</button>
-          <button id="btnFit">Auto Fit</button>
+          <button id="btnFit">Focus Fit</button>
         </div>
 
         <label>
@@ -59,7 +66,7 @@
 
         <section class="vrm-panel">
           <h2>VRM Skeleton</h2>
-          <p class="fit-note">VRM を重ねて骨ベースでパーツ位置を確認します。</p>
+          <p class="fit-note">VRM を重ねて骨ベースでパーツ位置と向きを確認します。</p>
           <label>
             VRM Path
             <input id="vrmPath" type="text" value="viewer/assets/vrm/default.vrm" />
@@ -94,8 +101,42 @@
           <div id="vrmStatus" class="vrm-status">VRM: not loaded</div>
         </section>
 
+        <section class="deposition-panel">
+          <h2>Deposition Mock</h2>
+          <p class="fit-note">VRM 体と装甲に対して、色相帯ベースの蒸着モック演出を再生します。</p>
+          <label>
+            Deposition Profile
+            <select id="depositionProfile">
+              <option value="auto" selected>Auto from palette</option>
+              <option value="uplift">高揚</option>
+              <option value="drive">闘志</option>
+              <option value="grief">哀傷</option>
+              <option value="tension">緊張</option>
+              <option value="guard">守護</option>
+              <option value="embrace">受容</option>
+            </select>
+          </label>
+          <label>
+            Duration
+            <input id="depositionDuration" type="range" min="1.2" max="6.0" step="0.1" value="2.8" />
+          </label>
+          <div class="row row2">
+            <button id="btnDepositionPlay">Play 蒸着</button>
+            <button id="btnDepositionReset">Reset FX</button>
+          </div>
+          <div id="depositionStatus" class="deposition-status">Deposition: idle</div>
+        </section>
+
         <section class="live-input">
           <h2>Live Input (PoC)</h2>
+          <label>
+            Live View
+            <select id="liveViewMode">
+              <option value="auto" selected>Auto (front=mirror / back,pov=world)</option>
+              <option value="mirror">Mirror Demo</option>
+              <option value="world">World / First-person</option>
+            </select>
+          </label>
           <p class="fit-note">Webカメラから姿勢を推定して body-fit にリアルタイム反映します。</p>
           <div class="row row2">
             <button id="btnLiveStart">Start WebCam</button>
@@ -108,6 +149,32 @@
         <section class="fit-editor">
           <h2>Fit Editor</h2>
           <p class="fit-note">全身表示を見ながら、各パーツのサイズと位置を調整できます。</p>
+
+          <section class="fit-assist">
+            <div class="fit-assist-head">
+              <strong>Fit Assist</strong>
+              <button id="btnFitRefreshCheck" type="button">Refresh Check</button>
+            </div>
+            <p id="fitAssistSummary" class="fit-suggest-hint">
+              1. VRM を読み込む 2. Auto Fit Armor 3. Needs Attention を上から修正 4. Refresh Check 5. Save SuitSpec
+            </p>
+          <div class="row row3 fit-assist-actions">
+            <button id="btnFitPrevIssue" type="button">Prev Issue</button>
+            <button id="btnFitNextIssue" type="button">Next Issue</button>
+            <button id="btnFitFocusPart" type="button">Focus Part</button>
+          </div>
+          <div class="row row4 fit-assist-actions">
+            <button id="btnGizmoToggle" type="button">Gizmo: On</button>
+            <button id="btnGizmoMove" type="button">Move</button>
+            <button id="btnGizmoScale" type="button">Scale</button>
+            <button id="btnGizmoSpace" type="button">Space: Local</button>
+          </div>
+          <p id="fitGizmoHint" class="fit-suggest-hint">
+            Attach=Body では fit、Attach=Hybrid/VRM では anchor を gizmo で編集します。
+          </p>
+          <div id="fitAssistCurrent" class="fit-assist-current">Current: -</div>
+          <div id="fitAssistList" class="fit-assist-list"></div>
+          </section>
 
           <label>
             Part
@@ -138,6 +205,44 @@
               zOffset
               <input id="fitZOffset" type="number" step="0.01" min="-1.00" max="1.00" />
             </label>
+          </div>
+
+          <label>
+            Nudge Step
+            <select id="fitNudgeStep">
+              <option value="0.005">0.005 fine</option>
+              <option value="0.01" selected>0.01 normal</option>
+              <option value="0.02">0.02 large</option>
+              <option value="0.05">0.05 rough</option>
+            </select>
+          </label>
+
+          <div id="fitNudgeControls" class="fit-nudge-list">
+            <div class="fit-nudge-row">
+              <span>scaleX</span>
+              <button type="button" data-fit-nudge="fitScaleX:-1">-</button>
+              <button type="button" data-fit-nudge="fitScaleX:1">+</button>
+            </div>
+            <div class="fit-nudge-row">
+              <span>scaleY</span>
+              <button type="button" data-fit-nudge="fitScaleY:-1">-</button>
+              <button type="button" data-fit-nudge="fitScaleY:1">+</button>
+            </div>
+            <div class="fit-nudge-row">
+              <span>scaleZ</span>
+              <button type="button" data-fit-nudge="fitScaleZ:-1">-</button>
+              <button type="button" data-fit-nudge="fitScaleZ:1">+</button>
+            </div>
+            <div class="fit-nudge-row">
+              <span>offsetY</span>
+              <button type="button" data-fit-nudge="fitOffsetY:-1">-</button>
+              <button type="button" data-fit-nudge="fitOffsetY:1">+</button>
+            </div>
+            <div class="fit-nudge-row">
+              <span>zOffset</span>
+              <button type="button" data-fit-nudge="fitZOffset:-1">-</button>
+              <button type="button" data-fit-nudge="fitZOffset:1">+</button>
+            </div>
           </div>
 
           <div class="row row4">
@@ -222,7 +327,9 @@
             <button id="btnVrmEditReset">Reset Anchor</button>
           </div>
 
-          <p id="vrmEditHint" class="fit-suggest-hint">Load Anchor で現在値を読み込み、Apply Anchor で反映します。</p>
+          <p id="vrmEditHint" class="fit-suggest-hint">
+            Load Anchor で現在値を読み込み、Apply Anchor で反映します。
+          </p>
         </section>
 
         <div id="status">Ready</div>
@@ -248,6 +355,6 @@
         }
       }
     </script>
-    <script type="module" src="./viewer.js?v=20260307c"></script>
+    <script type="module" src="./viewer.js?v=20260412d"></script>
   </body>
 </html>

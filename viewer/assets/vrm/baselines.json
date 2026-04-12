@@ -1,0 +1,16 @@
+{
+  "schema_version": "0.1",
+  "defaults": {
+    "suitspec_path": "examples/suitspec.sample.json",
+    "sim_path": "sessions/body-sim.json",
+    "force_tpose": true
+  },
+  "baselines": [
+    {
+      "id": "default",
+      "label": "Default VRM",
+      "vrm_path": "viewer/assets/vrm/default.vrm",
+      "enabled": true
+    }
+  ]
+}

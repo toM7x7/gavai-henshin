@@ -49,6 +49,12 @@ def create_draft_suitspec(
         "suit_id": sid,
         "oath": oath,
         "style_tags": tags,
+        "operator_profile": {
+            "protect_archetype": "citizens",
+            "temperament_bias": "calm",
+            "color_mood": "industrial_gray",
+            "note": "",
+        },
         "modules": modules,
         "palette": {"primary": "#1E2A3A", "secondary": "#A8B3C6", "emissive": "#3AC7FF"},
         "blueprint": {"image_path": "artifacts/Blueprint.png", "projection_mode": "triplanar"},

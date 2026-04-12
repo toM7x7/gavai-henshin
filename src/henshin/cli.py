@@ -6,19 +6,17 @@ import argparse
 import functools
 import http.server
 import json
-import shutil
 import socketserver
-import time
 from pathlib import Path
 
 from .archive import ensure_session_dir, save_session_bundle
 from .bodyfit import BodyFrame, CoverScale as BodyCoverScale, SegmentSpec, Vec2 as BodyVec2, run_body_sequence
 from .constants import REFUSAL_CODES
 from .dashboard_server import serve_dashboard
+from .fit_regression import DEFAULT_BASELINE_MANIFEST, run_fit_regression, write_fit_regression_output
 from .forge import create_draft_morphotype, create_draft_suitspec, write_json
 from .gemini_image import (
     GeminiImageError,
-    GeminiReferenceImage,
     extension_for_mime,
     generate_image,
     resolve_api_key,
@@ -26,10 +24,19 @@ from .gemini_image import (
     write_generation_meta,
 )
 from .ids import generate_approval_id, generate_morphotype_id, generate_session_id, generate_suit_id
-from .part_prompts import build_uv_refine_prompt, list_enabled_parts, resolve_part_prompts
+from .part_generation import (
+    DEFAULT_GEMINI_FALLBACK_MODEL,
+    DEFAULT_PROVIDER_PROFILE,
+    GenerationRequest,
+    _resolve_fallback_image,
+    _use_fallback_asset,
+    run_generate_parts,
+)
+from .image_providers import ImageProviderError
 from .rightarm import CoverScale, RightArmFrame, Vec2, run_rightarm_sequence
 from .transform import ProtocolStateMachine
 from .validators import load_json, validate_file
+from .vrm_authoring_audit import run_authoring_audit, write_authoring_audit
 
 
 def _cmd_new_session(args: argparse.Namespace) -> int:
@@ -206,258 +213,37 @@ def _cmd_generate_image(args: argparse.Namespace) -> int:
 
 
 def _cmd_generate_parts(args: argparse.Namespace) -> int:
-    started_at = time.perf_counter()
-    spec = load_json(args.suitspec)
-    requested = args.parts or list_enabled_parts(spec)
-    if not requested:
-        print(json.dumps({"ok": False, "error": "No enabled parts found in suitspec."}, ensure_ascii=False))
-        return 2
-
-    prompts = resolve_part_prompts(spec, requested, texture_mode=args.texture_mode)
-    concept_prompts: dict[str, str] = {}
-    refine_prompts: dict[str, str] = {}
-    if args.uv_refine and args.texture_mode == "mesh_uv":
-        concept_prompts = resolve_part_prompts(spec, requested, texture_mode="concept")
-        refine_prompts = {part: build_uv_refine_prompt(part, spec) for part in requested}
-
-    if args.dry_run:
-        payload: dict[str, object] = {
-            "ok": True,
-            "dry_run": True,
-            "parts": requested,
-            "prompts": prompts,
-        }
-        if refine_prompts:
-            payload["refine_prompts"] = refine_prompts
-        print(
-            json.dumps(
-                payload,
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
-        return 0
-
-    fallback_dir: Path | None = None
-    if args.fallback_dir:
-        fallback_dir = Path(args.fallback_dir)
-        if not fallback_dir.exists() or not fallback_dir.is_dir():
-            print(
-                json.dumps(
-                    {
-                        "ok": False,
-                        "error": f"Fallback dir not found or not a directory: {fallback_dir}",
-                    },
-                    ensure_ascii=False,
-                )
-            )
-            return 2
-
-    api_key: str | None = None
-    api_key_error: str | None = None
-    try:
-        api_key = resolve_api_key(args.api_key)
-    except GeminiImageError as exc:
-        api_key_error = str(exc)
-        if fallback_dir is None:
-            print(json.dumps({"ok": False, "error": api_key_error}, ensure_ascii=False))
-            return 2
-
-    model_id = args.model_id or spec.get("generation", {}).get("model_id", "gemini-3-pro-image-preview")
-    session_id = args.session_id or generate_session_id()
-    session_dir = ensure_session_dir(session_id, root=args.root)
-    parts_dir = session_dir / "artifacts" / "parts"
-    parts_dir.mkdir(parents=True, exist_ok=True)
-    image_aspect_ratio = "1:1" if args.texture_mode == "mesh_uv" else None
-    image_size = "2K" if args.texture_mode == "mesh_uv" else None
-
-    generated: dict[str, dict[str, str]] = {}
-    errors: dict[str, str] = {}
-    fallback_used: list[str] = []
-    part_durations_sec: dict[str, float] = {}
-    for part in requested:
-        part_started_at = time.perf_counter()
-        part_error: str | None = None
-        used_fallback = False
-
-        try:
-            if args.prefer_fallback and fallback_dir is not None:
-                fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
-                if fallback_info is not None:
-                    generated[part] = fallback_info
-                    fallback_used.append(part)
-                    used_fallback = True
-
-            if not used_fallback and api_key is not None:
-                try:
-                    if args.uv_refine and args.texture_mode == "mesh_uv":
-                        concept = generate_image(
-                            prompt=concept_prompts[part],
-                            model_id=model_id,
-                            api_key=api_key,
-                            aspect_ratio=image_aspect_ratio,
-                            image_size=image_size,
-                            timeout_seconds=args.timeout,
-                        )
-                        concept_ext = extension_for_mime(concept.mime_type)
-                        concept_path = save_image(concept, output_path=parts_dir / f"{part}.concept{concept_ext}")
-                        write_generation_meta(parts_dir / f"{part}.concept.generation.json", result=concept, kind=f"part:{part}:concept")
-
-                        try:
-                            result = generate_image(
-                                prompt=refine_prompts[part],
-                                model_id=model_id,
-                                api_key=api_key,
-                                references=[GeminiReferenceImage(mime_type=concept.mime_type, image_bytes=concept.image_bytes)],
-                                aspect_ratio=image_aspect_ratio,
-                                image_size=image_size,
-                                timeout_seconds=args.timeout,
-                            )
-                            source = "gemini_refine"
-                        except GeminiImageError:
-                            result = generate_image(
-                                prompt=prompts[part],
-                                model_id=model_id,
-                                api_key=api_key,
-                                aspect_ratio=image_aspect_ratio,
-                                image_size=image_size,
-                                timeout_seconds=args.timeout,
-                            )
-                            source = "gemini_single_pass_after_refine_fail"
-
-                        ext = extension_for_mime(result.mime_type)
-                        image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
-                        meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
-                        generated[part] = {
-                            "image_path": str(image_path),
-                            "meta_path": str(meta_path),
-                            "source": source,
-                            "concept_path": str(concept_path),
-                        }
-                    else:
-                        result = generate_image(
-                            prompt=prompts[part],
-                            model_id=model_id,
-                            api_key=api_key,
-                            aspect_ratio=image_aspect_ratio,
-                            image_size=image_size,
-                            timeout_seconds=args.timeout,
-                        )
-                        ext = extension_for_mime(result.mime_type)
-                        image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
-                        meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
-                        generated[part] = {"image_path": str(image_path), "meta_path": str(meta_path), "source": "gemini"}
-                except GeminiImageError as exc:
-                    part_error = str(exc)
-
-            if part in generated:
-                continue
-
-            if fallback_dir is not None:
-                fallback_info = _use_fallback_asset(part=part, fallback_dir=fallback_dir, parts_dir=parts_dir)
-                if fallback_info is not None:
-                    generated[part] = fallback_info
-                    fallback_used.append(part)
-                    continue
-
-            if part_error is None:
-                part_error = api_key_error or "Image generation failed and fallback asset not found."
-            errors[part] = part_error
-        finally:
-            part_durations_sec[part] = round(time.perf_counter() - part_started_at, 3)
-
-    if args.update_suitspec:
-        modules = spec.setdefault("modules", {})
-        generation = spec.setdefault("generation", {})
-        generation["texture_mode"] = args.texture_mode
-        generation["uv_refine"] = bool(args.uv_refine)
-        part_prompts = generation.setdefault("part_prompts", {})
-        for part, prompt in prompts.items():
-            part_prompts[part] = prompt
-        for part, info in generated.items():
-            module = modules.setdefault(part, {"enabled": True, "asset_ref": f"modules/{part}/base.prefab"})
-            module["texture_path"] = info["image_path"]
-        write_json(args.suitspec, spec)
-
-    summary_path = parts_dir / "parts.generation.summary.json"
-    summary = {
-        "session_id": session_id,
-        "model_id": model_id,
-        "texture_mode": args.texture_mode,
-        "uv_refine": bool(args.uv_refine),
-        "aspect_ratio": image_aspect_ratio,
-        "image_size": image_size,
-        "requested_parts": requested,
-        "prompts": prompts,
-        "refine_prompts": refine_prompts,
-        "fallback_dir": str(fallback_dir) if fallback_dir else None,
-        "fallback_used": fallback_used,
-        "generated": generated,
-        "errors": errors,
-        "part_durations_sec": part_durations_sec,
-        "total_elapsed_sec": round(time.perf_counter() - started_at, 3),
-    }
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    ok = len(errors) == 0
-    print(
-        json.dumps(
-            {
-                "ok": ok,
-                "session_id": session_id,
-                "generated_count": len(generated),
-                "error_count": len(errors),
-                "fallback_used_count": len(fallback_used),
-                "total_elapsed_sec": summary["total_elapsed_sec"],
-                "summary_path": str(summary_path),
-            },
-            ensure_ascii=False,
-        )
+    req = GenerationRequest(
+        suitspec=args.suitspec,
+        root=args.root,
+        session_id=args.session_id,
+        parts=args.parts,
+        model_id=args.model_id,
+        api_key=args.api_key,
+        generation_brief=args.generation_brief,
+        operator_profile_override=None,
+        timeout=args.timeout,
+        texture_mode=args.texture_mode,
+        uv_refine=bool(args.uv_refine),
+        fallback_dir=args.fallback_dir,
+        prefer_fallback=bool(args.prefer_fallback),
+        update_suitspec=bool(args.update_suitspec),
+        dry_run=bool(args.dry_run),
+        provider_profile=args.provider_profile,
+        priority_mode=args.priority_mode,
+        use_cache=bool(args.use_cache),
+        hero_render=bool(args.hero_render),
+        tracking_source=args.tracking_source,
+        max_parallel=int(args.max_parallel),
+        retry_count=int(args.retry_count),
     )
-    return 0 if ok else 1
-
-
-def _resolve_fallback_image(part: str, fallback_dir: Path) -> Path | None:
-    candidates = [
-        f"{part}.generated.png",
-        f"{part}.generated.jpg",
-        f"{part}.generated.jpeg",
-        f"{part}.generated.webp",
-        f"{part}.png",
-        f"{part}.jpg",
-        f"{part}.jpeg",
-        f"{part}.webp",
-    ]
-    for name in candidates:
-        path = fallback_dir / name
-        if path.exists() and path.is_file():
-            return path
-    return None
-
-
-def _use_fallback_asset(part: str, fallback_dir: Path, parts_dir: Path) -> dict[str, str] | None:
-    source = _resolve_fallback_image(part, fallback_dir)
-    if source is None:
-        return None
-
-    ext = source.suffix.lower() or ".png"
-    image_path = parts_dir / f"{part}.generated{ext}"
-    if source.resolve() != image_path.resolve():
-        shutil.copy2(source, image_path)
-
-    meta_path = parts_dir / f"{part}.generation.json"
-    meta_payload = {
-        "kind": f"part:{part}",
-        "source": "fallback",
-        "fallback_image_path": str(source),
-    }
-    meta_path.write_text(json.dumps(meta_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    return {
-        "image_path": str(image_path),
-        "meta_path": str(meta_path),
-        "source": "fallback",
-    }
+    try:
+        result = run_generate_parts(req)
+    except (ValueError, ImageProviderError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
 
 
 def _cmd_simulate_rightarm(args: argparse.Namespace) -> int:
@@ -594,6 +380,58 @@ def _cmd_serve_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_fit_regression(args: argparse.Namespace) -> int:
+    try:
+        result = run_fit_regression(
+            root=args.root,
+            baselines_manifest=args.baselines,
+            suitspec=args.suitspec,
+            sim=args.sim,
+            baseline_ids=args.baseline_id,
+            mode=args.mode,
+            force_tpose=bool(args.force_tpose),
+            timeout_seconds=int(args.timeout),
+            browser_channel=args.browser_channel,
+        )
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    if args.output:
+        output_path = write_fit_regression_output(result, args.output)
+        result = {**result, "output": str(output_path)}
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def _cmd_authoring_audit(args: argparse.Namespace) -> int:
+    try:
+        audit = run_authoring_audit(
+            root=args.root,
+            baselines_manifest=args.baselines,
+            suitspec=args.suitspec,
+            sim=args.sim,
+            baseline_ids=args.baseline_id,
+            mode=args.mode,
+            timeout_seconds=int(args.timeout),
+            browser_channel=args.browser_channel,
+        )
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    outputs = write_authoring_audit(
+        audit,
+        json_path=args.output_json,
+        markdown_path=args.output_md,
+    )
+    payload = {**audit}
+    if outputs:
+        payload["outputs"] = outputs
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="henshin", description="SIM-first henshin prototyping CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -614,7 +452,7 @@ def build_parser() -> argparse.ArgumentParser:
     draft.add_argument("--approval-id")
     draft.add_argument("--morphotype-id")
     draft.add_argument("--oath", default="INTEGRITY_FIRST")
-    draft.add_argument("--model-id", default="gemini-3-pro-image-preview")
+    draft.add_argument("--model-id", default=DEFAULT_GEMINI_FALLBACK_MODEL)
     draft.add_argument("--source", choices=["manual", "mocopi", "webcam"], default="manual")
     draft.add_argument("--style-tags", nargs="*")
     draft.set_defaults(func=_cmd_draft)
@@ -642,7 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate_image_cmd.add_argument("--kind", choices=["blueprint", "emblem"], default="blueprint")
     generate_image_cmd.add_argument("--suitspec", help="Path to SuitSpec JSON (uses generation.prompt)")
     generate_image_cmd.add_argument("--prompt", help="Direct prompt override")
-    generate_image_cmd.add_argument("--model-id", default="gemini-3-pro-image-preview")
+    generate_image_cmd.add_argument("--model-id", default=DEFAULT_GEMINI_FALLBACK_MODEL)
     generate_image_cmd.add_argument("--api-key", help="Gemini API key (optional if env is set)")
     generate_image_cmd.add_argument("--timeout", type=int, default=90)
     generate_image_cmd.add_argument("--output", help="Output image path")
@@ -681,6 +519,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     generate_parts.add_argument("--update-suitspec", action="store_true")
     generate_parts.add_argument("--dry-run", action="store_true")
+    generate_parts.add_argument("--provider-profile", default=DEFAULT_PROVIDER_PROFILE)
+    generate_parts.add_argument("--priority-mode", default="exhibition")
+    generate_parts.add_argument("--generation-brief", help="Optional concise creative direction for the current run")
+    generate_parts.add_argument("--use-cache", action=argparse.BooleanOptionalAction, default=True)
+    generate_parts.add_argument("--hero-render", action="store_true")
+    generate_parts.add_argument("--tracking-source", choices=["manual", "mocopi", "webcam"], default="webcam")
+    generate_parts.add_argument("--max-parallel", type=int, default=4)
+    generate_parts.add_argument("--retry-count", type=int, default=1)
     generate_parts.set_defaults(func=_cmd_generate_parts)
 
     simulate_rightarm = sub.add_parser(
@@ -714,6 +560,38 @@ def build_parser() -> argparse.ArgumentParser:
     serve_dashboard_cmd.add_argument("--root", default=".")
     serve_dashboard_cmd.add_argument("--port", type=int, default=8010)
     serve_dashboard_cmd.set_defaults(func=_cmd_serve_dashboard)
+
+    fit_regression = sub.add_parser(
+        "fit-regression",
+        help="Run VRM-first fit regression through the browser fit engine",
+    )
+    fit_regression.add_argument("--root", default=".")
+    fit_regression.add_argument("--suitspec", help="Optional SuitSpec override")
+    fit_regression.add_argument("--sim", help="Optional body-sim override")
+    fit_regression.add_argument("--baselines", default=str(DEFAULT_BASELINE_MANIFEST))
+    fit_regression.add_argument("--baseline-id", nargs="*", help="Optional subset of baseline ids")
+    fit_regression.add_argument("--mode", choices=["auto_fit", "current"], default="auto_fit")
+    fit_regression.add_argument("--force-tpose", action=argparse.BooleanOptionalAction, default=True)
+    fit_regression.add_argument("--timeout", type=int, default=90)
+    fit_regression.add_argument("--browser-channel", help="Optional browser channel override, e.g. msedge")
+    fit_regression.add_argument("--output", help="Optional output JSON path")
+    fit_regression.set_defaults(func=_cmd_fit_regression)
+
+    authoring_audit = sub.add_parser(
+        "authoring-audit",
+        help="Generate a VRM-first armor re-authoring backlog from fit regression results",
+    )
+    authoring_audit.add_argument("--root", default=".")
+    authoring_audit.add_argument("--suitspec", help="Optional SuitSpec override")
+    authoring_audit.add_argument("--sim", help="Optional body-sim override")
+    authoring_audit.add_argument("--baselines", default=str(DEFAULT_BASELINE_MANIFEST))
+    authoring_audit.add_argument("--baseline-id", nargs="*", help="Optional subset of baseline ids")
+    authoring_audit.add_argument("--mode", choices=["auto_fit", "current"], default="auto_fit")
+    authoring_audit.add_argument("--timeout", type=int, default=90)
+    authoring_audit.add_argument("--browser-channel", help="Optional browser channel override, e.g. msedge")
+    authoring_audit.add_argument("--output-json", help="Optional JSON output path")
+    authoring_audit.add_argument("--output-md", help="Optional Markdown output path")
+    authoring_audit.set_defaults(func=_cmd_authoring_audit)
 
     return parser
 

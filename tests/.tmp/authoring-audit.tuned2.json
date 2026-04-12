@@ -1,0 +1,570 @@
+{
+  "ok": true,
+  "mode": "auto_fit",
+  "root": "C:\\dev\\codex\\gavai-henshin",
+  "suitspec": "examples/suitspec.sample.json",
+  "sim": "sessions/body-sim.json",
+  "decision_totals": {
+    "rebuild": 0,
+    "tune": 7,
+    "keep": 11
+  },
+  "waves": [
+    {
+      "name": "Wave 1",
+      "goal": "胸背腰と腕系の接続をVRM基準で作り直す",
+      "parts": [
+        "chest",
+        "back",
+        "waist",
+        "left_shoulder",
+        "right_shoulder",
+        "left_upperarm",
+        "right_upperarm",
+        "left_forearm",
+        "right_forearm"
+      ]
+    },
+    {
+      "name": "Wave 2",
+      "goal": "下半身の接続と足首まわりをVRM基準で安定させる",
+      "parts": [
+        "left_thigh",
+        "right_thigh",
+        "left_shin",
+        "right_shin",
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    {
+      "name": "Wave 3",
+      "goal": "頭部と末端部位を仕上げて展示品質へ寄せる",
+      "parts": [
+        "helmet",
+        "left_hand",
+        "right_hand"
+      ]
+    }
+  ],
+  "baselines": [
+    {
+      "id": "default",
+      "label": "Default VRM",
+      "vrm_path": "viewer/assets/vrm/default.vrm",
+      "regression_ok": true,
+      "fit_score": 80.969,
+      "can_save": true,
+      "summary_reasons": [],
+      "part_actions": [
+        {
+          "part": "helmet",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 3",
+          "priority": "P2",
+          "anchor_bone": "head",
+          "body_proxy": "head_sphere",
+          "seam_focus": [
+            "helmet-chest"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": null,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "chest",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "upperChest",
+          "body_proxy": "torso_obb",
+          "seam_focus": [
+            "helmet-chest",
+            "chest-back",
+            "chest-waist"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": null,
+          "weak_pairs": [
+            {
+              "pair": "chest-back",
+              "score": 50,
+              "gap": 0.331,
+              "penetration": 0
+            },
+            {
+              "pair": "chest-waist",
+              "score": 85.531,
+              "gap": 0,
+              "penetration": 0.093
+            }
+          ],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "back",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "upperChest",
+          "body_proxy": "torso_obb",
+          "seam_focus": [
+            "chest-back"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": null,
+          "weak_pairs": [
+            {
+              "pair": "chest-back",
+              "score": 50,
+              "gap": 0.331,
+              "penetration": 0
+            }
+          ],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "waist",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "hips",
+          "body_proxy": "torso_obb",
+          "seam_focus": [
+            "chest-waist",
+            "waist-thigh"
+          ],
+          "part_score": 76.536,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": null,
+          "weak_pairs": [
+            {
+              "pair": "chest-waist",
+              "score": 85.531,
+              "gap": 0,
+              "penetration": 0.093
+            }
+          ],
+          "reasons": [
+            "part score 76.5 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "left_shoulder",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "leftShoulder",
+          "body_proxy": "upperarm_capsule",
+          "seam_focus": [
+            "shoulder-upperarm"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [
+            {
+              "pair": "left_shoulder-left_upperarm",
+              "score": 85.03,
+              "gap": 0,
+              "penetration": 0.096
+            }
+          ],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "right_shoulder",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "rightShoulder",
+          "body_proxy": "upperarm_capsule",
+          "seam_focus": [
+            "shoulder-upperarm"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [
+            {
+              "pair": "right_shoulder-right_upperarm",
+              "score": 85.03,
+              "gap": 0,
+              "penetration": 0.096
+            }
+          ],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "left_upperarm",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "leftUpperArm",
+          "body_proxy": "upperarm_capsule",
+          "seam_focus": [
+            "shoulder-upperarm",
+            "upperarm-forearm"
+          ],
+          "part_score": 79.412,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [
+            {
+              "pair": "left_shoulder-left_upperarm",
+              "score": 85.03,
+              "gap": 0,
+              "penetration": 0.096
+            },
+            {
+              "pair": "left_upperarm-left_forearm",
+              "score": 73.795,
+              "gap": 0,
+              "penetration": 0.168
+            }
+          ],
+          "reasons": [
+            "part score 79.4 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "right_upperarm",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "rightUpperArm",
+          "body_proxy": "upperarm_capsule",
+          "seam_focus": [
+            "shoulder-upperarm",
+            "upperarm-forearm"
+          ],
+          "part_score": 79.412,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [
+            {
+              "pair": "right_shoulder-right_upperarm",
+              "score": 85.03,
+              "gap": 0,
+              "penetration": 0.096
+            }
+          ],
+          "reasons": [
+            "part score 79.4 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "left_forearm",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "leftLowerArm",
+          "body_proxy": "forearm_capsule",
+          "seam_focus": [
+            "upperarm-forearm",
+            "forearm-hand"
+          ],
+          "part_score": 83.682,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [
+            {
+              "pair": "left_upperarm-left_forearm",
+              "score": 73.795,
+              "gap": 0,
+              "penetration": 0.168
+            }
+          ],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "right_forearm",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 1",
+          "priority": "P0",
+          "anchor_bone": "rightLowerArm",
+          "body_proxy": "forearm_capsule",
+          "seam_focus": [
+            "upperarm-forearm",
+            "forearm-hand"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "left_hand",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 3",
+          "priority": "P2",
+          "anchor_bone": "leftHand",
+          "body_proxy": "forearm_capsule",
+          "seam_focus": [
+            "forearm-hand"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "right_hand",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 3",
+          "priority": "P2",
+          "anchor_bone": "rightHand",
+          "body_proxy": "forearm_capsule",
+          "seam_focus": [
+            "forearm-hand"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "left_thigh",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 2",
+          "priority": "P1",
+          "anchor_bone": "leftUpperLeg",
+          "body_proxy": "thigh_capsule",
+          "seam_focus": [
+            "waist-thigh",
+            "thigh-shin"
+          ],
+          "part_score": 70.809,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "part score 70.8 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "right_thigh",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 2",
+          "priority": "P1",
+          "anchor_bone": "rightUpperLeg",
+          "body_proxy": "thigh_capsule",
+          "seam_focus": [
+            "waist-thigh",
+            "thigh-shin"
+          ],
+          "part_score": 70.809,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "part score 70.8 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "left_shin",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 2",
+          "priority": "P0",
+          "anchor_bone": "leftLowerLeg",
+          "body_proxy": "shin_capsule",
+          "seam_focus": [
+            "thigh-shin",
+            "shin-boot"
+          ],
+          "part_score": 80.843,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "part score 80.8 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "right_shin",
+          "decision": "tune",
+          "recommended_action": "既存メッシュ補正 + fit再校正",
+          "wave": "Wave 2",
+          "priority": "P0",
+          "anchor_bone": "rightLowerLeg",
+          "body_proxy": "shin_capsule",
+          "seam_focus": [
+            "thigh-shin",
+            "shin-boot"
+          ],
+          "part_score": 80.843,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "part score 80.8 < 82"
+          ],
+          "pass_gates": [
+            "surfaceViolations == 0",
+            "heroOverflow == 0",
+            "symmetryDelta ok"
+          ]
+        },
+        {
+          "part": "left_boot",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 2",
+          "priority": "P0",
+          "anchor_bone": "leftFoot",
+          "body_proxy": "foot_obb",
+          "seam_focus": [
+            "shin-boot"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        },
+        {
+          "part": "right_boot",
+          "decision": "keep",
+          "recommended_action": "現状維持",
+          "wave": "Wave 2",
+          "priority": "P0",
+          "anchor_bone": "rightFoot",
+          "body_proxy": "foot_obb",
+          "seam_focus": [
+            "shin-boot"
+          ],
+          "part_score": null,
+          "surface_violation_count": 0,
+          "hero_overflow_count": 0,
+          "symmetry_ok": true,
+          "weak_pairs": [],
+          "reasons": [
+            "baseline gate passed"
+          ],
+          "pass_gates": [
+            "VRM baselineで再回帰して summary.canSave == true"
+          ]
+        }
+      ]
+    }
+  ]
+}

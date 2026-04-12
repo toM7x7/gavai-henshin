@@ -6,5 +6,9 @@
     "dev": "python tools/run_henshin.py serve-dashboard --port 8010 --root .",
     "dev:viewer": "python tools/run_henshin.py serve-viewer --port 8000 --root .",
     "test": "python tools/run_henshin.py validate --kind suitspec --path examples/suitspec.sample.json"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1",
+    "three": "^0.180.0"
   }
 }

@@ -16,6 +16,9 @@ import {
   inferCanonicalJointsFromBoneResolver,
 } from "../shared/bone-inference.js?v=20260412a";
 import {
+  createBodyTrackingFrameFromInference,
+} from "../shared/body-tracking-frame.js?v=20260418a";
+import {
   FIT_CONTACT_PAIRS,
   VRM_BONE_ALIASES,
   effectiveVrmAnchorFor,
@@ -30,7 +33,17 @@ import {
   evaluateArmorFitToVrm,
   fitArmorToVrm,
   formatAutoFitSummary,
-} from "../shared/auto-fit-engine.js?v=20260412b";
+} from "../shared/auto-fit-engine.js?v=20260412g";
+import { createWearableTemplateGeometry } from "../shared/wearable-template.js?v=20260412d";
+import { renderBindingFor } from "../shared/vrm-fit-policy.js?v=20260412c";
+import {
+  buildSurfaceFirstSnapshot,
+  createSurfacePointLayer,
+  createSurfaceFirstDemoRig,
+  disposeSurfaceFirstDemoRig,
+  reprojectSurfaceFirstSnapshot,
+  summarizeSurfaceFirstSnapshot,
+} from "../shared/surface-first-system.js?v=20260412d";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";
@@ -52,7 +65,11 @@ const PANEL = {
   btnPlay: document.getElementById("btnPlay"),
   btnPrev: document.getElementById("btnPrev"),
   btnNext: document.getElementById("btnNext"),
+  btnUiSimple: document.getElementById("btnUiSimple"),
+  btnUiDetail: document.getElementById("btnUiDetail"),
+  uiModeHint: document.getElementById("uiModeHint"),
   btnTexture: document.getElementById("btnTexture"),
+  btnGeometry: document.getElementById("btnGeometry"),
   btnTheme: document.getElementById("btnTheme"),
   btnCamFront: document.getElementById("btnCamFront"),
   btnCamSide: document.getElementById("btnCamSide"),
@@ -82,10 +99,21 @@ const PANEL = {
   depositionProfile: document.getElementById("depositionProfile"),
   depositionDuration: document.getElementById("depositionDuration"),
   depositionStatus: document.getElementById("depositionStatus"),
+  btnSurfaceFirstRefresh: document.getElementById("btnSurfaceFirstRefresh"),
+  btnSurfaceFirstGraph: document.getElementById("btnSurfaceFirstGraph"),
+  btnSurfaceFirstShell: document.getElementById("btnSurfaceFirstShell"),
+  btnSurfaceFirstMounts: document.getElementById("btnSurfaceFirstMounts"),
+  surfacePointDensity: document.getElementById("surfacePointDensity"),
+  surfaceShellOffset: document.getElementById("surfaceShellOffset"),
+  surfaceStatus: document.getElementById("surfaceStatus"),
   btnLiveStart: document.getElementById("btnLiveStart"),
   btnLiveStop: document.getElementById("btnLiveStop"),
   liveViewMode: document.getElementById("liveViewMode"),
   liveStatus: document.getElementById("liveStatus"),
+  liveCheckInput: document.getElementById("liveCheckInput"),
+  liveCheckPose: document.getElementById("liveCheckPose"),
+  liveCheckFrame: document.getElementById("liveCheckFrame"),
+  liveCheckSurface: document.getElementById("liveCheckSurface"),
   liveVideo: document.getElementById("liveVideo"),
   fitPart: document.getElementById("fitPart"),
   fitScaleX: document.getElementById("fitScaleX"),
@@ -132,18 +160,41 @@ const PANEL = {
   meta: document.getElementById("meta"),
   legendText: document.getElementById("legendText"),
 };
+/* legacy label overrides retained only to avoid merge churn
+
+DEPOSITION_PROFILES.uplift.label = "高揚";
+DEPOSITION_PROFILES.drive.label = "闘志";
+DEPOSITION_PROFILES.grief.label = "哀傷";
+DEPOSITION_PROFILES.tension.label = "緊張";
+DEPOSITION_PROFILES.guard.label = "守護";
+DEPOSITION_PROFILES.embrace.label = "受容";
+
+*/
+DEPOSITION_PROFILES.uplift.label = "高揚";
+DEPOSITION_PROFILES.drive.label = "闘志";
+DEPOSITION_PROFILES.grief.label = "哀傷";
+DEPOSITION_PROFILES.tension.label = "緊張";
+DEPOSITION_PROFILES.guard.label = "守護";
+DEPOSITION_PROFILES.embrace.label = "受容";
 
 const FIT_FIELD_LABELS = {
-  fitScaleX: "scaleX",
-  fitScaleY: "scaleY",
-  fitScaleZ: "scaleZ",
-  fitOffsetY: "offsetY",
-  fitZOffset: "zOffset",
+  fitScaleX: "横幅",
+  fitScaleY: "高さ",
+  fitScaleZ: "奥行",
+  fitOffsetY: "上下位置",
+  fitZOffset: "前後位置",
 };
 
 const textureLoader = new THREE.TextureLoader();
 const meshGeometryCache = new Map();
+const textureAssetCache = new Map();
+const textureSamplerCache = new WeakMap();
+const geometryUvCache = new WeakMap();
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
+const GEOMETRY_MODES = Object.freeze({
+  TEMPLATE: "template",
+  ASSET: "asset",
+});
 
 const VRM_PART_BONE_FALLBACKS = {
   helmet: ["head", "neck", "upperChest", "chest"],
@@ -172,11 +223,56 @@ const VRM_ATTACH_MODES = {
   VRM: "vrm",
 };
 
+const UI_LEVELS = {
+  SIMPLE: "simple",
+  DETAIL: "detail",
+};
+
 const VRM_ATTACH_MODE_LABELS = {
   [VRM_ATTACH_MODES.BODY]: "BodySim",
-  [VRM_ATTACH_MODES.HYBRID]: "Hybrid",
+  [VRM_ATTACH_MODES.HYBRID]: "ハイブリッド",
   [VRM_ATTACH_MODES.VRM]: "VRM",
 };
+
+VRM_ATTACH_MODE_LABELS[VRM_ATTACH_MODES.BODY] = "BodySim基準";
+VRM_ATTACH_MODE_LABELS[VRM_ATTACH_MODES.HYBRID] = "ハイブリッド";
+
+const UI_MODE_HINTS = {
+  [UI_LEVELS.SIMPLE]: "まずは VRM を読み込み、「自動フィット」で装着結果を確認します。通常はこのモードだけで足ります。",
+  [UI_LEVELS.DETAIL]: "部位ごとのフィット調整、VRMアンカー調整、Surface-first デモ、ライブ入力まで扱うモードです。",
+};
+
+function jaOnOff(enabled) {
+  return enabled ? "ON" : "OFF";
+}
+
+function jaYesNo(enabled) {
+  return enabled ? "あり" : "なし";
+}
+
+function formatUiModeHint(level) {
+  return UI_MODE_HINTS[level] || UI_MODE_HINTS[UI_LEVELS.SIMPLE];
+}
+
+function formatAutoFitSummaryJa(summary) {
+  if (!summary) return "未評価";
+  const fitScore = Number(summary.fitScore || 0).toFixed(1);
+  const missing = Array.isArray(summary.missingAnchors) ? summary.missingAnchors.length : 0;
+  const surface = Array.isArray(summary.surfaceViolations) ? summary.surfaceViolations.length : 0;
+  const hero = Array.isArray(summary.heroOverflow) ? summary.heroOverflow.length : 0;
+  const symmetry = Array.isArray(summary.symmetryDelta)
+    ? summary.symmetryDelta.filter((entry) => entry && entry.ok === false).length
+    : 0;
+  const seam = Array.isArray(summary.seamContinuity)
+    ? summary.seamContinuity.filter((entry) => entry && entry.ok === false).length
+    : 0;
+  const render = Array.isArray(summary.renderDeviation)
+    ? summary.renderDeviation.filter((entry) => entry && entry.ok === false).length
+    : 0;
+  const textureNg = summary.texturesVisible === false ? 1 : 0;
+  const state = summary.canSave ? "保存可" : "要調整";
+  return `${state} | Fit ${fitScore} | アンカー ${missing} | 表面 ${surface} | ヒーロー ${hero} | 左右差 ${symmetry} | 継ぎ目 ${seam} | 表示 ${render} | テクスチャ ${textureNg}`;
+}
 
 const DEFAULT_SEGMENT_POSE = {
   chest_core: {
@@ -224,6 +320,24 @@ const DEFAULT_SEGMENT_POSE = {
     scale_y: 0.95,
     scale_z: 0.88,
   },
+  left_hand: {
+    position_x: 0.08,
+    position_y: -0.66,
+    position_z: 0.22,
+    rotation_z: 0.18,
+    scale_x: 0.2,
+    scale_y: 0.24,
+    scale_z: 0.2,
+  },
+  right_hand: {
+    position_x: 1.02,
+    position_y: -0.66,
+    position_z: 0.22,
+    rotation_z: -0.18,
+    scale_x: 0.2,
+    scale_y: 0.24,
+    scale_z: 0.2,
+  },
   left_thigh: {
     position_x: 0.42,
     position_y: -0.72,
@@ -260,6 +374,24 @@ const DEFAULT_SEGMENT_POSE = {
     scale_y: 1.05,
     scale_z: 0.92,
   },
+  left_foot: {
+    position_x: 0.42,
+    position_y: -1.56,
+    position_z: 0.3,
+    rotation_z: 0,
+    scale_x: 0.22,
+    scale_y: 0.26,
+    scale_z: 0.42,
+  },
+  right_foot: {
+    position_x: 0.68,
+    position_y: -1.56,
+    position_z: 0.3,
+    rotation_z: 0,
+    scale_x: 0.22,
+    scale_y: 0.26,
+    scale_z: 0.42,
+  },
 };
 
 const LIVE_SEGMENT_SPECS = [
@@ -284,6 +416,16 @@ const LIVE_SEGMENT_SPECS = [
     smoothGain: 18.0,
   },
   {
+    name: "right_hand",
+    startJoint: "right_wrist",
+    endJoint: "right_middle_proximal",
+    radiusFactor: 0.18,
+    radiusMin: 0.04,
+    radiusMax: 0.16,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
     name: "left_upperarm",
     startJoint: "left_shoulder",
     endJoint: "left_elbow",
@@ -300,6 +442,16 @@ const LIVE_SEGMENT_SPECS = [
     radiusFactor: 0.22,
     radiusMin: 0.05,
     radiusMax: 0.22,
+    z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_hand",
+    startJoint: "left_wrist",
+    endJoint: "left_middle_proximal",
+    radiusFactor: 0.18,
+    radiusMin: 0.04,
+    radiusMax: 0.16,
     z: 0.22,
     smoothGain: 18.0,
   },
@@ -324,6 +476,16 @@ const LIVE_SEGMENT_SPECS = [
     smoothGain: 18.0,
   },
   {
+    name: "right_foot",
+    startJoint: "right_ankle",
+    endJoint: "right_toes",
+    radiusFactor: 0.16,
+    radiusMin: 0.04,
+    radiusMax: 0.12,
+    z: 0.28,
+    smoothGain: 18.0,
+  },
+  {
     name: "left_thigh",
     startJoint: "left_hip",
     endJoint: "left_knee",
@@ -341,6 +503,16 @@ const LIVE_SEGMENT_SPECS = [
     radiusMin: 0.05,
     radiusMax: 0.22,
     z: 0.22,
+    smoothGain: 18.0,
+  },
+  {
+    name: "left_foot",
+    startJoint: "left_ankle",
+    endJoint: "left_toes",
+    radiusFactor: 0.16,
+    radiusMin: 0.04,
+    radiusMax: 0.12,
+    z: 0.28,
     smoothGain: 18.0,
   },
   {
@@ -491,6 +663,12 @@ function nextVrmAttachMode(currentMode) {
   return VRM_ATTACH_MODES.BODY;
 }
 
+function normalizeGeometryMode(mode) {
+  return String(mode || "").trim().toLowerCase() === GEOMETRY_MODES.ASSET
+    ? GEOMETRY_MODES.ASSET
+    : GEOMETRY_MODES.TEMPLATE;
+}
+
 function countFitOverrides(suitspec) {
   const modules = suitspec?.modules || {};
   return Object.values(modules).filter((module) => module && typeof module.fit === "object").length;
@@ -585,6 +763,9 @@ class BodyFitViewer {
     this.root.add(this.bridgeGroup);
     this.vrmGroup = new THREE.Group();
     this.scene.add(this.vrmGroup);
+    this.surfaceFirstGroup = new THREE.Group();
+    this.surfaceFirstGroup.name = "surfaceFirstOverlay";
+    this.scene.add(this.surfaceFirstGroup);
 
     this.grid = new THREE.GridHelper(3.2, 32, 0x9ab4dc, 0xd6e1f2);
     this.grid.position.y = -1.0;
@@ -609,12 +790,16 @@ class BodyFitViewer {
     this.scene.add(new THREE.HemisphereLight(0xd8e8ff, 0xaac7eb, 0.7));
 
     this.meshes = new Map();
+    this.renderMeshes = new Map();
     this.frames = [];
     this.frameIndex = 0;
     this.playing = false;
     this.playbackAccumSec = 0;
     this.speed = 1.0;
     this.useTextures = true;
+    this.geometryMode = "dual_shell";
+    this.showFitShell = false;
+    this.uiLevel = UI_LEVELS.SIMPLE;
     this.reliefStrength = Number(PANEL.reliefSlider?.value || "0.05");
     if (!Number.isFinite(this.reliefStrength)) this.reliefStrength = 0.05;
     this.bridgeEnabled = true;
@@ -679,6 +864,7 @@ class BodyFitViewer {
       liveRigReady: false,
       liveDriven: false,
       bodyInference: null,
+      bodyTrackingFrame: null,
       error: "",
     };
     this.armorVisible = true;
@@ -691,16 +877,38 @@ class BodyFitViewer {
       palette: buildDepositionPalette(DEPOSITION_PROFILES.guard),
       startedAtMs: 0,
     };
+    this.surfaceFirst = {
+      graphVisible: false,
+      shellVisible: false,
+      mountsVisible: false,
+      forceTrackingSource: "auto",
+      density: clamp(Number(PANEL.surfacePointDensity?.value || 72), 24, 240),
+      shellOffset: clamp(Number(PANEL.surfaceShellOffset?.value || 0.018), 0.002, 0.08),
+      lastRefreshMs: 0,
+      refreshIntervalMs: 180,
+      rig: null,
+      seedSnapshot: null,
+      snapshot: null,
+      summary: null,
+      trackingSource: "vrm",
+      error: "",
+    };
 
     this.lastTime = performance.now();
+    this.updatePlaybackButton();
     this.updateBridgeButton();
     this.updateArmorButton();
+    this.updateGeometryButton();
     this.updateVrmButton();
     this.updateVrmAttachButton();
     this.updateVrmIdleButton();
+    this.updateSurfaceFirstButtons();
     this.updateGizmoButtons();
-    this.updateVrmStatus("VRM: not loaded");
-    this.updateDepositionStatus("Deposition: idle");
+    this.updateUiModeButtons();
+    this.updateVrmStatus("VRM: 未読込");
+    this.updateDepositionStatus("蒸着: 待機中");
+    this.updateSurfaceFirstStatus("Surface-first: VRM 未読込");
+    this.updateSurfaceFirstStatus("Surface-first: VRM 未読込");
     this.transformControls.addEventListener("dragging-changed", (event) => {
       this.gizmo.dragging = Boolean(event.value);
       this.controls.enabled = !this.gizmo.dragging;
@@ -730,6 +938,32 @@ class BodyFitViewer {
     PANEL.status.classList.toggle("error", Boolean(isError));
   }
 
+  updatePlaybackButton() {
+    if (!PANEL.btnPlay) return;
+    PANEL.btnPlay.textContent = this.playing ? "停止" : "再生";
+    PANEL.btnPlay.classList.toggle("active", this.playing);
+  }
+
+  setUiLevel(level) {
+    this.uiLevel = level === UI_LEVELS.DETAIL ? UI_LEVELS.DETAIL : UI_LEVELS.SIMPLE;
+    document.body.dataset.uiLevel = this.uiLevel;
+    this.updateUiModeButtons();
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  updateUiModeButtons() {
+    if (PANEL.btnUiSimple) {
+      PANEL.btnUiSimple.classList.toggle("active", this.uiLevel === UI_LEVELS.SIMPLE);
+    }
+    if (PANEL.btnUiDetail) {
+      PANEL.btnUiDetail.classList.toggle("active", this.uiLevel === UI_LEVELS.DETAIL);
+    }
+    if (PANEL.uiModeHint) {
+      PANEL.uiModeHint.textContent = formatUiModeHint(this.uiLevel);
+    }
+  }
+
   setMeta(meta) {
     PANEL.meta.textContent = JSON.stringify(meta, null, 2);
   }
@@ -747,6 +981,8 @@ class BodyFitViewer {
       equip_frame: sim.equip_frame ?? -1,
       equipped: sim.equipped ?? false,
       textures: this.useTextures,
+      geometry_mode: this.geometryMode,
+      fit_shell_overlay: this.showFitShell,
       theme: this.darkTheme ? "dark" : "bright",
       fit_score: round3((this.fitStats?.score || 0) * 100),
       fit_pair_count: this.fitStats?.pairCount || 0,
@@ -779,6 +1015,13 @@ class BodyFitViewer {
       vrm_fit_readiness: this.vrm.bodyInference?.fitReadiness || null,
       vrm_fit_readiness_score: round3(this.vrm.bodyInference?.fitReadinessScore || 0),
       vrm_shape_profile: this.vrm.bodyInference?.shapeProfile || null,
+      vrm_tracking_frame: this.vrm.bodyTrackingFrame
+        ? {
+            id: this.vrm.bodyTrackingFrame.id,
+            source: this.vrm.bodyTrackingFrame.source,
+            schema: this.vrm.bodyTrackingFrame.schemaVersion,
+          }
+        : null,
       vrm_missing_anchor_parts: this.vrm.missingAnchorParts || [],
       vrm_resolved_anchors: this.vrm.resolvedAnchors || {},
       vrm_live_rig_ready: this.vrm.liveRigReady,
@@ -795,6 +1038,13 @@ class BodyFitViewer {
       live_fit_readiness: this.live?.bodyInference?.fitReadiness || null,
       live_fit_readiness_score: round3(this.live?.bodyInference?.fitReadinessScore || 0),
       live_shape_profile: this.live?.bodyInference?.shapeProfile || null,
+      live_tracking_frame: this.live?.bodyTrackingFrame
+        ? {
+            id: this.live.bodyTrackingFrame.id,
+            source: this.live.bodyTrackingFrame.source,
+            schema: this.live.bodyTrackingFrame.schemaVersion,
+          }
+        : null,
       live_pose_model: this.live?.poseModel || null,
       live_pose_quality: this.live?.poseQuality || "idle",
       live_pose_reliable_joints: this.live?.poseReliableJoints || 0,
@@ -810,6 +1060,14 @@ class BodyFitViewer {
       deposition_duration_sec: round3(this.deposition.durationSec || DEFAULT_DEPOSITION_DURATION),
       deposition_profile_mode: this.deposition.profileMode,
       deposition_profile_resolved: this.deposition.resolvedKey,
+      surface_first: this.surfaceFirst.summary
+        ? {
+            ...this.surfaceFirst.summary,
+            error: this.surfaceFirst.error || null,
+          }
+        : this.surfaceFirst.error
+          ? { error: this.surfaceFirst.error }
+          : null,
       auto_fit_summary: this.autoFitSummary
         ? {
             fit_score: round3(this.autoFitSummary.fitScore || 0),
@@ -822,9 +1080,67 @@ class BodyFitViewer {
             hero_overflow: this.autoFitSummary.heroOverflow || [],
             min_scale_locks: this.autoFitSummary.minScaleLocks || [],
             symmetry_delta: this.autoFitSummary.symmetryDelta || [],
+            seam_continuity: this.autoFitSummary.seamContinuity || [],
+            silhouette_budget: this.autoFitSummary.silhouetteBudget || [],
+            render_deviation: this.autoFitSummary.renderDeviation || [],
+            textures_visible: this.autoFitSummary.texturesVisible !== false,
           }
         : null,
     });
+    this.updateLiveCheckPanel();
+  }
+
+  getFitEngineMeshes() {
+    return Array.from(this.meshes.values()).map((rec) => ({
+      partName: rec.partName,
+      group:
+        (rec.surfaceFitNodeCount > 0 && rec.surfaceFitProxyGroup?.children?.length
+          ? rec.surfaceFitProxyGroup
+          : rec.fitProxyGroup) ||
+        rec.fitGroup ||
+        rec.group,
+    }));
+  }
+
+  getRenderEngineMeshes() {
+    return Array.from(this.meshes.values()).map((rec) => ({
+      partName: rec.partName,
+      group: rec.renderProxyRoot || rec.renderGroup || rec.group,
+    }));
+  }
+
+  getVisualRecords() {
+    return Array.from(this.meshes.values());
+  }
+
+  computeTextureState() {
+    const missing = [];
+    if (!this.useTextures) {
+      return { texturesVisible: false, missing };
+    }
+    for (const rec of this.meshes.values()) {
+      if (!rec.texturePath) continue;
+      if (!rec.renderMesh?.visible && !rec.renderGroup?.visible) continue;
+      if (!rec.texture || rec.mesh.material.map !== rec.texture) {
+        missing.push(rec.partName);
+      }
+    }
+    return { texturesVisible: missing.length === 0, missing };
+  }
+
+  decorateWearableSummary(summary) {
+    if (!summary) return summary;
+    const textureState = this.computeTextureState();
+    summary.texturesVisible = textureState.texturesVisible;
+    summary.textureMissingParts = textureState.missing;
+    if (!textureState.texturesVisible) {
+      summary.canSave = false;
+      const reason = `Textures missing: ${textureState.missing.join(", ") || "disabled"}`;
+      if (!(summary.reasons || []).includes(reason)) {
+        summary.reasons = [...(summary.reasons || []), reason];
+      }
+    }
+    return summary;
   }
 
   getSelectedFitPart() {
@@ -843,6 +1159,13 @@ class BodyFitViewer {
       source: "vrm",
     });
     this.vrm.bodyInference = snapshot;
+    this.vrm.bodyTrackingFrame = createBodyTrackingFrameFromInference(snapshot, {
+      source: "vrm",
+      timestampMs: performance.now(),
+      metadata: {
+        vrmPath: this.vrm.path || "",
+      },
+    });
     return snapshot;
   }
 
@@ -872,8 +1195,10 @@ class BodyFitViewer {
           score: null,
           critical: false,
           pairs: [],
+          seams: [],
           surface: [],
           hero: [],
+          render: [],
           minScaleAxes: [],
         });
       }
@@ -913,10 +1238,28 @@ class BodyFitViewer {
       item.minScaleAxes = Array.isArray(lock.axes) ? lock.axes.slice() : [];
     }
 
+    for (const seam of summary.seamContinuity || []) {
+      if (seam.ok) continue;
+      for (const partName of splitFitPairName(seam.pair)) {
+        const item = ensureItem(partName);
+        if (!item) continue;
+        item.seams.push(`${seam.pair}:${seam.gap}`);
+      }
+    }
+
+    for (const entry of summary.renderDeviation || []) {
+      if (entry.ok) continue;
+      const item = ensureItem(entry.part);
+      if (!item) continue;
+      item.render.push(`render:${Math.max(...(entry.ratio || [0]))}`);
+    }
+
     const severityOf = (item) => {
       let severity = 0;
+      severity += item.seams.length * 90;
       severity += item.surface.length * 100;
       severity += item.hero.length * 80;
+      severity += item.render.length * 70;
       severity += item.minScaleAxes.length * 12;
       if (item.critical && item.score != null && item.score < 58) severity += 60;
       if (item.score != null) severity += Math.max(0, 100 - item.score);
@@ -968,11 +1311,17 @@ class BodyFitViewer {
       if (current.pairs.length) {
         lines.push(`weak pairs=${current.pairs.slice(0, 3).join(", ")}`);
       }
+      if (current.seams.length) {
+        lines.push(`seams=${current.seams.slice(0, 3).join(", ")}`);
+      }
       if (current.surface.length) {
         lines.push(`surface=${current.surface.slice(0, 3).join(", ")}`);
       }
       if (current.hero.length) {
         lines.push(`hero=${current.hero.slice(0, 3).join(", ")}`);
+      }
+      if (current.render.length) {
+        lines.push(`render=${current.render.slice(0, 3).join(", ")}`);
       }
       if (current.minScaleAxes.length) {
         lines.push(`minScale lock=${current.minScaleAxes.join(", ")}`);
@@ -997,7 +1346,12 @@ class BodyFitViewer {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "fit-assist-item";
-      const blocking = item.surface.length || item.hero.length || (item.critical && item.score != null && item.score < 58);
+      const blocking =
+        item.seams.length ||
+        item.surface.length ||
+        item.hero.length ||
+        item.render.length ||
+        (item.critical && item.score != null && item.score < 58);
       if (blocking) button.classList.add("blocking");
       if (item.part === selectedPart) button.classList.add("active");
 
@@ -1007,8 +1361,10 @@ class BodyFitViewer {
       const detail = document.createElement("span");
       const detailParts = [];
       if (item.pairs.length) detailParts.push(`pair ${item.pairs.slice(0, 2).join(", ")}`);
+      if (item.seams.length) detailParts.push(`seam ${item.seams.slice(0, 2).join(", ")}`);
       if (item.surface.length) detailParts.push(`surface ${item.surface.slice(0, 2).join(", ")}`);
       if (item.hero.length) detailParts.push(`hero ${item.hero.slice(0, 2).join(", ")}`);
+      if (item.render.length) detailParts.push(`render ${item.render.slice(0, 2).join(", ")}`);
       if (item.minScaleAxes.length) detailParts.push(`minScale ${item.minScaleAxes.join(", ")}`);
       detail.textContent = detailParts.join(" | ") || "detail unavailable";
       button.append(title, detail);
@@ -1025,13 +1381,37 @@ class BodyFitViewer {
       const active = partName === selectedPart;
       rec.outline.material.color.setHex(active ? activeColor : baseColor);
       rec.outline.material.opacity = active ? 0.96 : this.useTextures ? 0.22 : 0.85;
+      if (rec.fitOutline) {
+        rec.fitOutline.material.color.setHex(active ? activeColor : 0x4f89ff);
+        rec.fitOutline.material.opacity = this.showFitShell ? (active ? 0.9 : 0.22) : 0;
+      }
     }
+  }
+
+  syncFitShellOverlay() {
+    for (const rec of this.meshes.values()) {
+      const useSurfaceOverlay = Boolean(rec.surfaceFitNodeCount > 0);
+      if (rec.fitGroup) rec.fitGroup.visible = this.showFitShell && !useSurfaceOverlay;
+      if (rec.surfaceFitOverlay) rec.surfaceFitOverlay.visible = this.showFitShell && useSurfaceOverlay && this.armorVisible && rec.group.visible;
+      if (rec.fitMesh?.material) {
+        rec.fitMesh.material.opacity = this.showFitShell && !useSurfaceOverlay ? 0.12 : 0;
+        rec.fitMesh.material.transparent = true;
+        rec.fitMesh.material.depthWrite = false;
+        rec.fitMesh.material.needsUpdate = true;
+      }
+      if (rec.fitOutline?.material) {
+        rec.fitOutline.material.opacity = this.showFitShell && !useSurfaceOverlay ? 0.22 : 0;
+        rec.fitOutline.material.transparent = true;
+      }
+    }
+    this.updateFitSelectionVisuals();
   }
 
   fitCameraToPart(partName) {
     const rec = this.meshes.get(partName);
-    if (!rec?.group) return false;
-    const box = new THREE.Box3().setFromObject(rec.group);
+    const target = rec?.renderGroup || rec?.group;
+    if (!target) return false;
+    const box = new THREE.Box3().setFromObject(target);
     if (box.isEmpty()) return false;
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const distance = Math.max(sphere.radius * 4.2, 0.55);
@@ -1095,7 +1475,7 @@ class BodyFitViewer {
     const next = round3(clamp(current + step * direction, min, max));
     input.value = String(next);
     this.applyFitEditorToCurrentPart({ silent: true });
-    this.setStatus(`Nudge: ${this.getSelectedFitPart() || "-"} ${FIT_FIELD_LABELS[fieldId] || fieldId} ${next}`);
+      this.setStatus(`微調整: ${this.getSelectedFitPart() || "-"} / ${FIT_FIELD_LABELS[fieldId] || fieldId} = ${next}`);
     return true;
   }
 
@@ -1226,7 +1606,7 @@ class BodyFitViewer {
       this.fitAssistDirty = true;
       this.applyFrame(this.frameIndex);
       this.loadFitEditorForPart(partName);
-      this.setStatus(`Gizmo fit applied: ${partName}`);
+      this.setStatus(`ギズモでフィット反映: ${partName}`);
       return true;
     }
 
@@ -1238,15 +1618,15 @@ class BodyFitViewer {
     this.fitAssistDirty = true;
     this.applyFrame(this.frameIndex);
     this.loadVrmAnchorEditorForPart(partName);
-    this.setStatus(`Gizmo anchor applied: ${partName}`);
+    this.setStatus(`ギズモでアンカー反映: ${partName}`);
     return true;
   }
 
   updateGizmoButtons() {
-    if (PANEL.btnGizmoToggle) PANEL.btnGizmoToggle.textContent = `Gizmo: ${this.gizmo.enabled ? "On" : "Off"}`;
+    if (PANEL.btnGizmoToggle) PANEL.btnGizmoToggle.textContent = `ギズモ: ${jaOnOff(this.gizmo.enabled)}`;
     if (PANEL.btnGizmoMove) PANEL.btnGizmoMove.classList.toggle("active", this.gizmo.mode === "translate");
     if (PANEL.btnGizmoScale) PANEL.btnGizmoScale.classList.toggle("active", this.gizmo.mode === "scale");
-    if (PANEL.btnGizmoSpace) PANEL.btnGizmoSpace.textContent = `Space: ${this.gizmo.space === "local" ? "Local" : "World"}`;
+    if (PANEL.btnGizmoSpace) PANEL.btnGizmoSpace.textContent = `座標: ${this.gizmo.space === "local" ? "ローカル" : "ワールド"}`;
     if (PANEL.btnGizmoSpace) PANEL.btnGizmoSpace.classList.toggle("active", this.gizmo.space === "world");
     if (PANEL.fitGizmoHint) {
       const target = this.getGizmoEditTargetMode() === "fit" ? "fit" : "anchor";
@@ -1254,6 +1634,25 @@ class BodyFitViewer {
       PANEL.fitGizmoHint.textContent =
         `Selected part に ${mode} gizmo を表示中。Attach=${VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "Hybrid"} なので ${target} を更新します。`;
     }
+  }
+
+  refreshLiveTrackingStatus() {
+    if (!this.live?.active) return;
+    const model = this.live.poseModel || "-";
+    const quality = this.live.poseQuality || "idle";
+    const joints = this.live.poseReliableJoints || 0;
+    const readiness = this.live?.bodyInference?.fitReadiness || "unknown";
+    const viewMode =
+      this.liveViewMode === "auto"
+        ? `自動/${this.getEffectiveLiveViewLabel() === "mirror" ? "ミラー" : "ワールド"}`
+        : this.liveViewMode === "mirror"
+          ? "ミラー"
+          : "ワールド";
+    const isLow = quality === "low" || quality === "missing";
+    const text = isLow
+      ? `ライブ: 信頼度が低めです (関節 ${joints}, model=${model}, readiness=${readiness}, view=${viewMode})`
+      : `ライブ: 動作中 (${quality}, 関節 ${joints}, readiness=${readiness}, model=${model}, view=${viewMode})`;
+    this.updateLiveStatus(text, isLow);
   }
 
   updateTransformGizmo() {
@@ -1301,6 +1700,37 @@ class BodyFitViewer {
     if (!PANEL.liveStatus) return;
     PANEL.liveStatus.textContent = text;
     PANEL.liveStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+    this.updateLiveCheckPanel();
+  }
+
+  updateLiveCheckPanel() {
+    if (!PANEL.liveCheckInput || !PANEL.liveCheckPose || !PANEL.liveCheckFrame || !PANEL.liveCheckSurface) return;
+    const live = this.live || {};
+    const frame = live.bodyTrackingFrame || null;
+    const inference = frame?.boneInference || live.bodyInference || null;
+    const summary = this.surfaceFirst?.summary || null;
+    const fps = round3(live.fps || 0);
+    const model = live.poseModel || "-";
+    const quality = live.poseQuality || inference?.qualityLabel || "idle";
+    const joints = live.poseReliableJoints || inference?.reliableJointCount || 0;
+    const readiness = inference?.fitReadiness || "未判定";
+
+    PANEL.liveCheckInput.textContent = live.active ? `ON / ${fps} fps / ${model}` : "停止中";
+    PANEL.liveCheckPose.textContent = live.active ? `${quality} / joints ${joints} / ${readiness}` : "未取得";
+    PANEL.liveCheckFrame.textContent = frame
+      ? `${frame.source} / schema ${frame.schemaVersion} / ${frame.id}`
+      : "なし";
+    if (summary?.error) {
+      PANEL.liveCheckSurface.textContent = `error / ${summary.error}`;
+    } else if (summary) {
+      const source = summary.tracking_frame_source || summary.tracking_source || "-";
+      const nodes = summary.stable_node_count ?? summary.sampleCount ?? 0;
+      const textureNodes = summary.texture_projected_nodes ?? 0;
+      const reproject = summary.live_reprojected ? "ON" : "OFF";
+      PANEL.liveCheckSurface.textContent = `${source} / nodes ${nodes} / tex ${textureNodes} / reproject ${reproject}`;
+    } else {
+      PANEL.liveCheckSurface.textContent = "未接続";
+    }
   }
 
   normalizeLiveViewMode(mode) {
@@ -1415,32 +1845,32 @@ class BodyFitViewer {
 
   updateBridgeButton() {
     if (PANEL.btnBridgeToggle) {
-      PANEL.btnBridgeToggle.textContent = `Bridges: ${this.bridgeEnabled ? "On" : "Off"}`;
+      PANEL.btnBridgeToggle.textContent = `接続ブリッジ: ${jaOnOff(this.bridgeEnabled)}`;
     }
   }
 
   updateArmorButton() {
     if (PANEL.btnArmorToggle) {
-      PANEL.btnArmorToggle.textContent = `Armor: ${this.armorVisible ? "On" : "Off"}`;
+      PANEL.btnArmorToggle.textContent = `鎧表示: ${jaOnOff(this.armorVisible)}`;
     }
   }
 
   updateVrmButton() {
     if (PANEL.btnVrmToggle) {
-      PANEL.btnVrmToggle.textContent = `VRM Bones: ${this.vrm.visible ? "On" : "Off"}`;
+      PANEL.btnVrmToggle.textContent = `骨表示: ${jaOnOff(this.vrm.visible)}`;
     }
   }
 
   updateVrmIdleButton() {
     if (PANEL.btnVrmIdleToggle) {
-      PANEL.btnVrmIdleToggle.textContent = `VRM Idle: ${this.vrm.idleEnabled ? "On" : "Off"}`;
+      PANEL.btnVrmIdleToggle.textContent = `待機モーション: ${jaOnOff(this.vrm.idleEnabled)}`;
     }
   }
 
   updateVrmAttachButton() {
     if (PANEL.btnVrmAttach) {
       const mode = normalizeVrmAttachMode(this.vrm.attachMode);
-      PANEL.btnVrmAttach.textContent = `Attach: ${VRM_ATTACH_MODE_LABELS[mode] || "Hybrid"}`;
+      PANEL.btnVrmAttach.textContent = `装着基準: ${VRM_ATTACH_MODE_LABELS[mode] || "ハイブリッド"}`;
     }
   }
 
@@ -1454,6 +1884,295 @@ class BodyFitViewer {
     if (!PANEL.depositionStatus) return;
     PANEL.depositionStatus.textContent = text;
     PANEL.depositionStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  updateSurfaceFirstButtons() {
+    if (PANEL.btnSurfaceFirstGraph) {
+      PANEL.btnSurfaceFirstGraph.textContent = `表面点群: ${jaOnOff(this.surfaceFirst.graphVisible)}`;
+      PANEL.btnSurfaceFirstGraph.classList.toggle("active", this.surfaceFirst.graphVisible);
+    }
+    if (PANEL.btnSurfaceFirstShell) {
+      PANEL.btnSurfaceFirstShell.textContent = `密着殻: ${jaOnOff(this.surfaceFirst.shellVisible)}`;
+      PANEL.btnSurfaceFirstShell.classList.toggle("active", this.surfaceFirst.shellVisible);
+    }
+    if (PANEL.btnSurfaceFirstMounts) {
+      PANEL.btnSurfaceFirstMounts.textContent = `装着点: ${jaOnOff(this.surfaceFirst.mountsVisible)}`;
+      PANEL.btnSurfaceFirstMounts.classList.toggle("active", this.surfaceFirst.mountsVisible);
+    }
+  }
+
+  updateSurfaceFirstStatus(text, isError = false) {
+    if (!PANEL.surfaceStatus) return;
+    PANEL.surfaceStatus.textContent = text;
+    PANEL.surfaceStatus.style.color = isError ? "#b41f2f" : "#264b7f";
+  }
+
+  isSurfaceFirstVisible() {
+    return Boolean(this.surfaceFirst.graphVisible || this.surfaceFirst.shellVisible || this.surfaceFirst.mountsVisible);
+  }
+
+  needsSurfaceFirstSnapshot() {
+    return Boolean(this.showFitShell || this.isSurfaceFirstVisible());
+  }
+
+  resolveSurfaceFirstTrackingContext() {
+    const forced = String(this.surfaceFirst?.forceTrackingSource || "auto");
+    const liveFrame = this.live?.active ? this.live?.bodyTrackingFrame : null;
+    const liveInference = liveFrame?.boneInference || (this.live?.active ? this.live?.bodyInference : null);
+    if (
+      forced !== "vrm" &&
+      liveInference &&
+      String(liveInference.fitReadiness || "") !== "insufficient"
+    ) {
+      return {
+        source: liveFrame?.source || "webcam",
+        label: "webcam",
+        bodyInference: liveInference,
+        trackingFrame: liveFrame,
+        resolveBone: null,
+      };
+    }
+    return {
+      source: "vrm",
+      label: "vrm",
+      bodyInference: this.vrm.bodyInference,
+      trackingFrame: this.vrm.bodyTrackingFrame || null,
+      resolveBone: (boneName) => this.resolveVrmBone(boneName),
+    };
+  }
+
+  clearSurfaceFitOverlays() {
+    for (const rec of this.meshes.values()) {
+      if (rec.surfaceFitOverlay) {
+        disposeObjectResources(rec.surfaceFitOverlay);
+        rec.surfaceFitOverlay.clear();
+        rec.surfaceFitOverlay.visible = false;
+      }
+      if (rec.surfaceFitProxyGroup) {
+        disposeObjectResources(rec.surfaceFitProxyGroup);
+        rec.surfaceFitProxyGroup.clear();
+      }
+      rec.surfaceFitNodeCount = 0;
+    }
+  }
+
+  projectSurfaceTextureColors(snapshot) {
+    if (!snapshot?.nodes?.length) return { texturedParts: [], texturedNodeCount: 0 };
+    this.root.updateMatrixWorld(true);
+    const texturedParts = new Set();
+    let texturedNodeCount = 0;
+    for (const node of snapshot.nodes) {
+      const partName = classifySurfaceNodeToPart(node, snapshot.proxies);
+      node.partName = partName || null;
+      if (partName && node.binding && !node.binding.partName) {
+        node.binding.partName = partName;
+      }
+      if (!partName) continue;
+      const record = this.meshes.get(partName);
+      if (!record) continue;
+      const samplePoint = (node.position || node.surfacePoint || new THREE.Vector3()).clone();
+      const color = this.useTextures
+        ? sampleRecordTextureColorAtWorldPoint(record, samplePoint, partColor(partName))
+        : new THREE.Color(partColor(partName));
+      node.color = color.clone().lerp(node.color || new THREE.Color(partColor(partName)), this.useTextures ? 0.18 : 0.32);
+      if (record.texture) {
+        texturedParts.add(partName);
+        texturedNodeCount += 1;
+      }
+    }
+    return {
+      texturedParts: Array.from(texturedParts.values()),
+      texturedNodeCount,
+    };
+  }
+
+  applySurfaceFitOverlays(snapshot) {
+    this.clearSurfaceFitOverlays();
+    if (!snapshot?.nodes?.length) return { partCount: 0, nodeCount: 0 };
+    this.root.updateMatrixWorld(true);
+    const offset = Number(snapshot.shellOffset || this.surfaceFirst.shellOffset || 0.018);
+    const buckets = new Map();
+    for (const node of snapshot.nodes) {
+      const partName = node.partName || classifySurfaceNodeToPart(node, snapshot.proxies);
+      const rec = this.meshes.get(partName);
+      if (!partName || !rec?.group) continue;
+      const worldPoint = (node.position || node.surfacePoint || new THREE.Vector3())
+        .clone()
+        .addScaledVector(node.normal || new THREE.Vector3(0, 0, 1), offset * 0.5);
+      const localPoint = rec.group.worldToLocal(worldPoint.clone());
+      const localNormal = (node.normal || new THREE.Vector3(0, 0, 1)).clone().normalize();
+      if (!buckets.has(partName)) buckets.set(partName, []);
+      buckets.get(partName).push({
+        position: localPoint,
+        normal: localNormal,
+        color: (node.color || new THREE.Color(partColor(partName))).clone(),
+      });
+    }
+
+    let totalNodes = 0;
+    for (const [partName, nodes] of buckets.entries()) {
+      const rec = this.meshes.get(partName);
+      if (!rec) continue;
+      totalNodes += nodes.length;
+      rec.surfaceFitNodeCount = nodes.length;
+
+      const overlay = createSurfacePointLayer(nodes, {
+        size: 0.02,
+        opacity: this.useTextures ? 0.82 : 0.7,
+        additive: false,
+        renderOrder: 6,
+      });
+      overlay.name = `${partName}:surfaceFitOverlayPoints`;
+      rec.surfaceFitOverlay.add(overlay);
+      rec.surfaceFitOverlay.visible = this.showFitShell && this.armorVisible && rec.group.visible;
+
+      const proxy = createSurfacePointLayer(nodes, {
+        size: 0.016,
+        opacity: 0.001,
+        additive: false,
+        renderOrder: 1,
+      });
+      proxy.name = `${partName}:surfaceFitProxyPoints`;
+      proxy.material.depthWrite = false;
+      proxy.material.depthTest = false;
+      rec.surfaceFitProxyGroup.add(proxy);
+    }
+    return { partCount: buckets.size, nodeCount: totalNodes };
+  }
+
+  clearSurfaceFirstDemo() {
+    if (this.surfaceFirst.rig?.group) {
+      this.surfaceFirstGroup.remove(this.surfaceFirst.rig.group);
+      disposeSurfaceFirstDemoRig(this.surfaceFirst.rig);
+    }
+    this.clearSurfaceFitOverlays();
+    this.surfaceFirst.rig = null;
+    this.surfaceFirst.seedSnapshot = null;
+    this.surfaceFirst.snapshot = null;
+    this.surfaceFirst.summary = null;
+    this.surfaceFirst.trackingSource = "vrm";
+    this.surfaceFirst.error = "";
+  }
+
+  refreshSurfaceFirstDemo({ force = false } = {}) {
+    this.surfaceFirst.density = clamp(Number(PANEL.surfacePointDensity?.value || this.surfaceFirst.density || 72), 24, 240);
+    this.surfaceFirst.shellOffset = clamp(Number(PANEL.surfaceShellOffset?.value || this.surfaceFirst.shellOffset || 0.018), 0.002, 0.08);
+    if (!this.vrm.model || !this.vrm.bodyInference) {
+      this.clearSurfaceFirstDemo();
+      this.updateSurfaceFirstStatus("Surface-first: VRM 未読込");
+      this.updateMetaPanel();
+      this.setLegend();
+      return null;
+    }
+    if (!force && !this.needsSurfaceFirstSnapshot()) {
+      this.updateSurfaceFirstStatus("Surface-first: 非表示");
+      this.updateMetaPanel();
+      this.setLegend();
+      return this.surfaceFirst.summary;
+    }
+    try {
+      const tracking = this.resolveSurfaceFirstTrackingContext();
+      const seedSnapshot = buildSurfaceFirstSnapshot({
+        vrmModel: this.vrm.model,
+        resolveBone: (boneName) => this.resolveVrmBone(boneName),
+        bodyInference: this.vrm.bodyInference,
+        options: {
+          maxSamplesPerMesh: this.surfaceFirst.density,
+          shellOffset: this.surfaceFirst.shellOffset,
+        },
+      });
+      const snapshot =
+        tracking.source !== "vrm"
+          ? reprojectSurfaceFirstSnapshot(seedSnapshot, {
+              bodyInference: tracking.bodyInference,
+              resolveBone: tracking.resolveBone,
+              options: {
+                trackingSource: tracking.source,
+                maxGraphNodesPerRegion: this.surfaceFirst.density,
+              },
+            })
+          : {
+              ...seedSnapshot,
+              trackingSource: tracking.source,
+            };
+      const textureProjection = this.projectSurfaceTextureColors(snapshot);
+      this.clearSurfaceFirstDemo();
+      this.surfaceFirst.seedSnapshot = seedSnapshot;
+      this.surfaceFirst.snapshot = snapshot;
+      this.surfaceFirst.trackingSource = tracking.source;
+      this.surfaceFirst.rig = createSurfaceFirstDemoRig(snapshot, {
+        graphVisible: this.surfaceFirst.graphVisible,
+        shellVisible: this.surfaceFirst.shellVisible,
+        mountsVisible: this.surfaceFirst.mountsVisible,
+        shellOffset: this.surfaceFirst.shellOffset,
+      });
+      if (this.surfaceFirst.rig?.group) {
+        this.surfaceFirstGroup.add(this.surfaceFirst.rig.group);
+      }
+      const fitOverlay = this.applySurfaceFitOverlays(snapshot);
+      const partCounts = {};
+      for (const node of snapshot.nodes || []) {
+        const partName = node.partName || null;
+        if (!partName) continue;
+        partCounts[partName] = (partCounts[partName] || 0) + 1;
+      }
+      this.surfaceFirst.summary = summarizeSurfaceFirstSnapshot(snapshot, {
+        graphVisible: this.surfaceFirst.graphVisible,
+        shellVisible: this.surfaceFirst.shellVisible,
+        mountsVisible: this.surfaceFirst.mountsVisible,
+        shellOffset: this.surfaceFirst.shellOffset,
+      });
+      this.surfaceFirst.summary.quality = this.vrm.bodyInference?.qualityLabel || null;
+      this.surfaceFirst.summary.fit_readiness = this.vrm.bodyInference?.fitReadiness || null;
+      this.surfaceFirst.summary.texture_projected_parts = textureProjection.texturedParts;
+      this.surfaceFirst.summary.texture_projected_nodes = textureProjection.texturedNodeCount;
+      this.surfaceFirst.summary.fit_overlay_parts = fitOverlay.partCount;
+      this.surfaceFirst.summary.fit_overlay_nodes = fitOverlay.nodeCount;
+      this.surfaceFirst.summary.tracking_source = tracking.source;
+      this.surfaceFirst.summary.stable_node_count = snapshot.nodes?.filter((node) => Boolean(node.id)).length || 0;
+      this.surfaceFirst.summary.first_node_id = snapshot.nodes?.[0]?.id || null;
+      this.surfaceFirst.summary.node_id_sample = (snapshot.nodes || []).slice(0, 8).map((node) => node.id);
+      this.surfaceFirst.summary.part_counts = partCounts;
+      this.surfaceFirst.summary.tracking_frame_id = tracking.trackingFrame?.id || null;
+      this.surfaceFirst.summary.tracking_frame_source = tracking.trackingFrame?.source || tracking.source;
+      this.surfaceFirst.summary.tracking_frame_schema = tracking.trackingFrame?.schemaVersion || null;
+      this.surfaceFirst.summary.tracking_timestamp_ms = round3(tracking.trackingFrame?.timestampMs || 0);
+      this.surfaceFirst.summary.live_reprojected = tracking.source !== "vrm";
+      this.surfaceFirst.lastRefreshMs = performance.now();
+      this.updateSurfaceFirstStatus(
+        `Surface-first: ${snapshot.sampleCount} pts / ${snapshot.links.length} links / ${snapshot.mounts.length} mounts / fit ${fitOverlay.partCount} parts / source ${tracking.label}`
+      );
+      this.updateMetaPanel();
+      this.syncFitShellOverlay();
+      this.setLegend();
+      return this.surfaceFirst.summary;
+    } catch (error) {
+      this.clearSurfaceFirstDemo();
+      this.surfaceFirst.error = error?.message || String(error);
+      this.updateSurfaceFirstStatus(`Surface-first: ${this.surfaceFirst.error}`, true);
+      this.updateMetaPanel();
+      this.setLegend();
+      return null;
+    }
+  }
+
+  setSurfaceFirstLayerVisible(layer, visible) {
+    if (layer === "graph") this.surfaceFirst.graphVisible = Boolean(visible);
+    if (layer === "shell") this.surfaceFirst.shellVisible = Boolean(visible);
+    if (layer === "mounts") this.surfaceFirst.mountsVisible = Boolean(visible);
+    if (this.surfaceFirst.rig) {
+      if (layer === "graph" && this.surfaceFirst.rig.graphGroup) this.surfaceFirst.rig.graphGroup.visible = this.surfaceFirst.graphVisible;
+      if (layer === "shell" && this.surfaceFirst.rig.shellGroup) this.surfaceFirst.rig.shellGroup.visible = this.surfaceFirst.shellVisible;
+      if (layer === "mounts" && this.surfaceFirst.rig.mountGroup) this.surfaceFirst.rig.mountGroup.visible = this.surfaceFirst.mountsVisible;
+    }
+    this.updateSurfaceFirstButtons();
+    this.refreshSurfaceFirstDemo({ force: this.needsSurfaceFirstSnapshot() });
+  }
+
+  syncSurfaceFirstDemo(now) {
+    if (!this.vrm.model || !this.vrm.bodyInference || !this.needsSurfaceFirstSnapshot()) return;
+    if (now - this.surfaceFirst.lastRefreshMs < this.surfaceFirst.refreshIntervalMs) return;
+    this.refreshSurfaceFirstDemo({ force: true });
   }
 
   resolveDepositionProfileKey() {
@@ -1472,7 +2191,7 @@ class BodyFitViewer {
 
   playDepositionMock() {
     if (!this.meshes.size) {
-      this.setStatus("Load SuitSpec before playing deposition", true);
+      this.setStatus("蒸着を再生する前に SuitSpec を読み込んでください。", true);
       this.updateDepositionStatus("Deposition: no armor loaded", true);
       return;
     }
@@ -1486,7 +2205,7 @@ class BodyFitViewer {
     this.deposition.palette = buildDepositionPalette(profile);
     const bounds = this.getDepositionBounds();
     if (!bounds) {
-      this.setStatus("Deposition bounds unavailable", true);
+      this.setStatus("蒸着の範囲を取得できませんでした。", true);
       this.updateDepositionStatus("Deposition: bounds unavailable", true);
       return;
     }
@@ -1516,7 +2235,7 @@ class BodyFitViewer {
       this.updateDepositionStatus("Deposition: idle");
     }
     if (!silent) {
-      this.setStatus("Deposition mock reset");
+    this.setStatus("蒸着演出をリセットしました。");
     }
     this.updateMetaPanel();
     this.setLegend();
@@ -1564,8 +2283,9 @@ class BodyFitViewer {
     let hasVisible = false;
     if (this.armorVisible) {
       for (const rec of this.meshes.values()) {
-        if (!rec.group.visible) continue;
-        box.expandByObject(rec.group);
+        const target = rec.renderGroup?.visible ? rec.renderGroup : rec.group;
+        if (!target?.visible) continue;
+        box.expandByObject(target);
         hasVisible = true;
       }
     }
@@ -1820,6 +2540,11 @@ class BodyFitViewer {
   setArmorVisible(enabled) {
     this.armorVisible = Boolean(enabled);
     this.root.visible = this.armorVisible;
+    for (const rec of this.meshes.values()) {
+      if (rec.renderGroup) rec.renderGroup.visible = this.armorVisible && rec.group.visible;
+      if (rec.fitGroup) rec.fitGroup.visible = this.armorVisible && this.showFitShell && rec.group.visible;
+    }
+    this.syncFitShellOverlay();
     this.updateArmorButton();
     this.updateMetaPanel();
     this.setLegend();
@@ -1868,6 +2593,7 @@ class BodyFitViewer {
   }
 
   clearVrmModel() {
+    this.clearSurfaceFirstDemo();
     if (this.vrm.skeleton) {
       this.vrmGroup.remove(this.vrm.skeleton);
       const mat = this.vrm.skeleton.material;
@@ -1899,6 +2625,7 @@ class BodyFitViewer {
     this.vrm.source = null;
     this.vrm.boneCount = 0;
     this.vrm.bodyInference = null;
+    this.vrm.bodyTrackingFrame = null;
     this.vrm.idleTimeSec = 0;
     this.vrm.hasRestPose = false;
     this.vrm.missingAnchorParts = [];
@@ -1907,7 +2634,9 @@ class BodyFitViewer {
     this.vrm.liveRigReady = false;
     this.vrm.liveDriven = false;
     this.vrm.error = "";
+    this.surfaceFirst.forceTrackingSource = "auto";
     this.updateVrmStatus("VRM: cleared");
+    this.updateSurfaceFirstStatus("Surface-first: VRM 未読込");
     this.updateMetaPanel();
     this.updateVrmAttachButton();
     this.populateVrmAnchorEditor();
@@ -2110,7 +2839,7 @@ class BodyFitViewer {
 
   applyVrmTPose({ silent = false } = {}) {
     if (!this.vrm.model) {
-      if (!silent) this.setStatus("Apply T-Pose failed: VRM is not loaded", true);
+      if (!silent) this.setStatus("Tポーズ適用に失敗しました。VRM が未読込です。", true);
       return false;
     }
 
@@ -2137,7 +2866,7 @@ class BodyFitViewer {
     this.updateMetaPanel();
     this.setLegend();
     if (!silent) {
-      this.setStatus(`Applied VRM T-pose (${applied}/${VRM_TPOSE_BONE_CHAINS.length} chains)`);
+      this.setStatus(`VRM に Tポーズを適用しました。(${applied}/${VRM_TPOSE_BONE_CHAINS.length})`);
     }
     return applied > 0;
   }
@@ -2209,33 +2938,36 @@ class BodyFitViewer {
 
   autoFitArmorToCurrentVrm({ forceTPose = true, silent = false } = {}) {
     if (!this.vrm.model) {
-      if (!silent) this.setStatus("Auto-fit failed: VRM is not loaded", true);
+      if (!silent) this.setStatus("自動フィットに失敗しました。VRM が未読込です。", true);
       return null;
     }
     if (!this.suitspec || this.meshes.size === 0) {
-      if (!silent) this.setStatus("Auto-fit failed: suitspec/body-fit is not loaded", true);
+      if (!silent) this.setStatus("自動フィットに失敗しました。SuitSpec または body-fit が未読込です。", true);
       return null;
     }
 
     try {
       const result = fitArmorToVrm({
         vrmModel: this.vrm.model,
-        meshes: this.meshes,
+        meshes: this.getFitEngineMeshes(),
         suitspec: this.suitspec,
         options: {
           forceTPose,
           resolveBone: (boneName) => this.resolveVrmBone(boneName),
           refinePasses: 2,
+          renderMeshes: this.getRenderEngineMeshes(),
         },
       });
+      this.decorateWearableSummary(result.summary);
+      result.wearableSummary = result.summary;
       this.applyAutoFitResult(result);
       if (!silent) {
-        this.setStatus(formatAutoFitSummary(result.summary), !result.summary?.canSave);
+        this.setStatus(formatAutoFitSummaryJa(result.summary), !result.summary?.canSave);
       }
       return result;
     } catch (err) {
       if (!silent) {
-        this.setStatus(`Auto-fit failed: ${String(err?.message || err || "unknown")}`, true);
+        this.setStatus(`自動フィットに失敗しました: ${String(err?.message || err || "unknown")}`, true);
       }
       return null;
     }
@@ -2243,36 +2975,37 @@ class BodyFitViewer {
 
   evaluateCurrentFitAgainstVrm({ forceTPose = true, silent = false } = {}) {
     if (!this.vrm.model) {
-      if (!silent) this.setStatus("Fit evaluation failed: VRM is not loaded", true);
+      if (!silent) this.setStatus("フィット診断に失敗しました。VRM が未読込です。", true);
       return null;
     }
     if (!this.suitspec || this.meshes.size === 0) {
-      if (!silent) this.setStatus("Fit evaluation failed: suitspec/body-fit is not loaded", true);
+      if (!silent) this.setStatus("フィット診断に失敗しました。SuitSpec または body-fit が未読込です。", true);
       return null;
     }
 
     try {
       const result = evaluateArmorFitToVrm({
         vrmModel: this.vrm.model,
-        meshes: this.meshes,
+        meshes: this.getFitEngineMeshes(),
         suitspec: this.suitspec,
         options: {
           forceTPose,
           resolveBone: (boneName) => this.resolveVrmBone(boneName),
+          renderMeshes: this.getRenderEngineMeshes(),
         },
       });
-      this.autoFitSummary = result.summary || null;
+      this.autoFitSummary = this.decorateWearableSummary(result.summary || null);
       this.fitAssistDirty = false;
       this.updateMetaPanel();
       this.renderFitAssistPanel();
       this.setLegend();
       if (!silent) {
-        this.setStatus(formatAutoFitSummary(result.summary), !result.summary?.canSave);
+        this.setStatus(formatAutoFitSummaryJa(result.summary), !result.summary?.canSave);
       }
       return result;
     } catch (err) {
       if (!silent) {
-        this.setStatus(`Fit evaluation failed: ${String(err?.message || err || "unknown")}`, true);
+        this.setStatus(`フィット診断に失敗しました: ${String(err?.message || err || "unknown")}`, true);
       }
       return null;
     }
@@ -2287,6 +3020,7 @@ class BodyFitViewer {
       rec.config = getModuleVisualConfig(partName, module);
     }
     this.autoFitSummary = result.summary || null;
+    this.decorateWearableSummary(this.autoFitSummary);
     this.fitAssistDirty = false;
     this.vrm.model?.updateMatrixWorld(true);
     this.buildVrmLiveRig();
@@ -2307,11 +3041,11 @@ class BodyFitViewer {
     const result = this.autoFitArmorToCurrentVrm({ forceTPose, silent: true });
     if (!result) return false;
     if (!result.summary?.canSave) {
-      this.setStatus(formatAutoFitSummary(result.summary), true);
+      this.setStatus(formatAutoFitSummaryJa(result.summary), true);
       return false;
     }
     await this.saveSuitspecFit({ requireAutoFitGate: true });
-    this.setStatus(`Auto Fit + Save complete: ${formatAutoFitSummary(result.summary)}`);
+    this.setStatus(`自動フィットして保存しました。${formatAutoFitSummaryJa(result.summary)}`);
     return true;
   }
 
@@ -2321,7 +3055,7 @@ class BodyFitViewer {
     silent = false,
   } = {}) {
     if (!this.vrm.model || !this.suitspec || this.meshes.size === 0) {
-      if (!silent) this.setStatus("VRM anchor auto-calibration skipped: missing VRM or suitspec", true);
+      if (!silent) this.setStatus("VRMアンカー自動補正をスキップしました。VRM または SuitSpec が不足しています。", true);
       return 0;
     }
     this.vrm.model.updateMatrixWorld(true);
@@ -2378,7 +3112,7 @@ class BodyFitViewer {
     }
 
     if (!silent) {
-      this.setStatus(`VRM anchor auto-calibrated: ${updated} parts`);
+      this.setStatus(`VRMアンカーを自動補正しました。${updated}部位を更新。`);
     }
     return updated;
   }
@@ -2402,11 +3136,15 @@ class BodyFitViewer {
         missing.push(partName);
         if (attachMode === VRM_ATTACH_MODES.VRM) {
           rec.group.visible = false;
+          if (rec.renderGroup) rec.renderGroup.visible = false;
+          if (rec.fitGroup) rec.fitGroup.visible = false;
         }
         continue;
       }
       if (attachMode === VRM_ATTACH_MODES.VRM) {
         rec.group.visible = true;
+        if (rec.renderGroup) rec.renderGroup.visible = this.armorVisible;
+        if (rec.fitGroup) rec.fitGroup.visible = this.showFitShell;
       }
       resolved[partName] = bone.name || anchor.bone;
 
@@ -2426,10 +3164,22 @@ class BodyFitViewer {
       );
       rec.group.position.copy(anchorPos);
       rec.group.quaternion.copy(boneQuat).multiply(localRot);
-      rec.group.scale.multiply(new THREE.Vector3(anchor.scale[0], anchor.scale[1], anchor.scale[2]));
+      const baseScale = rec.lastTransform
+        ? [
+            Number(rec.lastTransform.scale_x || 1),
+            Number(rec.lastTransform.scale_y || 1),
+            Number(rec.lastTransform.scale_z || 1),
+          ]
+        : [1, 1, 1];
+      rec.group.scale.set(
+        Math.max(0.01, baseScale[0] * Number(anchor.scale[0] || 1)),
+        Math.max(0.01, baseScale[1] * Number(anchor.scale[1] || 1)),
+        Math.max(0.01, baseScale[2] * Number(anchor.scale[2] || 1))
+      );
     }
     this.vrm.missingAnchorParts = missing;
     this.vrm.resolvedAnchors = resolved;
+    this.syncFitShellOverlay();
   }
 
   captureVrmRestPose() {
@@ -2502,7 +3252,7 @@ class BodyFitViewer {
     const rawPath = String(path || "").trim();
     if (!rawPath) {
       this.clearVrmModel();
-      if (!silent) this.setStatus("VRM path is empty.");
+      if (!silent) this.setStatus("VRM パスが空です。", true);
       return;
     }
 
@@ -2549,6 +3299,7 @@ class BodyFitViewer {
     this.vrm.boneCount = this.countModelBones(model);
     this.buildVrmLiveRig();
     this.buildVrmBoneInferenceSnapshot();
+    this.refreshSurfaceFirstDemo({ force: this.needsSurfaceFirstSnapshot() });
     this.captureVrmRestPose();
     this.applyVrmIdlePose(0, true);
     this.vrm.error = "";
@@ -2567,9 +3318,9 @@ class BodyFitViewer {
     this.setLegend();
     if (!silent) {
       if (source === "gltf-fallback") {
-        this.setStatus(`Loaded as GLTF fallback (VRM extension not parsed): ${rawPath}`, true);
+        this.setStatus(`VRM 拡張を読めなかったため GLTF として読み込みました: ${rawPath}`, true);
       } else {
-        this.setStatus(`Loaded VRM: ${rawPath}`);
+        this.setStatus(`VRM を読み込みました: ${rawPath}`);
       }
     }
   }
@@ -2629,13 +3380,15 @@ class BodyFitViewer {
       const mesh = this.ensureBridgeMesh(key);
       const recA = this.meshes.get(aName);
       const recB = this.meshes.get(bName);
-      if (!recA || !recB || !recA.group.visible || !recB.group.visible) {
+      const targetA = recA?.renderGroup?.visible ? recA.renderGroup : recA?.group;
+      const targetB = recB?.renderGroup?.visible ? recB.renderGroup : recB?.group;
+      if (!recA || !recB || !targetA?.visible || !targetB?.visible) {
         mesh.visible = false;
         continue;
       }
 
-      const boxA = new THREE.Box3().setFromObject(recA.group);
-      const boxB = new THREE.Box3().setFromObject(recB.group);
+      const boxA = new THREE.Box3().setFromObject(targetA);
+      const boxB = new THREE.Box3().setFromObject(targetB);
       if (boxA.isEmpty() || boxB.isEmpty()) {
         mesh.visible = false;
         continue;
@@ -2817,6 +3570,20 @@ class BodyFitViewer {
     const fitReadiness = smoothedInference.fitReadiness || "insufficient";
     this.live.poseReliableJoints = reliableJointCount;
     this.live.bodyInference = smoothedInference;
+    this.live.bodyTrackingFrame = createBodyTrackingFrameFromInference(smoothedInference, {
+      source: "webcam",
+      timestampMs: performance.now(),
+      metadata: {
+        model: this.live.poseModel || null,
+        rawQuality: rawInference.qualityLabel || null,
+        smoothed: true,
+      },
+      raw: {
+        reliableJointCount,
+        hasMeasuredTorsoAnchors,
+        hasSolvedTorsoAnchors,
+      },
+    });
     this.lastLiveJoints = joints;
 
     const canUseUpperBodyFallback =
@@ -2872,6 +3639,8 @@ class BodyFitViewer {
       const t = resolveTransform(name, rec.config, segs);
       if (!t) {
         rec.group.visible = false;
+        if (rec.renderGroup) rec.renderGroup.visible = false;
+        if (rec.fitGroup) rec.fitGroup.visible = false;
         continue;
       }
       rec.lastTransform = { ...t };
@@ -2879,6 +3648,8 @@ class BodyFitViewer {
       rec.group.position.set(t.position_x, t.position_y, t.position_z);
       rec.group.rotation.set(0, 0, t.rotation_z);
       rec.group.scale.set(t.scale_x, t.scale_y, t.scale_z);
+      if (rec.renderGroup) rec.renderGroup.visible = this.armorVisible;
+      if (rec.fitGroup) rec.fitGroup.visible = this.showFitShell;
     }
     const sphere = this.computeVisibleBounds();
     if (sphere) {
@@ -2891,6 +3662,7 @@ class BodyFitViewer {
     if (!this.gizmo.dragging) {
       this.applyArmorToVrmBones();
     }
+    this.syncFitShellOverlay();
     this.fitStats = this.calculateFitStats();
     this.updateBridges();
     this.updateMetaPanel();
@@ -2900,18 +3672,18 @@ class BodyFitViewer {
 
   async startLiveWebcam() {
     if (this.live.active) {
-      this.updateLiveStatus("Live: already active");
+      this.updateLiveStatus("ライブ: すでに起動中");
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
-      this.updateLiveStatus("Live: camera API unavailable", true);
-      this.setStatus("WebCam unavailable in this browser/context", true);
+      this.updateLiveStatus("ライブ: カメラ API を利用できません", true);
+      this.setStatus("このブラウザ環境では Webカメラを利用できません。", true);
       return;
     }
 
     try {
-      this.setStatus("Starting webcam + live pipeline...");
-      this.updateLiveStatus("Live: opening webcam...");
+      this.setStatus("Webカメラとライブ推定を開始しています...");
+      this.updateLiveStatus("ライブ: Webカメラを起動中...");
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 960 }, height: { ideal: 540 } },
@@ -2928,14 +3700,14 @@ class BodyFitViewer {
         stream,
       };
       this.updateLiveVideoPresentation();
-      this.updateLiveStatus("Live: starting modules...");
+      this.updateLiveStatus("ライブ: 推定モジュールを開始中...");
       await this.startLivePipelineModules();
       this.resetLiveFollowers();
       this.lastLiveJoints = null;
       this.vrm.liveDriven = false;
       this.playing = false;
-      PANEL.btnPlay.textContent = "Play";
-      this.updateLiveStatus("Live: webcam active");
+      this.updatePlaybackButton();
+      this.updateLiveStatus("ライブ: Webカメラ動作中");
       this.setStatus(
         `Live webcam started (${this.listLivePipelineModules().join(", ")}, model=${this.live.poseModel || "-"})`
       );
@@ -2945,7 +3717,7 @@ class BodyFitViewer {
       const detail = this.formatLivePipelineError(err?.message || err || "unknown");
       this.livePipelineError = detail;
       this.updateLiveStatus("Live: start failed", true);
-      this.setStatus(`Live start failed: ${detail}`, true);
+      this.setStatus(`ライブ入力の開始に失敗しました: ${detail}`, true);
       this.updateMetaPanel();
     }
   }
@@ -2968,13 +3740,13 @@ class BodyFitViewer {
     this.liveJointTrackers.clear();
     this.lastLiveSegments = null;
     this.vrm.liveDriven = false;
-    this.updateLiveStatus("Live: inactive");
+    this.updateLiveStatus("ライブ: 停止中");
     this.updateMetaPanel();
     if (this.frames.length) {
       this.applyFrame(this.frameIndex);
     }
     if (!silent) {
-      this.setStatus("Live webcam stopped");
+      this.setStatus("ライブ入力を停止しました。");
     }
   }
 
@@ -3005,8 +3777,9 @@ class BodyFitViewer {
     this.root.updateMatrixWorld(true);
     const boxes = new Map();
     for (const [name, rec] of this.meshes.entries()) {
-      if (!rec.group.visible) continue;
-      boxes.set(name, new THREE.Box3().setFromObject(rec.group));
+      const target = rec.renderGroup?.visible ? rec.renderGroup : rec.group;
+      if (!target?.visible) continue;
+      boxes.set(name, new THREE.Box3().setFromObject(target));
     }
 
     let totalGap = 0;
@@ -3321,17 +4094,17 @@ class BodyFitViewer {
   async saveSuitspecFit({ requireAutoFitGate = false } = {}) {
     const path = this.loadedSuitspecPath || PANEL.suitspecPath.value;
     if (!path || !this.suitspec) {
-      this.setStatus("Save failed: suitspec not loaded", true);
+      this.setStatus("保存に失敗しました。SuitSpec が未読込です。", true);
       return;
     }
     if (!this.vrm.model) {
-      this.setStatus("Save failed: VRM fit validation requires a loaded VRM baseline", true);
+      this.setStatus("保存に失敗しました。VRM 基準体を読み込んでから保存してください。", true);
       return;
     }
     const evaluation = this.evaluateCurrentFitAgainstVrm({ forceTPose: true, silent: true });
     if (!evaluation) return;
     if (!evaluation.summary?.canSave) {
-      this.setStatus(formatAutoFitSummary(evaluation.summary), true);
+      this.setStatus(formatAutoFitSummaryJa(evaluation.summary), true);
       return;
     }
     applyAutoFitResultToSuitSpec(this.suitspec, evaluation);
@@ -3355,14 +4128,14 @@ class BodyFitViewer {
         throw new Error(msg);
       }
       this.updateMetaPanel();
-      this.setStatus(`Saved fits to ${data.path || path} | ${formatAutoFitSummary(evaluation.summary)}`);
+      this.setStatus(`SuitSpec を保存しました: ${data.path || path} | ${formatAutoFitSummaryJa(evaluation.summary)}`);
     } catch (err) {
       const detail = String(err?.message || err || "unknown");
       if (detail.includes("404")) {
-        this.setStatus("Save API not available. Use serve-dashboard on this URL.", true);
+        this.setStatus("保存 API が見つかりません。serve-dashboard 経由で開いてください。", true);
         return;
       }
-      this.setStatus(`Save failed: ${detail}`, true);
+      this.setStatus(`保存に失敗しました: ${detail}`, true);
     }
   }
 
@@ -3408,6 +4181,9 @@ class BodyFitViewer {
       `VRM Inference: ${this.vrm.bodyInference?.qualityLabel || "-"} | FitReady: ${
         this.vrm.bodyInference?.fitReadiness || "-"
       }`,
+      `SurfaceFirst: ${this.isSurfaceFirstVisible() ? "ON" : "OFF"} | Density: ${this.surfaceFirst.density} | ShellOffset: ${this.surfaceFirst.shellOffset.toFixed(
+        3
+      )} | SampleCount: ${this.surfaceFirst.summary?.sample_count || 0}`,
       `Deposition: ${this.deposition.active ? "PLAYING" : "IDLE"} | Profile: ${depositionLabel} | Progress: ${(
         (this.deposition.progress || 0) * 100
       ).toFixed(0)}% | Duration: ${this.deposition.durationSec.toFixed(1)}s`,
@@ -3431,8 +4207,9 @@ class BodyFitViewer {
     const box = new THREE.Box3();
     let hasVisible = false;
     for (const rec of this.meshes.values()) {
-      if (!rec.group.visible) continue;
-      box.expandByObject(rec.group);
+      const target = rec.renderGroup?.visible ? rec.renderGroup : rec.group;
+      if (!target?.visible) continue;
+      box.expandByObject(target);
       hasVisible = true;
     }
     if (!hasVisible || box.isEmpty()) return null;
@@ -3530,7 +4307,7 @@ class BodyFitViewer {
       for (const mat of gridMaterials) {
         mat.color.setHex(0xc4d2e8);
       }
-      PANEL.btnTheme.textContent = "Theme: Soft";
+      PANEL.btnTheme.textContent = "表示テーマ: ソフト";
     } else {
       this.scene.background = new THREE.Color(0xffffff);
       this.floor.material.color.setHex(0xffffff);
@@ -3538,13 +4315,19 @@ class BodyFitViewer {
       for (const mat of gridMaterials) {
         mat.color.setHex(0xd6e1f2);
       }
-      PANEL.btnTheme.textContent = "Theme: White";
+      PANEL.btnTheme.textContent = "表示テーマ: 明";
     }
 
     for (const rec of this.meshes.values()) {
       rec.outline.material.color.setHex(outlineColor);
+      if (rec.fitOutline?.material) rec.fitOutline.material.color.setHex(0x4f89ff);
     }
     this.updateFitSelectionVisuals();
+    if (this.vrm.model && this.vrm.bodyInference && this.needsSurfaceFirstSnapshot()) {
+      this.refreshSurfaceFirstDemo({ force: true });
+      return;
+    }
+    this.syncFitShellOverlay();
     this.setLegend();
   }
 
@@ -3552,7 +4335,7 @@ class BodyFitViewer {
     if (this.live.active) {
       this.stopLive({ silent: true });
     }
-    this.setStatus("Loading JSON...");
+    this.setStatus("JSON を読み込み中...");
     const [spec, sim] = await Promise.all([this.fetchJson(suitspecPath), this.fetchJson(simPath)]);
     this.suitspec = spec;
     this.sim = sim;
@@ -3600,7 +4383,7 @@ class BodyFitViewer {
         this.updateVrmStatus(`VRM load failed: ${detail}`, true);
       }
     } else {
-      this.updateVrmStatus("VRM: not loaded");
+      this.updateVrmStatus("VRM: 未読込");
     }
     this.fitCameraToVisible();
     const hasFrames = this.frames.length > 0;
@@ -3629,12 +4412,23 @@ class BodyFitViewer {
     this.clearBridges();
     for (const rec of this.meshes.values()) {
       this.root.remove(rec.group);
+      disposeObjectResources(rec.surfaceFitOverlay);
+      disposeObjectResources(rec.surfaceFitProxyGroup);
+      rec.fitProxyMesh?.geometry?.dispose?.();
+      rec.fitProxyMesh?.material?.dispose?.();
+      rec.renderProxyMesh?.geometry?.dispose?.();
+      rec.renderProxyMesh?.material?.dispose?.();
+      rec.fitMesh.geometry.dispose();
+      rec.fitMesh.material.dispose();
+      rec.fitOutline.geometry.dispose();
+      rec.fitOutline.material.dispose();
       rec.mesh.geometry.dispose();
       rec.mesh.material.dispose();
       rec.outline.geometry.dispose();
       rec.outline.material.dispose();
     }
     this.meshes.clear();
+    this.renderMeshes.clear();
   }
 
   async buildMeshes() {
@@ -3644,38 +4438,38 @@ class BodyFitViewer {
       if (!module?.enabled) continue;
       const config = getModuleVisualConfig(name, module);
       const assetPath = resolveMeshAssetPath(name, module);
-      const geometry = await loadModuleGeometry(name, config.shape, assetPath);
-      const mesh = createMeshFromGeometry(geometry);
-      mesh.material.color.setHex(partColor(name));
-      mesh.userData.partName = name;
-
-      const outline = createOutline(mesh, this.darkTheme ? 0xffffff : 0x10223f);
-      const group = new THREE.Group();
-      group.add(mesh);
-      group.add(outline);
-
-      this.root.add(group);
-      this.meshes.set(name, {
+      const fitGeometry = createWearableTemplateGeometry(name, config.shape);
+      const renderGeometry = await loadModuleGeometry(name, config.shape, assetPath, GEOMETRY_MODES.ASSET);
+      const record = createWearableRecord({
         partName: name,
-        group,
-        mesh,
-        outline,
+        fitGeometry,
+        renderGeometry,
         config,
         assetPath,
         texturePath: module.texture_path || null,
-        texture: null,
-        lastTransform: null,
+        darkTheme: this.darkTheme,
       });
+      this.root.add(record.group);
+      this.meshes.set(name, record);
+      this.renderMeshes.set(name, record);
+      if (record.texturePath) {
+        record.texture = await loadTextureAsset(record.texturePath).catch(() => null);
+      }
     }
     this.updateTextureMode();
+    this.syncFitShellOverlay();
   }
 
   updateTextureMode(forceRelief = false) {
-    PANEL.btnTexture.textContent = this.useTextures ? "Textures: On" : "Textures: Off";
+    const texturesActive = this.useTextures;
+    if (PANEL.btnTexture) {
+      PANEL.btnTexture.textContent = this.useTextures ? "テクスチャ: ON" : "テクスチャ: OFF";
+      PANEL.btnTexture.classList.toggle("active", texturesActive);
+    }
     for (const rec of this.meshes.values()) {
       rec.outline.visible = true;
-      rec.outline.material.opacity = this.useTextures ? 0.22 : 0.85;
-      if (!this.useTextures) {
+      rec.outline.material.opacity = texturesActive ? 0.22 : 0.85;
+      if (!texturesActive) {
         rec.mesh.material.map = null;
         rec.mesh.material.color.setHex(partColor(rec.partName));
         rec.mesh.material.needsUpdate = true;
@@ -3683,41 +4477,63 @@ class BodyFitViewer {
         continue;
       }
       if (!rec.texturePath) continue;
-      if (rec.texture) {
-        rec.mesh.material.map = rec.texture;
-        rec.mesh.material.color.setHex(0xe7f0ff);
-        rec.mesh.material.needsUpdate = true;
-        if (forceRelief || !rec.reliefApplied) {
-          applyReliefFromTexture(rec.mesh, rec.texture, this.reliefStrength);
-          rec.reliefApplied = true;
-        }
-        continue;
+      if (!rec.texture) continue;
+      rec.mesh.material.map = rec.texture;
+      rec.mesh.material.color.setHex(0xe7f0ff);
+      rec.mesh.material.needsUpdate = true;
+      if (forceRelief || !rec.reliefApplied) {
+        applyReliefFromTexture(rec.mesh, rec.texture, this.reliefStrength);
+        rec.reliefApplied = true;
       }
-      textureLoader.load(
-        normalizePath(rec.texturePath),
-        (tex) => {
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.wrapS = THREE.RepeatWrapping;
-          tex.wrapT = THREE.RepeatWrapping;
-          rec.texture = tex;
-          rec.reliefApplied = false;
-          if (this.useTextures) {
-            rec.mesh.material.map = tex;
-            rec.mesh.material.color.setHex(0xe7f0ff);
-            rec.mesh.material.needsUpdate = true;
-            applyReliefFromTexture(rec.mesh, tex, this.reliefStrength);
-            rec.reliefApplied = true;
-          }
-        },
-        undefined,
-        () => {
-          rec.texture = null;
-          rec.reliefApplied = false;
-        }
-      );
     }
     this.updateFitSelectionVisuals();
+    if (this.vrm.model && this.vrm.bodyInference && this.needsSurfaceFirstSnapshot()) {
+      this.refreshSurfaceFirstDemo({ force: true });
+      return;
+    }
+    this.syncFitShellOverlay();
     this.setLegend();
+  }
+
+  updateGeometryButton() {
+    if (!PANEL.btnGeometry) return;
+    PANEL.btnGeometry.textContent = `Fitシェル: ${jaOnOff(this.showFitShell)}`;
+    PANEL.btnGeometry.classList.toggle("active", this.showFitShell);
+  }
+
+  setGeometryMode(mode) {
+    this.showFitShell = Boolean(mode);
+    this.updateGeometryButton();
+    this.syncFitShellOverlay();
+    if (this.vrm.model && this.vrm.bodyInference && this.needsSurfaceFirstSnapshot()) {
+      this.refreshSurfaceFirstDemo({ force: true });
+    }
+    this.updateMetaPanel();
+    this.setLegend();
+  }
+
+  async rebuildGeometryPresentation() {
+    if (!this.suitspec?.modules) {
+      this.updateTextureMode();
+      this.updateMetaPanel();
+      return;
+    }
+    const currentIndex = this.frameIndex;
+    await this.buildMeshes();
+    if (this.live.active && this.lastLiveSegments) {
+      this.applySegments(this.lastLiveSegments, this.frames[currentIndex] || null);
+    } else if (this.frames.length) {
+      this.applyFrame(clamp(currentIndex, 0, this.frames.length - 1));
+    } else {
+      this.applySegments({}, null);
+    }
+    if (this.vrm.model && normalizeVrmAttachMode(this.vrm.attachMode) !== VRM_ATTACH_MODES.BODY) {
+      this.applyArmorToVrmBones();
+    }
+    this.updateTextureMode(true);
+    this.syncFitShellOverlay();
+    this.fitCameraToVisible();
+    this.updateMetaPanel();
   }
 
   applyFrame(index) {
@@ -3727,6 +4543,139 @@ class BodyFitViewer {
     PANEL.frameSlider.value = String(safeIndex);
     const frame = this.frames[safeIndex];
     this.applySegments(frame.segments || {}, frame);
+  }
+
+  updateGizmoButtons() {
+    if (PANEL.btnGizmoToggle) PANEL.btnGizmoToggle.textContent = `ギズモ: ${jaOnOff(this.gizmo.enabled)}`;
+    if (PANEL.btnGizmoMove) PANEL.btnGizmoMove.classList.toggle("active", this.gizmo.mode === "translate");
+    if (PANEL.btnGizmoScale) PANEL.btnGizmoScale.classList.toggle("active", this.gizmo.mode === "scale");
+    if (PANEL.btnGizmoSpace) {
+      PANEL.btnGizmoSpace.textContent = `座標: ${this.gizmo.space === "local" ? "ローカル" : "ワールド"}`;
+      PANEL.btnGizmoSpace.classList.toggle("active", this.gizmo.space === "world");
+    }
+    if (PANEL.fitGizmoHint) {
+      const target = this.getGizmoEditTargetMode() === "fit" ? "フィット" : "アンカー";
+      const mode = this.gizmo.mode === "translate" ? "移動" : "拡縮";
+      const attachMode = VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "ハイブリッド";
+      PANEL.fitGizmoHint.textContent = `選択中の部位を ${mode} ギズモで編集します。装着基準: ${attachMode} / 編集対象: ${target}`;
+    }
+  }
+
+  renderFitAssistPanel() {
+    if (!PANEL.fitAssistSummary || !PANEL.fitAssistCurrent || !PANEL.fitAssistList) return;
+
+    const selectedPart = this.getSelectedFitPart();
+    const summary = this.autoFitSummary;
+    const items = this.buildFitAssistItems();
+
+    if (!this.vrm.model) {
+      PANEL.fitAssistSummary.textContent = "1. VRM読込  2. 自動フィット  3. 必要な部位だけ詳細調整  4. 再チェック  5. 保存";
+    } else if (!summary) {
+      PANEL.fitAssistSummary.textContent = "まだ診断していません。まず「自動フィット」または「再チェック」を実行してください。";
+    } else if (this.fitAssistDirty) {
+      PANEL.fitAssistSummary.textContent = "値を変更したので未再評価です。「再チェック」で最新の判定に更新してください。";
+    } else if (summary.canSave) {
+      PANEL.fitAssistSummary.textContent = "保存可能です。見た目に違和感がなければそのまま SuitSpec を保存できます。";
+    } else {
+      PANEL.fitAssistSummary.textContent = `要調整: ${items.length}部位 | ${formatAutoFitSummaryJa(summary)}`;
+    }
+
+    const current = items.find((item) => item.part === selectedPart) || null;
+    if (!selectedPart) {
+      PANEL.fitAssistCurrent.textContent = "現在の部位: 未選択";
+    } else if (!current) {
+      PANEL.fitAssistCurrent.textContent = `現在の部位: ${selectedPart}\nこの部位は大きな問題としては検出されていません。`;
+    } else {
+      const lines = [`現在の部位: ${current.part}`];
+      if (current.score != null) {
+        lines.push(`スコア: ${current.score.toFixed(1)}${current.critical ? " / 重要部位" : ""}`);
+      }
+      if (current.pairs.length) lines.push(`接続ペア: ${current.pairs.slice(0, 3).join(", ")}`);
+      if (current.seams.length) lines.push(`継ぎ目: ${current.seams.slice(0, 3).join(", ")}`);
+      if (current.surface.length) lines.push(`表面判定: ${current.surface.slice(0, 3).join(", ")}`);
+      if (current.hero.length) lines.push(`張り出し: ${current.hero.slice(0, 3).join(", ")}`);
+      if (current.render.length) lines.push(`表示殻: ${current.render.slice(0, 3).join(", ")}`);
+      if (current.minScaleAxes.length) lines.push(`最小スケール固定: ${current.minScaleAxes.join(", ")}`);
+      PANEL.fitAssistCurrent.textContent = lines.join("\n");
+    }
+
+    PANEL.fitAssistList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "fit-assist-item empty";
+      empty.disabled = true;
+      empty.textContent = summary?.canSave
+        ? "大きな問題はありません。必要なら見た目だけ確認して保存してください。"
+        : "大きな問題候補は見つかりませんでした。再チェックして最新判定を確認してください。";
+      PANEL.fitAssistList.appendChild(empty);
+      return;
+    }
+
+    for (const item of items) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "fit-assist-item";
+      const blocking =
+        item.seams.length ||
+        item.surface.length ||
+        item.hero.length ||
+        item.render.length ||
+        (item.critical && item.score != null && item.score < 58);
+      if (blocking) button.classList.add("blocking");
+      if (item.part === selectedPart) button.classList.add("active");
+
+      const title = document.createElement("strong");
+      title.textContent = item.score != null ? `${item.part} | スコア ${item.score.toFixed(1)}` : item.part;
+      const detail = document.createElement("span");
+      const detailParts = [];
+      if (item.pairs.length) detailParts.push(`接続 ${item.pairs.slice(0, 2).join(", ")}`);
+      if (item.seams.length) detailParts.push(`継ぎ目 ${item.seams.slice(0, 2).join(", ")}`);
+      if (item.surface.length) detailParts.push(`表面 ${item.surface.slice(0, 2).join(", ")}`);
+      if (item.hero.length) detailParts.push(`張り出し ${item.hero.slice(0, 2).join(", ")}`);
+      if (item.render.length) detailParts.push(`表示 ${item.render.slice(0, 2).join(", ")}`);
+      if (item.minScaleAxes.length) detailParts.push(`最小値 ${item.minScaleAxes.join(", ")}`);
+      detail.textContent = detailParts.join(" | ") || "詳細なし";
+      button.append(title, detail);
+      button.onclick = () => this.selectFitPart(item.part, { focusCamera: true });
+      PANEL.fitAssistList.appendChild(button);
+    }
+  }
+
+  setLegend(frame = null) {
+    if (!PANEL.legendText) return;
+    const activeFrame = frame || this.frames[this.frameIndex] || null;
+    const frameText = this.frames.length ? `${this.frameIndex + 1}/${this.frames.length}` : "0/0";
+    const equipped = activeFrame ? Boolean(activeFrame.equipped) : Boolean(this.sim?.equipped);
+    const fitScore = ((this.fitStats?.score || 0) * 100).toFixed(1);
+    const fitGap = (this.fitStats?.meanGap || 0).toFixed(3);
+    const fitPen = (this.fitStats?.meanPenetration || 0).toFixed(3);
+    const liveViewText =
+      this.liveViewMode === "auto"
+        ? `自動 -> ${this.getEffectiveLiveViewLabel() === "mirror" ? "ミラー" : "ワールド"}`
+        : this.getEffectiveLiveViewLabel() === "mirror"
+          ? "ミラー"
+          : "ワールド";
+    const depositionLabel = DEPOSITION_PROFILES[this.deposition.resolvedKey]?.label || this.deposition.resolvedKey || "自動";
+    const lines = [
+      "body-fit の現在状態",
+      `フレーム ${frameText} | 装着状態: ${equipped ? "装着済み" : "未装着"} | 再生速度 x${this.speed.toFixed(2)}`,
+      `テクスチャ ${jaOnOff(this.useTextures)} | 凹凸 ${this.reliefStrength.toFixed(2)} | 表示テーマ ${this.darkTheme ? "ソフト" : "明"}`,
+      `Fitシェル ${jaOnOff(this.showFitShell)} | 接続ブリッジ ${jaOnOff(this.bridgeEnabled)} | 表示数 ${this.bridgeVisibleCount} | 太さ ${this.bridgeThickness.toFixed(2)}`,
+      `鎧表示 ${jaOnOff(this.armorVisible)} | 待機モーション ${jaOnOff(this.vrm.idleEnabled)} x${this.vrm.idleSpeed.toFixed(2)} | 装着基準 ${VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "ハイブリッド"}`,
+      `VRM ${this.vrm.path ? "読込済み" : "未読込"} | Source ${this.vrm.source || "-"} | Humanoid ${jaYesNo(Boolean(this.vrm.instance?.humanoid))} | Bones ${this.vrm.boneCount || 0} | 骨表示 ${jaOnOff(this.vrm.visible)}`,
+      `ライブ入力 ${jaOnOff(this.live.active)} | FPS ${(this.live?.fps || 0).toFixed(1)} | パイプライン ${jaOnOff(this.livePipelineActive)} | 視点 ${liveViewText}`,
+      `姿勢推定 ${this.live?.poseModel || "-"} | 品質 ${this.live?.poseQuality || "idle"} | 信頼関節 ${this.live?.poseReliableJoints || 0} | FitReady ${this.live?.bodyInference?.fitReadiness || "-"}`,
+      `VRM推定 ${this.vrm.bodyInference?.qualityLabel || "-"} | FitReady ${this.vrm.bodyInference?.fitReadiness || "-"}`,
+      `Surface-first ${jaOnOff(this.isSurfaceFirstVisible())} | 密度 ${this.surfaceFirst.density} | オフセット ${this.surfaceFirst.shellOffset.toFixed(3)} | 点数 ${this.surfaceFirst.summary?.sample_count || 0}`,
+      `蒸着 ${this.deposition.active ? "再生中" : "待機中"} | プロファイル ${depositionLabel} | 進捗 ${(((this.deposition.progress || 0) * 100)).toFixed(0)}% | 秒数 ${this.deposition.durationSec.toFixed(1)}`,
+      `フィットスコア ${fitScore} | Gap ${fitGap} | Penetration ${fitPen}`,
+      `自動フィット判定: ${formatAutoFitSummaryJa(this.autoFitSummary)}`,
+      this.uiLevel === UI_LEVELS.SIMPLE
+        ? "操作モード: かんたん操作。通常は「VRM読込 -> 自動フィット -> 保存」で進めます。"
+        : "操作モード: 詳細操作。部位調整・アンカー調整・PoC機能まで表示しています。",
+    ];
+    PANEL.legendText.innerHTML = lines.join("<br>");
   }
 
   tick(now) {
@@ -3760,6 +4709,7 @@ class BodyFitViewer {
       }
     }
     this.updateDepositionEffect(now, dt);
+    this.syncSurfaceFirstDemo(now);
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -3801,13 +4751,343 @@ function createMeshFromGeometry(geometry) {
   return mesh;
 }
 
+function computeGeometryBounds(geometry) {
+  if (!geometry.boundingBox) geometry.computeBoundingBox();
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+  const box = geometry.boundingBox?.clone() || new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  return { box, size, center };
+}
+
+function scaledGeometryBox(box, scale) {
+  return {
+    min: new THREE.Vector3(box.min.x * scale[0], box.min.y * scale[1], box.min.z * scale[2]),
+    max: new THREE.Vector3(box.max.x * scale[0], box.max.y * scale[1], box.max.z * scale[2]),
+  };
+}
+
+function boxRefValue(box, axis, align) {
+  if (align === "min") return box.min[axis];
+  if (align === "max") return box.max[axis];
+  return (box.min[axis] + box.max[axis]) * 0.5;
+}
+
+function deriveRenderBinding(partName, fitGeometry, renderGeometry) {
+  const fitBounds = computeGeometryBounds(fitGeometry);
+  const renderBounds = computeGeometryBounds(renderGeometry);
+  const binding = renderBindingFor(partName);
+  const scaleBias = normalizeVec3(binding?.scaleBias, [1, 1, 1]);
+  const offsetBias = normalizeVec3(binding?.offsetBias, [0, 0, 0]);
+  const scale = [
+    round3(clamp((fitBounds.size.x / Math.max(renderBounds.size.x, 0.0001)) * scaleBias[0], 0.05, 4)),
+    round3(clamp((fitBounds.size.y / Math.max(renderBounds.size.y, 0.0001)) * scaleBias[1], 0.05, 4)),
+    round3(clamp((fitBounds.size.z / Math.max(renderBounds.size.z, 0.0001)) * scaleBias[2], 0.05, 4)),
+  ];
+  const scaledRender = scaledGeometryBox(renderBounds.box, scale);
+  const offset = [0, 1, 2].map((index) => {
+    const axis = index === 0 ? "x" : index === 1 ? "y" : "z";
+    const align =
+      axis === "x"
+        ? "center"
+        : axis === "y"
+          ? binding?.alignY || "center"
+          : binding?.alignZ || "center";
+    return round3(boxRefValue(fitBounds.box, axis, align) - boxRefValue(scaledRender, axis, align) + toNumberOr(offsetBias[index], 0));
+  });
+  return {
+    scale,
+    offset,
+    alignY: binding?.alignY || "center",
+    alignZ: binding?.alignZ || "center",
+    maxDeviation: normalizeVec3(binding?.maxDeviation, [0.22, 0.22, 0.22]),
+  };
+}
+
+function applyRenderBindingToGroup(group, binding) {
+  if (!group) return;
+  group.position.set(binding.offset[0], binding.offset[1], binding.offset[2]);
+  group.scale.set(binding.scale[0], binding.scale[1], binding.scale[2]);
+  group.rotation.set(0, 0, 0);
+}
+
+function applyRenderBinding(record) {
+  const binding = record.renderBinding || { scale: [1, 1, 1], offset: [0, 0, 0] };
+  applyRenderBindingToGroup(record.renderGroup, binding);
+  applyRenderBindingToGroup(record.renderProxyShell, binding);
+}
+
+function wrapUnit(value) {
+  const next = Number(value) % 1;
+  return next < 0 ? next + 1 : next;
+}
+
+function getTextureSampler(texture) {
+  if (!texture?.image) return null;
+  const cached = textureSamplerCache.get(texture);
+  if (cached) return cached;
+  const image = texture.image;
+  const width = Number(image.width || image.videoWidth || 0);
+  const height = Number(image.height || image.videoHeight || 0);
+  if (!width || !height) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0, width, height);
+  const sampler = { canvas, ctx, width, height, flipY: texture.flipY !== false };
+  textureSamplerCache.set(texture, sampler);
+  return sampler;
+}
+
+function sampleTextureColor(texture, u, v, target = new THREE.Color(0xffffff)) {
+  const sampler = getTextureSampler(texture);
+  if (!sampler) return null;
+  const uu = wrapUnit(u);
+  const vv = sampler.flipY ? 1 - wrapUnit(v) : wrapUnit(v);
+  const x = clamp(Math.round(uu * Math.max(0, sampler.width - 1)), 0, Math.max(0, sampler.width - 1));
+  const y = clamp(Math.round(vv * Math.max(0, sampler.height - 1)), 0, Math.max(0, sampler.height - 1));
+  const rgba = sampler.ctx.getImageData(x, y, 1, 1).data;
+  target.setRGB(rgba[0] / 255, rgba[1] / 255, rgba[2] / 255);
+  return target;
+}
+
+function getGeometryUvInfo(geometry) {
+  if (!geometry) return null;
+  const cached = geometryUvCache.get(geometry);
+  if (cached) return cached;
+  const position = geometry.getAttribute?.("position");
+  const uv = geometry.getAttribute?.("uv");
+  if (!position?.count || !uv?.count) return null;
+  const info = { position, uv, count: Math.min(position.count, uv.count) };
+  geometryUvCache.set(geometry, info);
+  return info;
+}
+
+function nearestUvForLocalPoint(geometry, localPoint) {
+  const info = getGeometryUvInfo(geometry);
+  if (!info) return null;
+  const { position, uv, count } = info;
+  let bestIndex = -1;
+  let bestDistance = Infinity;
+  for (let index = 0; index < count; index += 1) {
+    const dx = position.getX(index) - localPoint.x;
+    const dy = position.getY(index) - localPoint.y;
+    const dz = position.getZ(index) - localPoint.z;
+    const distanceSq = dx * dx + dy * dy + dz * dz;
+    if (distanceSq < bestDistance) {
+      bestDistance = distanceSq;
+      bestIndex = index;
+    }
+  }
+  if (bestIndex < 0) return null;
+  return {
+    u: uv.getX(bestIndex),
+    v: uv.getY(bestIndex),
+  };
+}
+
+function sampleRecordTextureColorAtWorldPoint(record, worldPoint, fallbackHex = 0xe7f0ff) {
+  const color = new THREE.Color(fallbackHex);
+  if (!record?.texture || !record?.renderMesh?.geometry || !record.renderMesh.worldToLocal) {
+    return color;
+  }
+  record.renderMesh.updateMatrixWorld(true);
+  const localPoint = record.renderMesh.worldToLocal(worldPoint.clone());
+  const uv = nearestUvForLocalPoint(record.renderMesh.geometry, localPoint);
+  if (!uv) return color;
+  return sampleTextureColor(record.texture, uv.u, uv.v, color) || color;
+}
+
+function normalizedSegmentT(point, start, end) {
+  if (!point || !start || !end) return 0.5;
+  const axis = new THREE.Vector3().subVectors(end, start);
+  const lengthSq = axis.lengthSq();
+  if (lengthSq < 1e-6) return 0.5;
+  return clamp(new THREE.Vector3().subVectors(point, start).dot(axis) / lengthSq, 0, 1);
+}
+
+function torsoLocalPoint(point, proxy) {
+  if (!point || !proxy?.center || !proxy?.axes) return null;
+  const delta = point.clone().sub(proxy.center);
+  return new THREE.Vector3(
+    delta.dot(proxy.axes.x || new THREE.Vector3(1, 0, 0)),
+    delta.dot(proxy.axes.y || new THREE.Vector3(0, 1, 0)),
+    delta.dot(proxy.axes.z || new THREE.Vector3(0, 0, 1))
+  );
+}
+
+function classifySurfaceNodeToPart(node, proxies = {}) {
+  const binding = node?.binding || null;
+  const point = node?.surfacePoint || node?.position || null;
+  switch (binding?.region || node?.region) {
+    case "head":
+      return "helmet";
+    case "torso": {
+      const yNorm = Number(binding?.obb?.yNorm);
+      const zNorm = Number(binding?.obb?.zNorm);
+      const torso = proxies.torso;
+      const local = (!Number.isFinite(yNorm) || !Number.isFinite(zNorm)) ? torsoLocalPoint(point, torso) : null;
+      const half = torso?.halfSize || new THREE.Vector3(0.2, 0.3, 0.12);
+      const resolvedYNorm = Number.isFinite(yNorm) ? yNorm : local ? local.y / Math.max(half.y, 0.001) : 0;
+      const resolvedZNorm = Number.isFinite(zNorm) ? zNorm : local ? local.z / Math.max(half.z, 0.001) : 0;
+      if (resolvedYNorm < -0.22) return "waist";
+      if (resolvedZNorm < -0.08) return "back";
+      return "chest";
+    }
+    case "left_upperarm": {
+      const segmentT = Number(binding?.capsule?.t);
+      const resolvedT = Number.isFinite(segmentT)
+        ? segmentT
+        : normalizedSegmentT(point, proxies.left_upperarm?.start, proxies.left_upperarm?.end);
+      return resolvedT < 0.22 ? "left_shoulder" : "left_upperarm";
+    }
+    case "right_upperarm": {
+      const segmentT = Number(binding?.capsule?.t);
+      const resolvedT = Number.isFinite(segmentT)
+        ? segmentT
+        : normalizedSegmentT(point, proxies.right_upperarm?.start, proxies.right_upperarm?.end);
+      return resolvedT < 0.22 ? "right_shoulder" : "right_upperarm";
+    }
+    case "left_forearm": {
+      const segmentT = Number(binding?.capsule?.t);
+      const resolvedT = Number.isFinite(segmentT)
+        ? segmentT
+        : normalizedSegmentT(point, proxies.left_forearm?.start, proxies.left_forearm?.end);
+      return resolvedT > 0.8 ? "left_hand" : "left_forearm";
+    }
+    case "right_forearm": {
+      const segmentT = Number(binding?.capsule?.t);
+      const resolvedT = Number.isFinite(segmentT)
+        ? segmentT
+        : normalizedSegmentT(point, proxies.right_forearm?.start, proxies.right_forearm?.end);
+      return resolvedT > 0.8 ? "right_hand" : "right_forearm";
+    }
+    case "left_thigh":
+      return "left_thigh";
+    case "right_thigh":
+      return "right_thigh";
+    case "left_shin":
+      return "left_shin";
+    case "right_shin":
+      return "right_shin";
+    case "left_foot":
+      return "left_boot";
+    case "right_foot":
+      return "right_boot";
+    default:
+      return null;
+  }
+}
+
+function disposeObjectResources(object) {
+  object?.traverse?.((entry) => {
+    entry.geometry?.dispose?.();
+    const material = entry.material;
+    if (Array.isArray(material)) {
+      material.forEach((item) => item?.dispose?.());
+    } else {
+      material?.dispose?.();
+    }
+  });
+}
+
+function createWearableRecord({ partName, fitGeometry, renderGeometry, config, assetPath, texturePath, darkTheme }) {
+  const fitMesh = createMeshFromGeometry(fitGeometry);
+  fitMesh.material.color.setHex(0x76a8ff);
+  fitMesh.material.transparent = true;
+  fitMesh.material.opacity = 0.12;
+  fitMesh.material.depthWrite = false;
+  fitMesh.material.metalness = 0.08;
+  fitMesh.material.roughness = 0.86;
+  fitMesh.userData.partName = `${partName}:fit`;
+  const fitOutline = createOutline(fitMesh, 0x4f89ff);
+  fitOutline.material.opacity = 0.22;
+  const fitGroup = new THREE.Group();
+  fitGroup.name = `${partName}:fitShell`;
+  fitGroup.add(fitMesh);
+  fitGroup.add(fitOutline);
+  fitGroup.visible = false;
+
+  const fitProxyMesh = createMeshFromGeometry(fitGeometry.clone());
+  fitProxyMesh.material.visible = false;
+  const fitProxyGroup = new THREE.Group();
+  fitProxyGroup.name = `${partName}:fitProxy`;
+  fitProxyGroup.add(fitProxyMesh);
+
+  const surfaceFitOverlay = new THREE.Group();
+  surfaceFitOverlay.name = `${partName}:surfaceFitOverlay`;
+  surfaceFitOverlay.visible = false;
+  const surfaceFitProxyGroup = new THREE.Group();
+  surfaceFitProxyGroup.name = `${partName}:surfaceFitProxy`;
+
+  const renderMesh = createMeshFromGeometry(renderGeometry);
+  renderMesh.material.color.setHex(partColor(partName));
+  renderMesh.userData.partName = partName;
+  const renderOutline = createOutline(renderMesh, darkTheme ? 0xffffff : 0x10223f);
+  const renderGroup = new THREE.Group();
+  renderGroup.name = `${partName}:renderShell`;
+  renderGroup.add(renderMesh);
+  renderGroup.add(renderOutline);
+
+  const renderProxyMesh = createMeshFromGeometry(renderGeometry.clone());
+  renderProxyMesh.material.visible = false;
+  const renderProxyShell = new THREE.Group();
+  renderProxyShell.name = `${partName}:renderProxyShell`;
+  renderProxyShell.add(renderProxyMesh);
+  const renderProxyRoot = new THREE.Group();
+  renderProxyRoot.name = `${partName}:renderProxy`;
+  renderProxyRoot.add(renderProxyShell);
+
+  const group = new THREE.Group();
+  group.name = partName;
+  group.add(renderGroup);
+  group.add(fitGroup);
+  group.add(surfaceFitOverlay);
+
+  const record = {
+    partName,
+    group,
+    mesh: renderMesh,
+    outline: renderOutline,
+    fitMesh,
+    fitOutline,
+    fitGroup,
+    fitProxyMesh,
+    fitProxyGroup,
+    surfaceFitOverlay,
+    surfaceFitProxyGroup,
+    renderGroup,
+    renderMesh,
+    renderOutline,
+    renderProxyMesh,
+    renderProxyShell,
+    renderProxyRoot,
+    renderBinding: deriveRenderBinding(partName, fitGeometry, renderGeometry),
+    config,
+    assetPath,
+    geometryMode: "dual_shell",
+    texturePath,
+    texture: null,
+    reliefApplied: false,
+    lastTransform: null,
+    surfaceFitNodeCount: 0,
+  };
+  applyRenderBinding(record);
+  return record;
+}
+
 function resolveMeshAssetPath(partName, module) {
   const ref = String(module?.asset_ref || "").replace(/\\/g, "/").trim();
   if (ref.toLowerCase().endsWith(".mesh.json")) return ref;
   return `viewer/assets/meshes/${partName}.mesh.json`;
 }
 
-async function loadModuleGeometry(partName, fallbackShape, assetPath) {
+async function loadModuleGeometry(partName, fallbackShape, assetPath, geometryMode = GEOMETRY_MODES.TEMPLATE) {
+  if (normalizeGeometryMode(geometryMode) === GEOMETRY_MODES.TEMPLATE) {
+    return createWearableTemplateGeometry(partName, fallbackShape);
+  }
   try {
     return await loadMeshGeometryFromAsset(assetPath);
   } catch (error) {
@@ -3830,6 +5110,32 @@ async function loadMeshGeometryFromAsset(assetPath) {
   const geometry = meshGeometryFromPayload(payload);
   meshGeometryCache.set(key, geometry);
   return geometry.clone();
+}
+
+async function loadTextureAsset(texturePath) {
+  const key = normalizePath(texturePath);
+  if (!key) return null;
+  if (textureAssetCache.has(key)) {
+    return textureAssetCache.get(key);
+  }
+  const pending = new Promise((resolve, reject) => {
+    textureLoader.load(
+      key,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        resolve(tex);
+      },
+      undefined,
+      (error) => reject(error || new Error(`Failed to load texture: ${key}`))
+    );
+  }).catch((error) => {
+    textureAssetCache.delete(key);
+    throw error;
+  });
+  textureAssetCache.set(key, pending);
+  return pending;
 }
 
 function meshGeometryFromPayload(payload) {
@@ -4412,7 +5718,26 @@ function init() {
   }
 
   const viewer = new BodyFitViewer(document.getElementById("canvas"));
+  const webcamCheckMode = params.get("webcamCheck") === "1";
+  viewer.geometryMode = "dual_shell";
+  viewer.showFitShell = params.get("fitOverlay") === "1" || webcamCheckMode;
+  viewer.uiLevel = params.get("ui") === UI_LEVELS.DETAIL || webcamCheckMode ? UI_LEVELS.DETAIL : UI_LEVELS.SIMPLE;
   viewer.setVrmAttachMode(params.get("attach") || VRM_ATTACH_MODES.HYBRID);
+  viewer.surfaceFirst.graphVisible = params.has("surfaceGraph") ? params.get("surfaceGraph") === "1" : webcamCheckMode;
+  viewer.surfaceFirst.shellVisible = params.has("surfaceShell") ? params.get("surfaceShell") === "1" : webcamCheckMode;
+  viewer.surfaceFirst.mountsVisible = params.has("surfaceMounts") ? params.get("surfaceMounts") === "1" : webcamCheckMode;
+  viewer.surfaceFirst.forceTrackingSource = params.get("surfaceTracking") || "auto";
+  if (params.has("surfaceDensity")) {
+    const density = clamp(Number(params.get("surfaceDensity")), 24, 240);
+    if (PANEL.surfacePointDensity) PANEL.surfacePointDensity.value = String(density);
+    viewer.surfaceFirst.density = density;
+  }
+  if (params.has("surfaceOffset")) {
+    const shellOffset = clamp(Number(params.get("surfaceOffset")), 0.002, 0.08);
+    if (PANEL.surfaceShellOffset) PANEL.surfaceShellOffset.value = String(shellOffset);
+    viewer.surfaceFirst.shellOffset = shellOffset;
+  }
+  viewer.updateSurfaceFirstButtons();
 
   viewer.pendingLoad = Promise.resolve();
   const loadIntoViewer = async (suitspecPath, simPath) => {
@@ -4427,7 +5752,7 @@ function init() {
       await loadIntoViewer(PANEL.suitspecPath.value, PANEL.simPath.value);
     } catch (err) {
       const details = formatLoadError(err);
-      viewer.setStatus(`Load failed: ${details}`, true);
+      viewer.setStatus(`読込に失敗しました: ${details}`, true);
         viewer.setMeta({
           error: String(details),
           suitspec: PANEL.suitspecPath.value,
@@ -4437,9 +5762,16 @@ function init() {
     }
   };
 
+  if (PANEL.btnUiSimple) {
+    PANEL.btnUiSimple.onclick = () => viewer.setUiLevel(UI_LEVELS.SIMPLE);
+  }
+  if (PANEL.btnUiDetail) {
+    PANEL.btnUiDetail.onclick = () => viewer.setUiLevel(UI_LEVELS.DETAIL);
+  }
+
   PANEL.btnPlay.onclick = () => {
     viewer.playing = !viewer.playing;
-    PANEL.btnPlay.textContent = viewer.playing ? "Pause" : "Play";
+    viewer.updatePlaybackButton();
     viewer.setLegend();
   };
 
@@ -4450,7 +5782,14 @@ function init() {
   PANEL.btnTexture.onclick = () => {
     viewer.useTextures = !viewer.useTextures;
     viewer.updateTextureMode();
+    viewer.updateMetaPanel();
+    viewer.setLegend();
   };
+  if (PANEL.btnGeometry) {
+    PANEL.btnGeometry.onclick = () => {
+      viewer.setGeometryMode(!viewer.showFitShell);
+    };
+  }
   if (PANEL.reliefSlider) {
     PANEL.reliefSlider.oninput = () => {
       viewer.reliefStrength = Number(PANEL.reliefSlider.value || "0");
@@ -4540,6 +5879,30 @@ function init() {
       viewer.setLegend();
     };
   }
+  if (PANEL.btnSurfaceFirstRefresh) {
+    PANEL.btnSurfaceFirstRefresh.onclick = () => viewer.refreshSurfaceFirstDemo({ force: true });
+  }
+  if (PANEL.btnSurfaceFirstGraph) {
+    PANEL.btnSurfaceFirstGraph.onclick = () => viewer.setSurfaceFirstLayerVisible("graph", !viewer.surfaceFirst.graphVisible);
+  }
+  if (PANEL.btnSurfaceFirstShell) {
+    PANEL.btnSurfaceFirstShell.onclick = () => viewer.setSurfaceFirstLayerVisible("shell", !viewer.surfaceFirst.shellVisible);
+  }
+  if (PANEL.btnSurfaceFirstMounts) {
+    PANEL.btnSurfaceFirstMounts.onclick = () => viewer.setSurfaceFirstLayerVisible("mounts", !viewer.surfaceFirst.mountsVisible);
+  }
+  if (PANEL.surfacePointDensity) {
+    PANEL.surfacePointDensity.oninput = () => {
+      viewer.surfaceFirst.density = clamp(Number(PANEL.surfacePointDensity.value || viewer.surfaceFirst.density), 24, 240);
+      viewer.refreshSurfaceFirstDemo({ force: viewer.needsSurfaceFirstSnapshot() });
+    };
+  }
+  if (PANEL.surfaceShellOffset) {
+    PANEL.surfaceShellOffset.oninput = () => {
+      viewer.surfaceFirst.shellOffset = clamp(Number(PANEL.surfaceShellOffset.value || viewer.surfaceFirst.shellOffset), 0.002, 0.08);
+      viewer.refreshSurfaceFirstDemo({ force: viewer.needsSurfaceFirstSnapshot() });
+    };
+  }
   window.__HENSHIN_BODY_FIT__ = {
     ready: true,
     viewer,
@@ -4577,11 +5940,57 @@ function init() {
         simPath,
         vrmPath,
         summary: result.summary || null,
+        wearableSummary: result.wearableSummary || result.summary || null,
         metrics: result.metrics || null,
         fitByPart: result.fitByPart || {},
         anchorByPart: result.anchorByPart || {},
         surfaceModel: result.surfaceModel || null,
       };
+    },
+    runSurfaceFirstDemo: async ({
+      suitspecPath = PANEL.suitspecPath.value,
+      simPath = PANEL.simPath.value,
+      vrmPath = PANEL.vrmPath?.value || DEFAULT_VRM_PATH,
+      graphVisible = true,
+      shellVisible = true,
+      mountsVisible = true,
+      density = viewer.surfaceFirst.density,
+      shellOffset = viewer.surfaceFirst.shellOffset,
+      trackingSource = "auto",
+    } = {}) => {
+      if (PANEL.suitspecPath) PANEL.suitspecPath.value = suitspecPath;
+      if (PANEL.simPath) PANEL.simPath.value = simPath;
+      if (PANEL.vrmPath) PANEL.vrmPath.value = vrmPath;
+      if (PANEL.surfacePointDensity) PANEL.surfacePointDensity.value = String(clamp(Number(density), 24, 240));
+      if (PANEL.surfaceShellOffset) PANEL.surfaceShellOffset.value = String(clamp(Number(shellOffset), 0.002, 0.08));
+      await loadIntoViewer(suitspecPath, simPath);
+      if (!viewer.vrm.model || viewer.vrm.path !== vrmPath) {
+        await viewer.loadVrmModel(vrmPath, { silent: true });
+      }
+      viewer.surfaceFirst.graphVisible = Boolean(graphVisible);
+      viewer.surfaceFirst.shellVisible = Boolean(shellVisible);
+      viewer.surfaceFirst.mountsVisible = Boolean(mountsVisible);
+      viewer.surfaceFirst.forceTrackingSource = String(trackingSource || "auto");
+      viewer.surfaceFirst.density = clamp(Number(density), 24, 240);
+      viewer.surfaceFirst.shellOffset = clamp(Number(shellOffset), 0.002, 0.08);
+      if (viewer.surfaceFirst.forceTrackingSource === "live" && !viewer.live?.bodyInference && viewer.vrm.bodyInference) {
+        viewer.live.active = true;
+        viewer.live.bodyInference = JSON.parse(JSON.stringify(viewer.vrm.bodyInference));
+        viewer.live.bodyTrackingFrame = createBodyTrackingFrameFromInference(viewer.live.bodyInference, {
+          source: "webcam",
+          timestampMs: performance.now(),
+          metadata: {
+            synthetic: true,
+            sourceFrame: viewer.vrm.bodyTrackingFrame?.id || null,
+          },
+        });
+        viewer.live.poseQuality = viewer.live.bodyInference?.qualityLabel || "good";
+        viewer.live.poseReliableJoints = viewer.live.bodyInference?.reliableJointCount || 0;
+        viewer.lastLiveJoints = viewer.live.bodyInference?.joints || null;
+      }
+      viewer.updateSurfaceFirstButtons();
+      viewer.refreshSurfaceFirstDemo({ force: true });
+      return viewer.surfaceFirst.summary;
     },
   };
   if (PANEL.depositionDuration) {
@@ -4711,17 +6120,20 @@ function init() {
   viewer.applyTheme();
   viewer.updateBridgeButton();
   viewer.updateArmorButton();
+  viewer.updateGeometryButton();
   viewer.updateVrmButton();
   viewer.updateVrmAttachButton();
   viewer.updateVrmIdleButton();
+  viewer.updateSurfaceFirstButtons();
   viewer.setCameraPreset("front");
+  viewer.setUiLevel(viewer.uiLevel);
   viewer.setLiveViewMode(PANEL.liveViewMode?.value || "auto");
   viewer.setLegend();
-  viewer.updateLiveStatus("Live: inactive");
+  viewer.updateLiveStatus("ライブ: 停止中");
   window.addEventListener("beforeunload", () => viewer.stopLive({ silent: true }));
   void loadIntoViewer(PANEL.suitspecPath.value, PANEL.simPath.value).catch((err) => {
     const details = formatLoadError(err);
-    viewer.setStatus(`Load failed: ${details}`, true);
+    viewer.setStatus(`読込に失敗しました: ${details}`, true);
     viewer.setMeta({
       error: String(details),
       suitspec: PANEL.suitspecPath.value,

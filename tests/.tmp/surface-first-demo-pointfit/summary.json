@@ -1,0 +1,41 @@
+{
+  "sample_count": 365,
+  "density": 72,
+  "shell_offset": 0.018,
+  "link_count": 127,
+  "mount_count": 12,
+  "region_counts": {
+    "torso": 284,
+    "left_upperarm": 24,
+    "left_thigh": 7,
+    "right_thigh": 12,
+    "left_shin": 4,
+    "right_shin": 5,
+    "right_foot": 6,
+    "left_foot": 6,
+    "left_forearm": 8,
+    "right_forearm": 9
+  },
+  "graph_visible": true,
+  "shell_visible": true,
+  "mounts_visible": true,
+  "quality": "good",
+  "fit_readiness": "fit-ready",
+  "texture_projected_parts": [
+    "back",
+    "waist",
+    "left_shoulder",
+    "left_thigh",
+    "right_thigh",
+    "left_shin",
+    "right_shin",
+    "right_boot",
+    "left_boot",
+    "left_forearm",
+    "right_forearm",
+    "chest"
+  ],
+  "texture_projected_nodes": 365,
+  "fit_overlay_parts": 12,
+  "fit_overlay_nodes": 365
+}

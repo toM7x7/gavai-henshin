@@ -1,0 +1,166 @@
+[browser] Failed to load resource: the server responded with a status of 404 ()
+❌ IWSDK: Failed to launch browser: page.waitForFunction: Timeout 30000ms exceeded.
+    at launchManagedBrowser (C:\dev\codex\gavai-henshin\node_modules\@iwsdk\vite-plugin-dev\dist\index.js:199:16)
+    at async file:///C:/dev/codex/gavai-henshin/node_modules/@iwsdk/vite-plugin-dev/dist/index.js:767:41 {
+  name: 'TimeoutError'
+}
+[2m16:29:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/helmet.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/chest.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:06[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/back.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_shoulder.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_shoulder.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_upperarm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_upperarm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_forearm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_forearm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/waist.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_thigh.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_thigh.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_shin.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:07[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_shin.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_boot.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_boot.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_hand.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-IW-DEMO/artifacts/iwsdk-deposition-replay.json[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:08[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_hand.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:10[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/iw-henshin/voice[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/helmet.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/chest.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/back.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_shoulder.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_shoulder.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_upperarm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_upperarm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_forearm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_forearm.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:39[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/waist.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_thigh.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_thigh.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_shin.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_shin.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_boot.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_boot.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/left_hand.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-IW-DEMO/artifacts/iwsdk-deposition-replay.json[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:40[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /sessions/S-20260412-YOUB/artifacts/parts/right_hand.generated.png[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+[2m16:29:42[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/iw-henshin/voice[39m
+Error: connect ECONNREFUSED 127.0.0.1:8010
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)

@@ -6,6 +6,7 @@ import argparse
 import functools
 import http.server
 import json
+import os
 import socketserver
 from pathlib import Path
 
@@ -24,6 +25,13 @@ from .gemini_image import (
     write_generation_meta,
 )
 from .ids import generate_approval_id, generate_morphotype_id, generate_session_id, generate_suit_id
+from .iw_henshin import (
+    DEFAULT_EXPLANATION,
+    DEFAULT_TRIGGER_PHRASE,
+    IWSDKHenshinConfig,
+    IWSDKHenshinRequest,
+    run_iwsdk_henshin,
+)
 from .part_generation import (
     DEFAULT_GEMINI_FALLBACK_MODEL,
     DEFAULT_PROVIDER_PROFILE,
@@ -34,6 +42,7 @@ from .part_generation import (
 )
 from .image_providers import ImageProviderError
 from .rightarm import CoverScale, RightArmFrame, Vec2, run_rightarm_sequence
+from .sakura_ai_engine import resolve_sakura_config
 from .transform import ProtocolStateMachine
 from .validators import load_json, validate_file
 from .vrm_authoring_audit import run_authoring_audit, write_authoring_audit
@@ -432,6 +441,45 @@ def _cmd_authoring_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_iw_henshin(args: argparse.Namespace) -> int:
+    try:
+        mocopi_payload = load_json(args.mocopi) if args.mocopi else None
+        config = IWSDKHenshinConfig(
+            trigger_phrase=args.trigger_phrase or os.getenv("VOICE_TRIGGER_PHRASE") or DEFAULT_TRIGGER_PHRASE,
+            explanation_text=args.explanation or DEFAULT_EXPLANATION,
+            tts_enabled=not bool(args.no_tts),
+        )
+        sakura_config = resolve_sakura_config(
+            token=args.sakura_token,
+            base_url=args.sakura_base_url,
+            whisper_model=args.whisper_model,
+            tts_model=args.tts_model,
+            tts_voice=args.tts_voice,
+            tts_format=args.tts_format,
+            timeout_seconds=args.timeout,
+        )
+        result = run_iwsdk_henshin(
+            IWSDKHenshinRequest(
+                transcript=args.transcript,
+                audio_path=args.audio,
+                mocopi_payload=mocopi_payload,
+                session_id=args.session_id,
+                root=args.root,
+                dry_run=bool(args.dry_run),
+                config=config,
+                sakura_config=sakura_config,
+            )
+        )
+    except (ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    print(json.dumps(result, ensure_ascii=False))
+    if result.get("ok"):
+        return 0
+    return 2 if result.get("error") else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="henshin", description="SIM-first henshin prototyping CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -592,6 +640,28 @@ def build_parser() -> argparse.ArgumentParser:
     authoring_audit.add_argument("--output-json", help="Optional JSON output path")
     authoring_audit.add_argument("--output-md", help="Optional Markdown output path")
     authoring_audit.set_defaults(func=_cmd_authoring_audit)
+
+    iw_henshin = sub.add_parser(
+        "iw-henshin",
+        help="Run IWSDK-ready voice triggered full-body armor deposition",
+    )
+    iw_henshin.add_argument("--root", default="sessions")
+    iw_henshin.add_argument("--session-id")
+    iw_henshin.add_argument("--transcript", help="Use a transcript directly instead of calling Whisper")
+    iw_henshin.add_argument("--audio", help="Audio file sent to Sakura Whisper when --transcript is omitted")
+    iw_henshin.add_argument("--mocopi", help="mocopi/IWSDK tracking JSON; defaults to an internal demo pose")
+    iw_henshin.add_argument("--dry-run", action="store_true", help="Skip remote STT/TTS calls")
+    iw_henshin.add_argument("--trigger-phrase", help="Voice trigger phrase; defaults to VOICE_TRIGGER_PHRASE or 生成")
+    iw_henshin.add_argument("--explanation", help="TTS explanation text played after trigger detection")
+    iw_henshin.add_argument("--no-tts", action="store_true", help="Disable Sakura TTS even when a token is configured")
+    iw_henshin.add_argument("--sakura-token", help="Sakura AI Engine account token")
+    iw_henshin.add_argument("--sakura-base-url", help="Sakura AI Engine API base URL")
+    iw_henshin.add_argument("--whisper-model", help="Sakura Whisper model")
+    iw_henshin.add_argument("--tts-model", help="Sakura TTS model")
+    iw_henshin.add_argument("--tts-voice", help="Sakura TTS voice")
+    iw_henshin.add_argument("--tts-format", help="Sakura TTS response format")
+    iw_henshin.add_argument("--timeout", type=int, default=90)
+    iw_henshin.set_defaults(func=_cmd_iw_henshin)
 
     return parser
 

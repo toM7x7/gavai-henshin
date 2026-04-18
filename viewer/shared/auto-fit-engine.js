@@ -3,6 +3,7 @@ import {
   FIT_CONTACT_PAIRS,
   VRM_BONE_ALIASES,
   VRM_PART_BONE_FALLBACKS,
+  baseFitFor,
   effectiveFitFor,
   effectiveVrmAnchorFor,
   normalizeAttachmentSlot,
@@ -13,6 +14,7 @@ import {
   VRM_FIT_THRESHOLDS,
   criticalFitParts,
   fitPolicyFor,
+  renderBindingFor,
 } from "./vrm-fit-policy.js";
 import {
   createBoneInferenceSnapshot,
@@ -25,21 +27,29 @@ const DEFAULT_SEGMENT_POSE = Object.freeze({
   right_upperarm: { position_x: 0.88, position_y: -0.02, position_z: 0.22, rotation_z: -0.2, scale_x: 0.9, scale_y: 0.95, scale_z: 0.9 },
   left_forearm: { position_x: 0.16, position_y: -0.42, position_z: 0.22, rotation_z: 0.18, scale_x: 0.88, scale_y: 0.95, scale_z: 0.88 },
   right_forearm: { position_x: 0.94, position_y: -0.42, position_z: 0.22, rotation_z: -0.18, scale_x: 0.88, scale_y: 0.95, scale_z: 0.88 },
+  left_hand: { position_x: 0.08, position_y: -0.66, position_z: 0.22, rotation_z: 0.18, scale_x: 0.2, scale_y: 0.24, scale_z: 0.2 },
+  right_hand: { position_x: 1.02, position_y: -0.66, position_z: 0.22, rotation_z: -0.18, scale_x: 0.2, scale_y: 0.24, scale_z: 0.2 },
   left_thigh: { position_x: 0.42, position_y: -0.72, position_z: 0.22, rotation_z: 0.04, scale_x: 0.95, scale_y: 1.05, scale_z: 0.95 },
   right_thigh: { position_x: 0.68, position_y: -0.72, position_z: 0.22, rotation_z: -0.04, scale_x: 0.95, scale_y: 1.05, scale_z: 0.95 },
   left_shin: { position_x: 0.42, position_y: -1.18, position_z: 0.22, rotation_z: 0.02, scale_x: 0.92, scale_y: 1.05, scale_z: 0.92 },
   right_shin: { position_x: 0.68, position_y: -1.18, position_z: 0.22, rotation_z: -0.02, scale_x: 0.92, scale_y: 1.05, scale_z: 0.92 },
+  left_foot: { position_x: 0.42, position_y: -1.56, position_z: 0.3, rotation_z: 0, scale_x: 0.22, scale_y: 0.26, scale_z: 0.42 },
+  right_foot: { position_x: 0.68, position_y: -1.56, position_z: 0.3, rotation_z: 0, scale_x: 0.22, scale_y: 0.26, scale_z: 0.42 },
 });
 
 const SEGMENT_SPECS = Object.freeze([
   { name: "right_upperarm", startJoint: "right_shoulder", endJoint: "right_elbow", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
   { name: "right_forearm", startJoint: "right_elbow", endJoint: "right_wrist", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
+  { name: "right_hand", startJoint: "right_wrist", endJoint: "right_middle_proximal", radiusFactor: 0.18, radiusMin: 0.04, radiusMax: 0.16, z: 0.22 },
   { name: "left_upperarm", startJoint: "left_shoulder", endJoint: "left_elbow", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
   { name: "left_forearm", startJoint: "left_elbow", endJoint: "left_wrist", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
+  { name: "left_hand", startJoint: "left_wrist", endJoint: "left_middle_proximal", radiusFactor: 0.18, radiusMin: 0.04, radiusMax: 0.16, z: 0.22 },
   { name: "right_thigh", startJoint: "right_hip", endJoint: "right_knee", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
   { name: "right_shin", startJoint: "right_knee", endJoint: "right_ankle", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
+  { name: "right_foot", startJoint: "right_ankle", endJoint: "right_toes", radiusFactor: 0.16, radiusMin: 0.04, radiusMax: 0.12, z: 0.28 },
   { name: "left_thigh", startJoint: "left_hip", endJoint: "left_knee", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
   { name: "left_shin", startJoint: "left_knee", endJoint: "left_ankle", radiusFactor: 0.22, radiusMin: 0.05, radiusMax: 0.22, z: 0.22 },
+  { name: "left_foot", startJoint: "left_ankle", endJoint: "left_toes", radiusFactor: 0.16, radiusMin: 0.04, radiusMax: 0.12, z: 0.28 },
   { name: "chest_core", startJoint: "hips_center", endJoint: "shoulders_center", radiusFactor: 0.38, radiusMin: 0.05, radiusMax: 0.35, z: 0.22 },
 ]);
 
@@ -69,6 +79,22 @@ const MIRROR_PART_PAIRS = Object.freeze([
 
 const SUMMARY_PAIR_WEIGHTS = Object.freeze({
   "chest-back": 0.35,
+});
+
+const WEARABLE_SEAM_TARGETS = Object.freeze({
+  "helmet-chest": { maxGap: 0.16, source: "fit" },
+  "chest-back": { maxGap: 0.09, source: "fit" },
+  "back-waist": { maxGap: 0.15, source: "fit" },
+  "left_shoulder-left_upperarm": { maxGap: 0.08, source: "render" },
+  "right_shoulder-right_upperarm": { maxGap: 0.08, source: "render" },
+  "left_upperarm-left_forearm": { maxGap: 0.08, source: "render" },
+  "right_upperarm-right_forearm": { maxGap: 0.08, source: "render" },
+  "left_forearm-left_hand": { maxGap: 0.08, source: "render" },
+  "right_forearm-right_hand": { maxGap: 0.08, source: "render" },
+  "left_thigh-left_shin": { maxGap: 0.1, source: "render" },
+  "right_thigh-right_shin": { maxGap: 0.1, source: "render" },
+  "left_shin-left_boot": { maxGap: 0.08, source: "render" },
+  "right_shin-right_boot": { maxGap: 0.08, source: "render" },
 });
 
 export const AUTO_FIT_CRITICAL_PARTS = Object.freeze(criticalFitParts());
@@ -132,8 +158,37 @@ function cloneFit(fit) {
   return { shape: String(fit.shape || "box"), source: String(fit.source || "chest_core"), attach: String(fit.attach || "center"), offsetY: numberOr(fit.offsetY, 0), zOffset: numberOr(fit.zOffset, 0), scale: normalizeVec3(fit.scale, [1, 1, 1]), follow: normalizeVec3(fit.follow, [1, 1, 1]), minScale: normalizeVec3(fit.minScale, [0.2, 0.2, 0.2]) };
 }
 
+function seedFitForAutoFit(partName, module, options = {}) {
+  if (options.useCurrentFit === true) {
+    return effectiveFitFor(partName, module);
+  }
+  return baseFitFor(partName);
+}
+
 function cloneAnchor(anchor) {
   return { bone: String(anchor.bone || "chest"), offset: normalizeVec3(anchor.offset, [0, 0, 0]), rotation: normalizeVec3(anchor.rotation, [0, 0, 0]), scale: normalizeVec3(anchor.scale, [1, 1, 1]).map((value) => Math.max(0.01, numberOr(value, 1))) };
+}
+
+function canonicalizeDistalFit(partName, fit) {
+  const next = cloneFit(fit);
+  if (partName === "left_boot") {
+    next.source = "left_shin";
+    next.attach = "end";
+    next.offsetY = 0;
+  } else if (partName === "right_boot") {
+    next.source = "right_shin";
+    next.attach = "end";
+    next.offsetY = 0;
+  } else if (partName === "left_hand") {
+    next.source = "left_hand";
+    next.attach = "center";
+    next.offsetY = 0;
+  } else if (partName === "right_hand") {
+    next.source = "right_hand";
+    next.attach = "center";
+    next.offsetY = 0;
+  }
+  return next;
 }
 
 function listEnabledParts(suitspec) { return Object.entries(suitspec?.modules || {}).filter(([, module]) => module?.enabled).map(([partName]) => partName); }
@@ -185,6 +240,7 @@ function resolveBoneForPart(resolveBone, partName, module, primaryBone) {
 }
 
 function getBoneWorldPosition(resolveBone, boneName) {
+  if (typeof resolveBone !== "function") return null;
   const bone = resolveBone(boneName);
   return bone ? bone.getWorldPosition(new THREE.Vector3()) : null;
 }
@@ -281,6 +337,16 @@ function snapshotObjects(meshMap) {
   return new Map(Array.from(meshMap.entries()).map(([partName, object]) => [partName, { object, position: object.position.clone(), quaternion: object.quaternion.clone(), scale: object.scale.clone(), visible: object.visible }]));
 }
 
+function mergeSnapshots(...snapshots) {
+  const merged = new Map();
+  for (const snapshot of snapshots) {
+    for (const [key, value] of snapshot || []) {
+      if (!merged.has(key)) merged.set(key, value);
+    }
+  }
+  return merged;
+}
+
 function restoreObjects(snapshot) {
   for (const entry of snapshot.values()) {
     entry.object.position.copy(entry.position);
@@ -349,6 +415,56 @@ function measureObjectWorldSize(object) {
   return new THREE.Vector3(Math.max(size.x, 0.02), Math.max(size.y, 0.02), Math.max(size.z, 0.02));
 }
 
+function measureObjectAlignedSize(object) {
+  if (!object) return new THREE.Vector3(0.22, 0.22, 0.22);
+  const snapshot = {
+    position: object.position.clone(),
+    quaternion: object.quaternion.clone(),
+    scale: object.scale.clone(),
+    visible: object.visible,
+  };
+  try {
+    object.position.set(0, 0, 0);
+    object.quaternion.identity();
+    object.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(object);
+    if (box.isEmpty()) return new THREE.Vector3(0.22, 0.22, 0.22);
+    const size = box.getSize(new THREE.Vector3());
+    return new THREE.Vector3(Math.max(size.x, 0.02), Math.max(size.y, 0.02), Math.max(size.z, 0.02));
+  } finally {
+    object.position.copy(snapshot.position);
+    object.quaternion.copy(snapshot.quaternion);
+    object.scale.copy(snapshot.scale);
+    object.visible = snapshot.visible;
+    object.updateMatrixWorld(true);
+  }
+}
+
+function measureReferenceFitSize(object, fit, segments) {
+  if (!object || !fit) return new THREE.Vector3(0.22, 0.22, 0.22);
+  const snapshot = {
+    position: object.position.clone(),
+    quaternion: object.quaternion.clone(),
+    scale: object.scale.clone(),
+    visible: object.visible,
+  };
+  try {
+    const referenceFit = cloneFit({
+      ...fit,
+      scale: [1, 1, 1],
+      minScale: [0, 0, 0],
+    });
+    applyTransformToObject(object, resolveTransform(referenceFit, segments));
+    return measureObjectAlignedSize(object);
+  } finally {
+    object.position.copy(snapshot.position);
+    object.quaternion.copy(snapshot.quaternion);
+    object.scale.copy(snapshot.scale);
+    object.visible = snapshot.visible;
+    object.updateMatrixWorld(true);
+  }
+}
+
 export function estimateArmorTargetSizeFromMetrics(partName, metrics, fallbackSize, policy = null, calibration = null) {
   const fb = fallbackSize || new THREE.Vector3(0.22, 0.22, 0.22);
   const target = fb.clone();
@@ -385,44 +501,44 @@ export function estimateArmorTargetSizeFromMetrics(partName, metrics, fallbackSi
 
   switch (partName) {
     case "helmet":
-      target.set(headLen * 0.9, headLen * 1.0, headLen * 0.92);
+      target.set(headLen * 0.78, headLen * 0.86, headLen * 0.8);
       break;
     case "chest":
-      target.set(torsoWidth * 0.88 * torsoWidthBias, torsoLen * 0.44 * verticalBias, torsoDepth * 1.18 * torsoDepthBias);
+      target.set(torsoWidth * 0.68 * torsoWidthBias, torsoLen * 0.4 * verticalBias, torsoDepth * 0.88 * torsoDepthBias);
       break;
     case "back":
-      target.set(torsoWidth * 0.84 * torsoWidthBias, torsoLen * 0.42 * verticalBias, torsoDepth * 1.02 * torsoDepthBias);
+      target.set(torsoWidth * 0.66 * torsoWidthBias, torsoLen * 0.4 * verticalBias, torsoDepth * 0.8 * torsoDepthBias);
       break;
     case "waist":
-      target.set(hipWidth * 0.98 * torsoWidthBias, torsoLen * 0.24 * verticalBias, torsoDepth * 0.86 * torsoDepthBias);
+      target.set(hipWidth * 0.76 * torsoWidthBias, torsoLen * 0.24 * verticalBias, torsoDepth * 0.6 * torsoDepthBias);
       break;
     case "left_shoulder":
     case "right_shoulder":
-      target.set(upperArmWidth * 0.86 * armWidthBias, upperArmWidth * 0.86 * armWidthBias, upperArmWidth * 0.86 * armWidthBias);
+      target.set(upperArmWidth * 0.74 * armWidthBias, upperArmWidth * 0.74 * armWidthBias, upperArmWidth * 0.74 * armWidthBias);
       break;
     case "left_upperarm":
     case "right_upperarm":
-      target.set(upperArmWidth * armWidthBias, upperArmLen * 0.94 * verticalBias, upperArmWidth * armWidthBias);
+      target.set(upperArmWidth * 0.84 * armWidthBias, upperArmLen * 0.88 * verticalBias, upperArmWidth * 0.84 * armWidthBias);
       break;
     case "left_forearm":
     case "right_forearm":
-      target.set(foreArmWidth * forearmWidthBias, foreArmLen * 0.98 * verticalBias, foreArmWidth * forearmWidthBias);
+      target.set(foreArmWidth * 0.84 * forearmWidthBias, foreArmLen * 0.9 * verticalBias, foreArmWidth * 0.84 * forearmWidthBias);
       break;
     case "left_hand":
     case "right_hand":
-      target.set(handWidth * 1.02 * handWidthBias, handLen * 0.48, handWidth * 1.28 * handWidthBias);
+      target.set(handWidth * 0.84 * handWidthBias, handLen * 0.4, handWidth * 1.0 * handWidthBias);
       break;
     case "left_thigh":
     case "right_thigh":
-      target.set(thighWidth * thighWidthBias, thighLen * 1.0 * verticalBias, thighWidth * thighWidthBias);
+      target.set(thighWidth * 0.88 * thighWidthBias, thighLen * 0.94 * verticalBias, thighWidth * 0.88 * thighWidthBias);
       break;
     case "left_shin":
     case "right_shin":
-      target.set(shinWidth * shinWidthBias, shinLen * 1.0 * verticalBias, shinWidth * shinWidthBias);
+      target.set(shinWidth * 0.88 * shinWidthBias, shinLen * 0.94 * verticalBias, shinWidth * 0.88 * shinWidthBias);
       break;
     case "left_boot":
     case "right_boot":
-      target.set(footWidth * bootWidthBias, footHeight * bootHeightBias, footLen * 0.95);
+      target.set(footWidth * 0.84 * bootWidthBias, footHeight * 0.84 * bootHeightBias, footLen * 0.84);
       break;
     default:
       break;
@@ -529,7 +645,46 @@ function sampleSkinnedVertexWorldPosition(object, index, target) {
   return false;
 }
 
-function collectVrmSurfaceSamples(vrmModel, options = {}) {
+function surfaceSamplePoint(sample) {
+  if (sample instanceof THREE.Vector3) return sample;
+  if (sample?.position instanceof THREE.Vector3) return sample.position;
+  if (
+    sample &&
+    Number.isFinite(sample.x) &&
+    Number.isFinite(sample.y) &&
+    Number.isFinite(numberOr(sample.z, 0))
+  ) {
+    return new THREE.Vector3(sample.x, sample.y, numberOr(sample.z, 0));
+  }
+  return new THREE.Vector3();
+}
+
+function stableObjectKey(object) {
+  const segments = [];
+  let current = object;
+  while (current) {
+    const parent = current.parent || null;
+    const siblingIndex = parent ? parent.children.indexOf(current) : 0;
+    const label = String(current.name || current.type || "node").replace(/[\\/:|]/g, "_");
+    segments.push(`${label}[${Math.max(0, siblingIndex)}]`);
+    current = parent;
+  }
+  return segments.reverse().join("/");
+}
+
+function createSurfaceSample(object, index, position) {
+  const meshKey = stableObjectKey(object);
+  return {
+    id: `${meshKey}:${index}`,
+    meshKey,
+    meshName: String(object?.name || ""),
+    vertexIndex: index,
+    skinned: Boolean(object?.isSkinnedMesh),
+    position: position.clone(),
+  };
+}
+
+export function collectVrmSurfaceSamples(vrmModel, options = {}) {
   const samples = [];
   const maxSamplesPerMesh = Math.max(48, numberOr(options.maxSamplesPerMesh, 320));
   const target = new THREE.Vector3();
@@ -540,12 +695,12 @@ function collectVrmSurfaceSamples(vrmModel, options = {}) {
     const step = Math.max(1, Math.floor(positionAttr.count / maxSamplesPerMesh));
     for (let index = 0; index < positionAttr.count; index += step) {
       if (object.isSkinnedMesh && sampleSkinnedVertexWorldPosition(object, index, target)) {
-        samples.push(target.clone());
+        samples.push(createSurfaceSample(object, index, target));
         continue;
       }
       target.fromBufferAttribute(positionAttr, index);
       object.localToWorld(target);
-      samples.push(target.clone());
+      samples.push(createSurfaceSample(object, index, target));
     }
   });
   return samples;
@@ -554,10 +709,11 @@ function collectVrmSurfaceSamples(vrmModel, options = {}) {
 function bucketSurfaceSamples(samples, anchors) {
   const buckets = new Map(Object.keys(anchors).map((key) => [key, []]));
   for (const sample of samples) {
+    const point = surfaceSamplePoint(sample);
     let bestKey = "torso";
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const [key, anchor] of Object.entries(anchors)) {
-      const distance = sample.distanceTo(anchor);
+      const distance = point.distanceTo(anchor);
       if (distance < bestDistance) {
         bestDistance = distance;
         bestKey = key;
@@ -570,11 +726,12 @@ function bucketSurfaceSamples(samples, anchors) {
 
 function buildHeadSphereProxy(points, joints, metrics) {
   const fallbackCenter = vectorFromPoint(joints?.nose || joints?.shoulders_center || { x: 0, y: numberOr(metrics.headLen, 0.18), z: 0.22 });
-  if (!points?.length) {
+  const surfacePoints = (points || []).map(surfaceSamplePoint);
+  if (!surfacePoints.length) {
     return { type: "head_sphere", center: fallbackCenter, radius: Math.max(numberOr(metrics.headLen, 0.18) * 0.55, 0.08) };
   }
-  const center = points.reduce((sum, point) => sum.add(point), new THREE.Vector3()).multiplyScalar(1 / points.length);
-  const radius = percentile(points.map((point) => point.distanceTo(center)), 0.85, numberOr(metrics.headLen, 0.18) * 0.55);
+  const center = surfacePoints.reduce((sum, point) => sum.add(point), new THREE.Vector3()).multiplyScalar(1 / surfacePoints.length);
+  const radius = percentile(surfacePoints.map((point) => point.distanceTo(center)), 0.85, numberOr(metrics.headLen, 0.18) * 0.55);
   return { type: "head_sphere", center, radius: clamp(radius, 0.08, 0.22) };
 }
 
@@ -582,10 +739,11 @@ function buildCapsuleProxy(points, startPoint, endPoint, fallbackRadius) {
   const start = vectorFromPoint(startPoint);
   const end = vectorFromPoint(endPoint);
   const length = Math.max(start.distanceTo(end), 0.12);
-  if (!points?.length) {
+  const surfacePoints = (points || []).map(surfaceSamplePoint);
+  if (!surfacePoints.length) {
     return { type: "capsule", start, end, length, radius: clamp(numberOr(fallbackRadius, length * 0.18), 0.03, 0.22) };
   }
-  const distances = points.map((point) => distancePointToSegment(point, start, end));
+  const distances = surfacePoints.map((point) => distancePointToSegment(point, start, end));
   const radius = percentile(distances, 0.8, numberOr(fallbackRadius, length * 0.18));
   return {
     type: "capsule",
@@ -608,10 +766,10 @@ function buildTorsoObbProxy(points, joints, metrics) {
   const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
   const safeZ = zAxis.lengthSq() < 1e-6 ? new THREE.Vector3(0, 0, 1) : zAxis;
   const safeY = new THREE.Vector3().crossVectors(safeZ, xAxis).normalize();
-  const torsoPoints = points?.length ? points : [shouldersCenter, hipsCenter];
-  let halfX = Math.max(numberOr(metrics.shoulderWidth, 0.44) * 0.5, 0.12);
-  let halfY = Math.max(numberOr(metrics.torsoLen, 0.62) * 0.5, 0.18);
-  let halfZ = Math.max((numberOr(metrics.shoulderWidth, 0.44) + numberOr(metrics.hipWidth, 0.32)) * 0.16, 0.08);
+  const torsoPoints = (points || []).length ? points.map(surfaceSamplePoint) : [shouldersCenter, hipsCenter];
+  let halfX = Math.max(numberOr(metrics.torsoWidth, numberOr(metrics.shoulderWidth, 0.44) * 0.86) * 0.5, 0.12);
+  let halfY = Math.max(numberOr(metrics.torsoLen, 0.62) * 0.44, 0.16);
+  let halfZ = Math.max(numberOr(metrics.torsoDepth, numberOr(metrics.shoulderWidth, 0.44) * 0.32) * 0.5, 0.06);
   for (const point of torsoPoints) {
     const delta = point.clone().sub(center);
     halfX = Math.max(halfX, Math.abs(delta.dot(xAxis)));
@@ -622,44 +780,52 @@ function buildTorsoObbProxy(points, joints, metrics) {
     type: "torso_obb",
     center,
     axes: { x: xAxis, y: safeY, z: safeZ },
-    halfSize: new THREE.Vector3(clamp(halfX, 0.12, 0.42), clamp(halfY, 0.18, 0.54), clamp(halfZ, 0.08, 0.24)),
+    halfSize: new THREE.Vector3(clamp(halfX, 0.12, 0.32), clamp(halfY, 0.16, 0.46), clamp(halfZ, 0.06, 0.18)),
   };
 }
 
 function buildFootObbProxy(points, anklePoint, footLen) {
   const ankle = vectorFromPoint(anklePoint);
-  if (!points?.length) {
+  const baseFootLen = numberOr(footLen, 0.16);
+  const targetHalfY = clamp(baseFootLen * 0.16, 0.024, 0.055);
+  const surfacePoints = (points || []).map(surfaceSamplePoint);
+  if (!surfacePoints.length) {
     return {
       type: "foot_obb",
-      center: ankle.clone().add(new THREE.Vector3(0, -Math.max(numberOr(footLen, 0.16) * 0.08, 0.02), numberOr(footLen, 0.16) * 0.32)),
-      halfSize: new THREE.Vector3(Math.max(numberOr(footLen, 0.16) * 0.22, 0.04), Math.max(numberOr(footLen, 0.16) * 0.12, 0.03), Math.max(numberOr(footLen, 0.16) * 0.42, 0.06)),
+      center: ankle.clone().add(new THREE.Vector3(0, -targetHalfY * 0.3, baseFootLen * 0.32)),
+      halfSize: new THREE.Vector3(
+        Math.max(baseFootLen * 0.22, 0.04),
+        targetHalfY,
+        Math.max(baseFootLen * 0.42, 0.06)
+      ),
     };
   }
   const box = new THREE.Box3();
-  for (const point of points) box.expandByPoint(point);
+  for (const point of surfacePoints) box.expandByPoint(point);
   if (box.isEmpty()) {
     return buildFootObbProxy(null, anklePoint, footLen);
   }
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
+  const halfYFromPoints = clamp(size.y * 0.22, 0.02, 0.06);
+  const halfY = clamp(Math.max(halfYFromPoints, targetHalfY), 0.024, 0.065);
   return {
     type: "foot_obb",
-    center,
+    center: new THREE.Vector3(center.x, Math.min(center.y, ankle.y - halfY * 0.2), center.z),
     halfSize: new THREE.Vector3(
-      clamp(Math.max(size.x * 0.5, numberOr(footLen, 0.16) * 0.2), 0.04, 0.16),
-      clamp(Math.max(size.y * 0.5, numberOr(footLen, 0.16) * 0.1), 0.03, 0.12),
-      clamp(Math.max(size.z * 0.5, numberOr(footLen, 0.16) * 0.36), 0.06, 0.22)
+      clamp(Math.max(size.x * 0.5, baseFootLen * 0.2), 0.04, 0.16),
+      halfY,
+      clamp(Math.max(size.z * 0.5, baseFootLen * 0.36), 0.06, 0.22)
     ),
   };
 }
 
-function buildVrmBodySurfaceModel(vrmModel, resolveBone, joints, metrics, options = {}) {
-  const surfacePoints = collectVrmSurfaceSamples(vrmModel, options);
+export function buildVrmBodySurfaceModelFromSamples(surfacePoints, resolveBone, joints, metrics) {
   const anchors = inferRegionAnchors(joints, metrics, resolveBone);
   const buckets = bucketSurfaceSamples(surfacePoints, anchors);
   const proxies = {
     head: buildHeadSphereProxy(buckets.get("head"), joints, metrics),
-    torso: buildTorsoObbProxy([...(buckets.get("torso") || []), ...(buckets.get("left_shoulder") || []), ...(buckets.get("right_shoulder") || [])], joints, metrics),
+    torso: buildTorsoObbProxy(buckets.get("torso"), joints, metrics),
     left_upperarm: buildCapsuleProxy(buckets.get("left_upperarm"), joints?.left_shoulder, joints?.left_elbow, numberOr(metrics.upperArmWidth, numberOr(metrics.upperArmLen, 0.36) * 0.24) * 0.5),
     right_upperarm: buildCapsuleProxy(buckets.get("right_upperarm"), joints?.right_shoulder, joints?.right_elbow, numberOr(metrics.upperArmWidth, numberOr(metrics.upperArmLen, 0.36) * 0.24) * 0.5),
     left_forearm: buildCapsuleProxy(buckets.get("left_forearm"), joints?.left_elbow, joints?.left_wrist, numberOr(metrics.foreArmWidth, numberOr(metrics.foreArmLen, 0.32) * 0.22) * 0.5),
@@ -676,6 +842,11 @@ function buildVrmBodySurfaceModel(vrmModel, resolveBone, joints, metrics, option
     buckets: Object.fromEntries(Array.from(buckets.entries()).map(([key, value]) => [key, value.length])),
     proxies,
   };
+}
+
+export function buildVrmBodySurfaceModel(vrmModel, resolveBone, joints, metrics, options = {}) {
+  const surfacePoints = collectVrmSurfaceSamples(vrmModel, options);
+  return buildVrmBodySurfaceModelFromSamples(surfacePoints, resolveBone, joints, metrics);
 }
 
 function visualTargetClearance(policy, key, fallbackTarget) {
@@ -703,7 +874,7 @@ function desiredZOffsetForPolicy(partName, policy, proxy) {
 }
 
 function measurePartSurfaceFit(partName, object, policy, proxy) {
-  const size = measureObjectWorldSize(object);
+  const size = measureObjectAlignedSize(object);
   const band = policy?.clearanceBand || { min: 0, target: 0, max: Number.POSITIVE_INFINITY };
   const result = {
     part: partName,
@@ -741,7 +912,7 @@ function measurePartSurfaceFit(partName, object, policy, proxy) {
     if (value > numberOr(band.max, Number.POSITIVE_INFINITY)) pushViolation(metric, value, band.max, "above_max");
     const heroBudget = numberOr(policy.heroAllowance?.[heroKey], 0);
     const heroLimit = numberOr(band.target, 0) + heroBudget;
-    if (heroBudget > 0 && value > heroLimit) pushHeroOverflow(metric, value, heroLimit);
+    if (heroBudget > 0 && value > heroLimit + 0.001) pushHeroOverflow(metric, value, heroLimit);
   };
 
   if (policy.bodyProxy === "head_sphere") {
@@ -860,7 +1031,146 @@ function buildSymmetryDelta(fitByPart) {
   return results;
 }
 
-function evaluateFitSummary({ meshMap, modules, enabledParts, fitByPart, anchorByPart, stats, surfaceModel, tPose, metrics, minScaleLocks = [] }) {
+function collectVisibleBoxes(meshMap) {
+  const boxes = new Map();
+  for (const [partName, object] of meshMap.entries()) {
+    if (!object?.visible) continue;
+    object.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(object);
+    if (!box.isEmpty()) boxes.set(partName, box);
+  }
+  return boxes;
+}
+
+function sizeOfBox(box) {
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  return size;
+}
+
+function centerOfBox(box) {
+  return box.getCenter(new THREE.Vector3());
+}
+
+function buildRenderDeviation(fitBoxes, renderBoxes) {
+  const entries = [];
+  for (const [partName, renderBox] of renderBoxes.entries()) {
+    const fitBox = fitBoxes.get(partName);
+    if (!fitBox) continue;
+    const fitSize = sizeOfBox(fitBox);
+    const renderSize = sizeOfBox(renderBox);
+    const binding = renderBindingFor(partName);
+    const maxDeviation = binding?.maxDeviation || [0.22, 0.22, 0.22];
+    const ratio = [0, 1, 2].map((index) => {
+      const fitValue = Math.max(fitSize.getComponent(index), 0.0001);
+      const renderValue = renderSize.getComponent(index);
+      return Math.abs(renderValue - fitValue) / fitValue;
+    });
+    const ok = ratio.every((value, index) => value <= numberOr(maxDeviation[index], 0.22));
+    entries.push({
+      part: partName,
+      ratio: ratio.map((value) => round3(value)),
+      allowed: maxDeviation.map((value) => round3(value)),
+      ok,
+    });
+  }
+  return entries.sort((left, right) => {
+    const a = Math.max(...left.ratio);
+    const b = Math.max(...right.ratio);
+    return b - a;
+  });
+}
+
+function buildSeamContinuity(fitBoxes, renderBoxes) {
+  const results = [];
+  for (const [pairName, target] of Object.entries(WEARABLE_SEAM_TARGETS)) {
+    const [aName, bName] = pairName.split("-");
+    const source = target?.source === "fit" ? fitBoxes : renderBoxes;
+    const a = source.get(aName);
+    const b = source.get(bName);
+    if (!a || !b) continue;
+    const { gap } = aabbGapAndPenetration(a, b);
+    const maxGap = numberOr(target?.maxGap, 0.1);
+    const score = clamp(1 - gap / Math.max(maxGap, 0.0001), 0, 1);
+    results.push({
+      pair: pairName,
+      gap: round3(gap),
+      maxGap: round3(maxGap),
+      score: round3(score * 100),
+      ok: gap <= maxGap,
+    });
+  }
+  return results;
+}
+
+function unionBoxes(boxes) {
+  const valid = boxes.filter(Boolean);
+  if (!valid.length) return null;
+  const box = valid[0].clone();
+  for (let index = 1; index < valid.length; index += 1) box.union(valid[index]);
+  return box;
+}
+
+function mean(values) {
+  const filtered = values.filter((value) => Number.isFinite(value));
+  if (!filtered.length) return null;
+  return filtered.reduce((sum, value) => sum + value, 0) / filtered.length;
+}
+
+function buildSilhouetteBudget(renderBoxes) {
+  const helmet = renderBoxes.get("helmet") || null;
+  const torso = unionBoxes([renderBoxes.get("chest"), renderBoxes.get("back"), renderBoxes.get("waist")]);
+  const upperarms = [renderBoxes.get("left_upperarm"), renderBoxes.get("right_upperarm")].filter(Boolean);
+  const thighs = [renderBoxes.get("left_thigh"), renderBoxes.get("right_thigh")].filter(Boolean);
+  const shins = [renderBoxes.get("left_shin"), renderBoxes.get("right_shin")].filter(Boolean);
+  const boots = [renderBoxes.get("left_boot"), renderBoxes.get("right_boot")].filter(Boolean);
+  const total = unionBoxes([helmet, torso, ...upperarms, ...thighs, ...shins, ...boots]);
+  if (!torso || !total) return [];
+
+  const torsoSize = sizeOfBox(torso);
+  const torsoWidth = Math.max(torsoSize.x, 0.0001);
+  const headWidth = helmet ? sizeOfBox(helmet).x : null;
+  const meanThighWidth = mean(thighs.map((box) => sizeOfBox(box).x));
+  const meanUpperarmWidth = mean(upperarms.map((box) => sizeOfBox(box).x));
+  const meanBootLength = mean(boots.map((box) => sizeOfBox(box).z));
+  const meanShinLength = mean(shins.map((box) => sizeOfBox(box).y));
+  const totalHeight = sizeOfBox(total).y;
+
+  const entries = [];
+  const pushRatio = (name, value, min, max) => {
+    if (!Number.isFinite(value)) return;
+    entries.push({
+      name,
+      value: round3(value),
+      min: round3(min),
+      max: round3(max),
+      ok: value >= min && value <= max,
+    });
+  };
+
+  if (headWidth != null) pushRatio("head_to_torso_width", headWidth / torsoWidth, 0.38, 0.9);
+  if (meanThighWidth != null) pushRatio("torso_to_leg_width", torsoWidth / Math.max(meanThighWidth, 0.0001), 1.1, 2.8);
+  if (meanUpperarmWidth != null) pushRatio("torso_to_arm_width", torsoWidth / Math.max(meanUpperarmWidth, 0.0001), 1.6, 5.2);
+  if (meanBootLength != null && meanShinLength != null) {
+    pushRatio("boot_to_shin_length", meanBootLength / Math.max(meanShinLength, 0.0001), 0.28, 0.92);
+  }
+  pushRatio("torso_to_total_height", torsoSize.y / Math.max(totalHeight, 0.0001), 0.18, 0.42);
+  return entries;
+}
+
+function evaluateFitSummary({
+  meshMap,
+  renderMeshMap = null,
+  modules,
+  enabledParts,
+  fitByPart,
+  anchorByPart,
+  stats,
+  surfaceModel,
+  tPose,
+  metrics,
+  minScaleLocks = [],
+}) {
   const surfaceViolations = [];
   const heroOverflow = [];
   const surfaceMetrics = {};
@@ -877,6 +1187,11 @@ function evaluateFitSummary({ meshMap, modules, enabledParts, fitByPart, anchorB
 
   const weakParts = buildPartScores(fitByPart, stats);
   const symmetryDelta = buildSymmetryDelta(fitByPart);
+  const fitBoxes = collectVisibleBoxes(meshMap);
+  const renderBoxes = renderMeshMap ? collectVisibleBoxes(renderMeshMap) : new Map();
+  const seamContinuity = buildSeamContinuity(fitBoxes, renderBoxes);
+  const silhouetteBudget = renderBoxes.size ? buildSilhouetteBudget(renderBoxes) : [];
+  const renderDeviation = renderBoxes.size ? buildRenderDeviation(fitBoxes, renderBoxes) : [];
   const weightedScore = (() => {
     let scoreSum = 0;
     let weightSum = 0;
@@ -901,6 +1216,12 @@ function evaluateFitSummary({ meshMap, modules, enabledParts, fitByPart, anchorB
   if (heroOverflow.length) reasons.push(`Hero allowance overflow: ${heroOverflow.map((entry) => `${entry.part}:${entry.metric}`).join(", ")}`);
   const symmetryViolations = symmetryDelta.filter((entry) => !entry.ok);
   if (symmetryViolations.length) reasons.push(`Symmetry drift: ${symmetryViolations.map((entry) => `${entry.group}=${entry.delta.toFixed(3)}`).join(", ")}`);
+  const seamFailures = seamContinuity.filter((entry) => !entry.ok);
+  if (seamFailures.length) reasons.push(`Wearable seams open: ${seamFailures.map((entry) => `${entry.pair}=${entry.gap.toFixed(3)}`).join(", ")}`);
+  const silhouetteFailures = silhouetteBudget.filter((entry) => !entry.ok);
+  if (silhouetteFailures.length) reasons.push(`Silhouette budget exceeded: ${silhouetteFailures.map((entry) => `${entry.name}=${entry.value.toFixed(3)}`).join(", ")}`);
+  const renderDeviationFailures = renderDeviation.filter((entry) => !entry.ok);
+  if (renderDeviationFailures.length) reasons.push(`Render deviation too large: ${renderDeviationFailures.map((entry) => `${entry.part}=${Math.max(...entry.ratio).toFixed(3)}`).join(", ")}`);
 
   return {
     fitScore,
@@ -923,6 +1244,9 @@ function evaluateFitSummary({ meshMap, modules, enabledParts, fitByPart, anchorB
     surfaceViolations,
     heroOverflow,
     symmetryDelta,
+    seamContinuity,
+    silhouetteBudget,
+    renderDeviation,
     surfaceSampleCount: numberOr(surfaceModel?.sampleCount, 0),
     surfaceBuckets: surfaceModel?.buckets || {},
     surfaceMetrics,
@@ -947,13 +1271,14 @@ function solveAnchorsForParts(enabledParts, modules, meshMap, fitByPart, resolve
   return { anchorByPart, missingAnchors };
 }
 
-function summarizeCurrentFit({ enabledParts, meshMap, modules, fitByPart, resolveBone, surfaceModel, tPose, metrics, joints = null }) {
+function summarizeCurrentFit({ enabledParts, meshMap, renderMeshMap = null, modules, fitByPart, resolveBone, surfaceModel, tPose, metrics, joints = null }) {
   const currentJoints = joints || completeUpperBodyJoints(collectVrmJoints(resolveBone), metrics);
   applyFitTransforms(meshMap, modules, fitByPart, buildSegmentsFromJoints(currentJoints, 1));
   const stats = calculateFitStats(meshMap);
   const { anchorByPart, missingAnchors } = solveAnchorsForParts(enabledParts, modules, meshMap, fitByPart, resolveBone);
   const summary = evaluateFitSummary({
     meshMap,
+    renderMeshMap,
     modules,
     enabledParts,
     fitByPart,
@@ -1210,6 +1535,10 @@ export function formatAutoFitSummary(summary) {
     `Surface ${Array.isArray(summary.surfaceViolations) ? summary.surfaceViolations.length : 0}`,
     `Hero ${Array.isArray(summary.heroOverflow) ? summary.heroOverflow.length : 0}`,
     `Symmetry ${Array.isArray(summary.symmetryDelta) ? summary.symmetryDelta.filter((entry) => !entry.ok).length : 0}`,
+    `Seams ${Array.isArray(summary.seamContinuity) ? summary.seamContinuity.filter((entry) => !entry.ok).length : 0}`,
+    `Silhouette ${Array.isArray(summary.silhouetteBudget) ? summary.silhouetteBudget.filter((entry) => !entry.ok).length : 0}`,
+    `Render ${Array.isArray(summary.renderDeviation) ? summary.renderDeviation.filter((entry) => !entry.ok).length : 0}`,
+    `Textures ${summary.texturesVisible === false ? "MISS" : "OK"}`,
     summary.canSave ? "Ready to save" : "Preview only",
   ];
   if (Array.isArray(summary.reasons) && summary.reasons.length) {
@@ -1223,10 +1552,11 @@ export function evaluateArmorFitToVrm({ vrmModel, meshes, suitspec, options = {}
   if (!suitspec?.modules || typeof suitspec.modules !== "object") throw new Error("SuitSpec.modules is required.");
 
   const meshMap = normalizeMeshMap(meshes);
+  const renderMeshMap = normalizeMeshMap(options.renderMeshes);
   const enabledParts = listEnabledParts(suitspec).filter((partName) => meshMap.has(partName));
   if (!enabledParts.length) throw new Error("No enabled armor meshes available for fit evaluation.");
 
-  const snapshot = snapshotObjects(meshMap);
+  const snapshot = mergeSnapshots(snapshotObjects(meshMap), snapshotObjects(renderMeshMap));
   const resolveBone = createBoneResolver(vrmModel, options);
   const forceTPose = options.forceTPose !== false;
   const tPose = forceTPose
@@ -1245,12 +1575,16 @@ export function evaluateArmorFitToVrm({ vrmModel, meshes, suitspec, options = {}
 
   try {
     for (const partName of enabledParts) {
-      fitByPart[partName] = cloneFit(effectiveFitFor(partName, suitspec.modules[partName]));
+      fitByPart[partName] = canonicalizeDistalFit(partName, effectiveFitFor(partName, suitspec.modules[partName]));
     }
     applyFitTransforms(meshMap, suitspec.modules, fitByPart, segments);
+    if (renderMeshMap.size) {
+      applyFitTransforms(renderMeshMap, suitspec.modules, fitByPart, segments);
+    }
     const { stats, anchorByPart, summary } = summarizeCurrentFit({
       enabledParts,
       meshMap,
+      renderMeshMap,
       modules: suitspec.modules,
       fitByPart,
       resolveBone,
@@ -1282,6 +1616,7 @@ export function evaluateArmorFitToVrm({ vrmModel, meshes, suitspec, options = {}
         meanGap: round3(stats.meanGap),
         meanPenetration: round3(stats.meanPenetration),
       },
+      wearableSummary: summary,
     };
   } finally {
     restoreObjects(snapshot);
@@ -1293,10 +1628,11 @@ export function fitArmorToVrm({ vrmModel, meshes, suitspec, options = {} }) {
   if (!suitspec?.modules || typeof suitspec.modules !== "object") throw new Error("SuitSpec.modules is required.");
 
   const meshMap = normalizeMeshMap(meshes);
+  const renderMeshMap = normalizeMeshMap(options.renderMeshes);
   const enabledParts = listEnabledParts(suitspec).filter((partName) => meshMap.has(partName));
   if (!enabledParts.length) throw new Error("No enabled armor meshes available for auto-fit.");
 
-  const snapshot = snapshotObjects(meshMap);
+  const snapshot = mergeSnapshots(snapshotObjects(meshMap), snapshotObjects(renderMeshMap));
   const resolveBone = createBoneResolver(vrmModel, options);
   const forceTPose = options.forceTPose !== false;
   const tPose = forceTPose ? applyApproximateVrmTPose({ vrmModel, options: { resolveBone } }) : { appliedChains: 0, attemptedChains: TPOSE_BONE_CHAINS.length };
@@ -1317,18 +1653,14 @@ export function fitArmorToVrm({ vrmModel, meshes, suitspec, options = {} }) {
     for (const partName of enabledParts) {
       const module = suitspec.modules[partName];
       const object = meshMap.get(partName);
-      const effective = cloneFit(effectiveFitFor(partName, module));
+      const effective = canonicalizeDistalFit(partName, seedFitForAutoFit(partName, module, options));
       const policy = fitPolicyFor(partName, module);
-      applyTransformToObject(object, resolveTransform(effective, segments));
-      const currentSize = measureObjectWorldSize(object);
-      const targetSize = estimateArmorTargetSizeFromMetrics(partName, metrics, currentSize, policy, fitCalibration);
-      const ratioX = clamp(targetSize.x / Math.max(currentSize.x, 0.001), 0.65, 1.55);
-      const ratioY = clamp(targetSize.y / Math.max(currentSize.y, 0.001), 0.65, 1.55);
-      const ratioZ = clamp(targetSize.z / Math.max(currentSize.z, 0.001), 0.65, 1.55);
+      const referenceSize = measureReferenceFitSize(object, effective, segments);
+      const targetSize = estimateArmorTargetSizeFromMetrics(partName, metrics, referenceSize, policy, fitCalibration);
       const nextScale = [
-        round3(clamp(numberOr(effective.scale[0], 1) * ratioX, 0.05, 3.0)),
-        round3(clamp(numberOr(effective.scale[1], 1) * ratioY, 0.05, 3.0)),
-        round3(clamp(numberOr(effective.scale[2], 1) * ratioZ, 0.05, 3.0)),
+        round3(clamp(targetSize.x / Math.max(referenceSize.x, 0.001), 0.05, 3.0)),
+        round3(clamp(targetSize.y / Math.max(referenceSize.y, 0.001), 0.05, 3.0)),
+        round3(clamp(targetSize.z / Math.max(referenceSize.z, 0.001), 0.05, 3.0)),
       ];
       const lockedAxes = [
         numberOr(effective.minScale[0], 0.05) > nextScale[0] + 0.001 ? "x" : null,
@@ -1356,10 +1688,16 @@ export function fitArmorToVrm({ vrmModel, meshes, suitspec, options = {} }) {
     }
 
     applyFitTransforms(meshMap, suitspec.modules, fitByPart, segments);
+    if (renderMeshMap.size) {
+      applyFitTransforms(renderMeshMap, suitspec.modules, fitByPart, segments);
+    }
     refineFitAgainstSurface(meshMap, suitspec.modules, fitByPart, segments, surfaceModel);
     enforceFitSymmetry(fitByPart);
     for (let pass = 0; pass < numberOr(options.refinePasses, 2); pass += 1) {
       applyFitTransforms(meshMap, suitspec.modules, fitByPart, segments);
+      if (renderMeshMap.size) {
+        applyFitTransforms(renderMeshMap, suitspec.modules, fitByPart, segments);
+      }
       refineFitAgainstSurface(meshMap, suitspec.modules, fitByPart, segments, surfaceModel);
       stats = calculateFitStats(meshMap);
       if (!refineFitCandidates(fitByPart, stats)) break;
@@ -1367,11 +1705,15 @@ export function fitArmorToVrm({ vrmModel, meshes, suitspec, options = {} }) {
     }
 
     applyFitTransforms(meshMap, suitspec.modules, fitByPart, segments);
+    if (renderMeshMap.size) {
+      applyFitTransforms(renderMeshMap, suitspec.modules, fitByPart, segments);
+    }
     stats = calculateFitStats(meshMap);
 
     const { anchorByPart } = solveAnchorsForParts(enabledParts, suitspec.modules, meshMap, fitByPart, resolveBone);
     const summary = evaluateFitSummary({
       meshMap,
+      renderMeshMap,
       modules: suitspec.modules,
       enabledParts,
       fitByPart,
@@ -1406,6 +1748,7 @@ export function fitArmorToVrm({ vrmModel, meshes, suitspec, options = {} }) {
         buckets: surfaceModel?.buckets || {},
       },
       summary,
+      wearableSummary: summary,
     };
   } finally {
     restoreObjects(snapshot);

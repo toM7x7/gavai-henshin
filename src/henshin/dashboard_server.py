@@ -6,6 +6,8 @@ import json
 import os
 import threading
 import time
+import base64
+import binascii
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler
@@ -14,6 +16,13 @@ from socketserver import TCPServer, ThreadingMixIn
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from .iw_henshin import (
+    DEFAULT_EXPLANATION,
+    DEFAULT_TRIGGER_PHRASE,
+    IWSDKHenshinConfig,
+    IWSDKHenshinRequest,
+    run_iwsdk_henshin,
+)
 from .part_generation import DEFAULT_PROVIDER_PROFILE, GenerationRequest, run_generate_parts
 
 
@@ -79,6 +88,19 @@ class GeneratePartsPayload:
 class SaveSuitspecPayload:
     path: str
     suitspec: dict[str, Any]
+
+
+@dataclass(slots=True)
+class IWHenshinVoicePayload:
+    audio_base64: str
+    mime_type: str = "audio/webm"
+    audio_stats: dict[str, Any] | None = None
+    session_id: str | None = None
+    mocopi: str | None = "examples/mocopi_sequence.sample.json"
+    trigger_phrase: str | None = None
+    explanation: str | None = None
+    dry_run: bool = False
+    tts_enabled: bool = True
 
 
 class GenerationJob:
@@ -228,6 +250,152 @@ def run_save_suitspec(root: Path, payload: SaveSuitspecPayload) -> dict[str, Any
     return {"ok": True, "path": str(target.relative_to(root)).replace("\\", "/")}
 
 
+def _extension_for_mime(mime_type: str) -> str:
+    lowered = (mime_type or "").split(";")[0].strip().lower()
+    return {
+        "audio/webm": "webm",
+        "video/webm": "webm",
+        "audio/ogg": "ogg",
+        "audio/wav": "wav",
+        "audio/x-wav": "wav",
+        "audio/mpeg": "mp3",
+        "audio/mp3": "mp3",
+        "audio/mp4": "mp4",
+        "audio/aac": "aac",
+    }.get(lowered, "webm")
+
+
+def _decode_audio_base64(raw: str) -> bytes:
+    if not raw:
+        raise ValueError("audio_base64 is required.")
+    encoded = raw.split(",", 1)[1] if raw.startswith("data:") and "," in raw else raw
+    try:
+        return base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("audio_base64 is not valid base64.") from exc
+
+
+def _normalize_audio_stats(stats: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(stats, dict):
+        return None
+    allowed = {
+        "mode",
+        "mime_type",
+        "sample_rate",
+        "channels",
+        "samples",
+        "duration_sec",
+        "requested_sec",
+        "peak",
+        "rms",
+        "dbfs",
+        "zero_crossings",
+        "quiet",
+        "bytes",
+    }
+    normalized: dict[str, Any] = {}
+    for key, value in stats.items():
+        if key in allowed and isinstance(value, (str, int, float, bool)) and value is not None:
+            normalized[key] = value
+    return normalized or None
+
+
+def _web_path(root: Path, raw_path: str | Path | None) -> str | None:
+    if not raw_path:
+        return None
+    path = Path(raw_path)
+    candidate = path if path.is_absolute() else (root / path).resolve()
+    try:
+        rel = candidate.resolve().relative_to(root.resolve())
+    except ValueError:
+        return str(raw_path).replace("\\", "/")
+    return "/" + rel.as_posix()
+
+
+def _load_json_if_present(root: Path, raw_path: str | None) -> dict[str, Any] | None:
+    if not raw_path:
+        return None
+    target = _resolve_repo_path(root, raw_path)
+    return json.loads(target.read_text(encoding="utf-8"))
+
+
+def _normalize_replay_paths(root: Path, replay: dict[str, Any]) -> dict[str, Any]:
+    deposition = replay.get("deposition")
+    if isinstance(deposition, dict):
+        deposition["body_sim_path"] = _web_path(root, deposition.get("body_sim_path"))
+    tts = replay.get("tts")
+    if isinstance(tts, dict):
+        tts["audio_path"] = _web_path(root, tts.get("audio_path"))
+    return replay
+
+
+def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str, Any]:
+    session_id = payload.session_id or f"S-IW-QUEST-{int(time.time() * 1000):x}"
+    if not session_id.replace("-", "").isalnum():
+        raise ValueError("session_id may only contain letters, numbers, and hyphens.")
+
+    audio_bytes = _decode_audio_base64(payload.audio_base64)
+    extension = _extension_for_mime(payload.mime_type)
+    session_root = root / "sessions"
+    audio_path = session_root / session_id / "artifacts" / f"voice-command.{extension}"
+    audio_path.parent.mkdir(parents=True, exist_ok=True)
+    audio_path.write_bytes(audio_bytes)
+    audio_stats = _normalize_audio_stats(payload.audio_stats)
+    if audio_stats is not None:
+        audio_stats["bytes"] = len(audio_bytes)
+    voice_audio = {
+        "url": _web_path(root, audio_path),
+        "bytes": len(audio_bytes),
+        "mime_type": payload.mime_type,
+        "stats": audio_stats,
+    }
+
+    mocopi_payload = _load_json_if_present(root, payload.mocopi)
+    config = IWSDKHenshinConfig(
+        trigger_phrase=payload.trigger_phrase or os.getenv("VOICE_TRIGGER_PHRASE") or DEFAULT_TRIGGER_PHRASE,
+        explanation_text=payload.explanation or DEFAULT_EXPLANATION,
+        tts_enabled=payload.tts_enabled,
+    )
+    result = run_iwsdk_henshin(
+        IWSDKHenshinRequest(
+            audio_path=audio_path,
+            mocopi_payload=mocopi_payload,
+            session_id=session_id,
+            root=session_root,
+            dry_run=payload.dry_run,
+            config=config,
+        )
+    )
+
+    replay_path = result.get("replay_path")
+    replay: dict[str, Any] | None = None
+    if replay_path:
+        replay_file = Path(str(replay_path))
+        if replay_file.is_file():
+            replay = _normalize_replay_paths(root, json.loads(replay_file.read_text(encoding="utf-8")))
+            replay["voice_audio"] = voice_audio
+
+    normalized_result = dict(result)
+    for key in ("body_sim_path", "replay_path", "events_path"):
+        normalized_result[key] = _web_path(root, normalized_result.get(key))
+    tts = normalized_result.get("tts")
+    if isinstance(tts, dict):
+        tts["audio_path"] = _web_path(root, tts.get("audio_path"))
+    normalized_result["voice_audio"] = voice_audio
+    normalized_result["audio_stats"] = audio_stats
+
+    return {
+        "ok": bool(result.get("ok")),
+        "result": normalized_result,
+        "replay": replay,
+        "replay_url": normalized_result.get("replay_path"),
+        "body_sim_url": normalized_result.get("body_sim_path"),
+        "voice_audio_url": voice_audio["url"],
+        "voice_audio": voice_audio,
+        "audio_url": tts.get("audio_path") if isinstance(tts, dict) else None,
+    }
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, directory: str, root: Path, jobs: GenerationJobManager, **kwargs: Any) -> None:
         self.repo_root = root
@@ -325,7 +493,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._write_json({"ok": True, **job.snapshot()})
             return
 
-        if parsed.path not in ("/api/generation-jobs", "/api/generate-parts", "/api/suitspec-save"):
+        if parsed.path not in (
+            "/api/generation-jobs",
+            "/api/generate-parts",
+            "/api/suitspec-save",
+            "/api/iw-henshin/voice",
+        ):
             self._write_json({"ok": False, "error": "Unknown API endpoint."}, status=HTTPStatus.NOT_FOUND)
             return
 
@@ -333,7 +506,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             content_len = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
             payload_dict = json.loads(raw)
-            if parsed.path in ("/api/generation-jobs", "/api/generate-parts"):
+            if parsed.path == "/api/iw-henshin/voice":
+                payload = IWHenshinVoicePayload(**payload_dict)
+                result = run_iw_henshin_voice(self.repo_root, payload)
+            elif parsed.path in ("/api/generation-jobs", "/api/generate-parts"):
                 payload = GeneratePartsPayload(**payload_dict)
                 if parsed.path == "/api/generation-jobs":
                     result = self.jobs.create_job(payload)
@@ -347,7 +523,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._write_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             return
 
-        status = HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_REQUEST
+        status = HTTPStatus.OK if parsed.path == "/api/iw-henshin/voice" or result.get("ok") else HTTPStatus.BAD_REQUEST
         self._write_json(result, status=status)
 
 

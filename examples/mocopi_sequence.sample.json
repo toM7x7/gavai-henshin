@@ -1,0 +1,126 @@
+{
+  "source": "mocopi",
+  "coordinate_space": "normalized_xy01",
+  "notes": "Minimal mocopi-like fixture. Real IWSDK/mocopi receivers can emit these aliases or canonical joint names.",
+  "frames": [
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    },
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftLowerArm": [0.67, 0.48],
+        "RightLowerArm": [0.33, 0.48],
+        "LeftHand": [0.70, 0.61],
+        "RightHand": [0.225, 0.625],
+        "LeftUpperLeg": [0.57, 0.58],
+        "RightUpperLeg": [0.43, 0.58],
+        "LeftLowerLeg": [0.57, 0.76],
+        "RightLowerLeg": [0.43, 0.76],
+        "LeftFoot": [0.57, 0.92],
+        "RightFoot": [0.43, 0.92]
+      }
+    }
+  ]
+}

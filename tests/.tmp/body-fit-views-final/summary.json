@@ -1,0 +1,2122 @@
+{
+  "ok": true,
+  "mode": "auto_fit",
+  "suitspecPath": "examples/suitspec.sample.json",
+  "simPath": "sessions/body-sim.json",
+  "vrmPath": "viewer/assets/vrm/default.vrm",
+  "summary": {
+    "fitScore": 91.423,
+    "weakParts": [
+      {
+        "part": "helmet",
+        "score": 83.033,
+        "gap": 0.048,
+        "penetration": 0,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "chest",
+        "score": 85.983,
+        "gap": 0.039,
+        "penetration": 0,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_thigh",
+        "score": 87.689,
+        "gap": 0.021,
+        "penetration": 0.031,
+        "symmetryPenalty": 0,
+        "critical": false
+      },
+      {
+        "part": "right_thigh",
+        "score": 87.689,
+        "gap": 0.021,
+        "penetration": 0.031,
+        "symmetryPenalty": 0,
+        "critical": false
+      },
+      {
+        "part": "waist",
+        "score": 89.764,
+        "gap": 0.01,
+        "penetration": 0.042,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_shin",
+        "score": 90.265,
+        "gap": 0.021,
+        "penetration": 0.015,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "right_shin",
+        "score": 90.265,
+        "gap": 0.021,
+        "penetration": 0.015,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_shoulder",
+        "score": 92.682,
+        "gap": 0,
+        "penetration": 0.047,
+        "symmetryPenalty": 0,
+        "critical": true
+      }
+    ],
+    "weakPairs": [
+      {
+        "pair": "chest-back",
+        "gap": 0.08,
+        "penetration": 0,
+        "score": 71.425
+      },
+      {
+        "pair": "waist-left_thigh",
+        "gap": 0,
+        "penetration": 0.063,
+        "score": 90.18
+      },
+      {
+        "pair": "waist-right_thigh",
+        "gap": 0,
+        "penetration": 0.063,
+        "score": 90.18
+      },
+      {
+        "pair": "helmet-chest",
+        "gap": 0.048,
+        "penetration": 0,
+        "score": 83.033
+      },
+      {
+        "pair": "left_shoulder-left_upperarm",
+        "gap": 0,
+        "penetration": 0.047,
+        "score": 92.682
+      }
+    ],
+    "minScaleLocks": [
+      {
+        "part": "chest",
+        "axes": [
+          "y"
+        ],
+        "nextScale": [
+          1.105,
+          0.523,
+          1.625
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      }
+    ],
+    "missingAnchors": [],
+    "canSave": true,
+    "reasons": [],
+    "pairCount": 15,
+    "meanGap": 0.018,
+    "meanPenetration": 0.02,
+    "tPoseChainsApplied": 11,
+    "tPoseChainsAttempted": 11,
+    "surfaceViolations": [],
+    "heroOverflow": [],
+    "symmetryDelta": [
+      {
+        "group": "shoulder",
+        "delta": 0,
+        "tolerance": 0.08,
+        "ok": true
+      },
+      {
+        "group": "upperarm",
+        "delta": 0,
+        "tolerance": 0.065,
+        "ok": true
+      },
+      {
+        "group": "forearm",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "thigh",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "shin",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "boot",
+        "delta": 0,
+        "tolerance": 0.075,
+        "ok": true
+      },
+      {
+        "group": "hand",
+        "delta": 0,
+        "tolerance": 0.055,
+        "ok": true
+      }
+    ],
+    "seamContinuity": [
+      {
+        "pair": "helmet-chest",
+        "gap": 0.095,
+        "maxGap": 0.16,
+        "score": 40.712,
+        "ok": true
+      },
+      {
+        "pair": "chest-back",
+        "gap": 0.072,
+        "maxGap": 0.08,
+        "score": 9.484,
+        "ok": true
+      },
+      {
+        "pair": "back-waist",
+        "gap": 0.115,
+        "maxGap": 0.12,
+        "score": 3.942,
+        "ok": true
+      },
+      {
+        "pair": "left_shoulder-left_upperarm",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 100,
+        "ok": true
+      },
+      {
+        "pair": "right_shoulder-right_upperarm",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 100,
+        "ok": true
+      },
+      {
+        "pair": "left_upperarm-left_forearm",
+        "gap": 0.021,
+        "maxGap": 0.08,
+        "score": 73.679,
+        "ok": true
+      },
+      {
+        "pair": "right_upperarm-right_forearm",
+        "gap": 0.021,
+        "maxGap": 0.08,
+        "score": 73.679,
+        "ok": true
+      },
+      {
+        "pair": "left_forearm-left_hand",
+        "gap": 0.002,
+        "maxGap": 0.08,
+        "score": 97.713,
+        "ok": true
+      },
+      {
+        "pair": "right_forearm-right_hand",
+        "gap": 0.002,
+        "maxGap": 0.08,
+        "score": 97.713,
+        "ok": true
+      },
+      {
+        "pair": "left_thigh-left_shin",
+        "gap": 0.052,
+        "maxGap": 0.1,
+        "score": 48.055,
+        "ok": true
+      },
+      {
+        "pair": "right_thigh-right_shin",
+        "gap": 0.052,
+        "maxGap": 0.1,
+        "score": 48.055,
+        "ok": true
+      },
+      {
+        "pair": "left_shin-left_boot",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 99.902,
+        "ok": true
+      },
+      {
+        "pair": "right_shin-right_boot",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 99.902,
+        "ok": true
+      }
+    ],
+    "silhouetteBudget": [
+      {
+        "name": "head_to_torso_width",
+        "value": 0.434,
+        "min": 0.38,
+        "max": 0.9,
+        "ok": true
+      },
+      {
+        "name": "torso_to_leg_width",
+        "value": 2.403,
+        "min": 1.1,
+        "max": 2.8,
+        "ok": true
+      },
+      {
+        "name": "torso_to_arm_width",
+        "value": 3.804,
+        "min": 1.6,
+        "max": 5.2,
+        "ok": true
+      },
+      {
+        "name": "boot_to_shin_length",
+        "value": 0.518,
+        "min": 0.28,
+        "max": 0.92,
+        "ok": true
+      },
+      {
+        "name": "torso_to_total_height",
+        "value": 0.213,
+        "min": 0.18,
+        "max": 0.42,
+        "ok": true
+      }
+    ],
+    "renderDeviation": [
+      {
+        "part": "waist",
+        "ratio": [
+          0.22,
+          0.419,
+          0.26
+        ],
+        "allowed": [
+          0.24,
+          0.46,
+          0.28
+        ],
+        "ok": true
+      },
+      {
+        "part": "chest",
+        "ratio": [
+          0.16,
+          0.2,
+          0.159
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.24
+        ],
+        "ok": true
+      },
+      {
+        "part": "back",
+        "ratio": [
+          0.18,
+          0.14,
+          0.18
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.24
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_hand",
+        "ratio": [
+          0.115,
+          0.101,
+          0.16
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_hand",
+        "ratio": [
+          0.115,
+          0.101,
+          0.16
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_forearm",
+        "ratio": [
+          0.04,
+          0.06,
+          0.12
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_forearm",
+        "ratio": [
+          0.04,
+          0.06,
+          0.12
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_shoulder",
+        "ratio": [
+          0.08,
+          0.08,
+          0.1
+        ],
+        "allowed": [
+          0.16,
+          0.16,
+          0.16
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_shoulder",
+        "ratio": [
+          0.08,
+          0.08,
+          0.1
+        ],
+        "allowed": [
+          0.16,
+          0.16,
+          0.16
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_upperarm",
+        "ratio": [
+          0.041,
+          0.059,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_upperarm",
+        "ratio": [
+          0.041,
+          0.059,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_thigh",
+        "ratio": [
+          0.06,
+          0.04,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_thigh",
+        "ratio": [
+          0.06,
+          0.04,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_shin",
+        "ratio": [
+          0.06,
+          0.02,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_shin",
+        "ratio": [
+          0.06,
+          0.02,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_boot",
+        "ratio": [
+          0.06,
+          0.1,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_boot",
+        "ratio": [
+          0.06,
+          0.1,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "helmet",
+        "ratio": [
+          0.02,
+          0.061,
+          0.02
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.22
+        ],
+        "ok": true
+      }
+    ],
+    "surfaceSampleCount": 1677,
+    "surfaceBuckets": {
+      "head": 1317,
+      "torso": 25,
+      "left_upperarm": 37,
+      "right_upperarm": 50,
+      "left_forearm": 64,
+      "right_forearm": 62,
+      "left_thigh": 17,
+      "right_thigh": 16,
+      "left_shin": 9,
+      "right_shin": 11,
+      "left_foot": 35,
+      "right_foot": 34
+    },
+    "surfaceMetrics": {
+      "helmet": {
+        "radial": 0.024,
+        "vertical": 0.031
+      },
+      "chest": {
+        "x": 0.113,
+        "z": 0.077
+      },
+      "back": {
+        "x": 0.089,
+        "z": 0.064
+      },
+      "left_shoulder": {
+        "radial": 0.012,
+        "vertical": -0.012
+      },
+      "right_shoulder": {
+        "radial": 0.011,
+        "vertical": -0.012
+      },
+      "left_upperarm": {
+        "radial": 0.016,
+        "vertical": -0.024
+      },
+      "right_upperarm": {
+        "radial": 0.015,
+        "vertical": -0.024
+      },
+      "left_forearm": {
+        "radial": -0.117,
+        "vertical": 0.003
+      },
+      "right_forearm": {
+        "radial": -0.117,
+        "vertical": 0.003
+      },
+      "waist": {
+        "x": 0.074,
+        "z": 0.067
+      },
+      "left_thigh": {
+        "radial": 0.051,
+        "vertical": -0.029
+      },
+      "right_thigh": {
+        "radial": 0.051,
+        "vertical": -0.029
+      },
+      "left_shin": {
+        "radial": 0.018,
+        "vertical": -0.009
+      },
+      "right_shin": {
+        "radial": 0.029,
+        "vertical": -0.009
+      },
+      "left_boot": {
+        "x": 0.017,
+        "z": 0.003,
+        "y": -0.008
+      },
+      "right_boot": {
+        "x": 0.017,
+        "z": 0.007,
+        "y": 0
+      },
+      "left_hand": {
+        "radial": -0.128,
+        "vertical": -0.168
+      },
+      "right_hand": {
+        "radial": -0.128,
+        "vertical": -0.168
+      }
+    },
+    "metrics": {
+      "shoulderWidth": 0.44,
+      "hipWidth": 0.33,
+      "torsoLen": 0.31,
+      "torsoLenRatio": 0.6,
+      "headLen": 0.082,
+      "upperArmLen": 0.165,
+      "foreArmLen": 0.223,
+      "thighLen": 0.347,
+      "shinLen": 0.407,
+      "handLen": 0.066,
+      "footLen": 0.141,
+      "torsoWidth": 0.414,
+      "torsoDepth": 0.19,
+      "upperArmWidth": 0.15,
+      "foreArmWidth": 0.123,
+      "thighWidth": 0.106,
+      "shinWidth": 0.087,
+      "handWidth": 0.088,
+      "footWidth": 0.064,
+      "footHeight": 0.04
+    },
+    "inferenceQuality": "good",
+    "inferenceQualityScore": 1,
+    "fitReadiness": "fit-ready",
+    "fitReadinessScore": 1,
+    "texturesVisible": true,
+    "textureMissingParts": []
+  },
+  "wearableSummary": {
+    "fitScore": 91.423,
+    "weakParts": [
+      {
+        "part": "helmet",
+        "score": 83.033,
+        "gap": 0.048,
+        "penetration": 0,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "chest",
+        "score": 85.983,
+        "gap": 0.039,
+        "penetration": 0,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_thigh",
+        "score": 87.689,
+        "gap": 0.021,
+        "penetration": 0.031,
+        "symmetryPenalty": 0,
+        "critical": false
+      },
+      {
+        "part": "right_thigh",
+        "score": 87.689,
+        "gap": 0.021,
+        "penetration": 0.031,
+        "symmetryPenalty": 0,
+        "critical": false
+      },
+      {
+        "part": "waist",
+        "score": 89.764,
+        "gap": 0.01,
+        "penetration": 0.042,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_shin",
+        "score": 90.265,
+        "gap": 0.021,
+        "penetration": 0.015,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "right_shin",
+        "score": 90.265,
+        "gap": 0.021,
+        "penetration": 0.015,
+        "symmetryPenalty": 0,
+        "critical": true
+      },
+      {
+        "part": "left_shoulder",
+        "score": 92.682,
+        "gap": 0,
+        "penetration": 0.047,
+        "symmetryPenalty": 0,
+        "critical": true
+      }
+    ],
+    "weakPairs": [
+      {
+        "pair": "chest-back",
+        "gap": 0.08,
+        "penetration": 0,
+        "score": 71.425
+      },
+      {
+        "pair": "waist-left_thigh",
+        "gap": 0,
+        "penetration": 0.063,
+        "score": 90.18
+      },
+      {
+        "pair": "waist-right_thigh",
+        "gap": 0,
+        "penetration": 0.063,
+        "score": 90.18
+      },
+      {
+        "pair": "helmet-chest",
+        "gap": 0.048,
+        "penetration": 0,
+        "score": 83.033
+      },
+      {
+        "pair": "left_shoulder-left_upperarm",
+        "gap": 0,
+        "penetration": 0.047,
+        "score": 92.682
+      }
+    ],
+    "minScaleLocks": [
+      {
+        "part": "chest",
+        "axes": [
+          "y"
+        ],
+        "nextScale": [
+          1.105,
+          0.523,
+          1.625
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      }
+    ],
+    "missingAnchors": [],
+    "canSave": true,
+    "reasons": [],
+    "pairCount": 15,
+    "meanGap": 0.018,
+    "meanPenetration": 0.02,
+    "tPoseChainsApplied": 11,
+    "tPoseChainsAttempted": 11,
+    "surfaceViolations": [],
+    "heroOverflow": [],
+    "symmetryDelta": [
+      {
+        "group": "shoulder",
+        "delta": 0,
+        "tolerance": 0.08,
+        "ok": true
+      },
+      {
+        "group": "upperarm",
+        "delta": 0,
+        "tolerance": 0.065,
+        "ok": true
+      },
+      {
+        "group": "forearm",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "thigh",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "shin",
+        "delta": 0,
+        "tolerance": 0.06,
+        "ok": true
+      },
+      {
+        "group": "boot",
+        "delta": 0,
+        "tolerance": 0.075,
+        "ok": true
+      },
+      {
+        "group": "hand",
+        "delta": 0,
+        "tolerance": 0.055,
+        "ok": true
+      }
+    ],
+    "seamContinuity": [
+      {
+        "pair": "helmet-chest",
+        "gap": 0.095,
+        "maxGap": 0.16,
+        "score": 40.712,
+        "ok": true
+      },
+      {
+        "pair": "chest-back",
+        "gap": 0.072,
+        "maxGap": 0.08,
+        "score": 9.484,
+        "ok": true
+      },
+      {
+        "pair": "back-waist",
+        "gap": 0.115,
+        "maxGap": 0.12,
+        "score": 3.942,
+        "ok": true
+      },
+      {
+        "pair": "left_shoulder-left_upperarm",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 100,
+        "ok": true
+      },
+      {
+        "pair": "right_shoulder-right_upperarm",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 100,
+        "ok": true
+      },
+      {
+        "pair": "left_upperarm-left_forearm",
+        "gap": 0.021,
+        "maxGap": 0.08,
+        "score": 73.679,
+        "ok": true
+      },
+      {
+        "pair": "right_upperarm-right_forearm",
+        "gap": 0.021,
+        "maxGap": 0.08,
+        "score": 73.679,
+        "ok": true
+      },
+      {
+        "pair": "left_forearm-left_hand",
+        "gap": 0.002,
+        "maxGap": 0.08,
+        "score": 97.713,
+        "ok": true
+      },
+      {
+        "pair": "right_forearm-right_hand",
+        "gap": 0.002,
+        "maxGap": 0.08,
+        "score": 97.713,
+        "ok": true
+      },
+      {
+        "pair": "left_thigh-left_shin",
+        "gap": 0.052,
+        "maxGap": 0.1,
+        "score": 48.055,
+        "ok": true
+      },
+      {
+        "pair": "right_thigh-right_shin",
+        "gap": 0.052,
+        "maxGap": 0.1,
+        "score": 48.055,
+        "ok": true
+      },
+      {
+        "pair": "left_shin-left_boot",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 99.902,
+        "ok": true
+      },
+      {
+        "pair": "right_shin-right_boot",
+        "gap": 0,
+        "maxGap": 0.08,
+        "score": 99.902,
+        "ok": true
+      }
+    ],
+    "silhouetteBudget": [
+      {
+        "name": "head_to_torso_width",
+        "value": 0.434,
+        "min": 0.38,
+        "max": 0.9,
+        "ok": true
+      },
+      {
+        "name": "torso_to_leg_width",
+        "value": 2.403,
+        "min": 1.1,
+        "max": 2.8,
+        "ok": true
+      },
+      {
+        "name": "torso_to_arm_width",
+        "value": 3.804,
+        "min": 1.6,
+        "max": 5.2,
+        "ok": true
+      },
+      {
+        "name": "boot_to_shin_length",
+        "value": 0.518,
+        "min": 0.28,
+        "max": 0.92,
+        "ok": true
+      },
+      {
+        "name": "torso_to_total_height",
+        "value": 0.213,
+        "min": 0.18,
+        "max": 0.42,
+        "ok": true
+      }
+    ],
+    "renderDeviation": [
+      {
+        "part": "waist",
+        "ratio": [
+          0.22,
+          0.419,
+          0.26
+        ],
+        "allowed": [
+          0.24,
+          0.46,
+          0.28
+        ],
+        "ok": true
+      },
+      {
+        "part": "chest",
+        "ratio": [
+          0.16,
+          0.2,
+          0.159
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.24
+        ],
+        "ok": true
+      },
+      {
+        "part": "back",
+        "ratio": [
+          0.18,
+          0.14,
+          0.18
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.24
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_hand",
+        "ratio": [
+          0.115,
+          0.101,
+          0.16
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_hand",
+        "ratio": [
+          0.115,
+          0.101,
+          0.16
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_forearm",
+        "ratio": [
+          0.04,
+          0.06,
+          0.12
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_forearm",
+        "ratio": [
+          0.04,
+          0.06,
+          0.12
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_shoulder",
+        "ratio": [
+          0.08,
+          0.08,
+          0.1
+        ],
+        "allowed": [
+          0.16,
+          0.16,
+          0.16
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_shoulder",
+        "ratio": [
+          0.08,
+          0.08,
+          0.1
+        ],
+        "allowed": [
+          0.16,
+          0.16,
+          0.16
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_upperarm",
+        "ratio": [
+          0.041,
+          0.059,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_upperarm",
+        "ratio": [
+          0.041,
+          0.059,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_thigh",
+        "ratio": [
+          0.06,
+          0.04,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_thigh",
+        "ratio": [
+          0.06,
+          0.04,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_shin",
+        "ratio": [
+          0.06,
+          0.02,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_shin",
+        "ratio": [
+          0.06,
+          0.02,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.18
+        ],
+        "ok": true
+      },
+      {
+        "part": "left_boot",
+        "ratio": [
+          0.06,
+          0.1,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "right_boot",
+        "ratio": [
+          0.06,
+          0.1,
+          0.1
+        ],
+        "allowed": [
+          0.18,
+          0.18,
+          0.2
+        ],
+        "ok": true
+      },
+      {
+        "part": "helmet",
+        "ratio": [
+          0.02,
+          0.061,
+          0.02
+        ],
+        "allowed": [
+          0.24,
+          0.22,
+          0.22
+        ],
+        "ok": true
+      }
+    ],
+    "surfaceSampleCount": 1677,
+    "surfaceBuckets": {
+      "head": 1317,
+      "torso": 25,
+      "left_upperarm": 37,
+      "right_upperarm": 50,
+      "left_forearm": 64,
+      "right_forearm": 62,
+      "left_thigh": 17,
+      "right_thigh": 16,
+      "left_shin": 9,
+      "right_shin": 11,
+      "left_foot": 35,
+      "right_foot": 34
+    },
+    "surfaceMetrics": {
+      "helmet": {
+        "radial": 0.024,
+        "vertical": 0.031
+      },
+      "chest": {
+        "x": 0.113,
+        "z": 0.077
+      },
+      "back": {
+        "x": 0.089,
+        "z": 0.064
+      },
+      "left_shoulder": {
+        "radial": 0.012,
+        "vertical": -0.012
+      },
+      "right_shoulder": {
+        "radial": 0.011,
+        "vertical": -0.012
+      },
+      "left_upperarm": {
+        "radial": 0.016,
+        "vertical": -0.024
+      },
+      "right_upperarm": {
+        "radial": 0.015,
+        "vertical": -0.024
+      },
+      "left_forearm": {
+        "radial": -0.117,
+        "vertical": 0.003
+      },
+      "right_forearm": {
+        "radial": -0.117,
+        "vertical": 0.003
+      },
+      "waist": {
+        "x": 0.074,
+        "z": 0.067
+      },
+      "left_thigh": {
+        "radial": 0.051,
+        "vertical": -0.029
+      },
+      "right_thigh": {
+        "radial": 0.051,
+        "vertical": -0.029
+      },
+      "left_shin": {
+        "radial": 0.018,
+        "vertical": -0.009
+      },
+      "right_shin": {
+        "radial": 0.029,
+        "vertical": -0.009
+      },
+      "left_boot": {
+        "x": 0.017,
+        "z": 0.003,
+        "y": -0.008
+      },
+      "right_boot": {
+        "x": 0.017,
+        "z": 0.007,
+        "y": 0
+      },
+      "left_hand": {
+        "radial": -0.128,
+        "vertical": -0.168
+      },
+      "right_hand": {
+        "radial": -0.128,
+        "vertical": -0.168
+      }
+    },
+    "metrics": {
+      "shoulderWidth": 0.44,
+      "hipWidth": 0.33,
+      "torsoLen": 0.31,
+      "torsoLenRatio": 0.6,
+      "headLen": 0.082,
+      "upperArmLen": 0.165,
+      "foreArmLen": 0.223,
+      "thighLen": 0.347,
+      "shinLen": 0.407,
+      "handLen": 0.066,
+      "footLen": 0.141,
+      "torsoWidth": 0.414,
+      "torsoDepth": 0.19,
+      "upperArmWidth": 0.15,
+      "foreArmWidth": 0.123,
+      "thighWidth": 0.106,
+      "shinWidth": 0.087,
+      "handWidth": 0.088,
+      "footWidth": 0.064,
+      "footHeight": 0.04
+    },
+    "inferenceQuality": "good",
+    "inferenceQualityScore": 1,
+    "fitReadiness": "fit-ready",
+    "fitReadinessScore": 1,
+    "texturesVisible": true,
+    "textureMissingParts": []
+  },
+  "metrics": {
+    "shoulderWidth": 0.44,
+    "hipWidth": 0.33,
+    "torsoLen": 0.31,
+    "torsoLenRatio": 0.6,
+    "headLen": 0.082,
+    "upperArmLen": 0.165,
+    "foreArmLen": 0.223,
+    "thighLen": 0.347,
+    "shinLen": 0.407,
+    "handLen": 0.066,
+    "footLen": 0.141,
+    "torsoWidth": 0.414,
+    "torsoDepth": 0.19,
+    "upperArmWidth": 0.15,
+    "foreArmWidth": 0.123,
+    "thighWidth": 0.106,
+    "shinWidth": 0.087,
+    "handWidth": 0.088,
+    "footWidth": 0.064,
+    "footHeight": 0.04
+  },
+  "fitByPart": {
+    "helmet": {
+      "shape": "sphere",
+      "source": "chest_core",
+      "attach": "start",
+      "offsetY": 0.174,
+      "zOffset": 0.02,
+      "scale": [
+        0.374,
+        0.43,
+        0.364
+      ],
+      "follow": [
+        0.34,
+        0.42,
+        0.34
+      ],
+      "minScale": [
+        0.14,
+        0.16,
+        0.14
+      ]
+    },
+    "chest": {
+      "shape": "box",
+      "source": "chest_core",
+      "attach": "center",
+      "offsetY": -0.037,
+      "zOffset": 0.156,
+      "scale": [
+        1.664,
+        0.633,
+        2.533
+      ],
+      "follow": [
+        0.72,
+        0.78,
+        0.72
+      ],
+      "minScale": [
+        0.48,
+        0.56,
+        0.46
+      ]
+    },
+    "back": {
+      "shape": "box",
+      "source": "chest_core",
+      "attach": "center",
+      "offsetY": 0.037,
+      "zOffset": -0.145,
+      "scale": [
+        1.494,
+        0.512,
+        2.592
+      ],
+      "follow": [
+        0.68,
+        0.76,
+        0.68
+      ],
+      "minScale": [
+        0.18,
+        0.12,
+        0.14
+      ]
+    },
+    "left_shoulder": {
+      "shape": "sphere",
+      "source": "left_upperarm",
+      "attach": "start",
+      "offsetY": 0.109,
+      "zOffset": 0,
+      "scale": [
+        0.394,
+        0.33,
+        0.372
+      ],
+      "follow": [
+        0.56,
+        0.5,
+        0.56
+      ],
+      "minScale": [
+        0.16,
+        0.16,
+        0.16
+      ]
+    },
+    "right_shoulder": {
+      "shape": "sphere",
+      "source": "right_upperarm",
+      "attach": "start",
+      "offsetY": 0.109,
+      "zOffset": 0,
+      "scale": [
+        0.394,
+        0.33,
+        0.372
+      ],
+      "follow": [
+        0.56,
+        0.5,
+        0.56
+      ],
+      "minScale": [
+        0.16,
+        0.16,
+        0.16
+      ]
+    },
+    "left_upperarm": {
+      "shape": "cylinder",
+      "source": "left_upperarm",
+      "attach": "center",
+      "offsetY": -0.038,
+      "zOffset": 0,
+      "scale": [
+        1.385,
+        0.402,
+        1.302
+      ],
+      "follow": [
+        0.88,
+        0.94,
+        0.88
+      ],
+      "minScale": [
+        0.18,
+        0.14,
+        0.18
+      ]
+    },
+    "right_upperarm": {
+      "shape": "cylinder",
+      "source": "right_upperarm",
+      "attach": "center",
+      "offsetY": -0.038,
+      "zOffset": 0,
+      "scale": [
+        1.385,
+        0.402,
+        1.302
+      ],
+      "follow": [
+        0.88,
+        0.94,
+        0.88
+      ],
+      "minScale": [
+        0.18,
+        0.14,
+        0.18
+      ]
+    },
+    "left_forearm": {
+      "shape": "cylinder",
+      "source": "left_forearm",
+      "attach": "center",
+      "offsetY": 0,
+      "zOffset": 0,
+      "scale": [
+        1.92,
+        0.882,
+        1.806
+      ],
+      "follow": [
+        0.9,
+        0.96,
+        0.9
+      ],
+      "minScale": [
+        0.16,
+        0.14,
+        0.16
+      ]
+    },
+    "right_forearm": {
+      "shape": "cylinder",
+      "source": "right_forearm",
+      "attach": "center",
+      "offsetY": 0,
+      "zOffset": 0,
+      "scale": [
+        1.92,
+        0.882,
+        1.806
+      ],
+      "follow": [
+        0.9,
+        0.96,
+        0.9
+      ],
+      "minScale": [
+        0.16,
+        0.14,
+        0.16
+      ]
+    },
+    "waist": {
+      "shape": "box",
+      "source": "chest_core",
+      "attach": "end",
+      "offsetY": -0.044,
+      "zOffset": 0.138,
+      "scale": [
+        1.29,
+        0.576,
+        1.843
+      ],
+      "follow": [
+        0.62,
+        0.7,
+        0.62
+      ],
+      "minScale": [
+        0.14,
+        0.1,
+        0.12
+      ]
+    },
+    "left_thigh": {
+      "shape": "cylinder",
+      "source": "left_thigh",
+      "attach": "center",
+      "offsetY": -0.032,
+      "zOffset": 0,
+      "scale": [
+        1.357,
+        0.842,
+        1.307
+      ],
+      "follow": [
+        0.94,
+        0.96,
+        0.94
+      ],
+      "minScale": [
+        0.22,
+        0.22,
+        0.2
+      ]
+    },
+    "right_thigh": {
+      "shape": "cylinder",
+      "source": "right_thigh",
+      "attach": "center",
+      "offsetY": -0.032,
+      "zOffset": 0,
+      "scale": [
+        1.357,
+        0.842,
+        1.307
+      ],
+      "follow": [
+        0.94,
+        0.96,
+        0.94
+      ],
+      "minScale": [
+        0.22,
+        0.22,
+        0.2
+      ]
+    },
+    "left_shin": {
+      "shape": "cylinder",
+      "source": "left_shin",
+      "attach": "center",
+      "offsetY": 0.028,
+      "zOffset": 0,
+      "scale": [
+        1.245,
+        0.915,
+        1.178
+      ],
+      "follow": [
+        0.92,
+        0.96,
+        0.92
+      ],
+      "minScale": [
+        0.2,
+        0.22,
+        0.18
+      ]
+    },
+    "right_shin": {
+      "shape": "cylinder",
+      "source": "right_shin",
+      "attach": "center",
+      "offsetY": 0.028,
+      "zOffset": 0,
+      "scale": [
+        1.245,
+        0.915,
+        1.178
+      ],
+      "follow": [
+        0.92,
+        0.96,
+        0.92
+      ],
+      "minScale": [
+        0.2,
+        0.22,
+        0.18
+      ]
+    },
+    "left_boot": {
+      "shape": "box",
+      "source": "left_shin",
+      "attach": "end",
+      "offsetY": -0.008,
+      "zOffset": 0.159,
+      "scale": [
+        0.531,
+        0.263,
+        0.662
+      ],
+      "follow": [
+        0.58,
+        0.52,
+        0.62
+      ],
+      "minScale": [
+        0.16,
+        0.1,
+        0.18
+      ]
+    },
+    "right_boot": {
+      "shape": "box",
+      "source": "right_shin",
+      "attach": "end",
+      "offsetY": -0.008,
+      "zOffset": 0.159,
+      "scale": [
+        0.531,
+        0.263,
+        0.662
+      ],
+      "follow": [
+        0.58,
+        0.52,
+        0.62
+      ],
+      "minScale": [
+        0.16,
+        0.1,
+        0.18
+      ]
+    },
+    "left_hand": {
+      "shape": "sphere",
+      "source": "left_hand",
+      "attach": "center",
+      "offsetY": 0,
+      "zOffset": 0.01,
+      "scale": [
+        0.619,
+        0.344,
+        0.424
+      ],
+      "follow": [
+        0.38,
+        0.34,
+        0.38
+      ],
+      "minScale": [
+        0.14,
+        0.14,
+        0.14
+      ]
+    },
+    "right_hand": {
+      "shape": "sphere",
+      "source": "right_hand",
+      "attach": "center",
+      "offsetY": 0,
+      "zOffset": 0.01,
+      "scale": [
+        0.619,
+        0.344,
+        0.424
+      ],
+      "follow": [
+        0.38,
+        0.34,
+        0.38
+      ],
+      "minScale": [
+        0.14,
+        0.14,
+        0.14
+      ]
+    }
+  },
+  "anchorByPart": {
+    "helmet": {
+      "bone": "head",
+      "offset": [
+        0,
+        -0.05,
+        0.015
+      ],
+      "rotation": [
+        -0.251,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "chest": {
+      "bone": "upperChest",
+      "offset": [
+        0,
+        -0.104,
+        0.153
+      ],
+      "rotation": [
+        -7.103,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "back": {
+      "bone": "upperChest",
+      "offset": [
+        0,
+        -0.111,
+        -0.149
+      ],
+      "rotation": [
+        -7.103,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_shoulder": {
+      "bone": "leftShoulder",
+      "offset": [
+        -0.103,
+        -0.016,
+        0
+      ],
+      "rotation": [
+        -7.103,
+        0,
+        91.52
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_shoulder": {
+      "bone": "rightShoulder",
+      "offset": [
+        0.103,
+        -0.016,
+        0
+      ],
+      "rotation": [
+        -7.103,
+        0,
+        -91.52
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_upperarm": {
+      "bone": "leftUpperArm",
+      "offset": [
+        0.107,
+        0.002,
+        0
+      ],
+      "rotation": [
+        -172.897,
+        0,
+        -88.48
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_upperarm": {
+      "bone": "rightUpperArm",
+      "offset": [
+        -0.107,
+        0.002,
+        0
+      ],
+      "rotation": [
+        -172.897,
+        0,
+        88.48
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_forearm": {
+      "bone": "leftLowerArm",
+      "offset": [
+        0.111,
+        0,
+        0
+      ],
+      "rotation": [
+        -172.897,
+        0.003,
+        -90.001
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_forearm": {
+      "bone": "rightLowerArm",
+      "offset": [
+        -0.111,
+        0,
+        0
+      ],
+      "rotation": [
+        -172.897,
+        -0.003,
+        90.001
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "waist": {
+      "bone": "hips",
+      "offset": [
+        0,
+        -0.057,
+        0.133
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_thigh": {
+      "bone": "leftUpperLeg",
+      "offset": [
+        0,
+        -0.162,
+        -0.003
+      ],
+      "rotation": [
+        0.959,
+        0,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_thigh": {
+      "bone": "rightUpperLeg",
+      "offset": [
+        0,
+        -0.162,
+        -0.003
+      ],
+      "rotation": [
+        0.959,
+        0,
+        -180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_shin": {
+      "bone": "leftLowerLeg",
+      "offset": [
+        0,
+        -0.215,
+        -0.013
+      ],
+      "rotation": [
+        2.942,
+        0,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_shin": {
+      "bone": "rightLowerLeg",
+      "offset": [
+        0,
+        -0.215,
+        -0.013
+      ],
+      "rotation": [
+        2.942,
+        0,
+        -180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_boot": {
+      "bone": "leftFoot",
+      "offset": [
+        0,
+        0.402,
+        0.182
+      ],
+      "rotation": [
+        2.942,
+        0,
+        180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_boot": {
+      "bone": "rightFoot",
+      "offset": [
+        0,
+        0.402,
+        0.182
+      ],
+      "rotation": [
+        2.942,
+        0,
+        -180
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "left_hand": {
+      "bone": "leftHand",
+      "offset": [
+        0.033,
+        0.005,
+        -0.009
+      ],
+      "rotation": [
+        -172.897,
+        0.003,
+        -96.512
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "right_hand": {
+      "bone": "rightHand",
+      "offset": [
+        -0.033,
+        0.005,
+        -0.009
+      ],
+      "rotation": [
+        -172.897,
+        -0.003,
+        96.512
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "surfaceModel": {
+    "sampleCount": 1677,
+    "buckets": {
+      "head": 1317,
+      "torso": 25,
+      "left_upperarm": 37,
+      "right_upperarm": 50,
+      "left_forearm": 64,
+      "right_forearm": 62,
+      "left_thigh": 17,
+      "right_thigh": 16,
+      "left_shin": 9,
+      "right_shin": 11,
+      "left_foot": 35,
+      "right_foot": 34
+    }
+  }
+}

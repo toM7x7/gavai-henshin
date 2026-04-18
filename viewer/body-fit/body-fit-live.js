@@ -102,6 +102,7 @@ export function createDefaultLiveState() {
     fps: 0,
     bodyScaleRef: null,
     bodyInference: null,
+    bodyTrackingFrame: null,
     poseModel: null,
     poseQuality: "idle",
     poseReliableJoints: 0,

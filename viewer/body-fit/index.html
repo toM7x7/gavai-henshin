@@ -3,17 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HENSHIN Body Fit Viewer</title>
+    <title>HENSHIN ボディフィット ビューア</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div id="app">
       <aside class="panel">
-        <h1>Body Fit Viewer</h1>
+        <h1>ボディフィット ビューア</h1>
         <p class="hint">
-          SuitSpec と body-sim を読み込み、全身プレビュー上で各パーツの fit と VRM 追従を確認します。
+          SuitSpec と body-sim を読み込み、VRM への装着状態を確認します。通常は「かんたん操作」だけで進め、必要な時だけ「詳細操作」を開いてください。
         </p>
+
+        <section class="mode-panel">
+          <h2>操作モード</h2>
+          <div class="row row2">
+            <button id="btnUiSimple" class="active">かんたん操作</button>
+            <button id="btnUiDetail">詳細操作</button>
+          </div>
+          <p id="uiModeHint" class="fit-note">
+            まずは VRM を読み込んで「自動フィット」を押し、問題がある時だけ詳細調整へ進みます。
+          </p>
+        </section>
 
         <label>
           SuitSpec JSON
@@ -26,88 +37,89 @@
         </label>
 
         <div class="row row4">
-          <button id="btnLoad">Load</button>
-          <button id="btnPlay">Play</button>
-          <button id="btnPrev">Prev</button>
-          <button id="btnNext">Next</button>
+          <button id="btnLoad">読込</button>
+          <button id="btnPlay">再生</button>
+          <button id="btnPrev">前</button>
+          <button id="btnNext">次</button>
         </div>
 
-        <div class="row row2">
-          <button id="btnTexture">Textures: On</button>
-          <button id="btnTheme">Theme: Bright</button>
+        <div class="row row3">
+          <button id="btnTexture">テクスチャ: ON</button>
+          <button id="btnGeometry">Fitシェル: OFF</button>
+          <button id="btnTheme">表示テーマ: 明</button>
         </div>
 
-        <label>
-          Mesh Relief
+        <label data-ui-level="detail">
+          凹凸の強さ
           <input id="reliefSlider" type="range" min="0" max="0.1" step="0.01" value="0.05" />
         </label>
 
         <div class="row row4">
-          <button id="btnCamFront">Cam Front</button>
-          <button id="btnCamSide">Cam Side</button>
-          <button id="btnCamBack">Cam Back</button>
-          <button id="btnCamPov">Cam POV</button>
+          <button id="btnCamFront">正面</button>
+          <button id="btnCamSide">側面</button>
+          <button id="btnCamBack">背面</button>
+          <button id="btnCamPov">斜め</button>
         </div>
 
         <div class="row row2">
-          <button id="btnCamTop">Cam Top</button>
-          <button id="btnFit">Focus Fit</button>
+          <button id="btnCamTop">上面</button>
+          <button id="btnFit">全体表示</button>
         </div>
 
         <label>
-          Frame
+          フレーム
           <input id="frameSlider" type="range" min="0" max="0" value="0" />
         </label>
 
         <label>
-          Speed
+          再生速度
           <input id="speedSlider" type="range" min="0.25" max="4" step="0.25" value="1" />
         </label>
 
         <section class="vrm-panel">
-          <h2>VRM Skeleton</h2>
-          <p class="fit-note">VRM を重ねて骨ベースでパーツ位置と向きを確認します。</p>
+          <h2>VRM と自動フィット</h2>
+          <p class="fit-note">VRM を読み込み、自動フィットで鎧を装着します。通常はこのセクションだけで操作します。</p>
           <label>
-            VRM Path
+            VRM パス
             <input id="vrmPath" type="text" value="viewer/assets/vrm/default.vrm" />
           </label>
           <div class="row row3">
-            <button id="btnVrmLoad">Load VRM</button>
-            <button id="btnVrmClear">Clear VRM</button>
-            <button id="btnVrmToggle">VRM Bones: On</button>
+            <button id="btnVrmLoad">VRM 読込</button>
+            <button id="btnVrmClear">VRM 解除</button>
+            <button id="btnVrmToggle">骨表示: ON</button>
           </div>
           <div class="row row3">
-            <button id="btnArmorToggle">Armor: On</button>
-            <button id="btnVrmIdleToggle">VRM Idle: Off</button>
-            <button id="btnVrmFocus">Focus VRM</button>
+            <button id="btnArmorToggle">鎧表示: ON</button>
+            <button id="btnVrmIdleToggle">待機モーション: OFF</button>
+            <button id="btnVrmFocus">VRMへ寄る</button>
           </div>
           <div class="row row3">
-            <button id="btnVrmTPose">Apply T-Pose</button>
-            <button id="btnVrmAutoFit">Auto Fit Armor</button>
-            <button id="btnVrmAutoFitSave">Auto Fit + Save</button>
+            <button id="btnVrmTPose">Tポーズ適用</button>
+            <button id="btnVrmAutoFit">自動フィット</button>
+            <button id="btnVrmAutoFitSave">自動フィット+保存</button>
           </div>
-          <label>
-            VRM Idle Amount
+          <label data-ui-level="detail">
+            待機モーション量
             <input id="vrmIdleAmount" type="range" min="0" max="1" step="0.05" value="0.35" />
           </label>
-          <label>
-            VRM Idle Speed
+          <label data-ui-level="detail">
+            待機モーション速度
             <input id="vrmIdleSpeed" type="range" min="0.25" max="3" step="0.05" value="1" />
           </label>
-          <div class="row row2">
-            <button id="btnVrmAttach">Attach: Hybrid</button>
-            <div class="fit-note">クリックで BodySim / Hybrid / VRM を切り替えます。</div>
+          <div class="row row2" data-ui-level="detail">
+            <button id="btnVrmAttach">装着基準: ハイブリッド</button>
+            <div class="fit-note">BodySim基準 / ハイブリッド / VRM を切り替えて、どの基準に追従させるか選びます。</div>
           </div>
-          <div id="vrmStatus" class="vrm-status">VRM: not loaded</div>
+          <div id="vrmStatus" class="vrm-status">VRM: 未読込</div>
         </section>
 
-        <section class="deposition-panel">
-          <h2>Deposition Mock</h2>
+        <section class="deposition-panel" data-ui-level="detail">
+          <h2>蒸着モック</h2>
           <p class="fit-note">VRM 体と装甲に対して、色相帯ベースの蒸着モック演出を再生します。</p>
           <label>
-            Deposition Profile
+            蒸着プロファイル
             <select id="depositionProfile">
-              <option value="auto" selected>Auto from palette</option>
+              <option value="auto" selected>自動</option>
               <option value="uplift">高揚</option>
               <option value="drive">闘志</option>
               <option value="grief">哀傷</option>
@@ -117,103 +129,145 @@
             </select>
           </label>
           <label>
-            Duration
+            再生時間
             <input id="depositionDuration" type="range" min="1.2" max="6.0" step="0.1" value="2.8" />
           </label>
           <div class="row row2">
-            <button id="btnDepositionPlay">Play 蒸着</button>
-            <button id="btnDepositionReset">Reset FX</button>
+            <button id="btnDepositionPlay">蒸着を再生</button>
+            <button id="btnDepositionReset">演出リセット</button>
           </div>
-          <div id="depositionStatus" class="deposition-status">Deposition: idle</div>
+          <div id="depositionStatus" class="deposition-status">蒸着: 待機中</div>
         </section>
 
-        <section class="live-input">
-          <h2>Live Input (PoC)</h2>
+        <section class="surface-panel" data-ui-level="detail">
+          <h2>Surface-first デモ</h2>
+          <p class="fit-note">VRM 表面の点群ラティスを担体にして、Skin Shell と Armor Mounts を重ねる PoC です。</p>
+          <div class="row row4">
+            <button id="btnSurfaceFirstRefresh">再構築</button>
+            <button id="btnSurfaceFirstGraph">表面点群: OFF</button>
+            <button id="btnSurfaceFirstShell">密着殻: OFF</button>
+            <button id="btnSurfaceFirstMounts">装着点: OFF</button>
+          </div>
           <label>
-            Live View
+            点群密度
+            <input id="surfacePointDensity" type="range" min="24" max="240" step="8" value="72" />
+          </label>
+          <label>
+            殻のオフセット
+            <input id="surfaceShellOffset" type="range" min="0.002" max="0.08" step="0.002" value="0.018" />
+          </label>
+          <div id="surfaceStatus" class="surface-status">Surface-first: VRM 未読込</div>
+        </section>
+
+        <section class="live-input" data-ui-level="detail">
+          <h2>ライブ入力 (PoC)</h2>
+          <label>
+            ライブ表示
             <select id="liveViewMode">
-              <option value="auto" selected>Auto (front=mirror / back,pov=world)</option>
-              <option value="mirror">Mirror Demo</option>
-              <option value="world">World / First-person</option>
+              <option value="auto" selected>自動 (正面=ミラー / 背面・斜め=ワールド)</option>
+              <option value="mirror">ミラー表示</option>
+              <option value="world">ワールド / 一人称</option>
             </select>
           </label>
           <p class="fit-note">Webカメラから姿勢を推定して body-fit にリアルタイム反映します。</p>
           <div class="row row2">
-            <button id="btnLiveStart">Start WebCam</button>
-            <button id="btnLiveStop">Stop Live</button>
+            <button id="btnLiveStart">Webカメラ開始</button>
+            <button id="btnLiveStop">停止</button>
           </div>
-          <div id="liveStatus" class="live-status">Live: inactive</div>
+          <div id="liveStatus" class="live-status">ライブ: 停止中</div>
+          <div id="liveCheckPanel" class="live-check-panel">
+            <strong>Webcam確認</strong>
+            <dl>
+              <div>
+                <dt>入力</dt>
+                <dd id="liveCheckInput">停止中</dd>
+              </div>
+              <div>
+                <dt>姿勢</dt>
+                <dd id="liveCheckPose">未取得</dd>
+              </div>
+              <div>
+                <dt>TrackingFrame</dt>
+                <dd id="liveCheckFrame">なし</dd>
+              </div>
+              <div>
+                <dt>Surface追従</dt>
+                <dd id="liveCheckSurface">未接続</dd>
+              </div>
+            </dl>
+            <p>開始後に TrackingFrame が webcam、Surface追従が reproject ON なら接続OKです。</p>
+          </div>
           <video id="liveVideo" class="live-video" autoplay playsinline muted></video>
         </section>
 
-        <section class="fit-editor">
-          <h2>Fit Editor</h2>
+        <section class="fit-editor" data-ui-level="detail">
+          <h2>詳細フィット調整</h2>
           <p class="fit-note">全身表示を見ながら、各パーツのサイズと位置を調整できます。</p>
 
           <section class="fit-assist">
             <div class="fit-assist-head">
-              <strong>Fit Assist</strong>
-              <button id="btnFitRefreshCheck" type="button">Refresh Check</button>
+              <strong>フィット診断</strong>
+              <button id="btnFitRefreshCheck" type="button">再チェック</button>
             </div>
             <p id="fitAssistSummary" class="fit-suggest-hint">
-              1. VRM を読み込む 2. Auto Fit Armor 3. Needs Attention を上から修正 4. Refresh Check 5. Save SuitSpec
+              1. VRM を読み込む 2. 自動フィット 3. 問題部位だけ調整 4. 再チェック 5. SuitSpec 保存
             </p>
-          <div class="row row3 fit-assist-actions">
-            <button id="btnFitPrevIssue" type="button">Prev Issue</button>
-            <button id="btnFitNextIssue" type="button">Next Issue</button>
-            <button id="btnFitFocusPart" type="button">Focus Part</button>
+            <div class="row row3 fit-assist-actions">
+            <button id="btnFitPrevIssue" type="button">前の問題</button>
+            <button id="btnFitNextIssue" type="button">次の問題</button>
+            <button id="btnFitFocusPart" type="button">部位へ寄る</button>
           </div>
           <div class="row row4 fit-assist-actions">
-            <button id="btnGizmoToggle" type="button">Gizmo: On</button>
-            <button id="btnGizmoMove" type="button">Move</button>
-            <button id="btnGizmoScale" type="button">Scale</button>
-            <button id="btnGizmoSpace" type="button">Space: Local</button>
+            <button id="btnGizmoToggle" type="button">ギズモ: ON</button>
+            <button id="btnGizmoMove" type="button">移動</button>
+            <button id="btnGizmoScale" type="button">拡縮</button>
+            <button id="btnGizmoSpace" type="button">座標: ローカル</button>
           </div>
           <p id="fitGizmoHint" class="fit-suggest-hint">
-            Attach=Body では fit、Attach=Hybrid/VRM では anchor を gizmo で編集します。
+            装着基準が BodySim の時はフィット、Hybrid / VRM の時はアンカーを編集します。
           </p>
-          <div id="fitAssistCurrent" class="fit-assist-current">Current: -</div>
+          <div id="fitAssistCurrent" class="fit-assist-current">現在の部位: 未選択</div>
           <div id="fitAssistList" class="fit-assist-list"></div>
           </section>
 
           <label>
-            Part
+            部位
             <select id="fitPart"></select>
           </label>
 
           <div class="row row3">
             <label class="mini-field">
-              scaleX
+              横幅 scaleX
               <input id="fitScaleX" type="number" step="0.01" min="0.05" max="3.00" />
             </label>
             <label class="mini-field">
-              scaleY
+              高さ scaleY
               <input id="fitScaleY" type="number" step="0.01" min="0.05" max="3.00" />
             </label>
             <label class="mini-field">
-              scaleZ
+              奥行 scaleZ
               <input id="fitScaleZ" type="number" step="0.01" min="0.05" max="3.00" />
             </label>
           </div>
 
           <div class="row row2">
             <label class="mini-field">
-              offsetY
+              上下 offsetY
               <input id="fitOffsetY" type="number" step="0.01" min="-1.00" max="1.00" />
             </label>
             <label class="mini-field">
-              zOffset
+              前後 zOffset
               <input id="fitZOffset" type="number" step="0.01" min="-1.00" max="1.00" />
             </label>
           </div>
 
           <label>
-            Nudge Step
+            微調整ステップ
             <select id="fitNudgeStep">
-              <option value="0.005">0.005 fine</option>
-              <option value="0.01" selected>0.01 normal</option>
-              <option value="0.02">0.02 large</option>
-              <option value="0.05">0.05 rough</option>
+              <option value="0.005">0.005 細かい</option>
+              <option value="0.01" selected>0.01 標準</option>
+              <option value="0.02">0.02 大きめ</option>
+              <option value="0.05">0.05 粗い</option>
             </select>
           </label>
 
@@ -246,16 +300,16 @@
           </div>
 
           <div class="row row4">
-            <button id="btnFitSuggestCurrent">Suggest</button>
-            <button id="btnFitApplyCurrent">Apply</button>
-            <button id="btnFitResetCurrent">Reset Part</button>
-            <button id="btnFitSaveSuitspec">Save SuitSpec</button>
+            <button id="btnFitSuggestCurrent">候補提案</button>
+            <button id="btnFitApplyCurrent">反映</button>
+            <button id="btnFitResetCurrent">部位リセット</button>
+            <button id="btnFitSaveSuitspec">SuitSpec 保存</button>
           </div>
 
           <div class="row row2 bridge-row">
-            <button id="btnBridgeToggle">Bridges: On</button>
+            <button id="btnBridgeToggle">接続ブリッジ: ON</button>
             <label class="mini-field">
-              bridge thickness
+              ブリッジ太さ
               <input id="bridgeThickness" type="range" min="0.03" max="0.22" step="0.01" value="0.10" />
             </label>
           </div>
@@ -263,84 +317,84 @@
           <p id="fitSuggestHint" class="fit-suggest-hint">Suggest は現在のスコアを元に仮値を提示します。</p>
 
           <hr />
-          <h2>VRM Anchor Editor</h2>
+          <h2>VRM アンカー調整</h2>
           <p class="fit-note">Attach が Hybrid / VRM の時に、部位アンカーを全身プレビューで直接調整します。</p>
 
           <label>
-            Part
+            部位
             <select id="vrmEditPart"></select>
           </label>
 
           <label>
-            Bone
+            ボーン
             <select id="vrmEditBone"></select>
           </label>
 
           <div class="row row3">
             <label class="mini-field">
-              offsetX
+              左右 offsetX
               <input id="vrmEditOffsetX" type="number" step="0.01" min="-2.00" max="2.00" />
             </label>
             <label class="mini-field">
-              offsetY
+              上下 offsetY
               <input id="vrmEditOffsetY" type="number" step="0.01" min="-2.00" max="2.00" />
             </label>
             <label class="mini-field">
-              offsetZ
+              前後 offsetZ
               <input id="vrmEditOffsetZ" type="number" step="0.01" min="-2.00" max="2.00" />
             </label>
           </div>
 
           <div class="row row3">
             <label class="mini-field">
-              rotX
+              回転 rotX
               <input id="vrmEditRotX" type="number" step="1" min="-360" max="360" />
             </label>
             <label class="mini-field">
-              rotY
+              回転 rotY
               <input id="vrmEditRotY" type="number" step="1" min="-360" max="360" />
             </label>
             <label class="mini-field">
-              rotZ
+              回転 rotZ
               <input id="vrmEditRotZ" type="number" step="1" min="-360" max="360" />
             </label>
           </div>
 
           <div class="row row3">
             <label class="mini-field">
-              scaleX
+              横幅 scaleX
               <input id="vrmEditScaleX" type="number" step="0.01" min="0.01" max="4.00" />
             </label>
             <label class="mini-field">
-              scaleY
+              高さ scaleY
               <input id="vrmEditScaleY" type="number" step="0.01" min="0.01" max="4.00" />
             </label>
             <label class="mini-field">
-              scaleZ
+              奥行 scaleZ
               <input id="vrmEditScaleZ" type="number" step="0.01" min="0.01" max="4.00" />
             </label>
           </div>
 
           <div class="row row3">
-            <button id="btnVrmEditLoad">Load Anchor</button>
-            <button id="btnVrmEditApply">Apply Anchor</button>
-            <button id="btnVrmEditReset">Reset Anchor</button>
+            <button id="btnVrmEditLoad">読込</button>
+            <button id="btnVrmEditApply">反映</button>
+            <button id="btnVrmEditReset">リセット</button>
           </div>
 
           <p id="vrmEditHint" class="fit-suggest-hint">
-            Load Anchor で現在値を読み込み、Apply Anchor で反映します。
+            現在値を読み込んでから反映します。必要な時だけ使ってください。
           </p>
         </section>
 
-        <div id="status">Ready</div>
-        <pre id="meta"></pre>
+        <div id="status">準備完了</div>
+        <pre id="meta" data-ui-level="detail"></pre>
       </aside>
 
       <main class="viewport">
         <canvas id="canvas"></canvas>
         <section id="legend" class="legend">
-          <h2>Display Guide</h2>
-          <p id="legendText">Load すると表示ガイドがここに出ます。</p>
+          <h2>表示ガイド</h2>
+          <p id="legendText">読込後に現在状態と操作の要点がここに表示されます。</p>
         </section>
       </main>
     </div>
@@ -355,6 +409,6 @@
         }
       }
     </script>
-    <script type="module" src="./viewer.js?v=20260412d"></script>
+    <script type="module" src="./viewer.js?v=20260418b"></script>
   </body>
 </html>

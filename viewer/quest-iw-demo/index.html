@@ -1,0 +1,41 @@
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IW HENSHIN Quest VR Demo</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="stage">
+      <div id="xrRoot" class="xr-root" aria-label="IWSDK immersive scene"></div>
+
+      <section class="hud" aria-label="IW henshin demo controls">
+        <p class="eyebrow">IWSDK / mocopi / Sakura AI Engine bridge</p>
+        <h1>&#29983;&#25104;&#35013;&#30528;</h1>
+        <p id="status" class="status">Quest 3 VR ready. Tap Voice, say &#29983;&#25104;, then replay the deposition.</p>
+        <div class="meter" aria-hidden="true"><span id="meterFill"></span></div>
+        <div class="actions">
+          <button id="btnEnterVR" type="button">Enter VR</button>
+          <button id="btnVoice" type="button">Voice</button>
+          <button id="btnReplay" type="button">Replay</button>
+          <button id="btnPause" type="button">Pause</button>
+          <button id="btnReset" type="button">Reset</button>
+        </div>
+        <p id="micState" class="mic-state">Whisper waits behind the local API.</p>
+        <p id="voiceLine" class="voice-line"></p>
+        <details id="debugPanel" class="debug-panel" open>
+          <summary>Voice debug</summary>
+          <pre id="voiceDebug">Waiting for voice capture.</pre>
+        </details>
+      </section>
+
+      <section class="readout" aria-label="Session readout">
+        <span id="sessionId">SESSION</span>
+        <span id="triggerState">TRIGGER</span>
+        <span id="equipState">EQUIP</span>
+      </section>
+    </main>
+    <script type="module" src="./quest-demo.js"></script>
+  </body>
+</html>

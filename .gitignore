@@ -7,6 +7,9 @@ __pycache__/
 .pytest_cache/
 .coverage
 
+# Node
+node_modules/
+
 # Virtual env
 .venv/
 venv/
@@ -27,6 +30,10 @@ sessions/*
 !sessions/.gitkeep
 dist/
 build/
+config/*.pem
+config/*.key
+config/*.pfx
+config/*.cer
 
 # Embedded PoC workspace (local reference only, not part of core repo)
 examples/henshin-rightarm-poc/

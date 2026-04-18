@@ -4,11 +4,16 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "python tools/run_henshin.py serve-dashboard --port 8010 --root .",
+    "dev:quest": "vite --config vite.quest.config.js --host 0.0.0.0",
+    "dev:quest:lan": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_quest_lan_https.ps1",
     "dev:viewer": "python tools/run_henshin.py serve-viewer --port 8000 --root .",
     "test": "python tools/run_henshin.py validate --kind suitspec --path examples/suitspec.sample.json"
   },
   "devDependencies": {
+    "@iwsdk/core": "^0.3.1",
+    "@iwsdk/vite-plugin-dev": "^0.3.1",
     "playwright": "^1.59.1",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "vite": "^7.3.2"
   }
 }

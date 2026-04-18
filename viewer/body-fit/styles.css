@@ -12,6 +12,10 @@ body {
   font-family: "IBM Plex Sans JP", "Yu Gothic UI", "Segoe UI", sans-serif;
 }
 
+body[data-ui-level="simple"] [data-ui-level="detail"] {
+  display: none !important;
+}
+
 #app {
   display: grid;
   grid-template-columns: 420px 1fr;
@@ -30,6 +34,20 @@ body {
   margin: 0 0 10px;
   font-size: 24px;
   letter-spacing: 0.01em;
+}
+
+.mode-panel {
+  margin: 10px 0 14px;
+  border: 1px solid #9cb6e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: linear-gradient(180deg, #fbfdff 0%, #eef5ff 100%);
+}
+
+.mode-panel h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #173767;
 }
 
 .hint {
@@ -117,6 +135,14 @@ input[type="range"] {
   background: #f6f4ff;
 }
 
+.surface-panel {
+  margin: 10px 0 14px;
+  border: 1px solid #9cb6e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: linear-gradient(180deg, #f4fbff 0%, #eef8ff 100%);
+}
+
 .vrm-panel h2 {
   margin: 0 0 4px;
   font-size: 14px;
@@ -124,6 +150,12 @@ input[type="range"] {
 }
 
 .deposition-panel h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #173767;
+}
+
+.surface-panel h2 {
   margin: 0 0 4px;
   font-size: 14px;
   color: #173767;
@@ -150,7 +182,64 @@ input[type="range"] {
   font-weight: 700;
 }
 
+.live-check-panel {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid #c7d8f2;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #234a7d;
+  font-size: 11px;
+}
+
+.live-check-panel strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #173767;
+}
+
+.live-check-panel dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.live-check-panel div {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.live-check-panel dt {
+  margin: 0;
+  font-weight: 700;
+  color: #46658f;
+}
+
+.live-check-panel dd {
+  margin: 0;
+  font-weight: 700;
+  color: #173767;
+  overflow-wrap: anywhere;
+}
+
+.live-check-panel p {
+  margin: 6px 0 0;
+  color: #557096;
+  line-height: 1.4;
+}
+
 .deposition-status {
+  margin: -2px 0 4px;
+  font-size: 12px;
+  color: #264b7f;
+  font-weight: 700;
+  white-space: pre-wrap;
+}
+
+.surface-status {
   margin: -2px 0 4px;
   font-size: 12px;
   color: #264b7f;

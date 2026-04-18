@@ -30,6 +30,7 @@ class TestFitRegression(unittest.TestCase):
                     {
                         "ok": True,
                         "summary": {"canSave": True, "fitScore": 88.2, "missingAnchors": []},
+                        "wearableSummary": {"canSave": True, "seamContinuity": [], "renderDeviation": []},
                         "metrics": {"torsoLen": 0.61},
                         "fitByPart": {"waist": {"scale": [1, 1, 1]}},
                         "anchorByPart": {"waist": {"bone": "hips"}},
@@ -47,6 +48,7 @@ class TestFitRegression(unittest.TestCase):
         )
         self.assertTrue(result["ok"])
         self.assertEqual(result["baselines"][0]["summary"]["fitScore"], 88.2)
+        self.assertTrue(result["baselines"][0]["wearable_summary"]["canSave"])
         self.assertEqual(result["baselines"][0]["fit_by_part"]["waist"]["scale"], [1, 1, 1])
         self.assertEqual(result["baselines"][0]["anchor_by_part"]["waist"]["bone"], "hips")
         self.assertEqual(result["baselines"][0]["surface_model"]["sampleCount"], 128)

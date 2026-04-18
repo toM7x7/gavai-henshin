@@ -45,9 +45,9 @@ export const PART_FIT_POLICIES = Object.freeze({
     bodyProxy: "torso_obb",
     proxyKey: "torso",
     clearanceBand: { min: 0.0, target: 0.022, max: 0.08 },
-    heroAllowance: { x: 0.05, y: 0.024, z: 0.05 },
-    autoFitScale: { x: 0.97, y: 0.88, z: 0.93 },
-    surfaceFitScale: { x: 0.86, z: 0.84 },
+    heroAllowance: { x: 0.052, y: 0.024, z: 0.05 },
+    autoFitScale: { x: 1.08, y: 0.9, z: 1.16 },
+    surfaceFitScale: { x: 1.04, z: 1.18 },
     pairRefine: { radialPenalty: 2.1, lengthPenalty: 2.55, minScaleAll: 0.88, minScaleY: 0.84, offsetGain: 0.28 },
     mirrorGroup: null,
     symmetryTolerance: 0.0,
@@ -223,6 +223,7 @@ export const PART_FIT_POLICIES = Object.freeze({
     proxyKey: "left_foot",
     clearanceBand: { min: -0.03, target: 0.02, max: 0.09 },
     heroAllowance: { x: 0.05, y: 0.04, z: 0.09 },
+    pairRefine: { radialPenalty: 1.35, lengthPenalty: 1.6, minScaleAll: 0.92, minScaleY: 1.02, offsetGain: 0.42 },
     mirrorGroup: "boot",
     symmetryTolerance: 0.075,
     contactGroup: "boot_left",
@@ -235,6 +236,7 @@ export const PART_FIT_POLICIES = Object.freeze({
     proxyKey: "right_foot",
     clearanceBand: { min: -0.03, target: 0.02, max: 0.09 },
     heroAllowance: { x: 0.05, y: 0.04, z: 0.09 },
+    pairRefine: { radialPenalty: 1.35, lengthPenalty: 1.6, minScaleAll: 0.92, minScaleY: 1.02, offsetGain: 0.42 },
     mirrorGroup: "boot",
     symmetryTolerance: 0.075,
     contactGroup: "boot_right",
@@ -243,8 +245,133 @@ export const PART_FIT_POLICIES = Object.freeze({
   },
 });
 
+export const PART_RENDER_BINDINGS = Object.freeze({
+  helmet: {
+    scaleBias: [0.86, 0.84, 0.86],
+    alignY: "min",
+    alignZ: "center",
+    offsetBias: [0, 0.004, 0],
+    maxDeviation: [0.36, 0.3, 0.3],
+  },
+  chest: {
+    scaleBias: [0.68, 0.76, 0.68],
+    alignY: "center",
+    alignZ: "center",
+    offsetBias: [0, -0.014, -0.006],
+    maxDeviation: [0.42, 0.34, 0.42],
+  },
+  back: {
+    scaleBias: [0.66, 0.76, 0.66],
+    alignY: "center",
+    alignZ: "center",
+    offsetBias: [0, -0.026, 0.006],
+    maxDeviation: [0.42, 0.34, 0.42],
+  },
+  waist: {
+    scaleBias: [0.62, 0.56, 0.6],
+    alignY: "max",
+    alignZ: "center",
+    offsetBias: [0, 0.014, 0],
+    maxDeviation: [0.42, 0.5, 0.42],
+  },
+  left_shoulder: {
+    scaleBias: [0.8, 0.82, 0.78],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.28, 0.24, 0.28],
+  },
+  right_shoulder: {
+    scaleBias: [0.8, 0.82, 0.78],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.28, 0.24, 0.28],
+  },
+  left_upperarm: {
+    scaleBias: [0.84, 0.9, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.24, 0.3],
+  },
+  right_upperarm: {
+    scaleBias: [0.84, 0.9, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.24, 0.3],
+  },
+  left_forearm: {
+    scaleBias: [0.84, 0.88, 0.78],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.24, 0.3],
+  },
+  right_forearm: {
+    scaleBias: [0.84, 0.88, 0.78],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.24, 0.3],
+  },
+  left_hand: {
+    scaleBias: [0.76, 0.78, 0.72],
+    alignY: "center",
+    alignZ: "max",
+    maxDeviation: [0.32, 0.3, 0.32],
+  },
+  right_hand: {
+    scaleBias: [0.76, 0.78, 0.72],
+    alignY: "center",
+    alignZ: "max",
+    maxDeviation: [0.32, 0.3, 0.32],
+  },
+  left_thigh: {
+    scaleBias: [0.84, 0.9, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.26, 0.3],
+  },
+  right_thigh: {
+    scaleBias: [0.84, 0.9, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.26, 0.3],
+  },
+  left_shin: {
+    scaleBias: [0.84, 0.92, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.26, 0.3],
+  },
+  right_shin: {
+    scaleBias: [0.84, 0.92, 0.8],
+    alignY: "center",
+    alignZ: "center",
+    maxDeviation: [0.3, 0.26, 0.3],
+  },
+  left_boot: {
+    scaleBias: [0.8, 0.82, 0.78],
+    alignY: "min",
+    alignZ: "max",
+    maxDeviation: [0.32, 0.3, 0.32],
+  },
+  right_boot: {
+    scaleBias: [0.8, 0.82, 0.78],
+    alignY: "min",
+    alignZ: "max",
+    maxDeviation: [0.32, 0.3, 0.32],
+  },
+});
+
 export function fitPolicyFor(partName) {
   return PART_FIT_POLICIES[partName] || null;
+}
+
+export function renderBindingFor(partName) {
+  return PART_RENDER_BINDINGS[partName] || {
+    scaleBias: [1, 1, 1],
+    alignY: "center",
+    alignZ: "center",
+    offsetBias: [0, 0, 0],
+    maxDeviation: [0.22, 0.22, 0.22],
+  };
 }
 
 export function criticalFitParts() {

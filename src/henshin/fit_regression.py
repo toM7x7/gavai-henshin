@@ -212,6 +212,7 @@ def run_fit_regression(
                     {
                         "ok": bool(payload.get("ok")),
                         "summary": payload.get("summary"),
+                        "wearable_summary": payload.get("wearableSummary") or payload.get("summary"),
                         "metrics": payload.get("metrics"),
                         "fit_by_part": payload.get("fitByPart"),
                         "anchor_by_part": payload.get("anchorByPart"),

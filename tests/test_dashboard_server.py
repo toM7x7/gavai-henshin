@@ -1,6 +1,14 @@
+import base64
+import tempfile
 import unittest
+from pathlib import Path
 
-from henshin.dashboard_server import GeneratePartsPayload, GenerationJob
+from henshin.dashboard_server import (
+    GeneratePartsPayload,
+    GenerationJob,
+    IWHenshinVoicePayload,
+    run_iw_henshin_voice,
+)
 
 
 class TestDashboardServer(unittest.TestCase):
@@ -30,6 +38,29 @@ class TestDashboardServer(unittest.TestCase):
             operator_profile_override={"protect_archetype": "future", "color_mood": "clear_white"},
         )
         self.assertEqual(payload.operator_profile_override["protect_archetype"], "future")
+
+    def test_iw_voice_payload_dry_run_generates_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = IWHenshinVoicePayload(
+                audio_base64=base64.b64encode(b"dry-run").decode("ascii"),
+                mime_type="audio/wav",
+                audio_stats={"mode": "wav", "sample_rate": 48000, "duration_sec": 4.5, "peak": 0.25, "rms": 0.04},
+                session_id="S-IW-QUEST-TEST",
+                mocopi=None,
+                trigger_phrase="\u751f\u6210",
+                dry_run=True,
+            )
+            result = run_iw_henshin_voice(root, payload)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["result"]["session_id"], "S-IW-QUEST-TEST")
+        self.assertEqual(result["replay_url"], "/sessions/S-IW-QUEST-TEST/artifacts/iwsdk-deposition-replay.json")
+        self.assertEqual(result["body_sim_url"], "/sessions/S-IW-QUEST-TEST/body-sim.json")
+        self.assertEqual(result["voice_audio_url"], "/sessions/S-IW-QUEST-TEST/artifacts/voice-command.wav")
+        self.assertEqual(result["voice_audio"]["stats"]["mode"], "wav")
+        self.assertEqual(result["voice_audio"]["stats"]["bytes"], len(b"dry-run"))
+        self.assertEqual(result["result"]["voice_audio"]["mime_type"], "audio/wav")
 
 
 if __name__ == "__main__":

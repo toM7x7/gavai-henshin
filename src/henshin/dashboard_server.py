@@ -23,6 +23,7 @@ from .iw_henshin import (
     IWSDKHenshinRequest,
     run_iwsdk_henshin,
 )
+from .new_route_api import NewRouteApi
 from .part_generation import DEFAULT_PROVIDER_PROFILE, GenerationRequest, run_generate_parts
 
 
@@ -402,6 +403,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.jobs = jobs
         super().__init__(*args, directory=directory, **kwargs)
 
+    @staticmethod
+    def _new_route_response_for_test(root: Path, path: str):
+        return NewRouteApi(root).get(path)
+
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -446,6 +451,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        new_route_response = NewRouteApi(self.repo_root).get(parsed.path)
+        if new_route_response is not None:
+            self._write_json(new_route_response.body, status=new_route_response.status)
+            return
         if parsed.path == "/api/health":
             self._write_json({"ok": True})
             return

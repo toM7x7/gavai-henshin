@@ -79,6 +79,18 @@ python -m henshin serve-viewer --port 8000
 python -m henshin serve-dashboard --port 8010
 ```
 
+## Phase 1 API skeleton
+
+新規路線の Cloud Run / Hono API に移す前段として、同じ契約をローカル dashboard server からも返せるようにします。現時点の skeleton は seed/sample を読むだけで、Cloud SQL / GCS / Firestore への書き込みはまだ行いません。
+
+```text
+GET /health
+GET /v1/catalog/parts
+GET /v1/manifests/{manifestId}
+```
+
+まずは API 形、schema validation、PartCatalog / SuitManifest の参照を固定する。永続化の正本は次段で Cloud SQL、artifact は GCS、live state は Firestore に分ける。
+
 ## GitHub運用
 - CI: `.github/workflows/ci.yml`（unittest実行）
 - ライセンス: MIT

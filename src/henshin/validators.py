@@ -1,7 +1,4 @@
-"""Lightweight validators for provisional schemas.
-
-No third-party dependency is required in this phase.
-"""
+"""Validators for authoring and runtime data contracts."""
 
 from __future__ import annotations
 
@@ -27,6 +24,15 @@ _FIT_SOURCES = {
     "right_thigh",
     "left_shin",
     "right_shin",
+    "left_hand",
+    "right_hand",
+}
+
+_SCHEMA_KIND_TO_FILE = {
+    "suitmanifest": "suitmanifest.v0.1.schema.json",
+    "partcatalog": "partcatalog.v0.1.schema.json",
+    "transform-session": "transform-session.v0.1.schema.json",
+    "replay-script": "replay-script.v0.1.schema.json",
 }
 
 
@@ -143,6 +149,30 @@ def validate_morphotype(payload: dict[str, Any]) -> None:
         raise ValueError("Morphotype.confidence must be in 0..1")
 
 
+def _schema_dir() -> Path:
+    return Path(__file__).resolve().parents[2] / "schemas"
+
+
+def validate_against_schema(payload: dict[str, Any], kind: str) -> None:
+    schema_file = _SCHEMA_KIND_TO_FILE.get(kind)
+    if not schema_file:
+        raise ValueError(f"Unsupported schema kind: {kind}")
+    try:
+        from jsonschema import Draft202012Validator
+        from jsonschema.exceptions import ValidationError
+    except ImportError as exc:
+        raise ValueError("jsonschema is required for runtime schema validation") from exc
+
+    schema = load_json(_schema_dir() / schema_file)
+    validator = Draft202012Validator(schema)
+    try:
+        validator.validate(payload)
+    except ValidationError as exc:
+        path = ".".join(str(p) for p in exc.absolute_path)
+        label = f"{kind}.{path}" if path else kind
+        raise ValueError(f"{label}: {exc.message}") from exc
+
+
 def validate_file(path: str | Path, kind: str) -> None:
     payload = load_json(path)
     if kind == "suitspec":
@@ -150,5 +180,8 @@ def validate_file(path: str | Path, kind: str) -> None:
         return
     if kind == "morphotype":
         validate_morphotype(payload)
+        return
+    if kind in _SCHEMA_KIND_TO_FILE:
+        validate_against_schema(payload, kind)
         return
     raise ValueError(f"Unsupported kind: {kind}")

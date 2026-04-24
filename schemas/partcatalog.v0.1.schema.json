@@ -1,0 +1,455 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gavai-henshin.local/schema/partcatalog.v0.1.schema.json",
+  "title": "PartCatalog v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "catalog_id",
+    "status",
+    "source_refs",
+    "material_slots",
+    "parts"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "catalog_id": {
+      "type": "string",
+      "pattern": "^PCAT-[A-Z0-9-]+$"
+    },
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "runtime_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mesh_format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "texture_binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderer_material": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "socket_aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "contact_pairs": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "$ref": "#/$defs/module"
+        }
+      }
+    },
+    "material_slots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/materialSlot"
+      }
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/part"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "ACTIVE",
+        "EXPERIMENTAL",
+        "RETIRED"
+      ]
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "helmet",
+        "chest",
+        "back",
+        "waist",
+        "left_shoulder",
+        "right_shoulder",
+        "left_upperarm",
+        "right_upperarm",
+        "left_forearm",
+        "right_forearm",
+        "left_hand",
+        "right_hand",
+        "left_thigh",
+        "right_thigh",
+        "left_shin",
+        "right_shin",
+        "left_boot",
+        "right_boot"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "head",
+        "torso",
+        "dorsal",
+        "waist",
+        "shoulder",
+        "upper_arm",
+        "forearm",
+        "hand",
+        "thigh",
+        "shin",
+        "boot"
+      ]
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "center",
+        "left",
+        "right"
+      ]
+    },
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    },
+    "colorHex": {
+      "type": "string",
+      "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+    },
+    "materialSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_id",
+        "map_types",
+        "suitspec_binding",
+        "renderer_binding",
+        "required"
+      ],
+      "properties": {
+        "slot_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "map_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "base_color",
+              "emissive",
+              "normal",
+              "roughness",
+              "metalness"
+            ]
+          }
+        },
+        "suitspec_binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderer_binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "uri",
+        "format",
+        "mesh_name",
+        "metrics"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "mesh_json",
+            "glb",
+            "obj"
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mesh_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "vertices",
+            "triangles",
+            "has_uv",
+            "local_bbox_min",
+            "local_bbox_max"
+          ],
+          "properties": {
+            "vertices": {
+              "type": "integer",
+              "minimum": 3
+            },
+            "triangles": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "has_uv": {
+              "type": "boolean"
+            },
+            "local_bbox_min": {
+              "$ref": "#/$defs/vec3"
+            },
+            "local_bbox_max": {
+              "$ref": "#/$defs/vec3"
+            }
+          }
+        }
+      }
+    },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shape",
+        "source",
+        "attach",
+        "offsetY",
+        "zOffset",
+        "scale",
+        "follow",
+        "minScale"
+      ],
+      "properties": {
+        "shape": {
+          "type": "string",
+          "enum": [
+            "box",
+            "sphere",
+            "cylinder"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "chest_core",
+            "left_upperarm",
+            "right_upperarm",
+            "left_forearm",
+            "right_forearm",
+            "left_thigh",
+            "right_thigh",
+            "left_shin",
+            "right_shin",
+            "left_hand",
+            "right_hand"
+          ]
+        },
+        "attach": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end"
+          ]
+        },
+        "offsetY": {
+          "type": "number"
+        },
+        "zOffset": {
+          "type": "number"
+        },
+        "scale": {
+          "$ref": "#/$defs/vec3"
+        },
+        "follow": {
+          "$ref": "#/$defs/vec3"
+        },
+        "minScale": {
+          "$ref": "#/$defs/vec3"
+        }
+      }
+    },
+    "vrmAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bone",
+        "offset",
+        "rotation",
+        "scale"
+      ],
+      "properties": {
+        "bone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "offset": {
+          "$ref": "#/$defs/vec3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/vec3"
+        },
+        "scale": {
+          "$ref": "#/$defs/vec3"
+        }
+      }
+    },
+    "materialSlotBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_id",
+        "binding",
+        "fallback_color"
+      ],
+      "properties": {
+        "slot_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "binding": {
+          "type": "string",
+          "enum": [
+            "module.texture_path",
+            "fallback_color_only"
+          ]
+        },
+        "fallback_color": {
+          "$ref": "#/$defs/colorHex"
+        }
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "part_id",
+        "module",
+        "display_name",
+        "category",
+        "side",
+        "socket",
+        "status",
+        "asset",
+        "fit",
+        "vrm_anchor",
+        "bone_fallbacks",
+        "material_slot_bindings"
+      ],
+      "properties": {
+        "part_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+        },
+        "module": {
+          "$ref": "#/$defs/module"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "$ref": "#/$defs/category"
+        },
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "socket": {
+          "$ref": "#/$defs/module"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "asset": {
+          "$ref": "#/$defs/asset"
+        },
+        "fit": {
+          "$ref": "#/$defs/fit"
+        },
+        "vrm_anchor": {
+          "$ref": "#/$defs/vrmAnchor"
+        },
+        "bone_fallbacks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "material_slot_bindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/materialSlotBinding"
+          }
+        }
+      }
+    }
+  }
+}

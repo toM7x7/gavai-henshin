@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gavai-henshin.local/schema/replay-script.v0.1.schema.json",
+  "title": "ReplayScript v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "replay_id",
+    "session_id",
+    "manifest_id",
+    "source_events",
+    "duration_sec",
+    "timeline"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "replay_id": {
+      "$ref": "#/$defs/replayId"
+    },
+    "session_id": {
+      "$ref": "#/$defs/sessionId"
+    },
+    "manifest_id": {
+      "$ref": "#/$defs/manifestId"
+    },
+    "source_events": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transform_session_schema_version",
+        "event_ids"
+      ],
+      "properties": {
+        "transform_session_schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "event_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/eventId"
+          }
+        }
+      }
+    },
+    "duration_sec": {
+      "type": "number",
+      "minimum": 0
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/replaySegment"
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "script_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preview_image_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "video_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96
+        }
+      }
+    }
+  },
+  "$defs": {
+    "replayId": {
+      "type": "string",
+      "pattern": "^RPL-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^S-[A-Z0-9][A-Z0-9-]{2,63}$"
+    },
+    "manifestId": {
+      "type": "string",
+      "pattern": "^MNF-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "eventId": {
+      "type": "string",
+      "pattern": "^EVT-[0-9]{8}-[A-Z0-9]{6}$"
+    },
+    "replaySegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "segment_id",
+        "start_time_sec",
+        "duration_sec",
+        "actions"
+      ],
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "pattern": "^SEG-[A-Z0-9][A-Z0-9_-]{1,63}$"
+        },
+        "start_time_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "source_event_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/eventId"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/replayAction"
+          }
+        }
+      }
+    },
+    "replayAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_type",
+        "at_time_sec"
+      ],
+      "properties": {
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "state_marker",
+            "camera",
+            "fx",
+            "audio",
+            "text",
+            "part_visibility",
+            "deposition_progress"
+          ]
+        },
+        "at_time_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

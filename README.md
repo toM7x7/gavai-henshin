@@ -11,6 +11,8 @@ Loreを基点に、Blueprintを実行可能にするための **SIM-first プロ
 ## 現在の実装範囲
 - 仮案IDルールと設定ファイル
 - `SuitSpec` / `Morphotype` のスキーマ（`schemas/`）
+- `SuitManifest` / `PartCatalog` / `TransformSession` / `ReplayScript` の新規路線契約
+- `SuitSpec` から `SuitManifest` への projection CLI
 - 生成ドラフト出力（JSON）
 - Gemini API経由の画像生成（Blueprint/Emblem）
 - Gemini API経由の部位別画像生成（module単位）
@@ -43,6 +45,8 @@ $env:PYTHONPATH="src"
 python -m henshin demo --mode happy
 python -m henshin demo --mode refused --refusal-code AUDIT_MISMATCH
 python -m henshin validate --kind suitspec --path examples/suitspec.sample.json
+python tools/run_henshin.py project-manifest --suitspec examples/suitspec.sample.json --output examples/suitmanifest.sample.json
+python tools/run_henshin.py validate --kind suitmanifest --path examples/suitmanifest.sample.json
 python -m unittest discover -s tests -v
 ```
 
@@ -62,6 +66,8 @@ python -m henshin new-session
 python -m henshin draft --session-id S-20260228-A1B2 --series AXIS --role OP
 python -m henshin demo --mode happy
 python -m henshin validate --kind morphotype --path examples/morphotype.sample.json
+python tools/run_henshin.py validate --kind partcatalog --path examples/partcatalog.seed.json
+python tools/run_henshin.py project-manifest --suitspec examples/suitspec.sample.json --partcatalog examples/partcatalog.seed.json --output examples/suitmanifest.sample.json
 python -m henshin generate-image --kind blueprint --suitspec examples/suitspec.sample.json
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --dry-run
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --texture-mode mesh_uv --dry-run

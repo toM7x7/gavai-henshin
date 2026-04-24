@@ -41,6 +41,7 @@ from .part_generation import (
     run_generate_parts,
 )
 from .image_providers import ImageProviderError
+from .manifest import project_suitspec_to_manifest
 from .rightarm import CoverScale, RightArmFrame, Vec2, run_rightarm_sequence
 from .sakura_ai_engine import resolve_sakura_config
 from .transform import ProtocolStateMachine
@@ -153,6 +154,45 @@ def _cmd_demo(args: argparse.Namespace) -> int:
 def _cmd_validate(args: argparse.Namespace) -> int:
     validate_file(args.path, kind=args.kind)
     print(json.dumps({"path": args.path, "kind": args.kind, "valid": True}, ensure_ascii=False))
+    return 0
+
+
+def _cmd_project_manifest(args: argparse.Namespace) -> int:
+    try:
+        suitspec = load_json(args.suitspec)
+        part_catalog = None
+        if args.partcatalog:
+            part_catalog = load_json(args.partcatalog)
+        manifest = project_suitspec_to_manifest(
+            suitspec,
+            part_catalog=part_catalog,
+            manifest_id=args.manifest_id,
+            status=args.status,
+            projection_version=args.projection_version,
+        )
+        if args.validate:
+            from .validators import validate_against_schema
+
+            validate_against_schema(manifest, "suitmanifest")
+    except (ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    output_path = None
+    if args.output:
+        output_path = write_json(args.output, manifest)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "manifest_id": manifest["manifest_id"],
+                "suit_id": manifest["suit_id"],
+                "parts": len(manifest["parts"]),
+                "output": str(output_path) if output_path else None,
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
@@ -518,9 +558,26 @@ def build_parser() -> argparse.ArgumentParser:
     demo.set_defaults(func=_cmd_demo)
 
     validate = sub.add_parser("validate", help="Validate a JSON file")
-    validate.add_argument("--kind", choices=["suitspec", "morphotype"], required=True)
+    validate.add_argument(
+        "--kind",
+        choices=["suitspec", "morphotype", "suitmanifest", "partcatalog", "transform-session", "replay-script"],
+        required=True,
+    )
     validate.add_argument("--path", required=True)
     validate.set_defaults(func=_cmd_validate)
+
+    project_manifest = sub.add_parser(
+        "project-manifest",
+        help="Project a SuitSpec authoring document into a SuitManifest runtime contract",
+    )
+    project_manifest.add_argument("--suitspec", required=True)
+    project_manifest.add_argument("--partcatalog", default="examples/partcatalog.seed.json")
+    project_manifest.add_argument("--manifest-id")
+    project_manifest.add_argument("--status", choices=["DRAFT", "READY", "ACTIVE", "RETIRED"], default="DRAFT")
+    project_manifest.add_argument("--projection-version", default="0.1")
+    project_manifest.add_argument("--output")
+    project_manifest.add_argument("--validate", action=argparse.BooleanOptionalAction, default=True)
+    project_manifest.set_defaults(func=_cmd_project_manifest)
 
     generate_image_cmd = sub.add_parser("generate-image", help="Generate blueprint/emblem image via Gemini API")
     generate_image_cmd.add_argument("--root", default="sessions")

@@ -11,6 +11,8 @@ Loreを基点に、Blueprintを実行可能にするための **SIM-first プロ
 ## 現在の実装範囲
 - 仮案IDルールと設定ファイル
 - `SuitSpec` / `Morphotype` のスキーマ（`schemas/`）
+- `SuitManifest` / `PartCatalog` / `TransformSession` / `ReplayScript` の新規路線契約
+- `SuitSpec` から `SuitManifest` への projection CLI
 - 生成ドラフト出力（JSON）
 - Gemini API経由の画像生成（Blueprint/Emblem）
 - Gemini API経由の部位別画像生成（module単位）
@@ -43,6 +45,8 @@ $env:PYTHONPATH="src"
 python -m henshin demo --mode happy
 python -m henshin demo --mode refused --refusal-code AUDIT_MISMATCH
 python -m henshin validate --kind suitspec --path examples/suitspec.sample.json
+python tools/run_henshin.py project-manifest --suitspec examples/suitspec.sample.json --output examples/suitmanifest.sample.json
+python tools/run_henshin.py validate --kind suitmanifest --path examples/suitmanifest.sample.json
 python -m unittest discover -s tests -v
 ```
 
@@ -62,6 +66,8 @@ python -m henshin new-session
 python -m henshin draft --session-id S-20260228-A1B2 --series AXIS --role OP
 python -m henshin demo --mode happy
 python -m henshin validate --kind morphotype --path examples/morphotype.sample.json
+python tools/run_henshin.py validate --kind partcatalog --path examples/partcatalog.seed.json
+python tools/run_henshin.py project-manifest --suitspec examples/suitspec.sample.json --partcatalog examples/partcatalog.seed.json --output examples/suitmanifest.sample.json
 python -m henshin generate-image --kind blueprint --suitspec examples/suitspec.sample.json
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --dry-run
 python -m henshin generate-parts --suitspec examples/suitspec.sample.json --texture-mode mesh_uv --dry-run
@@ -73,10 +79,49 @@ python -m henshin serve-viewer --port 8000
 python -m henshin serve-dashboard --port 8010
 ```
 
+## Phase 1 API skeleton
+
+新規路線の Cloud Run / Hono API に移す前段として、同じ契約をローカル dashboard server からも返せるようにします。現時点の skeleton は seed/sample を読むだけで、Cloud SQL / GCS / Firestore への書き込みはまだ行いません。
+
+```text
+GET /health
+GET /v1/catalog/parts
+POST /v1/suits
+GET /v1/suits/{suitId}
+POST /v1/suits/{suitId}/manifest
+GET /v1/suits/{suitId}/manifest
+GET /v1/manifests/{manifestId}
+POST /v1/trials
+GET /v1/trials/{trialId}
+POST /v1/trials/{trialId}/events
+GET /v1/trials/{trialId}/replay
+```
+
+Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the SuitSpec as the authoring source, and `POST /v1/suits/{suitId}/manifest` projects a validated SuitManifest with PartCatalog references. The local implementation writes JSON under `sessions/new-route/suits/...`; Cloud Run can keep the same contract while replacing that repository with Cloud SQL for source/version rows and GCS for artifacts.
+
+Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creates a schema-valid `TransformSession`, and `POST /v1/trials/{trialId}/events` appends canonical transform events with server-side event ids and sequence numbers. Local storage writes under `sessions/new-route/trials/...`; later GCP should map sessions/events to Cloud SQL and live state to Firestore.
+
+Phase 3 local replay path closes the first loop: `GET /v1/trials/{trialId}/replay` derives and stores a schema-valid `ReplayScript` from the canonical `TransformSession` events. Video/audio remain derived artifacts; the durable source stays event log plus replay script.
+
+まずは API 形、schema validation、PartCatalog / SuitManifest の参照を固定する。永続化の正本は次段で Cloud SQL、artifact は GCS、live state は Firestore に分ける。
+
 ## GitHub運用
 - CI: `.github/workflows/ci.yml`（unittest実行）
 - ライセンス: MIT
 - コントリビュート規約: `CONTRIBUTING.md`
+
+## 新規路線ブランチ対比
+
+新規路線は、既存モジュールを捨てずに `SuitManifest` / `PartCatalog` / `TransformEvent` を正本化して GCP / Quest / Replay へ段階移行する方針です。差分が混ざらないよう、以下のブランチ単位で退避・レビューします。
+
+| ブランチ | 目的 | レビュー順 |
+|---|---|---:|
+| `codex/new-route-phase0-contracts` | Phase 0 契約。`SuitManifest`、`PartCatalog`、`TransformSession`、`ReplayScript`、`SuitSpec -> SuitManifest` projection、GCP移行メモ。 | 1 |
+| `codex/quest-iw-mocopi-work` | Quest Browser / IWSDK / mocopi bridge / operator monitor 周辺の実機・展示レーン。 | 2 |
+| `codex/uv-part-generation-work` | UV guide、texture quality gate、prompt bench、part generation 改善。 | 3 |
+| `codex/new-route-source-docs` | 2026-04-23 の GPT Pro / GCP 方針資料原本。実装差分ではなく参照資料。 | 4 |
+
+基本順序は、まず Phase 0 契約をレビューし、その上に Quest / UV / source docs を必要に応じて積む。`main` へ入れる判断は、契約、実機、生成品質、資料の順で分ける。
 
 ## 次の実装候補
 1. SuitSpecサンプルを増やしてモジュール差し替え検証を追加

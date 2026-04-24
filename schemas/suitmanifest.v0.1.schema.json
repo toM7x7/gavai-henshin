@@ -1,85 +1,90 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gavai-henshin.local/schema/suitspec.v0.2.schema.json",
-  "title": "SuitSpec v0.2",
+  "$id": "https://gavai-henshin.local/schema/suitmanifest.v0.1.schema.json",
+  "title": "SuitManifest v0.1",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "manifest_id",
     "suit_id",
-    "style_tags",
-    "modules",
+    "source",
+    "status",
+    "parts",
     "palette",
-    "blueprint",
-    "emblem",
-    "effects",
-    "text",
-    "generation"
+    "effects"
   ],
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "0.2"
+      "const": "0.1"
+    },
+    "manifest_id": {
+      "$ref": "#/$defs/manifestId"
     },
     "suit_id": {
-      "type": "string",
-      "pattern": "^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$"
+      "$ref": "#/$defs/suitId"
     },
     "approval_id": {
-      "type": "string",
-      "pattern": "^APV-[0-9]{8}$"
+      "$ref": "#/$defs/approvalId"
     },
     "morphotype_id": {
-      "type": "string",
-      "pattern": "^MTP-[0-9]{8}$"
+      "$ref": "#/$defs/morphotypeId"
     },
-    "oath": {
-      "type": "string",
-      "enum": [
-        "NO_OMISSION",
-        "NO_FABRICATION",
-        "SEAL_INTACT",
-        "AUDIT_READY",
-        "REFUSAL_ACCEPTED",
-        "NC_OBSERVED",
-        "POSTED_OBEYED",
-        "CLEARANCE_RESPECT",
-        "PROTOCOL_COMPLETE",
-        "INTEGRITY_FIRST"
-      ]
-    },
-    "style_tags": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 12,
-      "items": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 32
-      }
-    },
-    "operator_profile": {
+    "source": {
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "type",
+        "suitspec_schema_version",
+        "suitspec_id"
+      ],
       "properties": {
-        "protect_archetype": {
+        "type": {
           "type": "string",
-          "minLength": 1
+          "enum": [
+            "suitspec_projection"
+          ]
         },
-        "temperament_bias": {
+        "suitspec_schema_version": {
           "type": "string",
-          "minLength": 1
+          "const": "0.2"
         },
-        "color_mood": {
+        "suitspec_id": {
+          "$ref": "#/$defs/suitId"
+        },
+        "projection_version": {
           "type": "string",
-          "minLength": 1
-        },
-        "note": {
-          "type": "string"
+          "minLength": 1,
+          "maxLength": 32
         }
       }
     },
-    "modules": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "READY",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "runtime_targets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "web_preview",
+          "playcanvas",
+          "quest",
+          "replay"
+        ]
+      }
+    },
+    "parts": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -89,58 +94,58 @@
       ],
       "properties": {
         "helmet": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "chest": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "back": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_shoulder": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_shoulder": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_upperarm": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_upperarm": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_forearm": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_forearm": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "waist": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_thigh": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_thigh": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_shin": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_shin": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_boot": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_boot": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "left_hand": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         },
         "right_hand": {
-          "$ref": "#/$defs/module"
+          "$ref": "#/$defs/part"
         }
       }
     },
@@ -243,9 +248,6 @@
     "text": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "deposition_log_lines"
-      ],
       "properties": {
         "deposition_log_lines": {
           "type": "array",
@@ -263,32 +265,21 @@
         }
       }
     },
-    "generation": {
+    "artifacts": {
       "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "model_id",
-        "prompt"
-      ],
+      "additionalProperties": false,
       "properties": {
-        "model_id": {
+        "manifest_path": {
           "type": "string",
           "minLength": 1
         },
-        "prompt": {
+        "preview_image_path": {
           "type": "string",
           "minLength": 1
         },
-        "seed": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "part_prompts": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string",
-            "minLength": 1
-          }
+        "glb_path": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -308,11 +299,27 @@
     }
   },
   "$defs": {
+    "manifestId": {
+      "type": "string",
+      "pattern": "^MNF-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "suitId": {
+      "type": "string",
+      "pattern": "^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$"
+    },
+    "approvalId": {
+      "type": "string",
+      "pattern": "^APV-[0-9]{8}$"
+    },
+    "morphotypeId": {
+      "type": "string",
+      "pattern": "^MTP-[0-9]{8}$"
+    },
     "colorHex": {
       "type": "string",
       "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
     },
-    "module": {
+    "part": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -326,6 +333,10 @@
         "asset_ref": {
           "type": "string",
           "minLength": 1
+        },
+        "catalog_part_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$"
         },
         "material_ref": {
           "type": "string",
@@ -341,117 +352,113 @@
           "maxLength": 64
         },
         "fit": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "shape": {
-              "type": "string",
-              "enum": [
-                "box",
-                "sphere",
-                "cylinder"
-              ]
-            },
-            "source": {
-              "type": "string",
-              "enum": [
-                "chest_core",
-                "left_upperarm",
-                "right_upperarm",
-                "left_forearm",
-                "right_forearm",
-                "left_thigh",
-                "right_thigh",
-                "left_shin",
-                "right_shin",
-                "left_hand",
-                "right_hand"
-              ]
-            },
-            "attach": {
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
-            },
-            "offsetY": {
-              "type": "number"
-            },
-            "zOffset": {
-              "type": "number"
-            },
-            "scale": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number"
-              }
-            },
-            "follow": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number"
-              }
-            },
-            "minScale": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number"
-              }
-            }
-          }
+          "$ref": "#/$defs/fit"
         },
         "vrm_anchor": {
+          "$ref": "#/$defs/vrmAnchor"
+        },
+        "runtime_flags": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "bone": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
+            "visible": {
+              "type": "boolean"
             },
-            "offset": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number"
-              }
+            "collision_enabled": {
+              "type": "boolean"
             },
-            "rotation": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number"
-              }
-            },
-            "scale": {
-              "type": "array",
-              "minItems": 3,
-              "maxItems": 3,
-              "items": {
-                "type": "number",
-                "minimum": 0.01
-              }
+            "tracking_locked": {
+              "type": "boolean"
             }
           }
-        },
-        "generation_prompt": {
-          "type": "string",
-          "minLength": 1
-        },
-        "notes": {
-          "type": "string",
-          "maxLength": 200
         }
+      }
+    },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "type": "string",
+          "enum": [
+            "box",
+            "sphere",
+            "cylinder"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "chest_core",
+            "left_upperarm",
+            "right_upperarm",
+            "left_forearm",
+            "right_forearm",
+            "left_thigh",
+            "right_thigh",
+            "left_shin",
+            "right_shin",
+            "left_hand",
+            "right_hand"
+          ]
+        },
+        "attach": {
+          "type": "string",
+          "enum": [
+            "start",
+            "center",
+            "end"
+          ]
+        },
+        "offsetY": {
+          "type": "number"
+        },
+        "zOffset": {
+          "type": "number"
+        },
+        "scale": {
+          "$ref": "#/$defs/vector3"
+        },
+        "follow": {
+          "$ref": "#/$defs/vector3"
+        },
+        "minScale": {
+          "$ref": "#/$defs/vector3"
+        }
+      }
+    },
+    "vrmAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "offset": {
+          "$ref": "#/$defs/vector3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/vector3"
+        },
+        "scale": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0.01
+          }
+        }
+      }
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
       }
     }
   }

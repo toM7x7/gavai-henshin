@@ -1,0 +1,899 @@
+{
+  "$schema": "../schemas/partcatalog.v0.1.schema.json",
+  "schema_version": "0.1",
+  "catalog_id": "PCAT-VIEWER-SEED-0001",
+  "status": "DRAFT",
+  "source_refs": [
+    "viewer/shared/armor-canon.js",
+    "viewer/assets/meshes/*.mesh.json",
+    "docs/quest3-local-demo.md",
+    "docs/uv-texture-generation-bench-log.md",
+    "docs/new-route-gcp-platform-plan.md"
+  ],
+  "runtime_contract": {
+    "mesh_format": "mesh.v1",
+    "texture_binding": "SuitSpec.modules.<module>.texture_path",
+    "renderer_material": "THREE.MeshStandardMaterial"
+  },
+  "socket_aliases": {
+    "helm": "helmet",
+    "torso": "chest",
+    "chest_core": "chest",
+    "shoulder_l": "left_shoulder",
+    "shoulder_r": "right_shoulder",
+    "upperarm_l": "left_upperarm",
+    "upperarm_r": "right_upperarm",
+    "forearm_l": "left_forearm",
+    "forearm_r": "right_forearm",
+    "hand_l": "left_hand",
+    "hand_r": "right_hand",
+    "thigh_l": "left_thigh",
+    "thigh_r": "right_thigh",
+    "shin_l": "left_shin",
+    "shin_r": "right_shin",
+    "boot_l": "left_boot",
+    "boot_r": "right_boot"
+  },
+  "contact_pairs": [
+    ["helmet", "chest"],
+    ["chest", "waist"],
+    ["chest", "back"],
+    ["left_shoulder", "left_upperarm"],
+    ["right_shoulder", "right_upperarm"],
+    ["left_upperarm", "left_forearm"],
+    ["right_upperarm", "right_forearm"],
+    ["left_forearm", "left_hand"],
+    ["right_forearm", "right_hand"],
+    ["waist", "left_thigh"],
+    ["waist", "right_thigh"],
+    ["left_thigh", "left_shin"],
+    ["right_thigh", "right_shin"],
+    ["left_shin", "left_boot"],
+    ["right_shin", "right_boot"]
+  ],
+  "material_slots": [
+    {
+      "slot_id": "surface_base",
+      "map_types": ["base_color"],
+      "suitspec_binding": "modules.<module>.texture_path",
+      "renderer_binding": "MeshStandardMaterial.map",
+      "required": false,
+      "notes": "Current viewers expose one texture slot per module; fallback color comes from PART_COLOR_MAP."
+    }
+  ],
+  "parts": [
+    {
+      "part_id": "viewer.mesh.helmet.v1",
+      "module": "helmet",
+      "display_name": "Helmet",
+      "category": "head",
+      "side": "center",
+      "socket": "helmet",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/helmet.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "helmet",
+        "metrics": {
+          "vertices": 680,
+          "triangles": 1248,
+          "has_uv": true,
+          "local_bbox_min": [-0.3952, -0.62, -0.37],
+          "local_bbox_max": [0.3952, 0.56, 0.5]
+        }
+      },
+      "fit": {
+        "shape": "sphere",
+        "source": "chest_core",
+        "attach": "start",
+        "offsetY": 0.2,
+        "zOffset": 0.02,
+        "scale": [0.3, 0.32, 0.3],
+        "follow": [0.34, 0.42, 0.34],
+        "minScale": [0.14, 0.16, 0.14]
+      },
+      "vrm_anchor": {
+        "bone": "head",
+        "offset": [0, 0.08, 0.12],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["head", "neck", "upperChest", "chest"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FFCD4F"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.chest.v1",
+      "module": "chest",
+      "display_name": "Chest",
+      "category": "torso",
+      "side": "center",
+      "socket": "chest",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/chest.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "chest",
+        "metrics": {
+          "vertices": 682,
+          "triangles": 1344,
+          "has_uv": true,
+          "local_bbox_min": [-0.534311, -0.62, 0.04],
+          "local_bbox_max": [0.534311, 0.66, 0.68]
+        }
+      },
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.72, 0.78, 0.66],
+        "follow": [0.72, 0.78, 0.72],
+        "minScale": [0.48, 0.56, 0.46]
+      },
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [0, 0.03, 0.1],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["upperChest", "chest", "spine", "hips"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#4FA8FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.back.v1",
+      "module": "back",
+      "display_name": "Back",
+      "category": "dorsal",
+      "side": "center",
+      "socket": "back",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/back.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "back",
+        "metrics": {
+          "vertices": 597,
+          "triangles": 1176,
+          "has_uv": true,
+          "local_bbox_min": [-0.452889, -0.6, -0.6],
+          "local_bbox_max": [0.452889, 0.58, -0.06]
+        }
+      },
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": -0.02,
+        "zOffset": -0.1,
+        "scale": [0.68, 0.74, 0.6],
+        "follow": [0.68, 0.76, 0.68],
+        "minScale": [0.18, 0.12, 0.14]
+      },
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [0, 0.01, -0.1],
+        "rotation": [0, 180, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["upperChest", "chest", "spine"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#4F88E8"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.waist.v1",
+      "module": "waist",
+      "display_name": "Waist",
+      "category": "waist",
+      "side": "center",
+      "socket": "waist",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/waist.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "waist",
+        "metrics": {
+          "vertices": 486,
+          "triangles": 800,
+          "has_uv": true,
+          "local_bbox_min": [-0.4601, -0.38, -0.4],
+          "local_bbox_max": [0.4601, 0.36, 0.43]
+        }
+      },
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "end",
+        "offsetY": -0.08,
+        "zOffset": 0,
+        "scale": [0.52, 0.38, 0.46],
+        "follow": [0.62, 0.7, 0.62],
+        "minScale": [0.14, 0.1, 0.12]
+      },
+      "vrm_anchor": {
+        "bone": "hips",
+        "offset": [0, 0, 0.06],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["hips", "spine"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#62C9FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_shoulder.v1",
+      "module": "left_shoulder",
+      "display_name": "Left Shoulder",
+      "category": "shoulder",
+      "side": "left",
+      "socket": "left_shoulder",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_shoulder.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_shoulder",
+        "metrics": {
+          "vertices": 326,
+          "triangles": 576,
+          "has_uv": true,
+          "local_bbox_min": [-0.324, -0.25, -0.3],
+          "local_bbox_max": [0.324, 0.24, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "sphere",
+        "source": "left_upperarm",
+        "attach": "start",
+        "offsetY": 0.08,
+        "zOffset": 0,
+        "scale": [0.24, 0.24, 0.24],
+        "follow": [0.56, 0.5, 0.56],
+        "minScale": [0.16, 0.16, 0.16]
+      },
+      "vrm_anchor": {
+        "bone": "leftShoulder",
+        "offset": [0.02, 0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftShoulder", "leftUpperArm", "upperChest", "chest"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FF8F6A"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_shoulder.v1",
+      "module": "right_shoulder",
+      "display_name": "Right Shoulder",
+      "category": "shoulder",
+      "side": "right",
+      "socket": "right_shoulder",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_shoulder.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_shoulder",
+        "metrics": {
+          "vertices": 326,
+          "triangles": 576,
+          "has_uv": true,
+          "local_bbox_min": [-0.324, -0.25, -0.3],
+          "local_bbox_max": [0.324, 0.24, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "sphere",
+        "source": "right_upperarm",
+        "attach": "start",
+        "offsetY": 0.08,
+        "zOffset": 0,
+        "scale": [0.24, 0.24, 0.24],
+        "follow": [0.56, 0.5, 0.56],
+        "minScale": [0.16, 0.16, 0.16]
+      },
+      "vrm_anchor": {
+        "bone": "rightShoulder",
+        "offset": [-0.02, 0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightShoulder", "rightUpperArm", "upperChest", "chest"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FF6A8F"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_upperarm.v1",
+      "module": "left_upperarm",
+      "display_name": "Left Upper Arm",
+      "category": "upper_arm",
+      "side": "left",
+      "socket": "left_upperarm",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_upperarm.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_upperarm",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.206, -0.52, -0.15],
+          "local_bbox_max": [0.206, 0.52, 0.21]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_upperarm",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.94, 1, 0.94],
+        "follow": [0.88, 0.94, 0.88],
+        "minScale": [0.18, 0.14, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "leftUpperArm",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftUpperArm", "leftShoulder", "leftLowerArm"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#9A8CFF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_upperarm.v1",
+      "module": "right_upperarm",
+      "display_name": "Right Upper Arm",
+      "category": "upper_arm",
+      "side": "right",
+      "socket": "right_upperarm",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_upperarm.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_upperarm",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.206, -0.52, -0.15],
+          "local_bbox_max": [0.206, 0.52, 0.21]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_upperarm",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.94, 1, 0.94],
+        "follow": [0.88, 0.94, 0.88],
+        "minScale": [0.18, 0.14, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "rightUpperArm",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightUpperArm", "rightShoulder", "rightLowerArm"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#7F99FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_forearm.v1",
+      "module": "left_forearm",
+      "display_name": "Left Forearm",
+      "category": "forearm",
+      "side": "left",
+      "socket": "left_forearm",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_forearm.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_forearm",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.1957, -0.54, -0.12],
+          "local_bbox_max": [0.1957, 0.54, 0.24]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_forearm",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.9, 1.02, 0.9],
+        "follow": [0.9, 0.96, 0.9],
+        "minScale": [0.16, 0.14, 0.16]
+      },
+      "vrm_anchor": {
+        "bone": "leftLowerArm",
+        "offset": [0, -0.01, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftLowerArm", "leftUpperArm", "leftHand"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#63D5FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_forearm.v1",
+      "module": "right_forearm",
+      "display_name": "Right Forearm",
+      "category": "forearm",
+      "side": "right",
+      "socket": "right_forearm",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_forearm.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_forearm",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.1957, -0.54, -0.12],
+          "local_bbox_max": [0.1957, 0.54, 0.24]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_forearm",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.9, 1.02, 0.9],
+        "follow": [0.9, 0.96, 0.9],
+        "minScale": [0.16, 0.14, 0.16]
+      },
+      "vrm_anchor": {
+        "bone": "rightLowerArm",
+        "offset": [0, -0.01, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightLowerArm", "rightUpperArm", "rightHand"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#5DEEC3"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_hand.v1",
+      "module": "left_hand",
+      "display_name": "Left Hand",
+      "category": "hand",
+      "side": "left",
+      "socket": "left_hand",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_hand.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_hand",
+        "metrics": {
+          "vertices": 287,
+          "triangles": 560,
+          "has_uv": true,
+          "local_bbox_min": [-0.147, -0.247, -0.17],
+          "local_bbox_max": [0.147, 0.247, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "sphere",
+        "source": "left_hand",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0.03,
+        "scale": [0.2, 0.2, 0.2],
+        "follow": [0.38, 0.34, 0.38],
+        "minScale": [0.14, 0.14, 0.14]
+      },
+      "vrm_anchor": {
+        "bone": "leftHand",
+        "offset": [0, 0, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftHand", "leftLowerArm"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#D4FF73"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_hand.v1",
+      "module": "right_hand",
+      "display_name": "Right Hand",
+      "category": "hand",
+      "side": "right",
+      "socket": "right_hand",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_hand.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_hand",
+        "metrics": {
+          "vertices": 287,
+          "triangles": 560,
+          "has_uv": true,
+          "local_bbox_min": [-0.147, -0.247, -0.17],
+          "local_bbox_max": [0.147, 0.247, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "sphere",
+        "source": "right_hand",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0.03,
+        "scale": [0.2, 0.2, 0.2],
+        "follow": [0.38, 0.34, 0.38],
+        "minScale": [0.14, 0.14, 0.14]
+      },
+      "vrm_anchor": {
+        "bone": "rightHand",
+        "offset": [0, 0, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightHand", "rightLowerArm"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#B2FF73"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_thigh.v1",
+      "module": "left_thigh",
+      "display_name": "Left Thigh",
+      "category": "thigh",
+      "side": "left",
+      "socket": "left_thigh",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_thigh.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_thigh",
+        "metrics": {
+          "vertices": 511,
+          "triangles": 864,
+          "has_uv": true,
+          "local_bbox_min": [-0.297, -0.62, -0.19],
+          "local_bbox_max": [0.297, 0.64, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_thigh",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [1, 1.04, 1],
+        "follow": [0.94, 0.96, 0.94],
+        "minScale": [0.22, 0.22, 0.2]
+      },
+      "vrm_anchor": {
+        "bone": "leftUpperLeg",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftUpperLeg", "hips", "leftLowerLeg"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FF8EC8"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_thigh.v1",
+      "module": "right_thigh",
+      "display_name": "Right Thigh",
+      "category": "thigh",
+      "side": "right",
+      "socket": "right_thigh",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_thigh.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_thigh",
+        "metrics": {
+          "vertices": 511,
+          "triangles": 864,
+          "has_uv": true,
+          "local_bbox_min": [-0.297, -0.62, -0.19],
+          "local_bbox_max": [0.297, 0.64, 0.34]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_thigh",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [1, 1.04, 1],
+        "follow": [0.94, 0.96, 0.94],
+        "minScale": [0.22, 0.22, 0.2]
+      },
+      "vrm_anchor": {
+        "bone": "rightUpperLeg",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightUpperLeg", "hips", "rightLowerLeg"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FF82AB"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_shin.v1",
+      "module": "left_shin",
+      "display_name": "Left Shin",
+      "category": "shin",
+      "side": "left",
+      "socket": "left_shin",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_shin.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_shin",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.1872, -0.58, -0.12],
+          "local_bbox_max": [0.1872, 0.58, 0.26]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_shin",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.96, 1.04, 0.96],
+        "follow": [0.92, 0.96, 0.92],
+        "minScale": [0.2, 0.22, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "leftLowerLeg",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftLowerLeg", "leftUpperLeg", "leftFoot"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#7CD7FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_shin.v1",
+      "module": "right_shin",
+      "display_name": "Right Shin",
+      "category": "shin",
+      "side": "right",
+      "socket": "right_shin",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_shin.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_shin",
+        "metrics": {
+          "vertices": 390,
+          "triangles": 640,
+          "has_uv": true,
+          "local_bbox_min": [-0.1872, -0.58, -0.12],
+          "local_bbox_max": [0.1872, 0.58, 0.26]
+        }
+      },
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_shin",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0,
+        "scale": [0.96, 1.04, 0.96],
+        "follow": [0.92, 0.96, 0.92],
+        "minScale": [0.2, 0.22, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "rightLowerLeg",
+        "offset": [0, -0.02, 0.02],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightLowerLeg", "rightUpperLeg", "rightFoot"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#63C6FF"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.left_boot.v1",
+      "module": "left_boot",
+      "display_name": "Left Boot",
+      "category": "boot",
+      "side": "left",
+      "socket": "left_boot",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/left_boot.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "left_boot",
+        "metrics": {
+          "vertices": 428,
+          "triangles": 840,
+          "has_uv": true,
+          "local_bbox_min": [-0.1976, -0.4136, -0.280524],
+          "local_bbox_max": [0.1976, 0.47, 0.604356]
+        }
+      },
+      "fit": {
+        "shape": "box",
+        "source": "left_shin",
+        "attach": "end",
+        "offsetY": 0,
+        "zOffset": 0.08,
+        "scale": [0.28, 0.22, 0.4],
+        "follow": [0.58, 0.52, 0.62],
+        "minScale": [0.16, 0.1, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "leftFoot",
+        "offset": [0, -0.01, 0.08],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["leftFoot", "leftLowerLeg"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FFE48A"
+        }
+      ]
+    },
+    {
+      "part_id": "viewer.mesh.right_boot.v1",
+      "module": "right_boot",
+      "display_name": "Right Boot",
+      "category": "boot",
+      "side": "right",
+      "socket": "right_boot",
+      "status": "ACTIVE",
+      "asset": {
+        "kind": "mesh_json",
+        "uri": "viewer/assets/meshes/right_boot.mesh.json",
+        "format": "mesh.v1",
+        "mesh_name": "right_boot",
+        "metrics": {
+          "vertices": 428,
+          "triangles": 840,
+          "has_uv": true,
+          "local_bbox_min": [-0.1976, -0.4136, -0.280524],
+          "local_bbox_max": [0.1976, 0.47, 0.604356]
+        }
+      },
+      "fit": {
+        "shape": "box",
+        "source": "right_shin",
+        "attach": "end",
+        "offsetY": 0,
+        "zOffset": 0.08,
+        "scale": [0.28, 0.22, 0.4],
+        "follow": [0.58, 0.52, 0.62],
+        "minScale": [0.16, 0.1, 0.18]
+      },
+      "vrm_anchor": {
+        "bone": "rightFoot",
+        "offset": [0, -0.01, 0.08],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "bone_fallbacks": ["rightFoot", "rightLowerLeg"],
+      "material_slot_bindings": [
+        {
+          "slot_id": "surface_base",
+          "binding": "module.texture_path",
+          "fallback_color": "#FFD36F"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Seed uses armor-canon.js baselines, not tuned per-user anchors from examples/suitspec.sample.json.",
+    "Current mesh assets are mesh.v1 JSON files with UV data; no GLB/OBJ source assets were found in viewer/assets.",
+    "Current material contract is intentionally one slot per module until multi-material GLB assets exist."
+  ]
+}

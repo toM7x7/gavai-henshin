@@ -10,6 +10,7 @@ authors = [
 license = { text = "MIT" }
 dependencies = [
   "Pillow>=10.0.0",
+  "jsonschema>=4.0.0",
 ]
 
 [project.scripts]

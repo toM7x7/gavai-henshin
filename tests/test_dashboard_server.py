@@ -1,9 +1,11 @@
 import base64
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from henshin.dashboard_server import (
+    DashboardHandler,
     GeneratePartsPayload,
     GenerationJob,
     IWHenshinVoicePayload,
@@ -12,6 +14,28 @@ from henshin.dashboard_server import (
 
 
 class TestDashboardServer(unittest.TestCase):
+    def test_new_route_api_paths_are_served_by_dashboard_handler(self) -> None:
+        root = Path(".").resolve()
+        response = DashboardHandler._new_route_response_for_test(root, "/v1/catalog/parts")
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
+
+    def test_new_route_post_paths_are_served_by_dashboard_handler(self) -> None:
+        suitspec = json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            response = DashboardHandler._new_route_post_response_for_test(
+                Path(".").resolve(),
+                "/v1/suits",
+                {"suitspec": suitspec},
+                suit_store_root=Path(tmp) / "suits",
+            )
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 201)
+
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))
         job.emit({"type": "job_started", "stage": "scan", "status": "started", "requested_count": 2})

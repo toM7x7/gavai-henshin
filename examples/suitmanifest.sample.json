@@ -1,0 +1,901 @@
+{
+  "schema_version": "0.1",
+  "manifest_id": "MNF-20260424-SAMP",
+  "suit_id": "VDA-AXIS-OP-00-0001",
+  "source": {
+    "type": "suitspec_projection",
+    "suitspec_schema_version": "0.2",
+    "suitspec_id": "VDA-AXIS-OP-00-0001",
+    "projection_version": "0.1"
+  },
+  "status": "DRAFT",
+  "runtime_targets": [
+    "web_preview",
+    "quest",
+    "replay"
+  ],
+  "parts": {
+    "helmet": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/helmet.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/helmet.generated.png",
+      "attachment_slot": "helmet",
+      "fit": {
+        "shape": "sphere",
+        "source": "chest_core",
+        "attach": "start",
+        "offsetY": 0.27,
+        "zOffset": 0.02,
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "follow": [
+          0.34,
+          0.42,
+          0.34
+        ],
+        "minScale": [
+          0.14,
+          0.16,
+          0.14
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "head",
+        "offset": [
+          0,
+          0.002,
+          0.011
+        ],
+        "rotation": [
+          5.557,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.helmet.v1"
+    },
+    "chest": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/chest.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/chest.generated.png",
+      "attachment_slot": "chest",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": -0.265,
+        "zOffset": 0,
+        "scale": [
+          0.26,
+          0.234,
+          0.237
+        ],
+        "follow": [
+          0.72,
+          0.78,
+          0.72
+        ],
+        "minScale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [
+          0,
+          -0.238,
+          0.034
+        ],
+        "rotation": [
+          -12.282,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.chest.v1"
+    },
+    "back": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/back.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/back.generated.png",
+      "attachment_slot": "back",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offsetY": 0.204,
+        "zOffset": -0.1,
+        "scale": [
+          0.244,
+          0.224,
+          0.227
+        ],
+        "follow": [
+          0.68,
+          0.76,
+          0.68
+        ],
+        "minScale": [
+          0.18,
+          0.12,
+          0.14
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "upperChest",
+        "offset": [
+          0,
+          -0.042,
+          -0.111
+        ],
+        "rotation": [
+          -12.282,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.back.v1"
+    },
+    "left_shoulder": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_shoulder.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_shoulder.generated.png",
+      "attachment_slot": "left_shoulder",
+      "fit": {
+        "shape": "sphere",
+        "source": "left_upperarm",
+        "attach": "start",
+        "offsetY": 0.292,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "minScale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftShoulder",
+        "offset": [
+          -0.125,
+          -0.023,
+          0.003
+        ],
+        "rotation": [
+          -12.282,
+          0,
+          100.232
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_shoulder.v1"
+    },
+    "right_shoulder": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_shoulder.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_shoulder.generated.png",
+      "attachment_slot": "right_shoulder",
+      "fit": {
+        "shape": "sphere",
+        "source": "right_upperarm",
+        "attach": "start",
+        "offsetY": 0.292,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "minScale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightShoulder",
+        "offset": [
+          0.125,
+          -0.023,
+          0.003
+        ],
+        "rotation": [
+          -12.282,
+          0,
+          -100.232
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_shoulder.v1"
+    },
+    "left_upperarm": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_upperarm.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_upperarm.generated.png",
+      "attachment_slot": "left_upperarm",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_upperarm",
+        "attach": "center",
+        "offsetY": -0.21,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.092,
+          0.05
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "minScale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftUpperArm",
+        "offset": [
+          0.154,
+          0.013,
+          0.001
+        ],
+        "rotation": [
+          -167.718,
+          0,
+          -79.768
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_upperarm.v1"
+    },
+    "right_upperarm": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_upperarm.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_upperarm.generated.png",
+      "attachment_slot": "right_upperarm",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_upperarm",
+        "attach": "center",
+        "offsetY": -0.21,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.092,
+          0.05
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "minScale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightUpperArm",
+        "offset": [
+          -0.154,
+          0.013,
+          0.001
+        ],
+        "rotation": [
+          -167.718,
+          0,
+          79.768
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_upperarm.v1"
+    },
+    "left_forearm": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_forearm.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_forearm.generated.png",
+      "attachment_slot": "left_forearm",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_forearm",
+        "attach": "center",
+        "offsetY": -0.3,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          1.917,
+          0.05
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "minScale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftLowerArm",
+        "offset": [
+          0.051,
+          0,
+          0
+        ],
+        "rotation": [
+          -167.718,
+          0.003,
+          -90.001
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_forearm.v1"
+    },
+    "right_forearm": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_forearm.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_forearm.generated.png",
+      "attachment_slot": "right_forearm",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_forearm",
+        "attach": "center",
+        "offsetY": -0.3,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          1.917,
+          0.05
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "minScale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightLowerArm",
+        "offset": [
+          -0.051,
+          0,
+          0
+        ],
+        "rotation": [
+          -167.718,
+          -0.003,
+          90.001
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_forearm.v1"
+    },
+    "waist": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/waist.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/waist.generated.png",
+      "attachment_slot": "waist",
+      "fit": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "end",
+        "offsetY": -0.151,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.05,
+          0.05
+        ],
+        "follow": [
+          0.62,
+          0.7,
+          0.62
+        ],
+        "minScale": [
+          0.14,
+          0.1,
+          0.12
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "hips",
+        "offset": [
+          0,
+          -0.116,
+          0.006
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.waist.v1"
+    },
+    "left_thigh": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_thigh.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_thigh.generated.png",
+      "attachment_slot": "left_thigh",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_thigh",
+        "attach": "center",
+        "offsetY": -0.3,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.052,
+          0.05
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "minScale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftUpperLeg",
+        "offset": [
+          0,
+          -0.079,
+          -0.002
+        ],
+        "rotation": [
+          1.198,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_thigh.v1"
+    },
+    "right_thigh": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_thigh.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_thigh.generated.png",
+      "attachment_slot": "right_thigh",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_thigh",
+        "attach": "center",
+        "offsetY": -0.3,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.052,
+          0.05
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "minScale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightUpperLeg",
+        "offset": [
+          0,
+          -0.079,
+          -0.002
+        ],
+        "rotation": [
+          1.198,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_thigh.v1"
+    },
+    "left_shin": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_shin.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_shin.generated.png",
+      "attachment_slot": "left_shin",
+      "fit": {
+        "shape": "cylinder",
+        "source": "left_shin",
+        "attach": "center",
+        "offsetY": -0.269,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.084,
+          0.05
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "minScale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftLowerLeg",
+        "offset": [
+          0,
+          -0.107,
+          -0.006
+        ],
+        "rotation": [
+          3.439,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_shin.v1"
+    },
+    "right_shin": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_shin.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_shin.generated.png",
+      "attachment_slot": "right_shin",
+      "fit": {
+        "shape": "cylinder",
+        "source": "right_shin",
+        "attach": "center",
+        "offsetY": -0.269,
+        "zOffset": 0,
+        "scale": [
+          0.05,
+          0.084,
+          0.05
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "minScale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightLowerLeg",
+        "offset": [
+          0,
+          -0.107,
+          -0.006
+        ],
+        "rotation": [
+          3.439,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_shin.v1"
+    },
+    "left_boot": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_boot.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_boot.generated.png",
+      "attachment_slot": "left_boot",
+      "fit": {
+        "shape": "box",
+        "source": "left_shin",
+        "attach": "end",
+        "offsetY": 0,
+        "zOffset": 0.152,
+        "scale": [
+          0.158,
+          0.05,
+          0.085
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "minScale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftFoot",
+        "offset": [
+          0,
+          -0.01,
+          0.08
+        ],
+        "rotation": [
+          3.439,
+          0,
+          -180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_boot.v1"
+    },
+    "right_boot": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_boot.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_boot.generated.png",
+      "attachment_slot": "right_boot",
+      "fit": {
+        "shape": "box",
+        "source": "right_shin",
+        "attach": "end",
+        "offsetY": 0,
+        "zOffset": 0.152,
+        "scale": [
+          0.158,
+          0.05,
+          0.085
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "minScale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightFoot",
+        "offset": [
+          0,
+          -0.01,
+          0.08
+        ],
+        "rotation": [
+          3.439,
+          0,
+          180
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_boot.v1"
+    },
+    "left_hand": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/left_hand.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/left_hand.generated.png",
+      "attachment_slot": "left_hand",
+      "fit": {
+        "shape": "sphere",
+        "source": "left_hand",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0.01,
+        "scale": [
+          0.05,
+          0.101,
+          0.087
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "minScale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "leftHand",
+        "offset": [
+          0,
+          0,
+          0.02
+        ],
+        "rotation": [
+          -167.718,
+          0.003,
+          -90.001
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.left_hand.v1"
+    },
+    "right_hand": {
+      "enabled": true,
+      "asset_ref": "viewer/assets/meshes/right_hand.mesh.json",
+      "texture_path": "sessions/S-20260412-YOUB/artifacts/parts/right_hand.generated.png",
+      "attachment_slot": "right_hand",
+      "fit": {
+        "shape": "sphere",
+        "source": "right_hand",
+        "attach": "center",
+        "offsetY": 0,
+        "zOffset": 0.01,
+        "scale": [
+          0.05,
+          0.101,
+          0.087
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "minScale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "vrm_anchor": {
+        "bone": "rightHand",
+        "offset": [
+          0,
+          0,
+          0.02
+        ],
+        "rotation": [
+          -167.718,
+          -0.003,
+          90.001
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "catalog_part_id": "viewer.mesh.right_hand.v1"
+    }
+  },
+  "palette": {
+    "primary": "#1E2A3A",
+    "secondary": "#A8B3C6",
+    "emissive": "#3AC7FF"
+  },
+  "effects": {
+    "deposition_seconds": 7.5,
+    "particle_density": 0.8,
+    "wire_to_metal_curve": "ease_in_out"
+  },
+  "metadata": {
+    "created_at": "2026-04-24T11:45:55.553374+00:00",
+    "updated_at": "2026-04-24T11:45:55.553384+00:00"
+  },
+  "approval_id": "APV-12345678",
+  "morphotype_id": "MTP-12345678",
+  "blueprint": {
+    "image_path": "artifacts/Blueprint.png",
+    "projection_mode": "triplanar"
+  },
+  "emblem": {
+    "image_path": "artifacts/Emblem.png",
+    "placement": "chest"
+  },
+  "text": {
+    "deposition_log_lines": [
+      "STATUS: POSTED",
+      "FIT AUDIT: PASS",
+      "MORPHOTYPE: LOCKED",
+      "BLUEPRINT: ISSUED",
+      "APPROVAL: GRANTED",
+      "DEPOSITION: START",
+      "SEAL: VERIFIED"
+    ],
+    "callout": "Protocol complete. Integrity first."
+  }
+}

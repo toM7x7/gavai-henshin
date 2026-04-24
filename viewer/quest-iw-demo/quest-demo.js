@@ -9,6 +9,8 @@ import * as THREE from "three";
 const DEFAULT_REPLAY = "/sessions/S-IW-DEMO/artifacts/iwsdk-deposition-replay.json";
 const DEFAULT_SUITSPEC = "/examples/suitspec.sample.json";
 const DEFAULT_MOCOPI = "examples/mocopi_sequence.sample.json";
+const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
+const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -231,6 +233,57 @@ function useMockTrigger() {
 
 function getAudioMode() {
   return params().get("audio") === "webm" ? "webm" : "wav";
+}
+
+function useNewRouteApi() {
+  return params().get("newRoute") === "1";
+}
+
+function getApiBase() {
+  const raw = params().get("apiBase") || "";
+  return raw.replace(/\/$/, "");
+}
+
+function getSuitId() {
+  return params().get("suit") || DEFAULT_SUIT_ID;
+}
+
+function getManifestId() {
+  return params().get("manifest") || DEFAULT_MANIFEST_ID;
+}
+
+function getOperatorId() {
+  return params().get("operator") || "quest-browser";
+}
+
+function getDeviceId() {
+  return params().get("device") || (navigator.userAgent.includes("Quest") ? "quest-browser" : "iw-sdk-dev");
+}
+
+function makeTrialId() {
+  return `S-IW-QUEST-${Date.now().toString(16).toUpperCase()}`;
+}
+
+async function postJson(path, payload) {
+  const response = await fetch(`${getApiBase()}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || `POST ${path} failed with ${response.status}`);
+  }
+  return data;
+}
+
+async function getJson(path) {
+  const response = await fetch(`${getApiBase()}${path}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || `GET ${path} failed with ${response.status}`);
+  }
+  return data;
 }
 
 function sleep(ms) {
@@ -1144,6 +1197,9 @@ class QuestHenshinDemo {
     this.suitspec = null;
     this.meshes = new Map();
     this.voiceState = "ready";
+    this.trialId = null;
+    this.trialReady = false;
+    this.trialReplayPath = null;
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
@@ -1260,6 +1316,77 @@ class QuestHenshinDemo {
     const value = text || "Voice debug: waiting.";
     if (UI.voiceDebug) UI.voiceDebug.textContent = value;
     this.spatialPanel?.setDebug(value);
+  }
+
+  appendVoiceDebug(line) {
+    if (!line) return;
+    const next = `${UI.voiceDebug?.textContent || "VOICE DEBUG"}\n${line}`;
+    this.updateVoiceDebug(next);
+  }
+
+  async ensureTrial() {
+    if (!useNewRouteApi()) return null;
+    if (this.trialReady && this.trialId) return this.trialId;
+    this.trialId = this.trialId || makeTrialId();
+    const suitId = getSuitId();
+    const manifestId = getManifestId();
+    await postJson("/v1/suits", {
+      suitspec: this.suitspec,
+      overwrite: true,
+    });
+    await postJson(`/v1/suits/${suitId}/manifest`, {
+      manifest_id: manifestId,
+      status: "READY",
+    });
+    const trial = await postJson("/v1/trials", {
+      manifest_id: manifestId,
+      suit_id: suitId,
+      session_id: this.trialId,
+      operator_id: getOperatorId(),
+      device_id: getDeviceId(),
+      tracking_source: "iw_sdk",
+      state: "POSTED",
+    });
+    this.trialId = trial.trial_id || trial.session_id || this.trialId;
+    this.trialReady = true;
+    UI.sessionId.textContent = this.trialId;
+    this.appendVoiceDebug(`trial: ${this.trialId}`);
+    return this.trialId;
+  }
+
+  async appendTrialEvent(eventType, options = {}) {
+    if (!useNewRouteApi()) return null;
+    try {
+      const trialId = await this.ensureTrial();
+      if (!trialId) return null;
+      const event = await postJson(`/v1/trials/${trialId}/events`, {
+        event_type: eventType,
+        state_after: options.stateAfter,
+        actor: options.actor || { type: "device", id: getDeviceId() },
+        payload: options.payload || {},
+        idempotency_key: options.idempotencyKey,
+      });
+      this.appendVoiceDebug(`trial event: ${event.event?.event_type || eventType} #${event.event?.sequence}`);
+      return event;
+    } catch (error) {
+      console.warn(error);
+      this.appendVoiceDebug(`trial api: ${error?.message || error}`);
+      return null;
+    }
+  }
+
+  async generateTrialReplay() {
+    if (!useNewRouteApi() || !this.trialId) return null;
+    try {
+      const replay = await getJson(`/v1/trials/${this.trialId}/replay`);
+      this.trialReplayPath = replay.replay_path || null;
+      this.appendVoiceDebug(`trial replay: ${replay.replay_id || this.trialReplayPath}`);
+      return replay;
+    } catch (error) {
+      console.warn(error);
+      this.appendVoiceDebug(`trial replay: ${error?.message || error}`);
+      return null;
+    }
   }
 
   togglePause() {
@@ -1383,6 +1510,11 @@ class QuestHenshinDemo {
     UI.btnPause.textContent = "Pause";
     UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Armor deposition replay running.`;
     this.setVoiceState("deposition");
+    void this.appendTrialEvent("DEPOSITION_STARTED", {
+      stateAfter: "DEPOSITION",
+      payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE },
+      idempotencyKey: "deposition-started",
+    });
     if (speak) this.speakExplanation();
   }
 
@@ -1418,6 +1550,7 @@ class QuestHenshinDemo {
       );
       this.updateVoiceDebug(`VOICE DEBUG\nresult: captured\ntrigger: ${TRIGGER_PHRASE}\naudio: ${statsLine || mode}\nbytes: ${blob.size}`);
       const audioBase64 = await blobToDataUrl(blob);
+      const trialId = useNewRouteApi() ? await this.ensureTrial() : makeTrialId();
       const response = await fetch("/api/iw-henshin/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1425,7 +1558,7 @@ class QuestHenshinDemo {
           audio_base64: audioBase64,
           mime_type: blob.type || (getAudioMode() === "wav" ? "audio/wav" : "audio/webm"),
           audio_stats: stats,
-          session_id: `S-IW-QUEST-${Date.now().toString(16)}`,
+          session_id: trialId,
           mocopi: params().get("mocopi") || DEFAULT_MOCOPI,
           trigger_phrase: TRIGGER_PHRASE,
           dry_run: useMockTrigger(),
@@ -1436,6 +1569,11 @@ class QuestHenshinDemo {
       const transcript = data.result?.transcript || data.replay?.trigger?.transcript || "";
       const debugText = formatVoiceDebug(data, transcript, data.result?.error || data.error || "");
       this.updateVoiceDebug(debugText);
+      void this.appendTrialEvent("VOICE_CAPTURED", {
+        stateAfter: "POSTED",
+        payload: { transcript, audio_stats: stats, trigger_phrase: TRIGGER_PHRASE },
+        idempotencyKey: `voice-captured-${trialId}`,
+      });
       UI.voiceLine.textContent = formatVoiceRetryHint(data, transcript);
       const triggerMatched =
         useMockTrigger() ||
@@ -1450,6 +1588,11 @@ class QuestHenshinDemo {
       if (!triggerMatched) {
         throw new Error(formatVoiceRetryDetail(data, transcript));
       }
+      void this.appendTrialEvent("TRIGGER_DETECTED", {
+        stateAfter: "TRY_ON",
+        payload: { transcript, trigger_phrase: TRIGGER_PHRASE },
+        idempotencyKey: `trigger-detected-${trialId}`,
+      });
       this.setVoiceState("detected", transcript ? `Transcript: ${transcript}` : `${TRIGGER_PHRASE} confirmed.`);
       this.audioBed.pulse(980, 0.18);
       if (data.replay && data.result?.tts?.audio_path && !data.replay.tts?.audio_path) {
@@ -1559,6 +1702,11 @@ class QuestHenshinDemo {
         UI.status.textContent = "Armor deposition complete. Replay remains available for review.";
         this.setVoiceState("complete");
         this.audioBed.pulse(1180, 0.18);
+        void this.appendTrialEvent("DEPOSITION_COMPLETED", {
+          stateAfter: "ACTIVE",
+          payload: { source: "quest-iw-demo", completed: true },
+          idempotencyKey: "deposition-completed",
+        }).then(() => this.generateTrialReplay());
         this.completionAnnounced = true;
       }
     }

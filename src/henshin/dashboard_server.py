@@ -407,6 +407,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def _new_route_response_for_test(root: Path, path: str):
         return NewRouteApi(root).get(path)
 
+    @staticmethod
+    def _new_route_post_response_for_test(
+        root: Path,
+        path: str,
+        payload: dict[str, Any],
+        *,
+        suit_store_root: Path | None = None,
+    ):
+        return NewRouteApi(root, suit_store_root=suit_store_root).post(path, payload)
+
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -500,6 +510,21 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self._write_json({"ok": False, "error": f"Unknown job: {job_id}"}, status=HTTPStatus.NOT_FOUND)
                 return
             self._write_json({"ok": True, **job.snapshot()})
+            return
+
+        if parsed.path.startswith("/v1/"):
+            try:
+                content_len = int(self.headers.get("Content-Length", "0"))
+                raw = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
+                payload_dict = json.loads(raw)
+                response = NewRouteApi(self.repo_root).post(parsed.path, payload_dict)
+            except (ValueError, json.JSONDecodeError) as exc:
+                self._write_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                return
+            if response is None:
+                self._write_json({"ok": False, "error": "Unknown API endpoint."}, status=HTTPStatus.NOT_FOUND)
+                return
+            self._write_json(response.body, status=response.status)
             return
 
         if parsed.path not in (

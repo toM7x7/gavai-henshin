@@ -1,4 +1,5 @@
 import base64
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,6 +21,20 @@ class TestDashboardServer(unittest.TestCase):
         assert response is not None
         self.assertEqual(response.status, 200)
         self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
+
+    def test_new_route_post_paths_are_served_by_dashboard_handler(self) -> None:
+        suitspec = json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            response = DashboardHandler._new_route_post_response_for_test(
+                Path(".").resolve(),
+                "/v1/suits",
+                {"suitspec": suitspec},
+                suit_store_root=Path(tmp) / "suits",
+            )
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 201)
 
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))

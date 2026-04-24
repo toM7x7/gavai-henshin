@@ -86,8 +86,14 @@ python -m henshin serve-dashboard --port 8010
 ```text
 GET /health
 GET /v1/catalog/parts
+POST /v1/suits
+GET /v1/suits/{suitId}
+POST /v1/suits/{suitId}/manifest
+GET /v1/suits/{suitId}/manifest
 GET /v1/manifests/{manifestId}
 ```
+
+Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the SuitSpec as the authoring source, and `POST /v1/suits/{suitId}/manifest` projects a validated SuitManifest with PartCatalog references. The local implementation writes JSON under `sessions/new-route/suits/...`; Cloud Run can keep the same contract while replacing that repository with Cloud SQL for source/version rows and GCS for artifacts.
 
 まずは API 形、schema validation、PartCatalog / SuitManifest の参照を固定する。永続化の正本は次段で Cloud SQL、artifact は GCS、live state は Firestore に分ける。
 

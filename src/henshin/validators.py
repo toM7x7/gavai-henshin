@@ -29,6 +29,7 @@ _FIT_SOURCES = {
 }
 
 _SCHEMA_KIND_TO_FILE = {
+    "suitspec": "suitspec.v0.2.schema.json",
     "suitmanifest": "suitmanifest.v0.1.schema.json",
     "partcatalog": "partcatalog.v0.1.schema.json",
     "transform-session": "transform-session.v0.1.schema.json",

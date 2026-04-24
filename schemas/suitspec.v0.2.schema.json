@@ -58,6 +58,27 @@
         "maxLength": 32
       }
     },
+    "operator_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protect_archetype": {
+          "type": "string",
+          "minLength": 1
+        },
+        "temperament_bias": {
+          "type": "string",
+          "minLength": 1
+        },
+        "color_mood": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
     "modules": {
       "type": "object",
       "additionalProperties": false,
@@ -244,7 +265,7 @@
     },
     "generation": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "model_id",
         "prompt"

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from .armor_design_team import compile_armor_design_team
 from .archive import ensure_session_dir, write_json
 from .emotion_compiler import compile_emotion_request
 from .gemini_image import extension_for_mime, save_image, write_generation_meta
@@ -21,6 +22,7 @@ from .image_providers import GeneratedImage, ImageReference, ImageProviderError,
 from .mesh_assets import resolve_mesh_asset_ref
 from .part_prompts import _base_style_text, build_uv_refine_prompt, list_enabled_parts, resolve_part_prompts
 from .suit_dna import resolve_suit_design_dna, serialize_suit_design_dna
+from .texture_quality import evaluate_texture_output
 from .user_profile_compiler import compile_operator_profile
 from .uv_guides import ensure_uv_guide_image, serialize_uv_guide
 from .uv_contracts import resolve_uv_contract, serialize_uv_contract
@@ -328,6 +330,7 @@ def _hero_prompt(
     generation_brief: str | None = None,
     user_armor_profile: dict[str, Any] | None = None,
     style_variation: dict[str, Any] | None = None,
+    armor_design_team: dict[str, Any] | None = None,
 ) -> str:
     style_text = _base_style_text(spec)
     user_profile_text = ""
@@ -351,6 +354,12 @@ def _hero_prompt(
             f"- Emissive guidance: {style_variation.get('emissive_guidance', '')}\n"
             f"- Tri-view guidance: {style_variation.get('tri_view_guidance', '')}\n"
         )
+    team_text = ""
+    if armor_design_team:
+        team_text = (
+            "Armor design team operating rule:\n"
+            f"- {armor_design_team.get('operating_rule', '')}\n"
+        )
     brief_text = ""
     if generation_brief and generation_brief.strip():
         brief_text = f"Creative direction from the current request: {generation_brief.strip()}.\n"
@@ -359,6 +368,7 @@ def _hero_prompt(
         f"{style_text}\n"
         f"{user_profile_text}"
         f"{variation_text}"
+        f"{team_text}"
         f"{brief_text}"
         f"Visible generated parts: {', '.join(generated_parts) if generated_parts else 'none'}.\n"
         f"Tracking source in the installation: {tracking_source}.\n"
@@ -441,6 +451,10 @@ def run_generate_parts(
     )
     effective_generation_brief = emotion_context["compiled_brief"]
     style_variation = emotion_context["style_variation"]
+    armor_design_team = compile_armor_design_team(
+        user_armor_profile=user_armor_profile,
+        style_variation=style_variation,
+    )
     design_dna = serialize_suit_design_dna(resolve_suit_design_dna(spec))
     uv_contracts = {part: serialize_uv_contract(resolve_uv_contract(spec, part)) for part in requested}
     uv_guides = {
@@ -451,6 +465,7 @@ def run_generate_parts(
             session_root=session_root,
             repo_root=repo_root,
             write_image=not request.dry_run,
+            guide_profile="topology_mask",
         )
         for part in requested
     }
@@ -462,6 +477,7 @@ def run_generate_parts(
         generation_brief=effective_generation_brief,
         style_variation=style_variation,
         user_armor_profile=user_armor_profile,
+        armor_design_team=armor_design_team,
     )
     concept_prompts: dict[str, str] = {}
     refine_prompts: dict[str, str] = {}
@@ -473,6 +489,7 @@ def run_generate_parts(
             generation_brief=effective_generation_brief,
             style_variation=style_variation,
             user_armor_profile=user_armor_profile,
+            armor_design_team=armor_design_team,
         )
         refine_prompts = {
             part: build_uv_refine_prompt(
@@ -481,6 +498,7 @@ def run_generate_parts(
                 generation_brief=effective_generation_brief,
                 style_variation=style_variation,
                 user_armor_profile=user_armor_profile,
+                armor_design_team=armor_design_team,
             )
             for part in requested
         }
@@ -493,6 +511,7 @@ def run_generate_parts(
             "operator_profile_raw": operator_context["operator_profile_raw"],
             "operator_profile_resolved": operator_context["operator_profile_resolved"],
             "user_armor_profile": user_armor_profile,
+            "armor_design_team": armor_design_team,
             "operator_resolved_defaults": operator_context["resolved_defaults"],
             "emotion_profile": emotion_context["emotion_profile_resolved"],
             "emotion_profile_raw": emotion_context["emotion_profile_raw"],
@@ -531,6 +550,7 @@ def run_generate_parts(
     errors: dict[str, str] = {}
     fallback_used: list[str] = []
     cache_hits: list[str] = []
+    quality_rejected: list[str] = []
     cancelled_parts: list[str] = []
     part_metrics: dict[str, dict[str, Any]] = {}
     waves = build_generation_waves(requested)
@@ -603,10 +623,14 @@ def run_generate_parts(
                 metric["total_ms"] = int((time.perf_counter() - part_started) * 1000)
                 cache_hits.append(part)
                 info = _copy_cached_asset(part, cached, parts_dir)
+                quality_gate = evaluate_texture_output(info["image_path"], guide_path=guide_path)
+                if quality_gate.get("reject"):
+                    quality_rejected.append(part)
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
                 info["timing_ms"] = dict(metric)
+                info["quality_gate"] = quality_gate
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
                 part_metrics[part] = dict(metric)
@@ -618,10 +642,14 @@ def run_generate_parts(
                 metric["fallback_used"] = True
                 metric["total_ms"] = int((time.perf_counter() - part_started) * 1000)
                 fallback_used.append(part)
+                quality_gate = evaluate_texture_output(info["image_path"], guide_path=guide_path)
+                if quality_gate.get("reject"):
+                    quality_rejected.append(part)
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
                 info["timing_ms"] = dict(metric)
+                info["quality_gate"] = quality_gate
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
                 part_metrics[part] = dict(metric)
@@ -721,6 +749,9 @@ def run_generate_parts(
                 meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
                 if request.use_cache:
                     _cache_store(cache_dir, key, result)
+                quality_gate = evaluate_texture_output(image_path, guide_path=guide_path)
+                if quality_gate.get("reject"):
+                    quality_rejected.append(part)
 
                 metric.update(
                     {
@@ -739,6 +770,7 @@ def run_generate_parts(
                     "model_id": result.model_id,
                     "preview_url": "/" + _display_path(image_path, repo_root).lstrip("/"),
                     "timing_ms": dict(metric),
+                    "quality_gate": quality_gate,
                     **info_common,
                     **info_extra,
                 }
@@ -762,6 +794,9 @@ def run_generate_parts(
             ext = extension_for_mime(result.mime_type)
             image_path = save_image(result, output_path=parts_dir / f"{part}.generated{ext}")
             meta_path = write_generation_meta(parts_dir / f"{part}.generation.json", result=result, kind=f"part:{part}")
+            quality_gate = evaluate_texture_output(image_path, guide_path=guide_path)
+            if quality_gate.get("reject"):
+                quality_rejected.append(part)
             metric.update(
                 {
                     "queue_wait_ms": result.queue_wait_ms,
@@ -779,6 +814,7 @@ def run_generate_parts(
                 "model_id": result.model_id,
                 "preview_url": "/" + _display_path(image_path, repo_root).lstrip("/"),
                 "timing_ms": dict(metric),
+                "quality_gate": quality_gate,
                 "reference_stack": [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else [],
                 **info_common,
             }
@@ -793,10 +829,14 @@ def run_generate_parts(
                 metric["fallback_used"] = True
                 metric["total_ms"] = int((time.perf_counter() - part_started) * 1000)
                 fallback_used.append(part)
+                quality_gate = evaluate_texture_output(info["image_path"], guide_path=guide_path)
+                if quality_gate.get("reject"):
+                    quality_rejected.append(part)
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
                 info["timing_ms"] = dict(metric)
+                info["quality_gate"] = quality_gate
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
                 part_metrics[part] = dict(metric)
@@ -838,6 +878,7 @@ def run_generate_parts(
                             "status": info.get("source") or "completed",
                             "preview_url": info.get("preview_url"),
                             "timing_ms": info.get("timing_ms"),
+                            "quality_gate": info.get("quality_gate"),
                             "completed_count": completed_count,
                             "requested_count": len(requested),
                             "log": info.get("source"),
@@ -871,6 +912,7 @@ def run_generate_parts(
                     effective_generation_brief,
                     user_armor_profile=user_armor_profile,
                     style_variation=style_variation,
+                    armor_design_team=armor_design_team,
                 ),
                 api_key_override=request.api_key,
                 references=None,
@@ -921,6 +963,7 @@ def run_generate_parts(
         generation["last_operator_profile_raw"] = operator_context["operator_profile_raw"] or {}
         generation["last_operator_profile_resolved"] = operator_context["operator_profile_resolved"] or {}
         generation["last_user_armor_profile"] = user_armor_profile or {}
+        generation["last_armor_design_team"] = armor_design_team or {}
         generation["last_emotion_profile_raw"] = emotion_context["emotion_profile_raw"] or {}
         generation["last_emotion_profile_resolved"] = emotion_context["emotion_profile_resolved"] or {}
         generation["last_style_variation"] = style_variation or {}
@@ -941,6 +984,7 @@ def run_generate_parts(
         "operator_profile_resolved": operator_context["operator_profile_resolved"],
         "operator_resolved_defaults": operator_context["resolved_defaults"],
         "user_armor_profile": user_armor_profile,
+        "armor_design_team": armor_design_team,
         "emotion_profile": emotion_context["emotion_profile_resolved"],
         "emotion_profile_raw": emotion_context["emotion_profile_raw"],
         "emotion_profile_resolved": emotion_context["emotion_profile_resolved"],
@@ -968,6 +1012,7 @@ def run_generate_parts(
         "fallback_dir": _display_path(fallback_dir, repo_root) if fallback_dir else None,
         "fallback_used": fallback_used,
         "cache_hits": cache_hits,
+        "quality_rejected": quality_rejected,
         "generated": generated,
         "hero_result": hero_result,
         "errors": errors,
@@ -990,6 +1035,7 @@ def run_generate_parts(
             "error_count": len(errors),
             "fallback_used_count": len(fallback_used),
             "cache_hit_count": len(cache_hits),
+            "quality_rejected_count": len(quality_rejected),
             "hero_preview_url": hero_result["preview_url"] if hero_result else None,
         },
     )
@@ -1001,6 +1047,7 @@ def run_generate_parts(
         "error_count": len(errors),
         "fallback_used_count": len(fallback_used),
         "cache_hit_count": len(cache_hits),
+        "quality_rejected_count": len(quality_rejected),
         "summary_path": _display_path(summary_path, repo_root),
         "hero_preview_url": hero_result["preview_url"] if hero_result else None,
         "total_elapsed_sec": summary["total_elapsed_sec"],

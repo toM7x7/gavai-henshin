@@ -194,6 +194,7 @@ class TestPartGeneration(unittest.TestCase):
         self.assertIn("operator_profile_raw", result)
         self.assertIn("operator_profile_resolved", result)
         self.assertIn("user_armor_profile", result)
+        self.assertIn("armor_design_team", result)
         self.assertIn("helmet", result["uv_contracts"])
         self.assertEqual(result["uv_contracts"]["helmet"]["fill_ratio_target"], [88, 96])
         self.assertIn("Core emotional trigger", result["generation_brief_compiled"])
@@ -201,6 +202,12 @@ class TestPartGeneration(unittest.TestCase):
         self.assertIn("emotion_profile_raw", result)
         self.assertIn("emotion_profile_resolved", result)
         self.assertIn("guide_hash", result["uv_guides"]["helmet"])
+        self.assertEqual(result["uv_guides"]["helmet"]["guide_profile"], "topology_mask")
+        self.assertIn("semantic_summary", result["uv_guides"]["helmet"])
+        self.assertIn("normal_semantic_counts", result["uv_guides"]["helmet"]["semantic_summary"])
+        role_keys = [role["key"] for role in result["armor_design_team"]["roles"]]
+        self.assertIn("uv_engineer", role_keys)
+        self.assertIn("reject_gatekeeper", role_keys)
         self.assertEqual(result["user_armor_profile"]["palette_family"], "Orbital audit gray")
 
     def test_run_generate_parts_uses_uv_guide_reference_for_mesh_uv(self) -> None:
@@ -241,7 +248,9 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(captured_references[0][0].mime_type, "image/png")
         summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
         self.assertIn("uv_guide_path", summary["generated"]["helmet"])
+        self.assertEqual(summary["uv_guides"]["helmet"]["guide_profile"], "topology_mask")
         self.assertEqual(summary["generated"]["helmet"]["reference_stack"][0]["role"], "uv_engineering_guide")
+        self.assertIn("quality_gate", summary["generated"]["helmet"])
 
     def test_run_generate_parts_uv_refine_uses_guide_then_concept(self) -> None:
         captured_references = []
@@ -382,6 +391,9 @@ class TestPartGeneration(unittest.TestCase):
         generation = saved_spec["generation"]
         self.assertEqual(generation["last_operator_profile_resolved"]["protect_archetype"], "future")
         self.assertEqual(generation["last_user_armor_profile"]["palette_family"], "Rescue ceramic white")
+        role_keys = [role["key"] for role in generation["last_armor_design_team"]["roles"]]
+        self.assertIn("uv_engineer", role_keys)
+        self.assertIn("dock_chief", role_keys)
 
 
 if __name__ == "__main__":

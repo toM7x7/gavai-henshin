@@ -124,6 +124,38 @@ class TestPartPrompts(unittest.TestCase):
         self.assertIn("Preserve front, side, and rear logic while translating it into UV space", prompt)
         self.assertIn("User-specific armor DNA", prompt)
 
+    def test_build_part_prompt_includes_armor_design_team_and_uv_legend(self) -> None:
+        spec = create_draft_suitspec()
+        prompt = build_part_prompt(
+            "helmet",
+            spec,
+            texture_mode="mesh_uv",
+            armor_design_team={
+                "team_seed": "team-1",
+                "operating_rule": "Lore rules outrank user taste.",
+                "review_sequence": ["lore_architect", "uv_engineer", "reject_gatekeeper"],
+                "hard_rejects": ["object concept sheet", "visible guide artifacts"],
+                "roles": [
+                    {
+                        "title": "UV engineer",
+                        "responsibility": "UV island authority.",
+                        "directive": "Obey normal zones and crease lines.",
+                    }
+                ],
+            },
+        )
+
+        self.assertIn("Armor design team review", prompt)
+        self.assertIn("UV engineer", prompt)
+        self.assertIn("Review sequence", prompt)
+        self.assertIn("Team hard rejects", prompt)
+        self.assertIn("object concept sheet", prompt)
+        self.assertIn("Reference A may be grayscale or color-coded", prompt)
+        self.assertIn("Do NOT copy Reference A tones", prompt)
+        self.assertIn("Do NOT draw the assembled armor module", prompt)
+        self.assertIn("Cover the entire square with continuous armor material", prompt)
+        self.assertIn("Do not add readable letters", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

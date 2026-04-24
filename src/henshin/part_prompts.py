@@ -32,6 +32,94 @@ PART_PROMPT_HINTS: dict[str, str] = {
     "right_hand": "right hand armored glove, isolated",
 }
 
+UV_ATLAS_FAILURE_GUARD = (
+    "UV atlas failure guards:\n"
+    "- Cover the entire square with continuous armor material. No unpainted white or gray negative space around armor-shaped silhouettes.\n"
+    "- Do not draw floating left/right plates, detachable side pods, a front-view shell, or a product-shot part on a blank canvas.\n"
+    "- Do not add readable letters, numbers, QR codes, labels, maker marks, serial tags, UI text, or calibration text.\n"
+    "- Do not use bevel shadows, cast shadows, or perspective shading to make the texture look like a rendered object.\n"
+    "- Seam-safe margins can be low frequency, but they must still be painted as armor material.\n"
+)
+
+UV_SAFE_MODULE_DESCRIPTORS: dict[str, str] = {
+    "helmet": "H-01 cranial sensor-shell UV surface group",
+    "chest": "C-01 torso core-shell UV surface group",
+    "back": "B-01 dorsal service-shell UV surface group",
+    "left_shoulder": "LS-01 left upper-mount UV surface group",
+    "right_shoulder": "RS-01 right upper-mount UV surface group",
+    "left_upperarm": "LUA-01 left proximal limb-shell UV surface group",
+    "right_upperarm": "RUA-01 right proximal limb-shell UV surface group",
+    "left_forearm": "LFA-01 left distal tool-shell UV surface group",
+    "right_forearm": "RFA-01 right distal tool-shell UV surface group",
+    "waist": "W-01 abdominal transfer-shell UV surface group",
+    "left_thigh": "LT-01 left upper-leg load-shell UV surface group",
+    "right_thigh": "RT-01 right upper-leg load-shell UV surface group",
+    "left_shin": "LSH-01 left lower-leg gait-shell UV surface group",
+    "right_shin": "RSH-01 right lower-leg gait-shell UV surface group",
+    "left_boot": "LFT-01 left lower terminal contact-shell UV surface group",
+    "right_boot": "RFT-01 right lower terminal contact-shell UV surface group",
+    "left_hand": "LH-01 left manipulator guard-shell UV surface group",
+    "right_hand": "RH-01 right manipulator guard-shell UV surface group",
+}
+
+UV_OBJECT_SUBJECT_TERMS: dict[str, str] = {
+    "helmet": "helmet, mask, head, or face object",
+    "chest": "chestplate or torso object",
+    "back": "backpack or backplate object",
+    "left_shoulder": "pauldron or shoulder object",
+    "right_shoulder": "pauldron or shoulder object",
+    "left_upperarm": "arm sleeve object",
+    "right_upperarm": "arm sleeve object",
+    "left_forearm": "gauntlet or forearm object",
+    "right_forearm": "gauntlet or forearm object",
+    "waist": "belt or waist object",
+    "left_thigh": "thigh guard object",
+    "right_thigh": "thigh guard object",
+    "left_shin": "shin guard object",
+    "right_shin": "shin guard object",
+    "left_boot": "boot, shoe, sole, or footwear object",
+    "right_boot": "boot, shoe, sole, or footwear object",
+    "left_hand": "glove, hand, or finger object",
+    "right_hand": "glove, hand, or finger object",
+}
+
+UV_SAFE_PART_FUNCTIONS: dict[str, str] = {
+    "helmet": "Cranial sensor-shell zones need visor-cassette material lanes, comms enclosure surfaces, and maintenance-latch returns without drawing a headgear silhouette.",
+    "chest": "Torso core-shell zones need sternum access, load-transfer lanes, and core-protection hierarchy without drawing a torso plate object.",
+    "back": "Dorsal service-shell zones need spine channeling, thermal management, and mount hardware continuity without drawing a backpack object.",
+    "left_shoulder": "Upper-mount zones need deflection crest, rotation clearance, and identification surface logic without drawing a pauldron object.",
+    "right_shoulder": "Upper-mount zones need deflection crest, rotation clearance, and identification surface logic without drawing a pauldron object.",
+    "left_upperarm": "Proximal limb-shell zones need actuator clearance, removable service cover logic, and strike-face hierarchy without drawing an arm sleeve object.",
+    "right_upperarm": "Proximal limb-shell zones need actuator clearance, removable service cover logic, and strike-face hierarchy without drawing an arm sleeve object.",
+    "left_forearm": "Distal tool-shell zones need wrist-cuff logic, hardpoint lanes, cable routing, and tool-robust surfaces without drawing a gauntlet object.",
+    "right_forearm": "Distal tool-shell zones need wrist-cuff logic, hardpoint lanes, cable routing, and tool-robust surfaces without drawing a gauntlet object.",
+    "waist": "Transfer-shell zones need abdomen guard rhythm, hip articulation edges, and service segmentation without drawing a belt object.",
+    "left_thigh": "Upper-leg load-shell zones need forward load face, mount rail continuity, and replacement-friendly segmentation without drawing a leg object.",
+    "right_thigh": "Upper-leg load-shell zones need forward load face, mount rail continuity, and replacement-friendly segmentation without drawing a leg object.",
+    "left_shin": "Lower-leg gait-shell zones need front crest hierarchy, ankle-transfer seams, and grounded mobility logic without drawing a greave object.",
+    "right_shin": "Lower-leg gait-shell zones need front crest hierarchy, ankle-transfer seams, and grounded mobility logic without drawing a greave object.",
+    "left_boot": "Lower terminal contact-shell zones need toe-roll material bands, heel-stabilizer logic, and sole-transition service seams without drawing footwear.",
+    "right_boot": "Lower terminal contact-shell zones need toe-roll material bands, heel-stabilizer logic, and sole-transition service seams without drawing footwear.",
+    "left_hand": "Manipulator guard-shell zones need dorsal shield material, knuckle lane hints, and wrist docking continuity without drawing a glove or fingers.",
+    "right_hand": "Manipulator guard-shell zones need dorsal shield material, knuckle lane hints, and wrist docking continuity without drawing a glove or fingers.",
+}
+
+
+def uv_safe_module_descriptor(part: str) -> str:
+    return UV_SAFE_MODULE_DESCRIPTORS.get(part, f"{part} UV surface group")
+
+
+def uv_safe_part_function(part: str) -> str:
+    return UV_SAFE_PART_FUNCTIONS.get(part, describe_part_function(part))
+
+
+def uv_subject_guard(part: str) -> str:
+    subject = UV_OBJECT_SUBJECT_TERMS.get(part, "armor object")
+    return (
+        f"The mesh key '{part}' is a routing key and UV address only, not the subject of an illustration. "
+        f"Do not render a recognizable {subject}; produce only its flat material atlas.\n"
+    )
+
 
 def list_enabled_parts(suitspec: dict[str, Any]) -> list[str]:
     modules = suitspec.get("modules", {})
@@ -128,6 +216,34 @@ def _style_variation_text(style_variation: dict[str, Any] | None) -> str:
         f"- Silhouette guidance: {style_variation.get('silhouette_guidance', '')}\n"
         f"- Tri-view guidance: {style_variation.get('tri_view_guidance', '')}\n"
     )
+
+
+def _armor_design_team_text(armor_design_team: dict[str, Any] | None) -> str:
+    if not armor_design_team:
+        return ""
+    review_sequence = armor_design_team.get("review_sequence") or []
+    hard_rejects = armor_design_team.get("hard_rejects") or []
+    lines = [
+        "Armor design team review:",
+        f"- Team seed: {armor_design_team.get('team_seed', 'unknown')}",
+        f"- Operating rule: {armor_design_team.get('operating_rule', '')}",
+    ]
+    if review_sequence:
+        sequence_text = ", ".join(str(role) for role in review_sequence if str(role).strip())
+        if sequence_text:
+            lines.append(f"- Review sequence: {sequence_text}")
+    if hard_rejects:
+        reject_text = "; ".join(str(item) for item in hard_rejects if str(item).strip())
+        if reject_text:
+            lines.append(f"- Team hard rejects: {reject_text}")
+    for role in armor_design_team.get("roles") or []:
+        if not isinstance(role, dict):
+            continue
+        title = role.get("title") or role.get("key") or "Role"
+        responsibility = role.get("responsibility") or ""
+        directive = role.get("directive") or ""
+        lines.append(f"- {title}: {responsibility} Directive: {directive}")
+    return "\n".join(lines) + "\n"
 
 
 def _uv_layout_hint(part: str) -> str:
@@ -278,6 +394,7 @@ def build_part_prompt(
     generation_brief: str | None = None,
     style_variation: dict[str, Any] | None = None,
     user_armor_profile: dict[str, Any] | None = None,
+    armor_design_team: dict[str, Any] | None = None,
 ) -> str:
     modules = suitspec.get("modules", {})
     module = modules.get(part, {})
@@ -289,6 +406,7 @@ def build_part_prompt(
     design_dna_text = _design_dna_text(suitspec)
     lore_text = _lore_design_text()
     user_profile_text = _user_armor_profile_text(user_armor_profile)
+    team_text = _armor_design_team_text(armor_design_team)
     module_override_text = _module_override_text(module)
     part_role_text = _part_role_text(part)
     three_view_text = _three_view_text(part)
@@ -297,14 +415,19 @@ def build_part_prompt(
     if texture_mode == "mesh_uv":
         uv_hint = _uv_layout_hint(part)
         uv_contract_text = _uv_contract_text(suitspec, part)
+        safe_descriptor = uv_safe_module_descriptor(part)
+        safe_function = uv_safe_part_function(part)
+        subject_guard = uv_subject_guard(part)
         return (
             "Generate a UV-ready texture atlas for one armor module.\n"
-            f"Target module: {part} ({hint}).\n"
+            f"Mesh routing key: {part}. UV subject descriptor: {safe_descriptor}.\n"
+            f"{subject_guard}"
             f"{style_text}\n"
             f"{design_dna_text}"
             f"{lore_text}\n"
             f"{user_profile_text}"
-            f"{part_role_text}"
+            f"{team_text}"
+            f"Mechanical role in UV-safe wording:\n- {safe_function}\n"
             f"{three_view_text}"
             f"{module_override_text}"
             f"{variation_text}"
@@ -312,7 +435,13 @@ def build_part_prompt(
             f"{uv_contract_text}"
             "Output format requirements:\n"
             "- When a reference image is provided, treat it as the UV engineering guide and obey its island layout authority.\n"
+            "- Reference A may be grayscale or color-coded, but its tones, fills, wire lines, centerline, motif box, and seam borders are construction annotations only.\n"
+            "- Do NOT copy Reference A tones, guide colors, wireframe strokes, grid lines, centerline, motif box, labels, or annotation marks into the final texture.\n"
+            "- Do NOT draw the assembled armor module as a 3D object. Paint material only inside the UV island topology.\n"
+            "- The entire square is a texture canvas. No studio background, no object silhouette, no cast shadow, no perspective camera.\n"
+            f"{UV_ATLAS_FAILURE_GUARD}"
             "- Think like an orthographic three-view sheet translated into UV islands, not like a hero render painted onto a square.\n"
+            "- Place paint breaks, emissives, and panel seams according to normal-facing zones and fold cues. Do not fight the indicated surface direction.\n"
             "- Front-facing identity surfaces belong to primary motif zones; lateral surfaces carry wrap logic and service cuts; rear or seam-adjacent surfaces carry maintenance logic.\n"
             "- Preserve same user, same production lineage continuity across every module.\n"
             "- 1:1 square texture map (base-color/albedo style), no perspective view.\n"
@@ -332,6 +461,7 @@ def build_part_prompt(
         f"{design_dna_text}"
         f"{lore_text}\n"
         f"{user_profile_text}"
+        f"{team_text}"
         f"{part_role_text}"
         f"{three_view_text}"
         f"{module_override_text}"
@@ -355,6 +485,7 @@ def build_uv_refine_prompt(
     *,
     style_variation: dict[str, Any] | None = None,
     user_armor_profile: dict[str, Any] | None = None,
+    armor_design_team: dict[str, Any] | None = None,
 ) -> str:
     hint = PART_PROMPT_HINTS.get(part, f"{part} armor part")
     style_text = _base_style_text(suitspec, style_variation=style_variation)
@@ -366,16 +497,22 @@ def build_uv_refine_prompt(
     part_role_text = _part_role_text(part)
     three_view_text = _three_view_text(part)
     user_profile_text = _user_armor_profile_text(user_armor_profile)
+    team_text = _armor_design_team_text(armor_design_team)
     variation_text = _style_variation_text(style_variation)
     brief_text = _generation_brief_text(generation_brief)
+    safe_descriptor = uv_safe_module_descriptor(part)
+    safe_function = uv_safe_part_function(part)
+    subject_guard = uv_subject_guard(part)
     return (
         "You are given a reference concept image for one armor module.\n"
-        f"Target module: {part} ({hint}).\n"
+        f"Mesh routing key: {part}. UV subject descriptor: {safe_descriptor}.\n"
+        f"{subject_guard}"
         f"{style_text}\n"
         f"{design_dna_text}"
         f"{lore_text}\n"
         f"{user_profile_text}"
-        f"{part_role_text}"
+        f"{team_text}"
+        f"Mechanical role in UV-safe wording:\n- {safe_function}\n"
         f"{three_view_text}"
         f"{module_override_text}"
         f"{variation_text}"
@@ -383,8 +520,13 @@ def build_uv_refine_prompt(
         f"{uv_contract_text}"
         "Task:\n"
         "- Reference A = UV engineering guide. It controls island placement, seam-safe borders, centerline, and motif zones.\n"
+        "- Reference A tones, fills, wire lines, centerline, motif box, and seam borders are construction annotations only. Do NOT copy them into the final texture.\n"
         "- Reference B = style concept. It controls surface language, material rhythm, and motif character.\n"
         "- Convert the reference visual language into a UV-ready flat texture sheet.\n"
+        "- Do NOT draw the assembled armor module as a 3D object. Paint material only inside the UV island topology.\n"
+        "- The entire square is a texture canvas. No studio background, no object silhouette, no cast shadow, no perspective camera.\n"
+        f"{UV_ATLAS_FAILURE_GUARD}"
+        "- Use fold/crease cues as places for believable plate bends, material breaks, or controlled hard-surface transitions.\n"
         "- Preserve front, side, and rear logic while translating it into UV space. Side and rear surfaces must not collapse into blank filler.\n"
         "- Preserve same user, same production lineage continuity across every module.\n"
         "- Keep motifs, panel rhythm, and material logic from the reference while re-laying to UV space.\n"
@@ -405,6 +547,7 @@ def resolve_part_prompts(
     generation_brief: str | None = None,
     style_variation: dict[str, Any] | None = None,
     user_armor_profile: dict[str, Any] | None = None,
+    armor_design_team: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     prompts: dict[str, str] = {}
     for part in parts:
@@ -415,5 +558,6 @@ def resolve_part_prompts(
             generation_brief=generation_brief,
             style_variation=style_variation,
             user_armor_profile=user_armor_profile,
+            armor_design_team=armor_design_team,
         )
     return prompts

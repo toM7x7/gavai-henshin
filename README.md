@@ -91,9 +91,14 @@ GET /v1/suits/{suitId}
 POST /v1/suits/{suitId}/manifest
 GET /v1/suits/{suitId}/manifest
 GET /v1/manifests/{manifestId}
+POST /v1/trials
+GET /v1/trials/{trialId}
+POST /v1/trials/{trialId}/events
 ```
 
 Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the SuitSpec as the authoring source, and `POST /v1/suits/{suitId}/manifest` projects a validated SuitManifest with PartCatalog references. The local implementation writes JSON under `sessions/new-route/suits/...`; Cloud Run can keep the same contract while replacing that repository with Cloud SQL for source/version rows and GCS for artifacts.
+
+Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creates a schema-valid `TransformSession`, and `POST /v1/trials/{trialId}/events` appends canonical transform events with server-side event ids and sequence numbers. Local storage writes under `sessions/new-route/trials/...`; later GCP should map sessions/events to Cloud SQL and live state to Firestore.
 
 まずは API 形、schema validation、PartCatalog / SuitManifest の参照を固定する。永続化の正本は次段で Cloud SQL、artifact は GCS、live state は Firestore に分ける。
 

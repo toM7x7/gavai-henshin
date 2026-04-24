@@ -107,8 +107,75 @@ class TestNewRouteApi(unittest.TestCase):
             assert response is not None
             self.assertEqual(response.status, 404)
 
+    def test_create_trial_uses_latest_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            response = api.post(
+                "/v1/trials",
+                {
+                    "suit_id": "VDA-AXIS-OP-00-0001",
+                    "session_id": "S-TRIAL-UNIT-0001",
+                    "operator_id": "operator-local",
+                    "device_id": "quest-local",
+                    "tracking_source": "iw_sdk",
+                },
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["session_id"], "S-TRIAL-UNIT-0001")
+            self.assertEqual(response.body["trial"]["manifest_id"], "MNF-20260424-ABCD")
+            self.assertEqual(response.body["trial"]["events"][0]["event_type"], "SESSION_CREATED")
+
+    def test_append_trial_event_updates_state_and_sequence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+
+            response = api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {
+                    "event_type": "DEPOSITION_STARTED",
+                    "state_after": "DEPOSITION",
+                    "actor": {"type": "device", "id": "quest-local"},
+                    "payload": {"source": "quest-browser"},
+                    "idempotency_key": "deposition-start",
+                },
+            )
+            fetched = api.get("/v1/trials/S-TRIAL-UNIT-0001")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(fetched)
+            assert response is not None and fetched is not None
+            self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["event"]["sequence"], 1)
+            self.assertEqual(response.body["trial"]["state"], "DEPOSITION")
+            self.assertEqual(fetched.body["trial"]["events"][1]["idempotency_key"], "deposition-start")
+
+    def test_create_trial_returns_conflict_without_manifest(self) -> None:
+        suitspec = self._sample_suitspec()
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            api.post("/v1/suits", {"suitspec": suitspec})
+
+            response = api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001"})
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 409)
+
     def _sample_suitspec(self) -> dict:
         return json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+
+    def _api_with_manifest(self, suit_store_root: Path) -> NewRouteApi:
+        api = NewRouteApi(Path("."), suit_store_root=suit_store_root)
+        api.post("/v1/suits", {"suitspec": self._sample_suitspec()})
+        api.post(
+            "/v1/suits/VDA-AXIS-OP-00-0001/manifest",
+            {"manifest_id": "MNF-20260424-ABCD", "status": "READY"},
+        )
+        return api
 
 
 if __name__ == "__main__":

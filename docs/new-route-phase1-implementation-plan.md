@@ -38,9 +38,16 @@ Target contract:
 
 ```text
 POST /v1/trials
+GET /v1/trials/{trialId}
 POST /v1/trials/{trialId}/events
 POST /v1/suits/{suitId}/send-to-quest
 ```
+
+Current local contract implemented:
+
+- `POST /v1/trials` creates a `TransformSession v0.1` from a saved suit manifest or a direct `manifest_id`.
+- `GET /v1/trials/{trialId}` reads the saved `TransformSession`.
+- `POST /v1/trials/{trialId}/events` appends canonical transform events and updates the session state.
 
 Storage split:
 

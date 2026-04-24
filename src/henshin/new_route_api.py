@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -19,7 +20,43 @@ from .validators import validate_against_schema, validate_suitspec
 
 _SUIT_ID_RE = re.compile(r"^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$")
 _MANIFEST_ID_RE = re.compile(r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
+_SESSION_ID_RE = re.compile(r"^S-[A-Z0-9][A-Z0-9-]{2,63}$")
+_EVENT_ID_RE = re.compile(r"^EVT-[0-9]{8}-[A-Z0-9]{6}$")
 _SUIT_STATUSES = {"DRAFT", "READY", "ACTIVE", "RETIRED"}
+_TRANSFORM_STATES = {
+    "IDLE",
+    "POSTED",
+    "FIT_AUDIT",
+    "MORPHOTYPE_LOCKED",
+    "DESIGN_ISSUED",
+    "DRY_FIT_SIM",
+    "TRY_ON",
+    "APPROVAL_PENDING",
+    "APPROVED",
+    "DEPOSITION",
+    "SEALING",
+    "ACTIVE",
+    "ARCHIVED",
+    "REFUSED",
+}
+_TRANSFORM_EVENT_TYPES = {
+    "SESSION_CREATED",
+    "TRIGGER_DETECTED",
+    "VOICE_CAPTURED",
+    "TRACKING_FRAME_BATCH",
+    "STATE_TRANSITION",
+    "FIT_AUDIT_RECORDED",
+    "MORPHOTYPE_LOCKED",
+    "BLUEPRINT_ISSUED",
+    "APPROVAL_GRANTED",
+    "DEPOSITION_STARTED",
+    "DEPOSITION_PROGRESS",
+    "DEPOSITION_COMPLETED",
+    "SEAL_VERIFIED",
+    "REFUSAL_RECORDED",
+    "ERROR_RECORDED",
+    "SESSION_ARCHIVED",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +69,7 @@ class NewRouteApi:
     def __init__(self, repo_root: Path, *, suit_store_root: Path | None = None) -> None:
         self.repo_root = repo_root.resolve()
         self.suit_store_root = (suit_store_root or self.repo_root / "sessions" / "new-route" / "suits").resolve()
+        self.trial_store_root = self.suit_store_root.parent / "trials"
 
     def health(self) -> ApiResponse:
         return ApiResponse(
@@ -175,6 +213,168 @@ class NewRouteApi:
             },
         )
 
+    def create_trial(self, payload: dict[str, Any]) -> ApiResponse:
+        if not isinstance(payload, dict):
+            return self._bad_request("request body must be a JSON object")
+        suit_id = str(payload.get("suit_id") or "")
+        manifest_id = payload.get("manifest_id")
+        if manifest_id is not None and not isinstance(manifest_id, str):
+            return self._bad_request("manifest_id must be a string")
+        if manifest_id is not None and not _MANIFEST_ID_RE.fullmatch(manifest_id):
+            return self._bad_request("manifest_id format is invalid")
+
+        if suit_id:
+            if not _SUIT_ID_RE.fullmatch(suit_id):
+                return self._bad_request("suit_id format is invalid")
+            suit_path = self._suit_path(suit_id)
+            if not suit_path.exists():
+                return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown suit: {suit_id}"})
+            suit = self._read_json(suit_path)
+            manifest_id = manifest_id or suit.get("manifest_id")
+            if not isinstance(manifest_id, str):
+                return ApiResponse(status=HTTPStatus.CONFLICT, body={"ok": False, "error": f"No manifest for suit: {suit_id}"})
+
+        if not isinstance(manifest_id, str):
+            return self._bad_request("manifest_id or suit_id with a saved manifest is required")
+        manifest_response = self.get_manifest(manifest_id)
+        if manifest_response.status != HTTPStatus.OK:
+            return manifest_response
+        manifest = manifest_response.body["manifest"]
+        manifest_suit_id = str(manifest.get("suit_id") or "")
+        if suit_id and manifest_suit_id != suit_id:
+            return self._bad_request("manifest.suit_id must match suit_id")
+        suit_id = suit_id or manifest_suit_id
+
+        session_id = str(payload.get("session_id") or self._generate_session_id())
+        if not _SESSION_ID_RE.fullmatch(session_id):
+            return self._bad_request("session_id format is invalid")
+        session_path = self._trial_path(session_id)
+        if session_path.exists():
+            return ApiResponse(status=HTTPStatus.CONFLICT, body={"ok": False, "error": f"Trial already exists: {session_id}"})
+
+        state = str(payload.get("state") or "POSTED")
+        if state not in _TRANSFORM_STATES:
+            return self._bad_request(f"state must be one of {sorted(_TRANSFORM_STATES)}")
+        tracking_source = str(payload.get("tracking_source") or "manual")
+        now = self._utc_now()
+        session = {
+            "schema_version": "0.1",
+            "session_id": session_id,
+            "manifest_id": manifest_id,
+            "suit_id": suit_id,
+            "operator_id": payload.get("operator_id"),
+            "device_id": payload.get("device_id"),
+            "tracking_source": tracking_source,
+            "state": state,
+            "started_at": now,
+            "events": [
+                {
+                    "event_id": self._generate_event_id(now),
+                    "session_id": session_id,
+                    "sequence": 0,
+                    "event_type": "SESSION_CREATED",
+                    "occurred_at": now,
+                    "actor": {"type": "system"},
+                    "state_after": state,
+                    "payload": {"source": "new-route-api", "manifest_id": manifest_id},
+                }
+            ],
+            "artifacts": {},
+            "metadata": {"created_at": now, "updated_at": now},
+        }
+        session = self._strip_none(session)
+        try:
+            validate_against_schema(session, "transform-session")
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        self._write_json(session_path, session)
+        return ApiResponse(
+            status=HTTPStatus.CREATED,
+            body={
+                "ok": True,
+                "trial_id": session_id,
+                "session_id": session_id,
+                "session": session,
+                "trial": session,
+                "trial_path": self._relative_path(session_path),
+                "links": {
+                    "events": f"/v1/trials/{session_id}/events",
+                    "replay": f"/v1/trials/{session_id}/replay",
+                },
+                "storage": self._storage_info(session_path),
+            },
+        )
+
+    def get_trial(self, session_id: str) -> ApiResponse:
+        if not _SESSION_ID_RE.fullmatch(session_id):
+            return self._bad_request("session_id format is invalid")
+        session_path = self._trial_path(session_id)
+        if not session_path.exists():
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown trial: {session_id}"})
+        return ApiResponse(status=HTTPStatus.OK, body={"ok": True, "trial": self._read_json(session_path)})
+
+    def append_trial_event(self, session_id: str, payload: dict[str, Any]) -> ApiResponse:
+        if not _SESSION_ID_RE.fullmatch(session_id):
+            return self._bad_request("session_id format is invalid")
+        session_path = self._trial_path(session_id)
+        if not session_path.exists():
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown trial: {session_id}"})
+        if not isinstance(payload, dict):
+            return self._bad_request("request body must be a JSON object")
+
+        session = self._read_json(session_path)
+        events = session.setdefault("events", [])
+        idempotency_key = payload.get("idempotency_key")
+        if isinstance(idempotency_key, str):
+            for event in events:
+                if event.get("idempotency_key") == idempotency_key:
+                    return ApiResponse(status=HTTPStatus.OK, body={"ok": True, "event": event, "trial": session})
+
+        now = str(payload.get("occurred_at") or self._utc_now())
+        event_id = str(payload.get("event_id") or self._generate_event_id(now))
+        if not _EVENT_ID_RE.fullmatch(event_id):
+            return self._bad_request("event_id format is invalid")
+        event_type = str(payload.get("event_type") or "STATE_TRANSITION")
+        if event_type not in _TRANSFORM_EVENT_TYPES:
+            return self._bad_request(f"event_type must be one of {sorted(_TRANSFORM_EVENT_TYPES)}")
+
+        state_before = str(session["state"])
+        state_after = str(payload.get("state_after") or state_before)
+        if state_after not in _TRANSFORM_STATES:
+            return self._bad_request(f"state_after must be one of {sorted(_TRANSFORM_STATES)}")
+
+        actor = payload.get("actor") or {"type": "system"}
+        if not isinstance(actor, dict):
+            return self._bad_request("actor must be a JSON object")
+        event = {
+            "event_id": event_id,
+            "session_id": session_id,
+            "sequence": len(events),
+            "event_type": event_type,
+            "occurred_at": now,
+            "actor": actor,
+            "state_before": state_before,
+            "state_after": state_after,
+            "payload": payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+        }
+        if isinstance(idempotency_key, str):
+            event["idempotency_key"] = idempotency_key
+
+        events.append(event)
+        session["state"] = state_after
+        if state_after in {"ACTIVE", "ARCHIVED", "REFUSED"}:
+            session["completed_at"] = now
+        session.setdefault("metadata", {})["updated_at"] = now
+        try:
+            validate_against_schema(session, "transform-session")
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        self._write_json(session_path, session)
+        return ApiResponse(
+            status=HTTPStatus.CREATED,
+            body={"ok": True, "trial_id": session_id, "event": event, "session": session, "trial": session},
+        )
+
     def get_part_catalog(self) -> ApiResponse:
         catalog = self._load_json("examples/partcatalog.seed.json")
         validate_against_schema(catalog, "partcatalog")
@@ -227,17 +427,28 @@ class NewRouteApi:
             if suffix.endswith("/manifest"):
                 return self.get_latest_suit_manifest(suffix[: -len("/manifest")])
             return self.get_suit(suffix)
+        trial_prefix = "/v1/trials/"
+        if normalized.startswith(trial_prefix):
+            suffix = normalized[len(trial_prefix) :]
+            return self.get_trial(suffix)
         return None
 
     def post(self, path: str, payload: dict[str, Any]) -> ApiResponse | None:
         normalized = "/" + path.strip("/")
         if normalized == "/v1/suits":
             return self.create_suit(payload)
+        if normalized == "/v1/trials":
+            return self.create_trial(payload)
         prefix = "/v1/suits/"
         suffix = normalized[len(prefix) :] if normalized.startswith(prefix) else ""
         if suffix.endswith("/manifest"):
             suit_id = suffix[: -len("/manifest")]
             return self.attach_manifest(suit_id, payload)
+        trial_prefix = "/v1/trials/"
+        trial_suffix = normalized[len(trial_prefix) :] if normalized.startswith(trial_prefix) else ""
+        if trial_suffix.endswith("/events"):
+            session_id = trial_suffix[: -len("/events")]
+            return self.append_trial_event(session_id, payload)
         return None
 
     def _load_json(self, rel_path: str) -> dict[str, Any]:
@@ -267,6 +478,9 @@ class NewRouteApi:
     def _manifest_path(self, suit_id: str, manifest_id: str) -> Path:
         return self.suit_store_root / suit_id / "manifests" / f"{manifest_id}.json"
 
+    def _trial_path(self, session_id: str) -> Path:
+        return self.trial_store_root / session_id / "transform-session.json"
+
     def _find_manifest_path(self, manifest_id: str) -> Path | None:
         if not self.suit_store_root.exists():
             return None
@@ -290,8 +504,22 @@ class NewRouteApi:
     def _utc_now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
 
+    def _generate_session_id(self) -> str:
+        return f"S-TRIAL-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex.upper()[:6]}"
+
+    def _generate_event_id(self, occurred_at: str) -> str:
+        date = datetime.now(timezone.utc).strftime("%Y%m%d")
+        try:
+            date = datetime.fromisoformat(occurred_at.replace("Z", "+00:00")).strftime("%Y%m%d")
+        except ValueError:
+            pass
+        return f"EVT-{date}-{uuid.uuid4().hex.upper()[:6]}"
+
     def _clone_json(self, payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(json.dumps(payload, ensure_ascii=False))
+
+    def _strip_none(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return {key: value for key, value in payload.items() if value is not None}
 
     def _manifest_from_payload(self, suit_id: str, payload: dict[str, Any], suitspec_path: Path) -> dict[str, Any]:
         supplied_manifest = payload.get("manifest")

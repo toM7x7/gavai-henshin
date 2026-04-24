@@ -202,6 +202,19 @@ button:focus-visible {
   backdrop-filter: blur(12px);
 }
 
+.readout span[data-live="true"] {
+  border-color: rgba(67, 216, 255, 0.78);
+  color: #fff4c8;
+  background: rgba(7, 35, 44, 0.72);
+  box-shadow: 0 0 22px rgba(67, 216, 255, 0.28);
+}
+
+.readout span[data-live="stale"] {
+  border-color: rgba(255, 207, 90, 0.68);
+  color: #fff4c8;
+  background: rgba(48, 35, 8, 0.68);
+}
+
 #ARButton,
 #VRButton {
   right: 18px !important;

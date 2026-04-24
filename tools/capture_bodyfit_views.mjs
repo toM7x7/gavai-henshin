@@ -10,6 +10,7 @@ function parseArgs(argv) {
     vrm: "viewer/assets/vrm/default.vrm",
     attach: "vrm",
     outputDir: "tests/.tmp/body-fit-views",
+    previewOnly: false,
   };
   for (let index = 2; index < argv.length; index += 1) {
     const token = argv[index];
@@ -32,6 +33,8 @@ function parseArgs(argv) {
     } else if (token === "--output-dir" && next) {
       options.outputDir = next;
       index += 1;
+    } else if (token === "--preview-only") {
+      options.previewOnly = true;
     }
   }
   return options;
@@ -60,7 +63,12 @@ async function main() {
   try {
     await page.goto(url, { waitUntil: "networkidle" });
     await page.waitForFunction(
-      () => window.__HENSHIN_BODY_FIT__?.viewer?.vrm?.model && window.__HENSHIN_BODY_FIT__?.viewer?.meshes?.size === 18,
+      () => {
+        const viewer = window.__HENSHIN_BODY_FIT__?.viewer;
+        if (!viewer?.vrm?.model || !viewer?.suitspec?.modules) return false;
+        const expected = Object.values(viewer.suitspec.modules).filter((module) => module?.enabled).length;
+        return expected > 0 && viewer.meshes?.size >= expected;
+      },
       null,
       { timeout: 90000 },
     );
@@ -89,7 +97,19 @@ async function main() {
 
     const summaryPath = path.join(outputDir, "summary.json");
     await fs.writeFile(summaryPath, JSON.stringify(regression, null, 2), "utf8");
-    process.stdout.write(JSON.stringify({ ok: regression.ok, outputDir, summaryPath }, null, 2));
+    process.stdout.write(
+      JSON.stringify(
+        {
+          ok: options.previewOnly ? true : regression.ok,
+          regressionOk: regression.ok,
+          previewOnly: options.previewOnly,
+          outputDir,
+          summaryPath,
+        },
+        null,
+        2,
+      ),
+    );
   } finally {
     await browser.close();
   }

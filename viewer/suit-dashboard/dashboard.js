@@ -2128,6 +2128,7 @@ function updatePromptPreview(part, suitspec) {
   const uvContract = lastSummary?.uv_contracts?.[part] || null;
   const runtimeOperatorProfile = lastSummary?.operator_profile_resolved || null;
   const runtimeUserArmorProfile = lastSummary?.user_armor_profile || null;
+  const runtimeArmorDesignTeam = lastSummary?.armor_design_team || null;
   const runtimeOperatorDefaults = lastSummary?.operator_resolved_defaults || null;
   const runtimeEmotionProfile = lastSummary?.emotion_profile_resolved || lastSummary?.emotion_profile || null;
   const runtimeEmotionDirectives = lastSummary?.emotion_directives || null;
@@ -2162,6 +2163,9 @@ function updatePromptPreview(part, suitspec) {
   }
   if (runtimeUserArmorProfile) {
     lines.push("", "[直近のユーザー固有武装DNA]", formatPreviewBlock(runtimeUserArmorProfile));
+  }
+  if (runtimeArmorDesignTeam) {
+    lines.push("", "[アーマー設計チーム]", formatPreviewBlock(runtimeArmorDesignTeam));
   }
   if (runtimeOperatorDefaults && Object.keys(runtimeOperatorDefaults).length > 0) {
     lines.push("", "[補完された武装核の既定値]", formatPreviewBlock(runtimeOperatorDefaults));

@@ -68,6 +68,9 @@ class TestIWHenshin(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertIn("right_wrist", frames[0].joints_xy01)
 
+    def test_normalize_mocopi_frames_can_disable_demo_fallback(self) -> None:
+        self.assertEqual(normalize_mocopi_frames({"frames": [{"bones": {}}]}, fallback=False), [])
+
     def test_run_iwsdk_henshin_writes_replay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_iwsdk_henshin(

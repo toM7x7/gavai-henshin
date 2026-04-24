@@ -23,6 +23,7 @@ from .iw_henshin import (
     IWSDKHenshinRequest,
     run_iwsdk_henshin,
 )
+from .mocopi_live import LiveMocopiStore
 from .part_generation import DEFAULT_PROVIDER_PROFILE, GenerationRequest, run_generate_parts
 
 
@@ -97,6 +98,7 @@ class IWHenshinVoicePayload:
     audio_stats: dict[str, Any] | None = None
     session_id: str | None = None
     mocopi: str | None = "examples/mocopi_sequence.sample.json"
+    mocopi_live: bool = False
     trigger_phrase: str | None = None
     explanation: str | None = None
     dry_run: bool = False
@@ -329,7 +331,12 @@ def _normalize_replay_paths(root: Path, replay: dict[str, Any]) -> dict[str, Any
     return replay
 
 
-def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str, Any]:
+def run_iw_henshin_voice(
+    root: Path,
+    payload: IWHenshinVoicePayload,
+    *,
+    mocopi_live: LiveMocopiStore | None = None,
+) -> dict[str, Any]:
     session_id = payload.session_id or f"S-IW-QUEST-{int(time.time() * 1000):x}"
     if not session_id.replace("-", "").isalnum():
         raise ValueError("session_id may only contain letters, numbers, and hyphens.")
@@ -350,7 +357,13 @@ def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str
         "stats": audio_stats,
     }
 
-    mocopi_payload = _load_json_if_present(root, payload.mocopi)
+    live_status: dict[str, Any] | None = None
+    mocopi_payload = None
+    if payload.mocopi_live and mocopi_live is not None:
+        mocopi_payload = mocopi_live.recent_payload(max_frames=48, max_age_sec=6.0)
+        live_status = mocopi_live.status()
+    if mocopi_payload is None:
+        mocopi_payload = _load_json_if_present(root, payload.mocopi)
     config = IWSDKHenshinConfig(
         trigger_phrase=payload.trigger_phrase or os.getenv("VOICE_TRIGGER_PHRASE") or DEFAULT_TRIGGER_PHRASE,
         explanation_text=payload.explanation or DEFAULT_EXPLANATION,
@@ -383,6 +396,8 @@ def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str
         tts["audio_path"] = _web_path(root, tts.get("audio_path"))
     normalized_result["voice_audio"] = voice_audio
     normalized_result["audio_stats"] = audio_stats
+    if live_status is not None:
+        normalized_result["mocopi_live"] = live_status
 
     return {
         "ok": bool(result.get("ok")),
@@ -393,13 +408,23 @@ def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str
         "voice_audio_url": voice_audio["url"],
         "voice_audio": voice_audio,
         "audio_url": tts.get("audio_path") if isinstance(tts, dict) else None,
+        "mocopi_live": live_status,
     }
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
-    def __init__(self, *args: Any, directory: str, root: Path, jobs: GenerationJobManager, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        directory: str,
+        root: Path,
+        jobs: GenerationJobManager,
+        mocopi_live: LiveMocopiStore,
+        **kwargs: Any,
+    ) -> None:
         self.repo_root = root
         self.jobs = jobs
+        self.mocopi_live = mocopi_live
         super().__init__(*args, directory=directory, **kwargs)
 
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
@@ -448,6 +473,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
             self._write_json({"ok": True})
+            return
+        if parsed.path == "/api/iw-henshin/mocopi-live/latest":
+            self._write_json(self.mocopi_live.status())
             return
         if parsed.path == "/api/suitspecs":
             self._write_json({"ok": True, "items": discover_suitspec_paths(self.repo_root)})
@@ -498,6 +526,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             "/api/generate-parts",
             "/api/suitspec-save",
             "/api/iw-henshin/voice",
+            "/api/iw-henshin/mocopi-live/frame",
+            "/api/iw-henshin/mocopi-live/bridge-status",
         ):
             self._write_json({"ok": False, "error": "Unknown API endpoint."}, status=HTTPStatus.NOT_FOUND)
             return
@@ -508,7 +538,11 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             payload_dict = json.loads(raw)
             if parsed.path == "/api/iw-henshin/voice":
                 payload = IWHenshinVoicePayload(**payload_dict)
-                result = run_iw_henshin_voice(self.repo_root, payload)
+                result = run_iw_henshin_voice(self.repo_root, payload, mocopi_live=self.mocopi_live)
+            elif parsed.path == "/api/iw-henshin/mocopi-live/frame":
+                result = self.mocopi_live.push_payload(payload_dict)
+            elif parsed.path == "/api/iw-henshin/mocopi-live/bridge-status":
+                result = self.mocopi_live.bridge.update(payload_dict)
             elif parsed.path in ("/api/generation-jobs", "/api/generate-parts"):
                 payload = GeneratePartsPayload(**payload_dict)
                 if parsed.path == "/api/generation-jobs":
@@ -534,9 +568,10 @@ def serve_dashboard(*, root: Path, port: int) -> None:
 
     directory = str(root)
     jobs = GenerationJobManager(root)
+    mocopi_live = LiveMocopiStore()
 
     def factory(*args: Any, **kwargs: Any) -> DashboardHandler:
-        return DashboardHandler(*args, directory=directory, root=root, jobs=jobs, **kwargs)
+        return DashboardHandler(*args, directory=directory, root=root, jobs=jobs, mocopi_live=mocopi_live, **kwargs)
 
     with ReusableThreadingTCPServer(("", port), factory) as httpd:
         print(

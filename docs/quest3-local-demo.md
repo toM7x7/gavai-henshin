@@ -151,6 +151,16 @@ $env:SAKURA_TTS_FORMAT="wav"
 
 Equivalent `.env` keys are also read by the bridge.
 
+## Exhibition Operation Modes
+
+For an event booth, do not assume personal tethering will be stable. The demo should be prepared with three explicit modes:
+
+- `cloud`: public visitor path. Serve the Quest app from HTTPS hosting such as Vercel and route Whisper/TTS through a server-side API. Use this when the organizer-provided line is available.
+- `local`: rehearsal/operator path. Use the current local Python/Vite bridge on a booth-owned router or trusted LAN. Avoid relying on shared venue Wi-Fi for Quest-to-PC local access because client isolation is common.
+- `demo`: emergency fallback. Skip live Whisper/TTS and complete deposition from a controller/menu trigger with pre-baked audio. This keeps the transformation experience available when the line is poor.
+
+Future implementation should add a visible VR health panel that shows the active mode, API status, mic permission, last transcript, trigger match, latency, and whether demo fallback is ready.
+
 ## Controls
 
 - `Enter VR`: uses IWSDK `world.launchXR()` to request an `immersive-vr` session.
@@ -161,6 +171,7 @@ Equivalent `.env` keys are also read by the bridge.
 
 Query options:
 
+- `?mocopiLive=1` or `?tracking=mocopi-live`: polls the local mocopi live bridge and uses the recent live frame buffer when the voice trigger succeeds.
 - `?mockTrigger=1`: developer-only smoke test that skips remote STT/TTS and treats the trigger as detected.
 - No mock flag: posts recorded audio to Sakura Whisper and starts deposition only when the transcript contains `生成`.
 - Default voice capture is browser-encoded mono `audio/wav`, because Sakura AI Engine's Whisper guide recommends trying common formats such as MP3/WAV and monaural audio when transcription fails.
@@ -170,6 +181,69 @@ Query options:
 - `?armDelay=2`: changes the microphone arming delay before the UI switches from `MIC ARMING` to `SPEAK NOW`. The default is `1.4` seconds.
 - `?suitspec=/sessions/<id>/suitspec.json`: uses another SuitSpec for mesh texture paths.
 - `?mocopi=examples/mocopi_sequence.sample.json`: selects the mocopi/IWSDK pose JSON sent with voice requests.
+
+## mocopi Live Bridge Contract
+
+Quest Browser cannot receive mocopi UDP directly. For live tracking, run a PC-side bridge that receives mocopi data and forwards normalized frames to the local API.
+
+Start the local API first:
+
+```powershell
+python tools\run_henshin.py serve-dashboard --port 8010 --root .
+```
+
+Then start the PC bridge in another terminal:
+
+```powershell
+npm run mocopi:bridge
+```
+
+Equivalent direct command:
+
+```powershell
+python tools\run_henshin.py mocopi-bridge --port 12351 --endpoint http://127.0.0.1:8010/api/iw-henshin/mocopi-live/frame
+```
+
+For mocopi app testing, set the external device IP to the notebook PC's LAN IP, set the outbound port to `12351`, and choose the app transfer format that matches the bridge adapter being tested. The bridge currently accepts JSON-style packets and simple OSC-style joint position messages; native mocopi binary packets need a Motion Serializer adapter.
+
+Push one frame or a batch of frames:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8010/api/iw-henshin/mocopi-live/frame -ContentType "application/json" -Body '{
+  "frames": [
+    {
+      "dt_sec": 0.1,
+      "bones": {
+        "LeftShoulder": [0.62, 0.38],
+        "RightShoulder": [0.38, 0.38],
+        "LeftHip": [0.57, 0.58],
+        "RightHip": [0.43, 0.58],
+        "RightHand": [0.225, 0.625]
+      }
+    }
+  ]
+}'
+```
+
+Check the latest frame and body-axis lock:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8010/api/iw-henshin/mocopi-live/latest
+```
+
+Open Quest demo with live buffer enabled:
+
+```text
+https://<PC LAN IP>:5173/viewer/quest-iw-demo/?mocopiLive=1
+```
+
+For exhibition/debug visibility, `?mocopiLive=1` now also shows a VR-side `MOCOPI LIVE` panel with a simplified live skeleton, joint count, frame age, and body-axis lock state. Use this first when you need to prove that mocopi is actually reaching the Quest experience. Add `&mocopiDebug=0` only when you want to hide that demo panel.
+
+If the panel stays `STALE`, read the second line:
+
+- `UDP: 0 packets received`: the PC bridge is running, but the phone/mocopi sender is not reaching the PC. Check the PC LAN IP, phone Wi-Fi, UDP port `12351`, and Windows firewall/private-network permission.
+- `UDP: <n> rx / <n> unsupported`: packets are reaching the PC, but the transfer format is not one of the current JSON/simple-OSC adapters. Add or select the Motion Serializer/native mocopi adapter next.
+- `UDP: <n> rx / <m> frames`: the bridge is forwarding frames. If this still appears stale, the sender has stopped or is sending too slowly for live tracking.
 
 ## Voice Debug Checklist
 

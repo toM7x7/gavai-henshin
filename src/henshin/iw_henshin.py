@@ -227,9 +227,9 @@ def _source_joints(raw: dict[str, Any]) -> dict[str, Any]:
     return raw
 
 
-def normalize_mocopi_frames(payload: dict[str, Any] | None) -> list[BodyFrame]:
+def normalize_mocopi_frames(payload: dict[str, Any] | None, *, fallback: bool = True) -> list[BodyFrame]:
     if not payload:
-        return create_demo_body_frames()
+        return create_demo_body_frames() if fallback else []
 
     raw_frames = payload.get("frames") or payload.get("mocopi_frames") or []
     frames: list[BodyFrame] = []
@@ -249,7 +249,7 @@ def normalize_mocopi_frames(payload: dict[str, Any] | None) -> list[BodyFrame]:
         if joints:
             frames.append(BodyFrame(dt_sec=_frame_dt(raw), joints_xy01=joints))
 
-    return frames or create_demo_body_frames()
+    return frames or (create_demo_body_frames() if fallback else [])
 
 
 def create_demo_body_frames() -> list[BodyFrame]:

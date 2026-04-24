@@ -9,6 +9,7 @@ from henshin.dashboard_server import (
     IWHenshinVoicePayload,
     run_iw_henshin_voice,
 )
+from henshin.mocopi_live import LiveMocopiStore
 
 
 class TestDashboardServer(unittest.TestCase):
@@ -61,6 +62,67 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(result["voice_audio"]["stats"]["mode"], "wav")
         self.assertEqual(result["voice_audio"]["stats"]["bytes"], len(b"dry-run"))
         self.assertEqual(result["result"]["voice_audio"]["mime_type"], "audio/wav")
+
+    def test_iw_voice_payload_can_use_live_mocopi_buffer(self) -> None:
+        live = LiveMocopiStore()
+        live.push_payload(
+            {
+                "frames": [
+                    {
+                        "dt_sec": 0.1,
+                        "bones": {
+                            "LeftShoulder": [0.62, 0.38],
+                            "RightShoulder": [0.38, 0.38],
+                            "LeftHip": [0.57, 0.58],
+                            "RightHip": [0.43, 0.58],
+                            "RightHand": [0.225, 0.625],
+                        },
+                    }
+                    for _ in range(8)
+                ]
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = IWHenshinVoicePayload(
+                audio_base64=base64.b64encode(b"dry-run").decode("ascii"),
+                mime_type="audio/wav",
+                session_id="S-IW-QUEST-LIVE",
+                mocopi=None,
+                mocopi_live=True,
+                trigger_phrase="\u751f\u6210",
+                dry_run=True,
+            )
+            result = run_iw_henshin_voice(root, payload, mocopi_live=live)
+
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["mocopi_live"]["connected"])
+        self.assertTrue(result["mocopi_live"]["axis"]["locked"])
+        self.assertEqual(result["replay"]["tracking"]["frame_count"], 8)
+
+    def test_mocopi_live_status_includes_bridge_diagnostics(self) -> None:
+        live = LiveMocopiStore()
+        live.bridge.update(
+            {
+                "event": "unsupported",
+                "listening": "0.0.0.0:12351",
+                "received": 3,
+                "forwarded_frames": 0,
+                "unsupported": 3,
+                "last_source": "192.168.1.12:50000",
+                "last_error": "Unsupported mocopi packet.",
+                "packet_seen": True,
+            }
+        )
+
+        status = live.status()
+
+        self.assertIn("bridge", status)
+        self.assertEqual(status["bridge"]["received"], 3)
+        self.assertEqual(status["bridge"]["unsupported"], 3)
+        self.assertTrue(status["bridge"]["receiving"])
+        self.assertEqual(status["bridge"]["last_source"], "192.168.1.12:50000")
 
 
 if __name__ == "__main__":

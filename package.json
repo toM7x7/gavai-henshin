@@ -7,6 +7,7 @@
     "dev:quest": "vite --config vite.quest.config.js --host 0.0.0.0",
     "dev:quest:lan": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_quest_lan_https.ps1",
     "dev:viewer": "python tools/run_henshin.py serve-viewer --port 8000 --root .",
+    "mocopi:bridge": "python tools/run_henshin.py mocopi-bridge --port 12351 --endpoint http://127.0.0.1:8010/api/iw-henshin/mocopi-live/frame",
     "test": "python tools/run_henshin.py validate --kind suitspec --path examples/suitspec.sample.json"
   },
   "devDependencies": {

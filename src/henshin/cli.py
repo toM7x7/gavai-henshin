@@ -32,6 +32,13 @@ from .iw_henshin import (
     IWSDKHenshinRequest,
     run_iwsdk_henshin,
 )
+from .mocopi_bridge import (
+    DEFAULT_DASHBOARD_ENDPOINT,
+    DEFAULT_LISTEN_HOST,
+    DEFAULT_LISTEN_PORT,
+    MocopiBridgeConfig,
+    run_udp_bridge,
+)
 from .part_generation import (
     DEFAULT_GEMINI_FALLBACK_MODEL,
     DEFAULT_PROVIDER_PROFILE,
@@ -520,6 +527,20 @@ def _cmd_iw_henshin(args: argparse.Namespace) -> int:
     return 2 if result.get("error") else 1
 
 
+def _cmd_mocopi_bridge(args: argparse.Namespace) -> int:
+    config = MocopiBridgeConfig(
+        listen_host=args.host,
+        listen_port=int(args.port),
+        dashboard_endpoint=args.endpoint,
+        status_endpoint=args.status_endpoint,
+        input_format=args.input_format,
+        timeout_sec=float(args.timeout),
+        quiet=bool(args.quiet),
+        dry_run=bool(args.dry_run),
+    )
+    return run_udp_bridge(config)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="henshin", description="SIM-first henshin prototyping CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -719,6 +740,20 @@ def build_parser() -> argparse.ArgumentParser:
     iw_henshin.add_argument("--tts-format", help="Sakura TTS response format")
     iw_henshin.add_argument("--timeout", type=int, default=90)
     iw_henshin.set_defaults(func=_cmd_iw_henshin)
+
+    mocopi_bridge = sub.add_parser(
+        "mocopi-bridge",
+        help="Receive mocopi-style UDP packets on this PC and forward normalized frames to the Quest API",
+    )
+    mocopi_bridge.add_argument("--host", default=DEFAULT_LISTEN_HOST)
+    mocopi_bridge.add_argument("--port", type=int, default=DEFAULT_LISTEN_PORT)
+    mocopi_bridge.add_argument("--endpoint", default=DEFAULT_DASHBOARD_ENDPOINT)
+    mocopi_bridge.add_argument("--status-endpoint")
+    mocopi_bridge.add_argument("--input-format", choices=["auto", "json", "osc"], default="auto")
+    mocopi_bridge.add_argument("--timeout", type=float, default=2.0)
+    mocopi_bridge.add_argument("--dry-run", action="store_true")
+    mocopi_bridge.add_argument("--quiet", action="store_true")
+    mocopi_bridge.set_defaults(func=_cmd_mocopi_bridge)
 
     return parser
 

@@ -98,6 +98,7 @@ const UI = {
   voiceLine: document.getElementById("voiceLine"),
   voiceDebug: document.getElementById("voiceDebug"),
   sessionId: document.getElementById("sessionId"),
+  mocopiState: document.getElementById("mocopiState"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
 };
@@ -140,6 +141,36 @@ const VR_PART_SCALE = {
   left_boot: 0.22,
   right_boot: 0.22,
 };
+
+const MOCOPI_VISUAL_JOINTS = [
+  "left_shoulder",
+  "right_shoulder",
+  "left_elbow",
+  "right_elbow",
+  "left_wrist",
+  "right_wrist",
+  "left_hip",
+  "right_hip",
+  "left_knee",
+  "right_knee",
+  "left_ankle",
+  "right_ankle",
+];
+
+const MOCOPI_VISUAL_BONES = [
+  ["left_shoulder", "right_shoulder"],
+  ["left_shoulder", "left_elbow"],
+  ["left_elbow", "left_wrist"],
+  ["right_shoulder", "right_elbow"],
+  ["right_elbow", "right_wrist"],
+  ["left_shoulder", "left_hip"],
+  ["right_shoulder", "right_hip"],
+  ["left_hip", "right_hip"],
+  ["left_hip", "left_knee"],
+  ["left_knee", "left_ankle"],
+  ["right_hip", "right_knee"],
+  ["right_knee", "right_ankle"],
+];
 
 const VOICE_STATES = {
   ready: {
@@ -229,6 +260,17 @@ function useMockTrigger() {
   return params().get("mockTrigger") === "1";
 }
 
+function useLiveMocopi() {
+  const raw = String(params().get("mocopiLive") || params().get("tracking") || "").toLowerCase();
+  return raw === "1" || raw === "live" || raw === "mocopi-live";
+}
+
+function showMocopiDebug() {
+  const raw = String(params().get("mocopiDebug") || "").toLowerCase();
+  if (raw === "0" || raw === "false" || raw === "off") return false;
+  return useLiveMocopi() || raw === "1" || raw === "true" || raw === "on";
+}
+
 function getAudioMode() {
   return params().get("audio") === "webm" ? "webm" : "wav";
 }
@@ -276,6 +318,67 @@ function formatAudioStats(stats) {
   return parts.join(" / ");
 }
 
+function formatMocopiLiveStatus(status) {
+  if (!status) return "tracking: mocopi-live waiting";
+  const axis = status.axis || {};
+  const age = Number(status.latest?.age_ms ?? axis.age_ms);
+  const ageText = Number.isFinite(age) ? `${Math.round(age)}ms` : "no frame";
+  const locked = axis.locked ? "axis locked" : `axis ${axis.reason || "waiting"}`;
+  const frames = Number(status.frame_count || 0);
+  return `tracking: mocopi-live ${status.connected ? "connected" : "waiting"} / ${locked} / ${frames} frames / ${ageText} / ${formatMocopiBridgeLine(status)}`;
+}
+
+function latestMocopiJoints(status) {
+  const joints = status?.latest?.joints || status?.latest?.bones || {};
+  return joints && typeof joints === "object" ? joints : {};
+}
+
+function countMocopiJoints(status) {
+  const axisCount = Number(status?.axis?.joint_count);
+  if (Number.isFinite(axisCount) && axisCount > 0) return axisCount;
+  return Object.keys(latestMocopiJoints(status)).length;
+}
+
+function formatMocopiReadout(status, enabled) {
+  if (!enabled) return "MOCOPI: OFF";
+  if (!status) return "MOCOPI: WAIT";
+  if (status.error) return "MOCOPI: API ERROR";
+  const bridge = status.bridge || {};
+  if (!status.latest && Number(bridge.received || 0) === 0) return "MOCOPI: UDP 0";
+  if (Number(bridge.unsupported || 0) > 0 && Number(bridge.forwarded_frames || 0) === 0) return `MOCOPI: BAD ${bridge.unsupported}`;
+  const jointCount = countMocopiJoints(status);
+  const age = Number(status.latest?.age_ms ?? status.axis?.age_ms);
+  const ageText = Number.isFinite(age) ? `${Math.round(age)}ms` : "--";
+  if (!status.latest) return "MOCOPI: NO FRAME";
+  return `${status.connected ? "MOCOPI: LIVE" : "MOCOPI: STALE"} / ${jointCount}J / ${ageText}`;
+}
+
+function formatMocopiBridgeLine(status) {
+  const bridge = status?.bridge || {};
+  if (!bridge || bridge.reason === "bridge_not_reported") return "bridge: no status";
+  const received = Number(bridge.received || 0);
+  const forwarded = Number(bridge.forwarded_frames || 0);
+  const unsupported = Number(bridge.unsupported || 0);
+  if (received === 0) return "UDP: 0 packets received";
+  if (unsupported > 0 && forwarded === 0) return `UDP: ${received} rx / ${unsupported} unsupported`;
+  return `UDP: ${received} rx / ${forwarded} frames / ${unsupported} bad`;
+}
+
+function formatMocopiDemoStatus(status, enabled) {
+  if (!enabled) return "MOCOPI OFF\nadd ?mocopiLive=1";
+  if (!status) return "MOCOPI WAITING\nPC bridge polling";
+  if (status.error) return `MOCOPI API ERROR\n${status.error}`;
+  const axis = status.axis || {};
+  const jointCount = countMocopiJoints(status);
+  const age = Number(status.latest?.age_ms ?? axis.age_ms);
+  const ageText = Number.isFinite(age) ? `${Math.round(age)}ms` : "no frame";
+  const lockText = axis.locked ? "AXIS LOCKED" : `AXIS ${String(axis.reason || "WAIT").toUpperCase()}`;
+  const shoulder = Number(axis.shoulder_width);
+  const shoulderText = Number.isFinite(shoulder) ? `shoulder ${shoulder.toFixed(2)}` : "shoulder --";
+  const state = status.connected ? "LIVE INPUT" : status.latest ? "STALE INPUT" : "NO FRAME";
+  return `${state}\n${formatMocopiBridgeLine(status)}\n${jointCount} joints / ${ageText}\n${lockText} / ${shoulderText}`;
+}
+
 function formatVoiceRetryDetail(data, transcript) {
   const voiceAudio = data?.voice_audio || data?.result?.voice_audio || {};
   const stats = voiceAudio.stats || data?.result?.audio_stats;
@@ -299,6 +402,7 @@ function formatVoiceDebug(data, transcript, reason = "") {
   const voiceAudio = data?.voice_audio || data?.result?.voice_audio || {};
   const stats = voiceAudio.stats || data?.result?.audio_stats;
   const match = data?.replay?.trigger?.match || data?.result?.trigger_match;
+  const mocopiLive = data?.mocopi_live || data?.result?.mocopi_live;
   const lines = [
     "VOICE DEBUG",
     `result: ${data?.ok ? "ok" : "retry"}`,
@@ -313,6 +417,7 @@ function formatVoiceDebug(data, transcript, reason = "") {
   if (voiceAudio.bytes) lines.push(`bytes: ${voiceAudio.bytes}`);
   if (voiceAudio.mime_type) lines.push(`mime: ${voiceAudio.mime_type}`);
   if (voiceAudio.url) lines.push(`saved: ${voiceAudio.url}`);
+  if (mocopiLive) lines.push(formatMocopiLiveStatus(mocopiLive));
   if (reason) lines.push(`reason: ${reason}`);
   return lines.join("\n");
 }
@@ -1128,6 +1233,241 @@ class SpatialControlPanel {
   }
 }
 
+class MocopiLiveVisualizer {
+  constructor(demo) {
+    this.demo = demo;
+    this.enabled = demo.liveMocopi.debugVisible;
+    this.group = new THREE.Group();
+    this.group.name = "XR-Mocopi-Live-Visualizer";
+    this.group.visible = false;
+    this.markerMap = new Map();
+    this.lineItems = [];
+    this.status = null;
+    this.clock = 0;
+    this.cameraPosition = new THREE.Vector3();
+    this.cameraQuaternion = new THREE.Quaternion();
+    this.forward = new THREE.Vector3();
+    this.right = new THREE.Vector3();
+    this.tempPositionA = new THREE.Vector3();
+    this.tempPositionB = new THREE.Vector3();
+
+    this.build();
+    this.demo.scene.add(this.group);
+    this.setStatus(null);
+  }
+
+  build() {
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.82, 1.02),
+      new THREE.MeshBasicMaterial({
+        color: 0x031116,
+        transparent: true,
+        opacity: 0.74,
+        side: THREE.DoubleSide,
+        depthTest: false,
+      }),
+    );
+    panel.renderOrder = 18;
+    this.group.add(panel);
+
+    this.title = makeTextPlane("MOCOPI LIVE", {
+      width: 0.68,
+      height: 0.09,
+      canvasWidth: 1000,
+      canvasHeight: 150,
+      fontSize: 54,
+      color: "#fff4c8",
+      background: "rgba(10, 26, 32, 0.82)",
+      border: "rgba(67, 216, 255, 0.64)",
+    });
+    this.title.position.set(0, 0.42, 0.016);
+    this.group.add(this.title);
+
+    this.statusText = makeTextPlane("MOCOPI WAITING\nPC bridge polling", {
+      width: 0.68,
+      height: 0.2,
+      canvasWidth: 1100,
+      canvasHeight: 320,
+      fontSize: 34,
+      fontWeight: 720,
+      align: "left",
+      baseline: "top",
+      color: "#d7f8ff",
+      background: "rgba(2, 9, 13, 0.7)",
+      border: "rgba(67, 216, 255, 0.24)",
+      maxLines: 4,
+    });
+    this.statusText.position.set(0, 0.255, 0.018);
+    this.group.add(this.statusText);
+
+    this.liveDot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.028, 20, 12),
+      new THREE.MeshBasicMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.95, depthTest: false }),
+    );
+    this.liveDot.position.set(-0.31, 0.425, 0.035);
+    this.liveDot.renderOrder = 25;
+    this.group.add(this.liveDot);
+
+    this.skeletonRoot = new THREE.Group();
+    this.skeletonRoot.position.set(0, -0.11, 0.026);
+    this.group.add(this.skeletonRoot);
+
+    const guideMaterial = new THREE.LineBasicMaterial({
+      color: 0x1d5665,
+      transparent: true,
+      opacity: 0.38,
+      depthTest: false,
+    });
+    const verticalGuide = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.32, 0), new THREE.Vector3(0, -0.36, 0)]),
+      guideMaterial.clone(),
+    );
+    verticalGuide.renderOrder = 19;
+    this.skeletonRoot.add(verticalGuide);
+    const horizontalGuide = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.33, -0.02, 0), new THREE.Vector3(0.33, -0.02, 0)]),
+      guideMaterial.clone(),
+    );
+    horizontalGuide.renderOrder = 19;
+    this.skeletonRoot.add(horizontalGuide);
+
+    for (const [from, to] of MOCOPI_VISUAL_BONES) {
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(6);
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setDrawRange(0, 2);
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({
+          color: 0x43d8ff,
+          transparent: true,
+          opacity: 0.86,
+          depthTest: false,
+        }),
+      );
+      line.visible = false;
+      line.renderOrder = 22;
+      this.skeletonRoot.add(line);
+      this.lineItems.push({ from, to, line });
+    }
+
+    for (const joint of MOCOPI_VISUAL_JOINTS) {
+      const marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 18, 10),
+        new THREE.MeshBasicMaterial({
+          color: joint.includes("wrist") || joint.includes("ankle") ? 0xffcf5a : 0x43d8ff,
+          transparent: true,
+          opacity: 0.95,
+          depthTest: false,
+        }),
+      );
+      marker.visible = false;
+      marker.renderOrder = 24;
+      marker.userData.baseScale = joint.includes("shoulder") || joint.includes("hip") ? 1.3 : 1.0;
+      this.skeletonRoot.add(marker);
+      this.markerMap.set(joint, marker);
+    }
+  }
+
+  setStatus(status) {
+    this.status = status;
+    if (!this.enabled) return;
+    const connected = Boolean(status?.connected);
+    const latest = Boolean(status?.latest);
+    const color = connected ? 0x43d8ff : latest ? 0xffcf5a : 0xff6b6b;
+    this.liveDot.material.color.setHex(color);
+    updateTextPlane(this.title, connected ? "MOCOPI LIVE" : latest ? "MOCOPI STALE" : "MOCOPI WAIT", {
+      color: connected ? "#fff4c8" : latest ? "#ffe8a0" : "#ffd2d2",
+      border: connected ? "rgba(67, 216, 255, 0.76)" : "rgba(255, 207, 90, 0.52)",
+    });
+    updateTextPlane(this.statusText, formatMocopiDemoStatus(status, this.demo.liveMocopi.enabled), {
+      color: connected ? "#eef9ff" : "#fff4c8",
+      maxLines: 4,
+    });
+    this.updateSkeleton(status);
+  }
+
+  jointPanelPosition(value) {
+    if (!value) return null;
+    const rawX = Array.isArray(value) ? value[0] : value.x;
+    const rawY = Array.isArray(value) ? value[1] : value.y;
+    const x = Number(rawX);
+    const y = Number(rawY);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return new THREE.Vector3((0.5 - clamp(x, 0, 1)) * 0.68, (0.62 - clamp(y, 0, 1)) * 0.92 - 0.03, 0.035);
+  }
+
+  updateSkeleton(status) {
+    const joints = latestMocopiJoints(status);
+    const positions = new Map();
+    for (const joint of MOCOPI_VISUAL_JOINTS) {
+      const marker = this.markerMap.get(joint);
+      const position = this.jointPanelPosition(joints[joint]);
+      if (!marker || !position) {
+        if (marker) marker.visible = false;
+        continue;
+      }
+      marker.visible = true;
+      marker.position.copy(position);
+      marker.scale.setScalar(marker.userData.baseScale || 1);
+      positions.set(joint, position);
+    }
+
+    for (const item of this.lineItems) {
+      const start = positions.get(item.from);
+      const end = positions.get(item.to);
+      if (!start || !end) {
+        item.line.visible = false;
+        continue;
+      }
+      item.line.visible = true;
+      const attribute = item.line.geometry.getAttribute("position");
+      attribute.setXYZ(0, start.x, start.y, start.z - 0.01);
+      attribute.setXYZ(1, end.x, end.y, end.z - 0.01);
+      attribute.needsUpdate = true;
+      item.line.geometry.computeBoundingSphere();
+    }
+  }
+
+  update(dt) {
+    if (!this.enabled) {
+      this.group.visible = false;
+      return;
+    }
+    this.clock += dt;
+    this.group.visible = true;
+
+    const connected = Boolean(this.status?.connected);
+    const pulse = connected ? 1 + Math.sin(this.clock * 9.5) * 0.22 : 1 + Math.sin(this.clock * 3.2) * 0.08;
+    this.liveDot.scale.setScalar(pulse);
+    this.liveDot.material.opacity = connected ? 0.72 + Math.sin(this.clock * 8.0) * 0.2 : 0.58;
+    for (const marker of this.markerMap.values()) {
+      if (marker.visible) marker.scale.setScalar((marker.userData.baseScale || 1) * (connected ? pulse : 1));
+    }
+
+    const inVR = Boolean(this.demo.world.session);
+    if (!inVR) {
+      this.group.position.set(1.05, 0.72, -2.3);
+      this.group.rotation.set(0, -0.25, 0);
+      this.group.scale.setScalar(1.0);
+      return;
+    }
+
+    const xrCamera = this.demo.renderer.xr.getCamera(this.demo.camera) || this.demo.camera;
+    xrCamera.getWorldPosition(this.cameraPosition);
+    xrCamera.getWorldQuaternion(this.cameraQuaternion);
+    this.forward.set(0, 0, -1).applyQuaternion(this.cameraQuaternion).normalize();
+    this.right.set(1, 0, 0).applyQuaternion(this.cameraQuaternion).normalize();
+    this.group.position
+      .copy(this.cameraPosition)
+      .add(this.tempPositionA.copy(this.forward).multiplyScalar(1.16))
+      .add(this.tempPositionB.copy(this.right).multiplyScalar(0.62));
+    this.group.position.y -= 0.34;
+    this.group.quaternion.copy(this.cameraQuaternion);
+    this.group.scale.setScalar(1.0);
+  }
+}
+
 class QuestHenshinDemo {
   constructor(world) {
     this.world = world;
@@ -1154,6 +1494,13 @@ class QuestHenshinDemo {
     this.bodyCenteredScale = new THREE.Vector3(BODY_CENTERED_SCALE, BODY_CENTERED_SCALE, BODY_CENTERED_SCALE);
     this.finalPosition = new THREE.Vector3();
     this.stagePosition = new THREE.Vector3();
+    this.liveMocopi = {
+      enabled: useLiveMocopi(),
+      debugVisible: showMocopiDebug(),
+      pending: false,
+      status: null,
+      timer: null,
+    };
 
     this.rig = new THREE.Group();
     this.rig.name = "IWSDK-Henshin-Rig";
@@ -1164,6 +1511,7 @@ class QuestHenshinDemo {
 
     this.initScene();
     this.spatialPanel = new SpatialControlPanel(this);
+    this.mocopiVisualizer = new MocopiLiveVisualizer(this);
     this.setVoiceState("ready");
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
     this.bind();
@@ -1274,6 +1622,20 @@ class QuestHenshinDemo {
     await this.loadArmorMeshes();
     const replay = await loadReplay();
     await this.applyReplay(replay, { speak: false, autoplay: false });
+    if (this.liveMocopi.enabled) {
+      UI.status.textContent = "mocopi live mode enabled. Waiting for PC bridge frames.";
+      if (UI.mocopiState) {
+        UI.mocopiState.textContent = "MOCOPI: WAIT";
+        UI.mocopiState.dataset.live = "stale";
+      }
+      this.liveMocopi.timer = window.setInterval(() => {
+        void this.refreshLiveMocopi();
+      }, 500);
+      void this.refreshLiveMocopi();
+    } else if (UI.mocopiState) {
+      UI.mocopiState.textContent = "MOCOPI: OFF";
+      UI.mocopiState.dataset.live = "false";
+    }
     this.startRenderLoop();
   }
 
@@ -1375,6 +1737,37 @@ class QuestHenshinDemo {
     this.updateVoiceDebug(`VOICE DEBUG\nresult: reset\ntrigger: ${TRIGGER_PHRASE}`);
   }
 
+  async refreshLiveMocopi() {
+    if (!this.liveMocopi.enabled || this.liveMocopi.pending) return;
+    this.liveMocopi.pending = true;
+    try {
+      const response = await fetch("/api/iw-henshin/mocopi-live/latest", { cache: "no-store" });
+      const status = await response.json();
+      this.liveMocopi.status = status;
+      this.mocopiVisualizer?.setStatus(status);
+      if (UI.mocopiState) {
+        UI.mocopiState.textContent = formatMocopiReadout(status, this.liveMocopi.enabled);
+        UI.mocopiState.dataset.live = status.connected ? "true" : "stale";
+      }
+      if (this.voiceState === "ready" || this.voiceState === "complete") {
+        UI.micState.textContent = formatMocopiLiveStatus(status);
+      }
+    } catch (error) {
+      console.warn(error);
+      this.liveMocopi.status = { ok: false, connected: false, error: String(error?.message || error) };
+      this.mocopiVisualizer?.setStatus(this.liveMocopi.status);
+      if (UI.mocopiState) {
+        UI.mocopiState.textContent = "MOCOPI: API ERROR";
+        UI.mocopiState.dataset.live = "stale";
+      }
+      if (this.voiceState === "ready") {
+        UI.micState.textContent = "tracking: mocopi-live API unavailable";
+      }
+    } finally {
+      this.liveMocopi.pending = false;
+    }
+  }
+
   replayFromStart({ speak, audio = speak }) {
     if (audio) this.audioBed.start();
     this.elapsed = 0;
@@ -1418,6 +1811,7 @@ class QuestHenshinDemo {
       );
       this.updateVoiceDebug(`VOICE DEBUG\nresult: captured\ntrigger: ${TRIGGER_PHRASE}\naudio: ${statsLine || mode}\nbytes: ${blob.size}`);
       const audioBase64 = await blobToDataUrl(blob);
+      if (this.liveMocopi.enabled) await this.refreshLiveMocopi();
       const response = await fetch("/api/iw-henshin/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1427,6 +1821,7 @@ class QuestHenshinDemo {
           audio_stats: stats,
           session_id: `S-IW-QUEST-${Date.now().toString(16)}`,
           mocopi: params().get("mocopi") || DEFAULT_MOCOPI,
+          mocopi_live: this.liveMocopi.enabled,
           trigger_phrase: TRIGGER_PHRASE,
           dry_run: useMockTrigger(),
           tts_enabled: true,
@@ -1597,6 +1992,7 @@ class QuestHenshinDemo {
     }
 
     this.spatialPanel.update(dt);
+    this.mocopiVisualizer.update(dt);
 
     if (!this.world.session) {
       this.rig.rotation.y = Math.sin(performance.now() * 0.00025) * 0.08;

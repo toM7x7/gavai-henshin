@@ -165,6 +165,25 @@ class TestNewRouteApi(unittest.TestCase):
             assert response is not None
             self.assertEqual(response.status, 409)
 
+    def test_get_trial_replay_generates_replay_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_STARTED", "state_after": "DEPOSITION"},
+            )
+
+            response = api.get("/v1/trials/S-TRIAL-UNIT-0001/replay")
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 200)
+            self.assertRegex(response.body["replay_id"], r"^RPL-[0-9]{8}-[A-Z0-9]{4}$")
+            self.assertEqual(response.body["replay"]["session_id"], "S-TRIAL-UNIT-0001")
+            self.assertEqual(response.body["replay"]["source_events"]["event_ids"][0], response.body["session"]["events"][0]["event_id"])
+            self.assertTrue(response.body["replay_path"].endswith("replay-script.json"))
+
     def _sample_suitspec(self) -> dict:
         return json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
 

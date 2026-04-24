@@ -69,6 +69,11 @@ Target contract:
 GET /v1/trials/{trialId}/replay
 ```
 
+Current local contract implemented:
+
+- `GET /v1/trials/{trialId}/replay` derives a `ReplayScript v0.1` from the saved `TransformSession` events.
+- The generated replay script is stored under the trial directory and linked back from `TransformSession.artifacts.replay_script_path`.
+
 Replay source of truth:
 
 - `TransformEvent` plus `SuitManifest` produces `ReplayScript`.

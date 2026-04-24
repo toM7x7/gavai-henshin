@@ -11,6 +11,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from hashlib import sha1
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
@@ -313,6 +314,47 @@ class NewRouteApi:
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown trial: {session_id}"})
         return ApiResponse(status=HTTPStatus.OK, body={"ok": True, "trial": self._read_json(session_path)})
 
+    def get_trial_replay(self, session_id: str) -> ApiResponse:
+        if not _SESSION_ID_RE.fullmatch(session_id):
+            return self._bad_request("session_id format is invalid")
+        session_path = self._trial_path(session_id)
+        if not session_path.exists():
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown trial: {session_id}"})
+
+        session = self._read_json(session_path)
+        events = session.get("events", [])
+        if not events:
+            return ApiResponse(status=HTTPStatus.CONFLICT, body={"ok": False, "error": "Replay requires at least one event"})
+
+        replay = self._build_replay_script(session)
+        try:
+            validate_against_schema(replay, "replay-script")
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        replay_path = self._replay_path(session_id)
+        self._write_json(replay_path, replay)
+
+        session.setdefault("artifacts", {})["replay_script_path"] = self._relative_path(replay_path)
+        session.setdefault("metadata", {})["updated_at"] = self._utc_now()
+        try:
+            validate_against_schema(session, "transform-session")
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        self._write_json(session_path, session)
+
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "trial_id": session_id,
+                "replay_id": replay["replay_id"],
+                "replay": replay,
+                "replay_path": self._relative_path(replay_path),
+                "session": session,
+                "storage": self._storage_info(replay_path),
+            },
+        )
+
     def append_trial_event(self, session_id: str, payload: dict[str, Any]) -> ApiResponse:
         if not _SESSION_ID_RE.fullmatch(session_id):
             return self._bad_request("session_id format is invalid")
@@ -430,6 +472,8 @@ class NewRouteApi:
         trial_prefix = "/v1/trials/"
         if normalized.startswith(trial_prefix):
             suffix = normalized[len(trial_prefix) :]
+            if suffix.endswith("/replay"):
+                return self.get_trial_replay(suffix[: -len("/replay")])
             return self.get_trial(suffix)
         return None
 
@@ -481,6 +525,9 @@ class NewRouteApi:
     def _trial_path(self, session_id: str) -> Path:
         return self.trial_store_root / session_id / "transform-session.json"
 
+    def _replay_path(self, session_id: str) -> Path:
+        return self.trial_store_root / session_id / "replay-script.json"
+
     def _find_manifest_path(self, manifest_id: str) -> Path | None:
         if not self.suit_store_root.exists():
             return None
@@ -514,6 +561,72 @@ class NewRouteApi:
         except ValueError:
             pass
         return f"EVT-{date}-{uuid.uuid4().hex.upper()[:6]}"
+
+    def _build_replay_script(self, session: dict[str, Any]) -> dict[str, Any]:
+        events = session["events"]
+        starts = [self._event_offset_seconds(events[0], event) for event in events]
+        timeline = [
+            {
+                "segment_id": f"SEG-{idx:04d}",
+                "start_time_sec": starts[idx],
+                "duration_sec": 0.5,
+                "source_event_ids": [event["event_id"]],
+                "actions": [self._replay_action_for_event(event, starts[idx])],
+            }
+            for idx, event in enumerate(events)
+        ]
+        duration_sec = max((segment["start_time_sec"] + segment["duration_sec"] for segment in timeline), default=0)
+        replay_id = self._build_replay_id(str(session["session_id"]), str(events[0]["occurred_at"]))
+        return {
+            "schema_version": "0.1",
+            "replay_id": replay_id,
+            "session_id": session["session_id"],
+            "manifest_id": session["manifest_id"],
+            "source_events": {
+                "transform_session_schema_version": session["schema_version"],
+                "event_ids": [event["event_id"] for event in events],
+            },
+            "duration_sec": duration_sec,
+            "timeline": timeline,
+            "metadata": {"created_at": self._utc_now(), "generator": "new-route-api"},
+        }
+
+    def _event_offset_seconds(self, first_event: dict[str, Any], event: dict[str, Any]) -> float:
+        try:
+            first = datetime.fromisoformat(str(first_event["occurred_at"]).replace("Z", "+00:00"))
+            current = datetime.fromisoformat(str(event["occurred_at"]).replace("Z", "+00:00"))
+            return max(0.0, round((current - first).total_seconds(), 3))
+        except ValueError:
+            return float(event.get("sequence", 0))
+
+    def _replay_action_for_event(self, event: dict[str, Any], at_time_sec: float) -> dict[str, Any]:
+        event_type = str(event["event_type"])
+        action_type = "state_marker"
+        if event_type in {"VOICE_CAPTURED", "TRIGGER_DETECTED"}:
+            action_type = "text"
+        elif event_type in {"DEPOSITION_STARTED", "DEPOSITION_COMPLETED", "SEAL_VERIFIED"}:
+            action_type = "fx"
+        elif event_type == "DEPOSITION_PROGRESS":
+            action_type = "deposition_progress"
+        return {
+            "action_type": action_type,
+            "at_time_sec": at_time_sec,
+            "params": {
+                "event_type": event_type,
+                "state_before": event.get("state_before"),
+                "state_after": event.get("state_after"),
+                "payload": event.get("payload", {}),
+            },
+        }
+
+    def _build_replay_id(self, session_id: str, occurred_at: str) -> str:
+        date = datetime.now(timezone.utc).strftime("%Y%m%d")
+        try:
+            date = datetime.fromisoformat(occurred_at.replace("Z", "+00:00")).strftime("%Y%m%d")
+        except ValueError:
+            pass
+        digest = sha1(session_id.encode("utf-8")).hexdigest().upper()[:4]
+        return f"RPL-{date}-{digest}"
 
     def _clone_json(self, payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(json.dumps(payload, ensure_ascii=False))

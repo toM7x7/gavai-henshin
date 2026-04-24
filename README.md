@@ -84,6 +84,19 @@ python -m henshin serve-dashboard --port 8010
 - ライセンス: MIT
 - コントリビュート規約: `CONTRIBUTING.md`
 
+## 新規路線ブランチ対比
+
+新規路線は、既存モジュールを捨てずに `SuitManifest` / `PartCatalog` / `TransformEvent` を正本化して GCP / Quest / Replay へ段階移行する方針です。差分が混ざらないよう、以下のブランチ単位で退避・レビューします。
+
+| ブランチ | 目的 | レビュー順 |
+|---|---|---:|
+| `codex/new-route-phase0-contracts` | Phase 0 契約。`SuitManifest`、`PartCatalog`、`TransformSession`、`ReplayScript`、`SuitSpec -> SuitManifest` projection、GCP移行メモ。 | 1 |
+| `codex/quest-iw-mocopi-work` | Quest Browser / IWSDK / mocopi bridge / operator monitor 周辺の実機・展示レーン。 | 2 |
+| `codex/uv-part-generation-work` | UV guide、texture quality gate、prompt bench、part generation 改善。 | 3 |
+| `codex/new-route-source-docs` | 2026-04-23 の GPT Pro / GCP 方針資料原本。実装差分ではなく参照資料。 | 4 |
+
+基本順序は、まず Phase 0 契約をレビューし、その上に Quest / UV / source docs を必要に応じて積む。`main` へ入れる判断は、契約、実機、生成品質、資料の順で分ける。
+
 ## 次の実装候補
 1. SuitSpecサンプルを増やしてモジュール差し替え検証を追加
 2. APIキー投入後の実画像生成スモークテスト

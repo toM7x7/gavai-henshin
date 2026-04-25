@@ -235,6 +235,28 @@ function getAudioMode() {
   return params().get("audio") === "webm" ? "webm" : "wav";
 }
 
+function useMicrophoneCapture() {
+  return params().get("mic") === "1" || !useMockTrigger();
+}
+
+function makeMockAudioCapture() {
+  return {
+    blob: new Blob(["dry-run"], { type: "audio/wav" }),
+    stats: {
+      mode: "mock",
+      mime_type: "audio/wav",
+      sample_rate: 48000,
+      channels: 1,
+      samples: 0,
+      duration_sec: 0.1,
+      requested_sec: 0,
+      peak: 0,
+      rms: 0,
+      quiet: false,
+    },
+  };
+}
+
 function useNewRouteApi() {
   return params().get("newRoute") === "1";
 }
@@ -1525,22 +1547,40 @@ class QuestHenshinDemo {
     try {
       const seconds = getVoiceSeconds();
       const armDelay = getVoiceArmDelay();
-      const mode = getAudioMode().toUpperCase();
-      UI.status.textContent = `Preparing microphone. Wait for SPEAK NOW, then say ${TRIGGER_PHRASE}.`;
-      this.setVoiceState("arming", `Mic arming ${armDelay.toFixed(1)}s. Do not speak yet.`);
-      this.updateVoiceDebug(`VOICE DEBUG\nresult: arming\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode}\narmDelay: ${armDelay.toFixed(1)}s`);
-      const { blob, stats } = await recordAudio(seconds, {
-        armDelaySec: armDelay,
-        onReady: () => {
-          UI.status.textContent = `Microphone armed. Wait ${armDelay.toFixed(1)}s for SPEAK NOW.`;
-          this.setVoiceState("arming", `Wait ${armDelay.toFixed(1)}s. Speak only after SPEAK NOW.`);
-        },
-        onStart: () => {
-          UI.status.textContent = `Recording ${seconds.toFixed(1)}s ${mode}. Say ${TRIGGER_PHRASE} clearly now.`;
-          this.setVoiceState("recording", `SPEAK NOW: ${seconds.toFixed(1)}s capture.`);
-          this.updateVoiceDebug(`VOICE DEBUG\nresult: recording\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode} ${seconds.toFixed(1)}s\narmDelay: ${armDelay.toFixed(1)}s`);
-        },
-      });
+      const useMic = useMicrophoneCapture();
+      const mode = useMic ? getAudioMode().toUpperCase() : "MOCK";
+      UI.status.textContent = useMic
+        ? `Preparing microphone. Wait for SPEAK NOW, then say ${TRIGGER_PHRASE}.`
+        : `Mock voice trigger is running without microphone capture.`;
+      this.setVoiceState(
+        useMic ? "arming" : "analyzing",
+        useMic ? `Mic arming ${armDelay.toFixed(1)}s. Do not speak yet.` : "Mock trigger is preparing replay.",
+      );
+      this.updateVoiceDebug(`VOICE DEBUG\nresult: ${useMic ? "arming" : "mock"}\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode}\narmDelay: ${useMic ? `${armDelay.toFixed(1)}s` : "skipped"}`);
+
+      let blob;
+      let stats;
+      if (useMic) {
+        const captured = await recordAudio(seconds, {
+          armDelaySec: armDelay,
+          onReady: () => {
+            UI.status.textContent = `Microphone armed. Wait ${armDelay.toFixed(1)}s for SPEAK NOW.`;
+            this.setVoiceState("arming", `Wait ${armDelay.toFixed(1)}s. Speak only after SPEAK NOW.`);
+          },
+          onStart: () => {
+            UI.status.textContent = `Recording ${seconds.toFixed(1)}s ${mode}. Say ${TRIGGER_PHRASE} clearly now.`;
+            this.setVoiceState("recording", `SPEAK NOW: ${seconds.toFixed(1)}s capture.`);
+            this.updateVoiceDebug(`VOICE DEBUG\nresult: recording\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode} ${seconds.toFixed(1)}s\narmDelay: ${armDelay.toFixed(1)}s`);
+          },
+        });
+        blob = captured.blob;
+        stats = captured.stats;
+      } else {
+        await sleep(160);
+        const captured = makeMockAudioCapture();
+        blob = captured.blob;
+        stats = captured.stats;
+      }
       const statsLine = formatAudioStats(stats);
       this.setVoiceState(
         "analyzing",

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "python tools/run_henshin.py serve-dashboard --port 8010 --root .",
     "dev:quest": "vite --config vite.quest.config.js --host 0.0.0.0",
+    "dev:quest:adb": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_quest_adb_reverse.ps1",
     "dev:quest:lan": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_quest_lan_https.ps1",
     "dev:viewer": "python tools/run_henshin.py serve-viewer --port 8000 --root .",
     "test": "python tools/run_henshin.py validate --kind suitspec --path examples/suitspec.sample.json"

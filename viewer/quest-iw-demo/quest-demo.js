@@ -999,7 +999,7 @@ class SpatialControlPanel {
 
   buildPanel() {
     const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.22, 1.12),
+      new THREE.PlaneGeometry(1.22, 1.34),
       new THREE.MeshBasicMaterial({
         color: 0x061116,
         transparent: true,
@@ -1019,7 +1019,7 @@ class SpatialControlPanel {
       background: "rgba(10, 26, 32, 0.82)",
       border: "rgba(255, 207, 90, 0.72)",
     });
-    this.status.position.set(0, 0.4, 0.012);
+    this.status.position.set(0, 0.5, 0.012);
     this.group.add(this.status);
 
     this.hint = makeTextPlane(`Trigger: ${TRIGGER_PHRASE}`, {
@@ -1031,14 +1031,14 @@ class SpatialControlPanel {
       background: "rgba(4, 13, 17, 0.58)",
       maxLines: 2,
     });
-    this.hint.position.set(0, 0.25, 0.014);
+    this.hint.position.set(0, 0.35, 0.014);
     this.group.add(this.hint);
 
     this.progressBack = new THREE.Mesh(
       new THREE.PlaneGeometry(0.74, 0.025),
       new THREE.MeshBasicMaterial({ color: 0x223139, transparent: true, opacity: 0.8, depthTest: false }),
     );
-    this.progressBack.position.set(0, 0.145, 0.014);
+    this.progressBack.position.set(0, 0.24, 0.014);
     this.progressBack.renderOrder = 12;
     this.group.add(this.progressBack);
 
@@ -1046,11 +1046,26 @@ class SpatialControlPanel {
       new THREE.PlaneGeometry(0.74, 0.025),
       new THREE.MeshBasicMaterial({ color: 0xffcf5a, transparent: true, opacity: 0.95, depthTest: false }),
     );
-    this.progressFill.position.set(-0.37, 0.145, 0.016);
+    this.progressFill.position.set(-0.37, 0.24, 0.016);
     this.progressFill.scale.x = 0.001;
     this.progressFill.geometry.translate(0.37, 0, 0);
     this.progressFill.renderOrder = 13;
     this.group.add(this.progressFill);
+
+    this.routeStatus = makeTextPlane("ROUTE LOCAL | TRIAL WAIT | REPLAY WAIT", {
+      width: 1.02,
+      height: 0.09,
+      canvasWidth: 1400,
+      canvasHeight: 160,
+      fontSize: 30,
+      fontWeight: 760,
+      color: "#fff4c8",
+      background: "rgba(4, 13, 17, 0.7)",
+      border: "rgba(255, 207, 90, 0.42)",
+      maxLines: 1,
+    });
+    this.routeStatus.position.set(0, 0.16, 0.017);
+    this.group.add(this.routeStatus);
 
     this.debug = makeTextPlane("Voice debug: waiting.", {
       width: 1.02,
@@ -1073,13 +1088,13 @@ class SpatialControlPanel {
       new THREE.RingGeometry(0.17, 0.185, 64),
       new THREE.MeshBasicMaterial({ color: 0x43d8ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false }),
     );
-    this.listenRing.position.set(-0.36, -0.245, 0.019);
+    this.listenRing.position.set(-0.36, -0.285, 0.019);
     this.listenRing.renderOrder = 15;
     this.group.add(this.listenRing);
 
-    this.addButton("voice", "VOICE", -0.22, 0xffcf5a);
-    this.addButton("replay", "REPLAY", -0.38, 0x43d8ff);
-    this.addButton("pause", "PAUSE", -0.54, 0xf6f1df);
+    this.addButton("voice", "VOICE", -0.26, 0xffcf5a);
+    this.addButton("replay", "REPLAY", -0.43, 0x43d8ff);
+    this.addButton("pause", "PAUSE", -0.6, 0xf6f1df);
   }
 
   addButton(action, label, y, color) {
@@ -1138,6 +1153,22 @@ class SpatialControlPanel {
     updateTextPlane(this.debug, text || "Voice debug: waiting.", {
       color: "#eef9ff",
       maxLines: 4,
+    });
+  }
+
+  setRouteStatus(text, state = "pending") {
+    if (!this.routeStatus) return;
+    const color = state === "error" ? "#ffd2d2" : state === "ok" ? "#eef9ff" : "#fff4c8";
+    const border =
+      state === "error"
+        ? "rgba(255, 107, 107, 0.72)"
+        : state === "ok"
+          ? "rgba(67, 216, 255, 0.54)"
+          : "rgba(255, 207, 90, 0.42)";
+    updateTextPlane(this.routeStatus, text || "ROUTE LOCAL | TRIAL WAIT | REPLAY WAIT", {
+      color,
+      border,
+      maxLines: 1,
     });
   }
 
@@ -1239,6 +1270,14 @@ class QuestHenshinDemo {
     this.trialReady = false;
     this.trialReplayPath = null;
     this.depositionStartPromise = null;
+    this.routeState = {
+      apiLabel: useNewRouteApi() ? "/v1 ARMED" : "OFF",
+      apiState: useNewRouteApi() ? "pending" : "idle",
+      trialLabel: "WAIT",
+      trialState: "pending",
+      replayLabel: "WAIT",
+      replayState: "pending",
+    };
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
@@ -1378,18 +1417,52 @@ class QuestHenshinDemo {
       this.trialReplayPath ? `REPLAY: ${compactToken(this.trialReplayPath)}` : "REPLAY: WAIT",
       this.trialReplayPath ? "ok" : "pending",
     );
+    this.routeState.apiLabel = newRoute ? "/v1 ARMED" : "OFF";
+    this.routeState.apiState = newRoute ? "pending" : "idle";
+    this.routeState.trialLabel = this.trialId || "WAIT";
+    this.routeState.trialState = this.trialId ? "ok" : "pending";
+    this.routeState.replayLabel = this.trialReplayPath || "WAIT";
+    this.routeState.replayState = this.trialReplayPath ? "ok" : "pending";
+    this.syncSpatialRouteStatus();
   }
 
   setRouteApi(label, state = "pending") {
     setBadge(UI.routeApi, `API: ${compactToken(label, 28)}`, state);
+    this.routeState.apiLabel = label;
+    this.routeState.apiState = state;
+    this.syncSpatialRouteStatus();
   }
 
   setRouteTrial(label, state = "pending") {
     setBadge(UI.routeTrial, `TRIAL: ${compactToken(label, 30)}`, state);
+    this.routeState.trialLabel = label;
+    this.routeState.trialState = state;
+    this.syncSpatialRouteStatus();
   }
 
   setRouteReplay(label, state = "pending") {
     setBadge(UI.routeReplay, `REPLAY: ${compactToken(label, 30)}`, state);
+    this.routeState.replayLabel = label;
+    this.routeState.replayState = state;
+    this.syncSpatialRouteStatus();
+  }
+
+  syncSpatialRouteStatus() {
+    const mode = useNewRouteApi() ? "NEW" : "LOCAL";
+    const api = compactToken(this.routeState.apiLabel || "OFF", 18);
+    const trial = compactToken(this.trialId || this.routeState.trialLabel || "WAIT", 20);
+    const replaySource =
+      this.routeState.replayState === "ok"
+        ? this.routeState.replayLabel
+        : this.trialReplayPath || this.routeState.replayLabel || "WAIT";
+    const replay = compactToken(replaySource, 18);
+    const state =
+      this.routeState.apiState === "error" || this.routeState.replayState === "error"
+        ? "error"
+        : this.routeState.replayState === "ok"
+          ? "ok"
+          : "pending";
+    this.spatialPanel?.setRouteStatus(`ROUTE ${mode} | API ${api} | TRIAL ${trial} | REPLAY ${replay}`, state);
   }
 
   async ensureTrial() {

@@ -117,6 +117,12 @@ const TAU = Math.PI * 2;
 const XR_VIEW_MODE_SELF = "self";
 const XR_VIEW_MODE_OBSERVER = "observer";
 const XR_VIEW_MODE_MIRROR = "mirror";
+const REPLAY_MOTION_SOURCE_LIVE_POSE = "live_pose";
+const REPLAY_MOTION_SOURCE_BODY_SIM = "body_sim";
+const REPLAY_MOTION_SOURCE_MIXED = "body_sim_plus_live_pose";
+const REPLAY_MOTION_SOURCE_STATIC = "static_fallback";
+const REPLAY_MOTION_SOURCE_CAPTURE = "live_capture";
+const REPLAY_MOTION_SOURCE_SELF = "first_person";
 const SELF_VIEW_HIDDEN_PARTS = new Set(["helmet", "left_hand", "right_hand"]);
 const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
 const VR_REPLAY_OBSERVER_HEIGHT_OFFSET = -0.06;
@@ -527,11 +533,72 @@ function motionFramesFromReplayScript(replayScript) {
     const actions = Array.isArray(segment?.actions) ? segment.actions : [];
     for (const action of actions) {
       const motionFrame = action?.params?.motion_frame;
-      const normalized = normalizeMotionFrame(motionFrame, action?.at_time_sec);
+      const actionTime = Number(action?.at_time_sec);
+      const timelineFrame = Number.isFinite(actionTime) && motionFrame
+        ? { ...motionFrame, t: actionTime }
+        : motionFrame;
+      const normalized = normalizeMotionFrame(timelineFrame, action?.at_time_sec);
       if (normalized) frames.push(normalized);
     }
   }
   return frames.sort((a, b) => a.t - b.t);
+}
+
+function makeReplayMotionDiagnostic(source, livePoseFrames = 0, bodySimFrames = 0) {
+  const live = Math.max(0, livePoseFrames);
+  const body = Math.max(0, bodySimFrames);
+  if (source === REPLAY_MOTION_SOURCE_MIXED) {
+    return {
+      source,
+      token: "BODY+LIVE",
+      label: `body-sim ${body} frames + live-pose ${live} frames`,
+      live_pose_frames: live,
+      body_sim_frames: body,
+    };
+  }
+  if (source === REPLAY_MOTION_SOURCE_LIVE_POSE) {
+    return {
+      source,
+      token: `LIVE ${live}f`,
+      label: `live-pose ${live} frames`,
+      live_pose_frames: live,
+      body_sim_frames: body,
+    };
+  }
+  if (source === REPLAY_MOTION_SOURCE_BODY_SIM) {
+    return {
+      source,
+      token: `BODY ${body}f`,
+      label: `body-sim ${body} frames`,
+      live_pose_frames: live,
+      body_sim_frames: body,
+    };
+  }
+  if (source === REPLAY_MOTION_SOURCE_CAPTURE) {
+    return {
+      source,
+      token: "CAPTURE",
+      label: "live capture",
+      live_pose_frames: live,
+      body_sim_frames: body,
+    };
+  }
+  if (source === REPLAY_MOTION_SOURCE_SELF) {
+    return {
+      source,
+      token: "SELF",
+      label: "first-person transform",
+      live_pose_frames: live,
+      body_sim_frames: body,
+    };
+  }
+  return {
+    source: REPLAY_MOTION_SOURCE_STATIC,
+    token: "STATIC",
+    label: "static fallback",
+    live_pose_frames: live,
+    body_sim_frames: body,
+  };
 }
 
 async function loadJson(path) {
@@ -1818,6 +1885,7 @@ class QuestHenshinDemo {
     this.liveTorsoYaw = 0;
     this.liveMotionFrames = [];
     this.archiveMotionFrames = [];
+    this.replayMotionDiagnostic = makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC);
     this.lastLiveMotionSampleAt = -Infinity;
     this.motionHeadPosition = new THREE.Vector3();
     this.motionPartPosition = new THREE.Vector3();
@@ -2046,8 +2114,12 @@ class QuestHenshinDemo {
     this.archiveViewMode =
       this.archiveViewMode === XR_VIEW_MODE_MIRROR ? XR_VIEW_MODE_OBSERVER : XR_VIEW_MODE_MIRROR;
     this.updateArchiveViewModeLabel();
+    const diagnostic = this.refreshReplayMotionDiagnostic({
+      playbackSource: "archive",
+      viewMode: this.archiveViewMode,
+    });
     UI.status.textContent = `記録再生の視点: ${formatArchiveViewMode(this.archiveViewMode)}`;
-    this.setVoiceState(this.voiceState, `記録再生は${formatArchiveViewMode(this.archiveViewMode)}視点で再生します。`);
+    this.setVoiceState(this.voiceState, `記録再生は${formatArchiveViewMode(this.archiveViewMode)}視点で再生します。動き ${diagnostic.token}。`);
   }
 
   setVoiceState(state, detail = "", options = {}) {
@@ -2082,7 +2154,9 @@ class QuestHenshinDemo {
     );
     setBadge(
       UI.routeReplay,
-      this.trialReplayPath ? `記録保管: ${compactToken(this.trialReplayPath)}` : "記録保管: WAIT",
+      this.trialReplayPath
+        ? `記録保管: ${compactToken(this.trialReplayPath, 20)} | 動き ${this.replayMotionDiagnostic.token}`
+        : `記録保管: WAIT | 動き ${this.replayMotionDiagnostic.token}`,
       this.trialReplayPath ? "ok" : "pending",
     );
     setRouteContract(UI.routeContract, this.suitspec);
@@ -2110,10 +2184,49 @@ class QuestHenshinDemo {
   }
 
   setRouteReplay(label, state = "pending") {
-    setBadge(UI.routeReplay, `記録保管: ${compactToken(label, 30)}`, state);
+    setBadge(UI.routeReplay, `記録保管: ${compactToken(label, 20)} | 動き ${this.replayMotionDiagnostic.token}`, state);
     this.routeState.replayLabel = label;
     this.routeState.replayState = state;
     this.syncSpatialRouteStatus();
+  }
+
+  computeReplayMotionDiagnostic({ viewMode = this.xrViewMode, playbackSource = this.playbackSource } = {}) {
+    const livePoseFrames = this.archiveMotionFrames.length;
+    const bodySimFrames = this.frames.length;
+    if (playbackSource !== "archive") {
+      return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_CAPTURE, livePoseFrames, bodySimFrames);
+    }
+    if (viewMode === XR_VIEW_MODE_SELF) {
+      return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_SELF, livePoseFrames, bodySimFrames);
+    }
+    if (livePoseFrames && bodySimFrames) {
+      return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_MIXED, livePoseFrames, bodySimFrames);
+    }
+    if (livePoseFrames) {
+      return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_LIVE_POSE, livePoseFrames, bodySimFrames);
+    }
+    if (bodySimFrames) {
+      return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_BODY_SIM, livePoseFrames, bodySimFrames);
+    }
+    return makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC, livePoseFrames, bodySimFrames);
+  }
+
+  setReplayMotionDiagnostic(diagnostic) {
+    this.replayMotionDiagnostic = diagnostic || makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC);
+    if (UI.routeReplay && this.routeState) {
+      setBadge(
+        UI.routeReplay,
+        `記録保管: ${compactToken(this.routeState.replayLabel || "WAIT", 20)} | 動き ${this.replayMotionDiagnostic.token}`,
+        this.routeState.replayState || "pending",
+      );
+    }
+    this.syncSpatialRouteStatus();
+  }
+
+  refreshReplayMotionDiagnostic(options = {}) {
+    const diagnostic = this.computeReplayMotionDiagnostic(options);
+    this.setReplayMotionDiagnostic(diagnostic);
+    return diagnostic;
   }
 
   syncSpatialRouteStatus() {
@@ -2125,13 +2238,14 @@ class QuestHenshinDemo {
         ? this.routeState.replayLabel
         : this.trialReplayPath || this.routeState.replayLabel || "WAIT";
     const replay = compactToken(replaySource, 18);
+    const motion = compactToken(this.replayMotionDiagnostic?.token || "WAIT", 12);
     const state =
       this.routeState.apiState === "error" || this.routeState.replayState === "error"
         ? "error"
         : this.routeState.replayState === "ok"
           ? "ok"
           : "pending";
-    this.spatialPanel?.setRouteStatus(`生成 ${mode} | 適合 ${api} | 試験 ${trial} | 記録 ${replay}`, state);
+    this.spatialPanel?.setRouteStatus(`生成 ${mode} | 適合 ${api} | 試験 ${trial} | 記録 ${replay} | 動き ${motion}`, state);
   }
 
   async ensureTrial() {
@@ -2198,6 +2312,10 @@ class QuestHenshinDemo {
     }
   }
 
+  trialEventKey(name) {
+    return `${name}-${this.trialId || "local"}`;
+  }
+
   async generateTrialReplay() {
     if (!useNewRouteApi() || !this.trialId) return null;
     try {
@@ -2205,9 +2323,18 @@ class QuestHenshinDemo {
       const replay = await getJson(`/v1/trials/${this.trialId}/replay`);
       this.trialReplayPath = replay.replay_path || null;
       const motionFrames = motionFramesFromReplayScript(replay.replay);
+      this.setArchiveMotionFrames(motionFrames);
       if (motionFrames.length) {
-        this.setArchiveMotionFrames(motionFrames);
-        this.appendVoiceDebug(`motion replay: ${motionFrames.length} pose frames`);
+        const diagnostic = this.refreshReplayMotionDiagnostic({
+          playbackSource: "archive",
+          viewMode: this.archiveViewMode,
+        });
+        this.appendVoiceDebug(`motion replay: ${diagnostic.label}`);
+      } else {
+        this.refreshReplayMotionDiagnostic({
+          playbackSource: "archive",
+          viewMode: this.archiveViewMode,
+        });
       }
       this.appendVoiceDebug(`trial replay: ${replay.replay_id || this.trialReplayPath}`);
       this.setRouteReplay(replay.replay_id || this.trialReplayPath || "READY", "ok");
@@ -2326,6 +2453,10 @@ class QuestHenshinDemo {
     this.frames = replay?.deposition?.body_sim_path
       ? await this.loadBodySim(replay.deposition.body_sim_path)
       : [];
+    this.refreshReplayMotionDiagnostic({
+      playbackSource: autoplay ? source : "archive",
+      viewMode: autoplay ? viewMode : this.archiveViewMode,
+    });
     UI.sessionId.textContent = replay.session_id || "SESSION";
     UI.triggerState.textContent = replay.trigger?.detected ? `音声: ${replay.trigger.phrase || TRIGGER_PHRASE}` : "音声: 待機";
     UI.equipState.textContent = autoplay && replay.deposition?.completed ? "変身: 完了" : "変身: 待機";
@@ -2353,8 +2484,12 @@ class QuestHenshinDemo {
     this.playing = false;
     this.completionAnnounced = false;
     this.depositionStartPromise = null;
+    this.trialId = null;
+    this.trialReady = false;
+    this.trialReplayPath = null;
     this.liveMotionFrames = [];
     this.lastLiveMotionSampleAt = -Infinity;
+    this.setReplayMotionDiagnostic(makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC));
     this.xrViewMode = XR_VIEW_MODE_SELF;
     this.xrWorldAnchorReady = false;
     this.captureWorldAnchor(this.xrViewMode);
@@ -2385,19 +2520,28 @@ class QuestHenshinDemo {
     this.completionAnnounced = false;
     UI.btnPause.textContent = "停止";
     const archive = source === "archive";
+    const diagnostic = this.refreshReplayMotionDiagnostic({ playbackSource: source, viewMode });
     const motionCount = archive ? this.playbackMotionFrames().length : 0;
     UI.status.textContent = archive
-      ? `記録再生: ${formatArchiveViewMode(viewMode)}視点で身体トレースを確認します。${motionCount ? `姿勢 ${motionCount} フレーム。` : ""}`
+      ? `記録再生: ${formatArchiveViewMode(viewMode)}視点。動き ${diagnostic.token}。${motionCount ? `姿勢 ${motionCount} フレーム。` : ""}`
       : `音声合図 ${TRIGGER_PHRASE} を確認。一人称変身を開始します。`;
     this.setVoiceState(
       "deposition",
-      archive ? `記録再生は${formatArchiveViewMode(viewMode)}視点です。` : "一人称変身中。手先表示は安全のため抑制中です。",
+      archive ? `記録再生は${formatArchiveViewMode(viewMode)}視点です。動きは ${diagnostic.token}。` : "一人称変身中。手先表示は安全のため抑制中です。",
     );
-    this.depositionStartPromise = this.appendTrialEvent("DEPOSITION_STARTED", {
-      stateAfter: "DEPOSITION",
-      payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE, view_mode: viewMode, replay_source: source },
-      idempotencyKey: "deposition-started",
-    });
+    this.depositionStartPromise = archive
+      ? null
+      : this.appendTrialEvent("DEPOSITION_STARTED", {
+          stateAfter: "DEPOSITION",
+          payload: {
+            source: "quest-iw-demo",
+            trigger_phrase: TRIGGER_PHRASE,
+            view_mode: viewMode,
+            replay_source: source,
+            replay_motion: diagnostic,
+          },
+          idempotencyKey: this.trialEventKey("deposition-started"),
+        });
     void this.depositionStartPromise;
     if (speak) this.speakExplanation();
   }
@@ -2927,19 +3071,21 @@ class QuestHenshinDemo {
         UI.status.textContent = "変身完了。記録再生で確認できます。";
         this.setVoiceState("complete");
         this.audioBed.pulse(1180, 0.18);
-        void Promise.resolve(this.depositionStartPromise)
-          .then(() =>
-            this.appendTrialEvent("DEPOSITION_COMPLETED", {
-              stateAfter: "ACTIVE",
-              payload: {
-                source: "quest-iw-demo",
-                completed: true,
-                motion_capture: this.motionCapturePayload(),
-              },
-              idempotencyKey: "deposition-completed",
-            }),
-          )
-          .then(() => this.generateTrialReplay());
+        if (this.playbackSource !== "archive") {
+          void Promise.resolve(this.depositionStartPromise)
+            .then(() =>
+              this.appendTrialEvent("DEPOSITION_COMPLETED", {
+                stateAfter: "ACTIVE",
+                payload: {
+                  source: "quest-iw-demo",
+                  completed: true,
+                  motion_capture: this.motionCapturePayload(),
+                },
+                idempotencyKey: this.trialEventKey("deposition-completed"),
+              }),
+            )
+            .then(() => this.generateTrialReplay());
+        }
         this.completionAnnounced = true;
       }
     }

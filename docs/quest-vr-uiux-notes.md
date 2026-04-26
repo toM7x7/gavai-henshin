@@ -57,12 +57,13 @@ Current slice:
 - Let the full panel switch into a world-locked `固定` state for longer inspection, then return to wrist follow with `追従`.
 - Auto-return the open wrist panel to compact mode after a short no-input interval.
 - Snap the live mirror into its target position when it first appears so it reads as a stable check mirror rather than a moving panel.
+- Show a compact replay motion diagnostic in the PC HUD and VR panel: `LIVE`, `BODY`, `BODY+LIVE`, or `STATIC`, with frame counts when available.
 
 Next UI slice:
 
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
 - Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
-- Add replay diagnostics for whether archive playback is using live-pose frames, body-sim frames, or static fallback.
+- Keep replay diagnostics visible enough for operator checks, but do not expand the bracelet panel just for telemetry.
 - Add a stronger transform-item affordance once the bracelet state feels stable on Quest.
 
 ## Fit And Suit Visibility Rule

@@ -45,3 +45,8 @@
 - `viewer/body-fit/body-fit-live.js` is now the live re-henshin signal layer: pose extraction, pose quality gates, and camera pipeline modules.
 - Current hotspot after this refactor is still the static armor/VRM lexicon inside `viewer/body-fit/viewer.js`; that is the next safe extraction target.
 - `viewer/suit-dashboard/dashboard.js` is the second large frontend hotspot and should follow the same split strategy once body-fit live tracking stabilizes.
+
+## Quest Replay Diagnostics Boundary (2026-04-27)
+- `viewer/quest-iw-demo` may display replay pose source, frame count, and fallback status for operator checks.
+- These diagnostics are telemetry only. They must not choose body-fit behavior, mutate replay duration, or change generation contracts.
+- Body quality remains owned by the body-fit/VRM/mocopi lanes; Quest diagnostics only expose whether replay currently has live-pose frames, body-sim frames, or static fallback.

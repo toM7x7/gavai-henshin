@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1",
+  "collections": {
+    "quest_devices": {
+      "{deviceId}": {
+        "device_id": "quest-local",
+        "operator_id": "operator-local",
+        "status": "READY",
+        "active_trial_id": null,
+        "last_seen_at": "serverTimestamp",
+        "capabilities": {
+          "webxr": true,
+          "microphone": true,
+          "iw_sdk": true
+        }
+      }
+    },
+    "live_trials": {
+      "{trialId}": {
+        "trial_id": "S-TRIAL-EXAMPLE",
+        "suit_id": "VDA-AXIS-OP-00-0001",
+        "manifest_id": "MNF-20260424-SAMP",
+        "device_id": "quest-local",
+        "operator_id": "operator-local",
+        "state": "DEPOSITION",
+        "progress": 0.5,
+        "last_event_id": "EVT-20260425-ABC123",
+        "updated_at": "serverTimestamp"
+      }
+    },
+    "operator_dashboards": {
+      "{operatorId}": {
+        "operator_id": "operator-local",
+        "active_device_id": "quest-local",
+        "active_trial_id": "S-TRIAL-EXAMPLE",
+        "current_step": "DEPOSITION",
+        "updated_at": "serverTimestamp"
+      }
+    }
+  },
+  "rules": [
+    "Do not store SuitSpec, SuitManifest, TransformSession, TransformEvent, or ReplayScript as the durable source in Firestore.",
+    "Firestore documents are cache/live mirrors for Quest and operator UI.",
+    "Cloud SQL remains the durable source for sessions and events."
+  ]
+}

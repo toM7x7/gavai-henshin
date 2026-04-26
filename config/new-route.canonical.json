@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1",
+  "status": "provisional",
+  "canonical_suit_id": "VDA-AXIS-OP-00-0001",
+  "canonical_manifest_id": "MNF-20260424-SAMP",
+  "suitspec_path": "examples/suitspec.sample.json",
+  "partcatalog_path": "examples/partcatalog.seed.json",
+  "runtime_targets": [
+    "web_preview",
+    "quest",
+    "replay"
+  ],
+  "notes": [
+    "This is the first canonical seed for the new route.",
+    "Replace suitspec_path or canonical_suit_id when the first official suit is finalized."
+  ]
+}

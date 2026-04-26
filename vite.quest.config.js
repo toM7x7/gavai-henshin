@@ -35,6 +35,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": apiTarget,
+      "/v1": apiTarget,
       "/sessions": apiTarget,
     },
   },

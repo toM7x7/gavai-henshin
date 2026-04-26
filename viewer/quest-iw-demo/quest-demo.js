@@ -9,6 +9,8 @@ import * as THREE from "three";
 const DEFAULT_REPLAY = "/sessions/S-IW-DEMO/artifacts/iwsdk-deposition-replay.json";
 const DEFAULT_SUITSPEC = "/examples/suitspec.sample.json";
 const DEFAULT_MOCOPI = "examples/mocopi_sequence.sample.json";
+const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
+const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -97,6 +99,10 @@ const UI = {
   micState: document.getElementById("micState"),
   voiceLine: document.getElementById("voiceLine"),
   voiceDebug: document.getElementById("voiceDebug"),
+  routeMode: document.getElementById("routeMode"),
+  routeApi: document.getElementById("routeApi"),
+  routeTrial: document.getElementById("routeTrial"),
+  routeReplay: document.getElementById("routeReplay"),
   sessionId: document.getElementById("sessionId"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
@@ -233,8 +239,93 @@ function getAudioMode() {
   return params().get("audio") === "webm" ? "webm" : "wav";
 }
 
+function useMicrophoneCapture() {
+  return params().get("mic") === "1" || !useMockTrigger();
+}
+
+function makeMockAudioCapture() {
+  return {
+    blob: new Blob(["dry-run"], { type: "audio/wav" }),
+    stats: {
+      mode: "mock",
+      mime_type: "audio/wav",
+      sample_rate: 48000,
+      channels: 1,
+      samples: 0,
+      duration_sec: 0.1,
+      requested_sec: 0,
+      peak: 0,
+      rms: 0,
+      quiet: false,
+    },
+  };
+}
+
+function useNewRouteApi() {
+  return params().get("newRoute") === "1";
+}
+
+function getApiBase() {
+  const raw = params().get("apiBase") || "";
+  return raw.replace(/\/$/, "");
+}
+
+function getSuitId() {
+  return params().get("suit") || DEFAULT_SUIT_ID;
+}
+
+function getManifestId() {
+  return params().get("manifest") || DEFAULT_MANIFEST_ID;
+}
+
+function getOperatorId() {
+  return params().get("operator") || "quest-browser";
+}
+
+function getDeviceId() {
+  return params().get("device") || (navigator.userAgent.includes("Quest") ? "quest-browser" : "iw-sdk-dev");
+}
+
+function makeTrialId() {
+  return `S-IW-QUEST-${Date.now().toString(16).toUpperCase()}`;
+}
+
+async function postJson(path, payload) {
+  const response = await fetch(`${getApiBase()}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || `POST ${path} failed with ${response.status}`);
+  }
+  return data;
+}
+
+async function getJson(path) {
+  const response = await fetch(`${getApiBase()}${path}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || `GET ${path} failed with ${response.status}`);
+  }
+  return data;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function compactToken(value, maxLength = 34) {
+  const text = String(value || "");
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(4, maxLength - 4))}...`;
+}
+
+function setBadge(element, text, state = "idle") {
+  if (!element) return;
+  element.textContent = text;
+  element.dataset.state = state;
 }
 
 function normalizeTriggerText(text) {
@@ -1144,6 +1235,10 @@ class QuestHenshinDemo {
     this.suitspec = null;
     this.meshes = new Map();
     this.voiceState = "ready";
+    this.trialId = null;
+    this.trialReady = false;
+    this.trialReplayPath = null;
+    this.depositionStartPromise = null;
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
@@ -1166,6 +1261,7 @@ class QuestHenshinDemo {
     this.spatialPanel = new SpatialControlPanel(this);
     this.setVoiceState("ready");
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
+    this.syncRoutePanel();
     this.bind();
   }
 
@@ -1260,6 +1356,121 @@ class QuestHenshinDemo {
     const value = text || "Voice debug: waiting.";
     if (UI.voiceDebug) UI.voiceDebug.textContent = value;
     this.spatialPanel?.setDebug(value);
+  }
+
+  appendVoiceDebug(line) {
+    if (!line) return;
+    const next = `${UI.voiceDebug?.textContent || "VOICE DEBUG"}\n${line}`;
+    this.updateVoiceDebug(next);
+  }
+
+  syncRoutePanel() {
+    const newRoute = useNewRouteApi();
+    setBadge(UI.routeMode, newRoute ? "ROUTE: NEW" : "ROUTE: LOCAL", newRoute ? "ok" : "idle");
+    setBadge(UI.routeApi, newRoute ? "API: /v1 ARMED" : "API: OFF", newRoute ? "pending" : "idle");
+    setBadge(
+      UI.routeTrial,
+      this.trialId ? `TRIAL: ${compactToken(this.trialId)}` : "TRIAL: WAIT",
+      this.trialId ? "ok" : "pending",
+    );
+    setBadge(
+      UI.routeReplay,
+      this.trialReplayPath ? `REPLAY: ${compactToken(this.trialReplayPath)}` : "REPLAY: WAIT",
+      this.trialReplayPath ? "ok" : "pending",
+    );
+  }
+
+  setRouteApi(label, state = "pending") {
+    setBadge(UI.routeApi, `API: ${compactToken(label, 28)}`, state);
+  }
+
+  setRouteTrial(label, state = "pending") {
+    setBadge(UI.routeTrial, `TRIAL: ${compactToken(label, 30)}`, state);
+  }
+
+  setRouteReplay(label, state = "pending") {
+    setBadge(UI.routeReplay, `REPLAY: ${compactToken(label, 30)}`, state);
+  }
+
+  async ensureTrial() {
+    if (!useNewRouteApi()) return null;
+    if (this.trialReady && this.trialId) {
+      this.setRouteTrial(this.trialId, "ok");
+      return this.trialId;
+    }
+    this.trialId = this.trialId || makeTrialId();
+    const suitId = getSuitId();
+    const manifestId = getManifestId();
+    this.setRouteApi("SUIT POST", "pending");
+    this.setRouteTrial(this.trialId, "pending");
+    await postJson("/v1/suits", {
+      suitspec: this.suitspec,
+      overwrite: true,
+    });
+    this.setRouteApi("MANIFEST", "pending");
+    await postJson(`/v1/suits/${suitId}/manifest`, {
+      manifest_id: manifestId,
+      status: "READY",
+    });
+    this.setRouteApi("TRIAL CREATE", "pending");
+    const trial = await postJson("/v1/trials", {
+      manifest_id: manifestId,
+      suit_id: suitId,
+      session_id: this.trialId,
+      operator_id: getOperatorId(),
+      device_id: getDeviceId(),
+      tracking_source: "iw_sdk",
+      state: "POSTED",
+    });
+    this.trialId = trial.trial_id || trial.session_id || this.trialId;
+    this.trialReady = true;
+    UI.sessionId.textContent = this.trialId;
+    this.setRouteApi("TRIAL READY", "ok");
+    this.setRouteTrial(this.trialId, "ok");
+    this.appendVoiceDebug(`trial: ${this.trialId}`);
+    return this.trialId;
+  }
+
+  async appendTrialEvent(eventType, options = {}) {
+    if (!useNewRouteApi()) return null;
+    try {
+      const trialId = await this.ensureTrial();
+      if (!trialId) return null;
+      this.setRouteApi(eventType, "pending");
+      const event = await postJson(`/v1/trials/${trialId}/events`, {
+        event_type: eventType,
+        state_after: options.stateAfter,
+        actor: options.actor || { type: "device", id: getDeviceId() },
+        payload: options.payload || {},
+        idempotency_key: options.idempotencyKey,
+      });
+      this.appendVoiceDebug(`trial event: ${event.event?.event_type || eventType} #${event.event?.sequence}`);
+      const sequence = event.event?.sequence ? ` #${event.event.sequence}` : "";
+      this.setRouteApi(`${event.event?.event_type || eventType}${sequence}`, "ok");
+      return event;
+    } catch (error) {
+      console.warn(error);
+      this.appendVoiceDebug(`trial api: ${error?.message || error}`);
+      this.setRouteApi("EVENT ERROR", "error");
+      return null;
+    }
+  }
+
+  async generateTrialReplay() {
+    if (!useNewRouteApi() || !this.trialId) return null;
+    try {
+      this.setRouteReplay("BUILDING", "pending");
+      const replay = await getJson(`/v1/trials/${this.trialId}/replay`);
+      this.trialReplayPath = replay.replay_path || null;
+      this.appendVoiceDebug(`trial replay: ${replay.replay_id || this.trialReplayPath}`);
+      this.setRouteReplay(replay.replay_id || this.trialReplayPath || "READY", "ok");
+      return replay;
+    } catch (error) {
+      console.warn(error);
+      this.appendVoiceDebug(`trial replay: ${error?.message || error}`);
+      this.setRouteReplay("ERROR", "error");
+      return null;
+    }
   }
 
   togglePause() {
@@ -1371,6 +1582,7 @@ class QuestHenshinDemo {
     UI.btnPause.textContent = "Resume";
     UI.status.textContent = "Reset. Use Replay or Voice to run the deposition again.";
     this.setVoiceState("ready");
+    this.syncRoutePanel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: reset\ntrigger: 生成");
     this.updateVoiceDebug(`VOICE DEBUG\nresult: reset\ntrigger: ${TRIGGER_PHRASE}`);
   }
@@ -1383,6 +1595,12 @@ class QuestHenshinDemo {
     UI.btnPause.textContent = "Pause";
     UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Armor deposition replay running.`;
     this.setVoiceState("deposition");
+    this.depositionStartPromise = this.appendTrialEvent("DEPOSITION_STARTED", {
+      stateAfter: "DEPOSITION",
+      payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE },
+      idempotencyKey: "deposition-started",
+    });
+    void this.depositionStartPromise;
     if (speak) this.speakExplanation();
   }
 
@@ -1393,22 +1611,40 @@ class QuestHenshinDemo {
     try {
       const seconds = getVoiceSeconds();
       const armDelay = getVoiceArmDelay();
-      const mode = getAudioMode().toUpperCase();
-      UI.status.textContent = `Preparing microphone. Wait for SPEAK NOW, then say ${TRIGGER_PHRASE}.`;
-      this.setVoiceState("arming", `Mic arming ${armDelay.toFixed(1)}s. Do not speak yet.`);
-      this.updateVoiceDebug(`VOICE DEBUG\nresult: arming\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode}\narmDelay: ${armDelay.toFixed(1)}s`);
-      const { blob, stats } = await recordAudio(seconds, {
-        armDelaySec: armDelay,
-        onReady: () => {
-          UI.status.textContent = `Microphone armed. Wait ${armDelay.toFixed(1)}s for SPEAK NOW.`;
-          this.setVoiceState("arming", `Wait ${armDelay.toFixed(1)}s. Speak only after SPEAK NOW.`);
-        },
-        onStart: () => {
-          UI.status.textContent = `Recording ${seconds.toFixed(1)}s ${mode}. Say ${TRIGGER_PHRASE} clearly now.`;
-          this.setVoiceState("recording", `SPEAK NOW: ${seconds.toFixed(1)}s capture.`);
-          this.updateVoiceDebug(`VOICE DEBUG\nresult: recording\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode} ${seconds.toFixed(1)}s\narmDelay: ${armDelay.toFixed(1)}s`);
-        },
-      });
+      const useMic = useMicrophoneCapture();
+      const mode = useMic ? getAudioMode().toUpperCase() : "MOCK";
+      UI.status.textContent = useMic
+        ? `Preparing microphone. Wait for SPEAK NOW, then say ${TRIGGER_PHRASE}.`
+        : `Mock voice trigger is running without microphone capture.`;
+      this.setVoiceState(
+        useMic ? "arming" : "analyzing",
+        useMic ? `Mic arming ${armDelay.toFixed(1)}s. Do not speak yet.` : "Mock trigger is preparing replay.",
+      );
+      this.updateVoiceDebug(`VOICE DEBUG\nresult: ${useMic ? "arming" : "mock"}\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode}\narmDelay: ${useMic ? `${armDelay.toFixed(1)}s` : "skipped"}`);
+
+      let blob;
+      let stats;
+      if (useMic) {
+        const captured = await recordAudio(seconds, {
+          armDelaySec: armDelay,
+          onReady: () => {
+            UI.status.textContent = `Microphone armed. Wait ${armDelay.toFixed(1)}s for SPEAK NOW.`;
+            this.setVoiceState("arming", `Wait ${armDelay.toFixed(1)}s. Speak only after SPEAK NOW.`);
+          },
+          onStart: () => {
+            UI.status.textContent = `Recording ${seconds.toFixed(1)}s ${mode}. Say ${TRIGGER_PHRASE} clearly now.`;
+            this.setVoiceState("recording", `SPEAK NOW: ${seconds.toFixed(1)}s capture.`);
+            this.updateVoiceDebug(`VOICE DEBUG\nresult: recording\ntrigger: ${TRIGGER_PHRASE}\naudio: ${mode} ${seconds.toFixed(1)}s\narmDelay: ${armDelay.toFixed(1)}s`);
+          },
+        });
+        blob = captured.blob;
+        stats = captured.stats;
+      } else {
+        await sleep(160);
+        const captured = makeMockAudioCapture();
+        blob = captured.blob;
+        stats = captured.stats;
+      }
       const statsLine = formatAudioStats(stats);
       this.setVoiceState(
         "analyzing",
@@ -1418,6 +1654,7 @@ class QuestHenshinDemo {
       );
       this.updateVoiceDebug(`VOICE DEBUG\nresult: captured\ntrigger: ${TRIGGER_PHRASE}\naudio: ${statsLine || mode}\nbytes: ${blob.size}`);
       const audioBase64 = await blobToDataUrl(blob);
+      const trialId = useNewRouteApi() ? await this.ensureTrial() : makeTrialId();
       const response = await fetch("/api/iw-henshin/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1425,7 +1662,7 @@ class QuestHenshinDemo {
           audio_base64: audioBase64,
           mime_type: blob.type || (getAudioMode() === "wav" ? "audio/wav" : "audio/webm"),
           audio_stats: stats,
-          session_id: `S-IW-QUEST-${Date.now().toString(16)}`,
+          session_id: trialId,
           mocopi: params().get("mocopi") || DEFAULT_MOCOPI,
           trigger_phrase: TRIGGER_PHRASE,
           dry_run: useMockTrigger(),
@@ -1436,6 +1673,11 @@ class QuestHenshinDemo {
       const transcript = data.result?.transcript || data.replay?.trigger?.transcript || "";
       const debugText = formatVoiceDebug(data, transcript, data.result?.error || data.error || "");
       this.updateVoiceDebug(debugText);
+      await this.appendTrialEvent("VOICE_CAPTURED", {
+        stateAfter: "POSTED",
+        payload: { transcript, audio_stats: stats, trigger_phrase: TRIGGER_PHRASE },
+        idempotencyKey: `voice-captured-${trialId}`,
+      });
       UI.voiceLine.textContent = formatVoiceRetryHint(data, transcript);
       const triggerMatched =
         useMockTrigger() ||
@@ -1450,6 +1692,11 @@ class QuestHenshinDemo {
       if (!triggerMatched) {
         throw new Error(formatVoiceRetryDetail(data, transcript));
       }
+      await this.appendTrialEvent("TRIGGER_DETECTED", {
+        stateAfter: "TRY_ON",
+        payload: { transcript, trigger_phrase: TRIGGER_PHRASE },
+        idempotencyKey: `trigger-detected-${trialId}`,
+      });
       this.setVoiceState("detected", transcript ? `Transcript: ${transcript}` : `${TRIGGER_PHRASE} confirmed.`);
       this.audioBed.pulse(980, 0.18);
       if (data.replay && data.result?.tts?.audio_path && !data.replay.tts?.audio_path) {
@@ -1461,6 +1708,7 @@ class QuestHenshinDemo {
       const message = String(error?.message || error);
       UI.status.textContent = "Voice rejected. Read the Voice debug panel for transcript and audio details.";
       UI.equipState.textContent = "DEPOSITION: CHECK";
+      if (useNewRouteApi()) this.setRouteApi("VOICE ERROR", "error");
       this.setVoiceState("rejected", message.length > 92 ? `${message.slice(0, 89)}...` : message);
       if (UI.voiceDebug && UI.voiceDebug.textContent.startsWith("VOICE DEBUG")) {
         UI.voiceDebug.textContent += `\nerror: ${message}`;
@@ -1559,6 +1807,15 @@ class QuestHenshinDemo {
         UI.status.textContent = "Armor deposition complete. Replay remains available for review.";
         this.setVoiceState("complete");
         this.audioBed.pulse(1180, 0.18);
+        void Promise.resolve(this.depositionStartPromise)
+          .then(() =>
+            this.appendTrialEvent("DEPOSITION_COMPLETED", {
+              stateAfter: "ACTIVE",
+              payload: { source: "quest-iw-demo", completed: true },
+              idempotencyKey: "deposition-completed",
+            }),
+          )
+          .then(() => this.generateTrialReplay());
         this.completionAnnounced = true;
       }
     }

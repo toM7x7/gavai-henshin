@@ -40,6 +40,23 @@ _TRANSFORM_STATES = {
     "ARCHIVED",
     "REFUSED",
 }
+_TRANSFORM_STATE_ORDER = [
+    "IDLE",
+    "POSTED",
+    "FIT_AUDIT",
+    "MORPHOTYPE_LOCKED",
+    "DESIGN_ISSUED",
+    "DRY_FIT_SIM",
+    "TRY_ON",
+    "APPROVAL_PENDING",
+    "APPROVED",
+    "DEPOSITION",
+    "SEALING",
+    "ACTIVE",
+    "ARCHIVED",
+    "REFUSED",
+]
+_TRANSFORM_STATE_RANK = {state: index for index, state in enumerate(_TRANSFORM_STATE_ORDER)}
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
     "TRIGGER_DETECTED",
@@ -314,6 +331,38 @@ class NewRouteApi:
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown trial: {session_id}"})
         return ApiResponse(status=HTTPStatus.OK, body={"ok": True, "trial": self._read_json(session_path)})
 
+    def list_trials(self) -> ApiResponse:
+        trials = self._all_trials()
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "count": len(trials),
+                "latest": self._trial_summary(trials[0]) if trials else None,
+                "trials": [self._trial_summary(trial) for trial in trials],
+            },
+        )
+
+    def get_latest_trial(self) -> ApiResponse:
+        trials = self._all_trials()
+        if not trials:
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": "No trials have been recorded"})
+        latest = trials[0]
+        session_id = str(latest["session_id"])
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "trial_id": session_id,
+                "summary": self._trial_summary(latest),
+                "trial": latest,
+                "links": {
+                    "self": f"/v1/trials/{session_id}",
+                    "replay": f"/v1/trials/{session_id}/replay",
+                },
+            },
+        )
+
     def get_trial_replay(self, session_id: str) -> ApiResponse:
         if not _SESSION_ID_RE.fullmatch(session_id):
             return self._bad_request("session_id format is invalid")
@@ -381,13 +430,19 @@ class NewRouteApi:
             return self._bad_request(f"event_type must be one of {sorted(_TRANSFORM_EVENT_TYPES)}")
 
         state_before = str(session["state"])
-        state_after = str(payload.get("state_after") or state_before)
-        if state_after not in _TRANSFORM_STATES:
+        requested_state_after = str(payload.get("state_after") or state_before)
+        if requested_state_after not in _TRANSFORM_STATES:
             return self._bad_request(f"state_after must be one of {sorted(_TRANSFORM_STATES)}")
+        state_after = self._non_regressive_state_after(state_before, requested_state_after)
 
         actor = payload.get("actor") or {"type": "system"}
         if not isinstance(actor, dict):
             return self._bad_request("actor must be a JSON object")
+        event_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+        event_payload = self._clone_json(event_payload)
+        if state_after != requested_state_after:
+            event_payload.setdefault("requested_state_after", requested_state_after)
+            event_payload.setdefault("state_transition_note", "ignored_regressive_state_after")
         event = {
             "event_id": event_id,
             "session_id": session_id,
@@ -397,7 +452,7 @@ class NewRouteApi:
             "actor": actor,
             "state_before": state_before,
             "state_after": state_after,
-            "payload": payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+            "payload": event_payload,
         }
         if isinstance(idempotency_key, str):
             event["idempotency_key"] = idempotency_key
@@ -460,6 +515,10 @@ class NewRouteApi:
             return self.health()
         if normalized == "/v1/catalog/parts":
             return self.get_part_catalog()
+        if normalized == "/v1/trials":
+            return self.list_trials()
+        if normalized == "/v1/trials/latest":
+            return self.get_latest_trial()
         prefix = "/v1/manifests/"
         if normalized.startswith(prefix):
             return self.get_manifest(normalized[len(prefix) :])
@@ -534,6 +593,39 @@ class NewRouteApi:
         for path in self.suit_store_root.glob(f"*/manifests/{manifest_id}.json"):
             return path
         return None
+
+    def _all_trials(self) -> list[dict[str, Any]]:
+        if not self.trial_store_root.exists():
+            return []
+        trials = [self._read_json(path) for path in self.trial_store_root.glob("*/transform-session.json")]
+        return sorted(trials, key=self._trial_sort_key, reverse=True)
+
+    def _trial_sort_key(self, trial: dict[str, Any]) -> str:
+        metadata = trial.get("metadata") if isinstance(trial.get("metadata"), dict) else {}
+        return str(metadata.get("updated_at") or trial.get("completed_at") or trial.get("started_at") or "")
+
+    def _trial_summary(self, trial: dict[str, Any]) -> dict[str, Any]:
+        events = trial.get("events") if isinstance(trial.get("events"), list) else []
+        artifacts = trial.get("artifacts") if isinstance(trial.get("artifacts"), dict) else {}
+        metadata = trial.get("metadata") if isinstance(trial.get("metadata"), dict) else {}
+        last_event = events[-1] if events and isinstance(events[-1], dict) else {}
+        return {
+            "session_id": trial.get("session_id"),
+            "suit_id": trial.get("suit_id"),
+            "manifest_id": trial.get("manifest_id"),
+            "state": trial.get("state"),
+            "event_count": len(events),
+            "last_event_type": last_event.get("event_type"),
+            "replay_script_path": artifacts.get("replay_script_path"),
+            "updated_at": metadata.get("updated_at") or trial.get("completed_at") or trial.get("started_at"),
+        }
+
+    def _non_regressive_state_after(self, state_before: str, requested_state_after: str) -> str:
+        before_rank = _TRANSFORM_STATE_RANK.get(state_before, -1)
+        requested_rank = _TRANSFORM_STATE_RANK.get(requested_state_after, before_rank)
+        if requested_rank < before_rank:
+            return state_before
+        return requested_state_after
 
     def _relative_path(self, path: Path) -> str:
         resolved = path.resolve()

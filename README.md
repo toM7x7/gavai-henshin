@@ -103,6 +103,8 @@ Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creat
 
 Phase 3 local replay path closes the first loop: `GET /v1/trials/{trialId}/replay` derives and stores a schema-valid `ReplayScript` from the canonical `TransformSession` events. Video/audio remain derived artifacts; the durable source stays event log plus replay script.
 
+Canonical seed and platform preparation are tracked in `config/new-route.canonical.json`, `docs/new-route-operator-checklist.md`, `docs/new-route-gcp-readiness.md`, and `infra/gcp/`.
+
 まずは API 形、schema validation、PartCatalog / SuitManifest の参照を固定する。永続化の正本は次段で Cloud SQL、artifact は GCS、live state は Firestore に分ける。
 
 ## GitHub運用

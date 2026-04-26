@@ -95,6 +95,44 @@ h1 {
   transition: width 100ms linear;
 }
 
+.route-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(440px, 100%);
+  margin-top: 14px;
+  pointer-events: auto;
+}
+
+.route-panel span {
+  min-height: 32px;
+  border: 1px solid rgba(141, 162, 173, 0.48);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(3, 9, 12, 0.58);
+  color: #d7f8ff;
+  font-size: 11px;
+  font-weight: 820;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+}
+
+.route-panel span[data-state="pending"] {
+  border-color: rgba(255, 207, 90, 0.58);
+  color: #fff4c8;
+}
+
+.route-panel span[data-state="ok"] {
+  border-color: rgba(67, 216, 255, 0.62);
+  color: #eef9ff;
+}
+
+.route-panel span[data-state="error"] {
+  border-color: rgba(255, 107, 107, 0.72);
+  color: #ffd2d2;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

@@ -404,8 +404,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=directory, **kwargs)
 
     @staticmethod
-    def _new_route_response_for_test(root: Path, path: str):
-        return NewRouteApi(root).get(path)
+    def _new_route_response_for_test(root: Path, path: str, *, suit_store_root: Path | None = None):
+        return NewRouteApi(root, suit_store_root=suit_store_root).get(path)
 
     @staticmethod
     def _new_route_post_response_for_test(

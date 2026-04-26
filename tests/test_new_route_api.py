@@ -153,6 +153,28 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["trial"]["state"], "DEPOSITION")
             self.assertEqual(fetched.body["trial"]["events"][1]["idempotency_key"], "deposition-start")
 
+    def test_append_trial_event_does_not_regress_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_COMPLETED", "state_after": "ACTIVE"},
+            )
+
+            response = api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "VOICE_CAPTURED", "state_after": "POSTED"},
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["trial"]["state"], "ACTIVE")
+            self.assertEqual(response.body["event"]["state_before"], "ACTIVE")
+            self.assertEqual(response.body["event"]["state_after"], "ACTIVE")
+            self.assertEqual(response.body["event"]["payload"]["requested_state_after"], "POSTED")
+
     def test_create_trial_returns_conflict_without_manifest(self) -> None:
         suitspec = self._sample_suitspec()
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,6 +205,31 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["replay"]["session_id"], "S-TRIAL-UNIT-0001")
             self.assertEqual(response.body["replay"]["source_events"]["event_ids"][0], response.body["session"]["events"][0]["event_id"])
             self.assertTrue(response.body["replay_path"].endswith("replay-script.json"))
+
+    def test_get_latest_trial_returns_replay_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0002"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_COMPLETED", "state_after": "ACTIVE"},
+            )
+            api.get("/v1/trials/S-TRIAL-UNIT-0001/replay")
+
+            latest = api.get("/v1/trials/latest")
+            listed = api.get("/v1/trials")
+
+            self.assertIsNotNone(latest)
+            self.assertIsNotNone(listed)
+            assert latest is not None and listed is not None
+            self.assertEqual(latest.status, 200)
+            self.assertEqual(latest.body["trial_id"], "S-TRIAL-UNIT-0001")
+            self.assertEqual(latest.body["summary"]["state"], "ACTIVE")
+            self.assertEqual(latest.body["summary"]["event_count"], 2)
+            self.assertTrue(latest.body["summary"]["replay_script_path"].endswith("replay-script.json"))
+            self.assertEqual(listed.body["count"], 2)
+            self.assertEqual(listed.body["latest"]["session_id"], "S-TRIAL-UNIT-0001")
 
     def _sample_suitspec(self) -> dict:
         return json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))

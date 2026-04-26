@@ -113,7 +113,9 @@ const textureLoader = new THREE.TextureLoader();
 const geometryCache = new Map();
 const textureCache = new Map();
 const TAU = Math.PI * 2;
-const BODY_CENTERED_SCALE = 1.0;
+const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
+const VR_REPLAY_OBSERVER_HEIGHT_OFFSET = -0.06;
+const VR_REPLAY_OBSERVER_SCALE = 0.88;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -242,6 +244,10 @@ function getAudioMode() {
 
 function useMicrophoneCapture() {
   return params().get("mic") === "1" || !useMockTrigger();
+}
+
+function useHandTracking() {
+  return params().get("hands") === "1";
 }
 
 function makeMockAudioCapture() {
@@ -1073,7 +1079,7 @@ class SpatialControlPanel {
 
   buildPanel() {
     const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.22, 1.34),
+      new THREE.PlaneGeometry(1.22, 1.68),
       new THREE.MeshBasicMaterial({
         color: 0x061116,
         transparent: true,
@@ -1169,6 +1175,7 @@ class SpatialControlPanel {
     this.addButton("voice", "VOICE", -0.26, 0xffcf5a);
     this.addButton("replay", "ARCHIVE", -0.43, 0x43d8ff);
     this.addButton("pause", "PAUSE", -0.6, 0xf6f1df);
+    this.addButton("reset", "RESET", -0.77, 0xff6b6b);
   }
 
   addButton(action, label, y, color) {
@@ -1321,6 +1328,7 @@ class SpatialControlPanel {
     if (action === "voice") void this.demo.runVoiceCommand();
     if (action === "replay") this.demo.replayFromStart({ speak: true });
     if (action === "pause") this.demo.togglePause();
+    if (action === "reset") this.demo.reset();
   }
 }
 
@@ -1355,11 +1363,16 @@ class QuestHenshinDemo {
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
+    this.xrForward = new THREE.Vector3();
     this.rigTargetPosition = new THREE.Vector3();
     this.rigTargetQuaternion = new THREE.Quaternion();
     this.rigTargetEuler = new THREE.Euler(0, 0, 0, "YXZ");
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
-    this.bodyCenteredScale = new THREE.Vector3(BODY_CENTERED_SCALE, BODY_CENTERED_SCALE, BODY_CENTERED_SCALE);
+    this.observerScale = new THREE.Vector3(
+      VR_REPLAY_OBSERVER_SCALE,
+      VR_REPLAY_OBSERVER_SCALE,
+      VR_REPLAY_OBSERVER_SCALE,
+    );
     this.finalPosition = new THREE.Vector3();
     this.stagePosition = new THREE.Vector3();
 
@@ -1388,7 +1401,7 @@ class QuestHenshinDemo {
           fallbackOrder: [ReferenceSpaceType.Local, ReferenceSpaceType.Viewer],
         },
         features: {
-          handTracking: true,
+          handTracking: useHandTracking(),
           layers: true,
         },
         offer: "none",
@@ -1438,9 +1451,9 @@ class QuestHenshinDemo {
 
     this.renderer.xr.addEventListener("sessionstart", () => {
       this.audioBed.start();
-      UI.status.textContent = "IWSDK immersive-vr session started. Voice menu is in front of you.";
+      UI.status.textContent = "IWSDK immersive-vr session started. Archive replay uses a third-person observer view.";
       UI.btnEnterVR.textContent = "Exit VR";
-      this.setVoiceState(this.voiceState, "Headset body anchor active. Live mocopi tracking is not connected yet.");
+      this.setVoiceState(this.voiceState, "Observer replay active. Live body attachment is still under fit audit.");
     });
     this.renderer.xr.addEventListener("sessionend", () => {
       UI.status.textContent = "VR session ended. Enter VR to return to immersive mode.";
@@ -1673,7 +1686,7 @@ class QuestHenshinDemo {
         fallbackOrder: [ReferenceSpaceType.Local, ReferenceSpaceType.Viewer],
       },
       features: {
-        handTracking: true,
+        handTracking: useHandTracking(),
         layers: true,
       },
     });
@@ -1735,8 +1748,12 @@ class QuestHenshinDemo {
   reset() {
     this.elapsed = 0;
     this.playing = false;
+    this.completionAnnounced = false;
+    this.depositionStartPromise = null;
     UI.btnPause.textContent = "Resume";
-    UI.status.textContent = "Reset. Use Replay or Voice to run the deposition again.";
+    UI.equipState.textContent = "DEPOSITION: READY";
+    UI.meterFill.style.width = "0%";
+    UI.status.textContent = "Reset. Use Archive or Voice to run the third-person deposition replay again.";
     this.setVoiceState("ready");
     this.syncRoutePanel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: reset\ntrigger: 生成");
@@ -1749,8 +1766,8 @@ class QuestHenshinDemo {
     this.playing = true;
     this.completionAnnounced = false;
     UI.btnPause.textContent = "Pause";
-    UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Armor deposition replay running.`;
-    this.setVoiceState("deposition");
+    UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Third-person armor deposition replay running.`;
+    this.setVoiceState("deposition", "Archive replay is staged in front of you for review.");
     this.depositionStartPromise = this.appendTrialEvent("DEPOSITION_STARTED", {
       stateAfter: "DEPOSITION",
       payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE },
@@ -1947,11 +1964,13 @@ class QuestHenshinDemo {
     xrCamera.getWorldPosition(this.cameraPosition);
     xrCamera.getWorldQuaternion(this.cameraQuaternion);
     this.rigTargetEuler.setFromQuaternion(this.cameraQuaternion, "YXZ");
-    this.rigTargetPosition.copy(this.cameraPosition);
     this.rigTargetQuaternion.setFromEuler(new THREE.Euler(0, this.rigTargetEuler.y, 0, "YXZ"));
+    this.xrForward.set(0, 0, -1).applyQuaternion(this.rigTargetQuaternion).normalize();
+    this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_OBSERVER_DISTANCE));
+    this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_OBSERVER_HEIGHT_OFFSET;
     this.rig.position.lerp(this.rigTargetPosition, 0.28);
     this.rig.quaternion.slerp(this.rigTargetQuaternion, 0.22);
-    this.rig.scale.lerp(this.bodyCenteredScale, 0.18);
+    this.rig.scale.lerp(this.observerScale, 0.18);
   }
 
   updateScene(dt) {
@@ -1986,7 +2005,13 @@ class QuestHenshinDemo {
     let order = 0;
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
-      applySegmentPose(mesh, segments[segmentName], part, reveal, {
+      const pose = segments[segmentName];
+      if (!pose) {
+        mesh.visible = false;
+        order += 1;
+        continue;
+      }
+      applySegmentPose(mesh, pose, part, reveal, {
         centered: Boolean(this.world.session),
         progress,
         finalPosition: this.finalPosition,

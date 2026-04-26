@@ -93,10 +93,18 @@ const UI = {
   stageMeta: document.getElementById("stageMeta"),
   stageParts: document.getElementById("stageParts"),
   eventLog: document.getElementById("eventLog"),
+  latestTrialUpdated: document.getElementById("latestTrialUpdated"),
+  latestTrialStatus: document.getElementById("latestTrialStatus"),
+  latestTrialSession: document.getElementById("latestTrialSession"),
+  latestTrialState: document.getElementById("latestTrialState"),
+  latestTrialEvents: document.getElementById("latestTrialEvents"),
+  latestTrialReplayState: document.getElementById("latestTrialReplayState"),
+  latestTrialReplay: document.getElementById("latestTrialReplay"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
   btnRefreshSuits: document.getElementById("btnRefreshSuits"),
   btnLoadSuit: document.getElementById("btnLoadSuit"),
+  btnRefreshLatestTrial: document.getElementById("btnRefreshLatestTrial"),
   btnGenerate: document.getElementById("btnGenerate"),
   btnCancelGenerate: document.getElementById("btnCancelGenerate"),
   btnAutoFitSave: document.getElementById("btnAutoFitSave"),
@@ -216,6 +224,88 @@ let gltfLoaderModulePromise = null;
 function setStatus(text, isError = false) {
   UI.status.textContent = text;
   UI.status.style.color = isError ? "#9c1b2f" : "#17335f";
+}
+
+function setLatestTrialStatus(text, state = "") {
+  if (!UI.latestTrialStatus) return;
+  UI.latestTrialStatus.classList.remove("complete", "pending", "error");
+  if (state) UI.latestTrialStatus.classList.add(state);
+  UI.latestTrialStatus.textContent = text;
+}
+
+function formatTrialTimestamp(value) {
+  if (!value) return "未取得";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function compactLabel(value, maxLength = 32) {
+  const text = String(value || "-");
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(4, maxLength - 4))}...`;
+}
+
+function renderLatestTrialEmpty(message = "Quest Trial未記録") {
+  setLatestTrialStatus(message, "pending");
+  if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = "未取得";
+  if (UI.latestTrialSession) UI.latestTrialSession.textContent = "-";
+  if (UI.latestTrialState) UI.latestTrialState.textContent = "-";
+  if (UI.latestTrialEvents) UI.latestTrialEvents.textContent = "-";
+  if (UI.latestTrialReplayState) UI.latestTrialReplayState.textContent = "-";
+  if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = "ReplayScript: -";
+}
+
+function renderLatestTrial(data) {
+  const summary = data?.summary || {};
+  const sessionId = summary.session_id || data?.trial_id || data?.trial?.session_id || "-";
+  const state = summary.state || data?.trial?.state || "-";
+  const eventCount = summary.event_count ?? data?.trial?.events?.length ?? "-";
+  const replayPath = summary.replay_script_path || data?.trial?.artifacts?.replay_script_path || "";
+  const isComplete = state === "ACTIVE" && Boolean(replayPath);
+
+  setLatestTrialStatus(isComplete ? "変身試験完了 / ReplayScript保存済み" : `Quest Trial進行: ${state}`, isComplete ? "complete" : "pending");
+  if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = `更新: ${formatTrialTimestamp(summary.updated_at)}`;
+  if (UI.latestTrialSession) {
+    UI.latestTrialSession.textContent = compactLabel(sessionId, 28);
+    UI.latestTrialSession.title = sessionId;
+  }
+  if (UI.latestTrialState) UI.latestTrialState.textContent = state;
+  if (UI.latestTrialEvents) UI.latestTrialEvents.textContent = String(eventCount);
+  if (UI.latestTrialReplayState) UI.latestTrialReplayState.textContent = replayPath ? "保存済み" : "未生成";
+  if (UI.latestTrialReplay) {
+    UI.latestTrialReplay.textContent = `ReplayScript: ${replayPath || "-"}`;
+    UI.latestTrialReplay.title = replayPath || "";
+  }
+}
+
+async function refreshLatestTrial({ silent = false } = {}) {
+  if (!UI.latestTrialStatus) return;
+  if (UI.btnRefreshLatestTrial) UI.btnRefreshLatestTrial.disabled = true;
+  if (!silent) setLatestTrialStatus("Quest Trialを取得中...", "pending");
+  try {
+    const { res, data } = await fetchJson("/v1/trials/latest");
+    if (res.status === 404) {
+      renderLatestTrialEmpty("Quest Trial未記録");
+      return;
+    }
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `Latest trial fetch failed: ${res.status}`);
+    }
+    renderLatestTrial(data);
+  } catch (err) {
+    setLatestTrialStatus("Quest Trial取得エラー", "error");
+    if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = "取得失敗";
+    if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = `error: ${String(err?.message || err)}`;
+  } finally {
+    if (UI.btnRefreshLatestTrial) UI.btnRefreshLatestTrial.disabled = false;
+  }
 }
 
 function bodyTunePartNames() {
@@ -2624,6 +2714,12 @@ function bindEvents() {
     }
   };
 
+  if (UI.btnRefreshLatestTrial) {
+    UI.btnRefreshLatestTrial.onclick = async () => {
+      await refreshLatestTrial();
+    };
+  }
+
   UI.btnLoadSuit.onclick = async () => {
     try {
       await loadSuit(UI.suitPath.value);
@@ -2890,6 +2986,8 @@ async function init() {
   clearHeroPoster();
   if (UI.btnCancelGenerate) UI.btnCancelGenerate.disabled = true;
   if (UI.eventLog) UI.eventLog.textContent = "進行ログを待機中...";
+  renderLatestTrialEmpty();
+  void refreshLatestTrial({ silent: true });
 
   try {
     const detected = await discoverDefaultVrmPath();

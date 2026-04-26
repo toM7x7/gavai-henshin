@@ -92,6 +92,7 @@ Invoke-RestMethod http://localhost:8010/v1/trials/latest
 ```
 
 The important fields are `summary.state`, `summary.event_count`, and `summary.replay_script_path`.
+The PC dashboard also shows the same latest trial in the `Quest実機ログ` card.
 
 Expected limitation over HTTP:
 

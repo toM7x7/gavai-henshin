@@ -108,6 +108,36 @@
           <div id="eventLog" class="event-log">進行ログを待機中...</div>
         </div>
 
+        <div class="latest-trial-panel" aria-label="Latest Quest Trial">
+          <div class="latest-trial-head">
+            <div>
+              <strong>Quest実機ログ</strong>
+              <small id="latestTrialUpdated">未取得</small>
+            </div>
+            <button id="btnRefreshLatestTrial" type="button">更新</button>
+          </div>
+          <div id="latestTrialStatus" class="latest-trial-status">Quest Trial待機中</div>
+          <div class="latest-trial-grid">
+            <div>
+              <span>Session</span>
+              <strong id="latestTrialSession">-</strong>
+            </div>
+            <div>
+              <span>State</span>
+              <strong id="latestTrialState">-</strong>
+            </div>
+            <div>
+              <span>Events</span>
+              <strong id="latestTrialEvents">-</strong>
+            </div>
+            <div>
+              <span>Replay</span>
+              <strong id="latestTrialReplayState">-</strong>
+            </div>
+          </div>
+          <div id="latestTrialReplay" class="latest-trial-replay">ReplayScript: -</div>
+        </div>
+
         <pre id="status">利用準備中...</pre>
 
           <details id="advancedSettings" class="advanced-panel">

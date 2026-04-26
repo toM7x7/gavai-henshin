@@ -117,13 +117,15 @@ const TAU = Math.PI * 2;
 const XR_VIEW_MODE_SELF = "self";
 const XR_VIEW_MODE_OBSERVER = "observer";
 const XR_VIEW_MODE_MIRROR = "mirror";
-const SELF_VIEW_HIDDEN_PARTS = new Set(["left_hand", "right_hand"]);
+const SELF_VIEW_HIDDEN_PARTS = new Set(["helmet", "left_hand", "right_hand"]);
 const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
 const VR_REPLAY_OBSERVER_HEIGHT_OFFSET = -0.06;
 const VR_REPLAY_OBSERVER_SCALE = 0.88;
 const VR_REPLAY_MIRROR_DISTANCE = 1.72;
 const VR_REPLAY_MIRROR_HEIGHT_OFFSET = -0.1;
 const VR_REPLAY_MIRROR_SCALE = 0.82;
+const MIRROR_FRAME_WIDTH = 1.34;
+const MIRROR_FRAME_HEIGHT = 2.08;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -1491,6 +1493,55 @@ class QuestHenshinDemo {
       this.rings.push(ring);
     }
 
+    this.mirrorFrame = new THREE.Group();
+    this.mirrorFrame.name = "XR-Archive-Mirror-Frame";
+    this.mirrorFrame.visible = false;
+    const mirrorGlass = new THREE.Mesh(
+      new THREE.PlaneGeometry(MIRROR_FRAME_WIDTH, MIRROR_FRAME_HEIGHT),
+      new THREE.MeshBasicMaterial({
+        color: 0x9eefff,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    mirrorGlass.position.set(0, -0.58, 0.26);
+    mirrorGlass.renderOrder = 1;
+    this.mirrorFrame.add(mirrorGlass);
+
+    const frameMaterial = new THREE.MeshBasicMaterial({
+      color: 0x43d8ff,
+      transparent: true,
+      opacity: 0.52,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const topBottom = new THREE.PlaneGeometry(MIRROR_FRAME_WIDTH + 0.08, 0.035);
+    const sides = new THREE.PlaneGeometry(0.035, MIRROR_FRAME_HEIGHT + 0.08);
+    for (const [geometry, x, y] of [
+      [topBottom, 0, 0.48],
+      [topBottom, 0, -1.64],
+      [sides, -0.69, -0.58],
+      [sides, 0.69, -0.58],
+    ]) {
+      const bar = new THREE.Mesh(geometry, frameMaterial.clone());
+      bar.position.set(x, y, 0.275);
+      bar.renderOrder = 2;
+      this.mirrorFrame.add(bar);
+    }
+    const mirrorLabel = makeTextPlane("鏡", {
+      width: 0.26,
+      height: 0.08,
+      fontSize: 54,
+      color: "#d7f8ff",
+      background: "rgba(4, 13, 17, 0.44)",
+      border: "rgba(67, 216, 255, 0.46)",
+    });
+    mirrorLabel.position.set(0, 0.59, 0.29);
+    this.mirrorFrame.add(mirrorLabel);
+    this.rig.add(this.mirrorFrame);
+
     const title = makeTextSprite(TRIGGER_PHRASE);
     title.position.set(0, 1.18, -0.3);
     this.rig.add(title);
@@ -2103,6 +2154,9 @@ class QuestHenshinDemo {
     let order = 0;
     const inXr = Boolean(this.world.session);
     const selfView = inXr && this.xrViewMode === XR_VIEW_MODE_SELF;
+    if (this.mirrorFrame) {
+      this.mirrorFrame.visible = inXr && this.xrViewMode === XR_VIEW_MODE_MIRROR;
+    }
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];

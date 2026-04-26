@@ -49,7 +49,7 @@ Current slice:
 - The transformation item should glow during voice standby/recording/deposition so the next action is obvious.
 - Store compact `quest-live-pose.v0` HMD/controller samples in the trial event log as the bridge toward motion replay.
 - Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
-- Keep the bracelet panel compact and use a simple 45 degree clockwise in-plane rotation for the current wrist-read baseline.
+- Keep the bracelet panel compact. Its local horizontal axis should align with the controller laser axis, with the panel plane rotated 90 degrees counterclockwise for a watch-like wrist read.
 
 Next UI slice:
 

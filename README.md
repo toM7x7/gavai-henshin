@@ -1,5 +1,92 @@
 # gavai-henshin
 
+## New Route Runbook
+
+Lore standard:
+
+```text
+Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
+```
+
+Use this route when validating the current new-route stack locally.
+
+### 1. Start Local Services
+
+Terminal 1: API, dashboard, static files.
+
+```powershell
+npm run dev
+```
+
+Terminal 2: Quest/IWSDK Vite app.
+
+```powershell
+npm run dev:quest -- --host 0.0.0.0
+```
+
+PC dashboard:
+
+```text
+http://localhost:8010/viewer/suit-dashboard/
+```
+
+Quest LAN smoke URL:
+
+```text
+http://{PC_LAN_IP}:5173/viewer/quest-iw-demo/?newRoute=1&mockTrigger=1
+```
+
+### 2. Quest Trial
+
+For HTTP LAN smoke, `mockTrigger=1` lets the Voice button exercise the new-route API without microphone permission. This is only a local smoke-test bypass.
+
+Real voice recognition and TTS remain on the Sakura AI Engine path. Use the real voice path with either ADB reverse or LAN HTTPS.
+
+ADB reverse path:
+
+```powershell
+adb devices
+npm run dev:quest:adb
+```
+
+Quest Browser URL:
+
+```text
+http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&mockTrigger=1&mic=1
+```
+
+Expected Quest signals:
+
+- The page status panel shows `ROUTE: NEW`.
+- Voice creates a `TransformSession`.
+- Replay generation ends with `REPLAY: RPL-...`.
+- In immersive mode, the floating VR panel shows route, trial, and replay status.
+
+### 3. Replay Proof
+
+After the Quest trial, confirm the latest durable record:
+
+```powershell
+Invoke-RestMethod http://localhost:8010/v1/trials/latest | ConvertTo-Json -Depth 6
+```
+
+Success criteria:
+
+- `summary.state` is `ACTIVE`.
+- `summary.event_count` is greater than 0.
+- `summary.replay_script_path` points to `sessions/new-route/trials/.../replay-script.json`.
+- The PC dashboard `Quest実機ログ` card shows the same latest trial.
+
+### 4. Active New-Route Branches
+
+Current local route branches:
+
+| Branch | Purpose |
+|---|---|
+| `codex/new-route-quest-status-panel` | Quest page route/API/trial/replay status plus latest-trial API. |
+| `codex/new-route-dashboard-latest-trial` | PC dashboard card for latest Quest trial. |
+| `codex/new-route-vr-trial-readout` | Floating VR control panel route/trial/replay readout. |
+
 Loreを基点に、Blueprintを実行可能にするための **SIM-first プロトタイピング基盤** です。  
 現段階は「技術検証デモを高速に回す」ことを目的に、仮案ルールで構築しています。
 

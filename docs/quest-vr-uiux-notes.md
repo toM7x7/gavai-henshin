@@ -51,6 +51,7 @@ Current slice:
 - Expand recorded live pose samples into compact ReplayScript `deposition_progress` actions and use them for mirror/observer archive replay.
 - Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
 - Keep the bracelet panel compact. Its short side should align with the controller laser axis while the menu remains a horizontal rectangle.
+- Keep the readable face toward the player by flipping the panel 180 degrees around that laser/short-side axis when the face is reversed.
 - Treat the left controller as the bottom-center anchor of the bracelet panel; the compact chip and full horizontal panel should expand upward from that anchor instead of hanging over the player.
 - Default the bracelet to a compact `メニュー` state; left trigger opens/closes the full panel.
 - Let the full panel switch into a world-locked `固定` state for longer inspection, then return to wrist follow with `追従`.

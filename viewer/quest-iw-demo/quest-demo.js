@@ -139,7 +139,9 @@ const XR_MENU_MODE_OPEN = "open";
 const XR_MENU_MODE_WORLD_LOCKED = "worldLocked";
 const XR_MENU_OPEN_AUTO_COMPACT_MS = 8000;
 // Map the panel's short side to the controller laser axis.
-const WATCH_PANEL_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, Math.PI, "XYZ"));
+const WATCH_PANEL_BASE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, Math.PI, "XYZ"));
+const WATCH_PANEL_FACE_FLIP = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI, 0, "XYZ"));
+const WATCH_PANEL_ROTATION = WATCH_PANEL_BASE_ROTATION.clone().multiply(WATCH_PANEL_FACE_FLIP);
 const WATCH_PANEL_WIDTH = 1.74;
 const WATCH_PANEL_HEIGHT = 1.06;
 const WATCH_COMPACT_PANEL_WIDTH = 0.76;

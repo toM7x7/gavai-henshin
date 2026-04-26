@@ -657,16 +657,22 @@ class NewRouteApi:
     def _build_replay_script(self, session: dict[str, Any]) -> dict[str, Any]:
         events = session["events"]
         starts = [self._event_offset_seconds(events[0], event) for event in events]
-        timeline = [
-            {
+        deposition_start_sec = next(
+            (starts[idx] for idx, event in enumerate(events) if event.get("event_type") == "DEPOSITION_STARTED"),
+            0.0,
+        )
+        timeline = []
+        for idx, event in enumerate(events):
+            timeline.append({
                 "segment_id": f"SEG-{idx:04d}",
                 "start_time_sec": starts[idx],
                 "duration_sec": 0.5,
                 "source_event_ids": [event["event_id"]],
                 "actions": [self._replay_action_for_event(event, starts[idx])],
-            }
-            for idx, event in enumerate(events)
-        ]
+            })
+            motion_segment = self._motion_replay_segment(event, deposition_start_sec, idx)
+            if motion_segment:
+                timeline.append(motion_segment)
         duration_sec = max((segment["start_time_sec"] + segment["duration_sec"] for segment in timeline), default=0)
         replay_id = self._build_replay_id(str(session["session_id"]), str(events[0]["occurred_at"]))
         return {
@@ -679,8 +685,50 @@ class NewRouteApi:
                 "event_ids": [event["event_id"] for event in events],
             },
             "duration_sec": duration_sec,
-            "timeline": timeline,
+            "timeline": sorted(timeline, key=lambda segment: (segment["start_time_sec"], segment["segment_id"])),
             "metadata": {"created_at": self._utc_now(), "generator": "new-route-api"},
+        }
+
+    def _motion_replay_segment(self, event: dict[str, Any], deposition_start_sec: float, index: int) -> dict[str, Any] | None:
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            return None
+        motion_capture = payload.get("motion_capture")
+        if not isinstance(motion_capture, dict):
+            return None
+        frames = motion_capture.get("frames")
+        if not isinstance(frames, list) or not frames:
+            return None
+
+        actions: list[dict[str, Any]] = []
+        last_t = 0.0
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            try:
+                frame_t = max(0.0, float(frame.get("t", 0.0)))
+            except (TypeError, ValueError):
+                frame_t = 0.0
+            last_t = max(last_t, frame_t)
+            actions.append({
+                "action_type": "deposition_progress",
+                "at_time_sec": round(deposition_start_sec + frame_t, 3),
+                "params": {
+                    "event_type": "TRACKING_FRAME_BATCH",
+                    "motion_capture_format": motion_capture.get("format", "unknown"),
+                    "tracking": motion_capture.get("tracking"),
+                    "motion_frame": frame,
+                },
+            })
+        if not actions:
+            return None
+
+        return {
+            "segment_id": f"SEG-MOTION-{index:04d}",
+            "start_time_sec": deposition_start_sec,
+            "duration_sec": round(last_t, 3),
+            "source_event_ids": [event["event_id"]],
+            "actions": actions,
         }
 
     def _event_offset_seconds(self, first_event: dict[str, Any], event: dict[str, Any]) -> float:

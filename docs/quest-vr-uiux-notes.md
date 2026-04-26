@@ -58,7 +58,7 @@ Next UI slice:
 - Add a world-lock mode for longer inspection.
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
 - Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
-- Wire ReplayScript generation to prefer recorded live pose samples over the canned body-sim path when motion capture exists.
+- ReplayScript generation now expands recorded live pose samples into `deposition_progress` timeline actions when motion capture exists.
 
 ## Fit And Suit Visibility Rule
 

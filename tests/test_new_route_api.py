@@ -206,6 +206,48 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["replay"]["source_events"]["event_ids"][0], response.body["session"]["events"][0]["event_id"])
             self.assertTrue(response.body["replay_path"].endswith("replay-script.json"))
 
+    def test_get_trial_replay_expands_motion_capture_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_STARTED", "state_after": "DEPOSITION"},
+            )
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {
+                    "event_type": "DEPOSITION_COMPLETED",
+                    "state_after": "ACTIVE",
+                    "payload": {
+                        "motion_capture": {
+                            "format": "quest-live-pose.v0",
+                            "tracking": "hmd_plus_controllers",
+                            "frames": [
+                                {"t": 0.0, "head": [0, 1.6, 0], "right_hand": [0.3, 1.2, -0.2]},
+                                {"t": 0.2, "head": [0, 1.6, 0], "right_hand": [0.5, 1.2, -0.2]},
+                            ],
+                        }
+                    },
+                },
+            )
+
+            response = api.get("/v1/trials/S-TRIAL-UNIT-0001/replay")
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 200)
+            motion_segments = [
+                segment for segment in response.body["replay"]["timeline"]
+                if str(segment["segment_id"]).startswith("SEG-MOTION-")
+            ]
+            self.assertEqual(len(motion_segments), 1)
+            self.assertEqual(motion_segments[0]["duration_sec"], 0.2)
+            self.assertEqual(len(motion_segments[0]["actions"]), 2)
+            self.assertEqual(motion_segments[0]["actions"][1]["action_type"], "deposition_progress")
+            self.assertEqual(motion_segments[0]["actions"][1]["params"]["motion_capture_format"], "quest-live-pose.v0")
+            self.assertEqual(motion_segments[0]["actions"][1]["params"]["motion_frame"]["right_hand"], [0.5, 1.2, -0.2])
+
     def test_get_latest_trial_returns_replay_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             api = self._api_with_manifest(Path(tmp) / "suits")

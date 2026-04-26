@@ -10,6 +10,12 @@ Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
 
 Use this route when validating the current new-route stack locally.
 
+Status note:
+
+- `Webでスーツ成立` is the lore/product target, not the current external-ready state.
+- Current Web/dashboard surfaces are internal operator tools for generation, contract checks, trial records, and replay proof.
+- The active visitor-facing experience lane is the Quest transformation PoC plus local Replay verification.
+
 Current route copy standard:
 
 ```text

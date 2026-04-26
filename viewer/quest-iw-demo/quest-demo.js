@@ -126,6 +126,9 @@ const VR_REPLAY_MIRROR_HEIGHT_OFFSET = -0.1;
 const VR_REPLAY_MIRROR_SCALE = 0.82;
 const MIRROR_FRAME_WIDTH = 1.34;
 const MIRROR_FRAME_HEIGHT = 2.08;
+const XR_MENU_FALLBACK_DISTANCE = 1.14;
+const XR_MENU_FALLBACK_LEFT = 0.62;
+const XR_MENU_FALLBACK_DOWN = 0.32;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -1084,7 +1087,7 @@ class SpatialControlPanel {
     this.tempMatrix = new THREE.Matrix4();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
-    this.forward = new THREE.Vector3();
+    this.controllerQuaternion = new THREE.Quaternion();
     this.controllerPosition = new THREE.Vector3();
     this.menuOffset = new THREE.Vector3();
     this.controllers = [];
@@ -1316,21 +1319,21 @@ class SpatialControlPanel {
     const xrCamera = this.demo.renderer.xr.getCamera(this.demo.camera) || this.demo.camera;
     xrCamera.getWorldPosition(this.cameraPosition);
     xrCamera.getWorldQuaternion(this.cameraQuaternion);
-    this.forward.set(0, 0, -1).applyQuaternion(this.cameraQuaternion).normalize();
     const wrist = this.controllers[0];
     if (wrist) {
       wrist.getWorldPosition(this.controllerPosition);
+      wrist.getWorldQuaternion(this.controllerQuaternion);
     }
     const wristDistance = wrist ? this.controllerPosition.distanceTo(this.cameraPosition) : 0;
     if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
-      this.menuOffset.set(-0.1, 0.12, -0.1).applyQuaternion(this.cameraQuaternion);
+      this.menuOffset.set(-0.14, 0.08, -0.12).applyQuaternion(this.controllerQuaternion);
       this.group.position.copy(this.controllerPosition).add(this.menuOffset);
-      this.group.quaternion.copy(this.cameraQuaternion);
+      this.group.quaternion.copy(this.controllerQuaternion);
       this.group.scale.setScalar(0.58);
     } else {
-      this.menuOffset.set(-0.68, -0.34, -1.15).applyQuaternion(this.cameraQuaternion);
-      this.group.position.copy(this.cameraPosition).add(this.menuOffset);
-      this.group.quaternion.copy(this.cameraQuaternion);
+      this.demo.ensureMenuFallbackAnchor();
+      this.group.position.copy(this.demo.menuFallbackPosition);
+      this.group.quaternion.copy(this.demo.menuFallbackQuaternion);
       this.group.scale.setScalar(0.62);
     }
 
@@ -1413,6 +1416,16 @@ class QuestHenshinDemo {
     this.rigTargetQuaternion = new THREE.Quaternion();
     this.viewForwardQuaternion = new THREE.Quaternion();
     this.rigTargetEuler = new THREE.Euler(0, 0, 0, "YXZ");
+    this.xrWorldAnchorReady = false;
+    this.xrWorldAnchorMode = null;
+    this.xrWorldAnchorPosition = new THREE.Vector3();
+    this.xrWorldAnchorQuaternion = new THREE.Quaternion();
+    this.xrWorldAnchorScale = new THREE.Vector3(1, 1, 1);
+    this.menuFallbackReady = false;
+    this.menuFallbackPosition = new THREE.Vector3();
+    this.menuFallbackQuaternion = new THREE.Quaternion();
+    this.menuFallbackRight = new THREE.Vector3();
+    this.menuFallbackForward = new THREE.Vector3();
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
     this.selfScale = new THREE.Vector3(1, 1, 1);
     this.observerScale = new THREE.Vector3(
@@ -1549,11 +1562,17 @@ class QuestHenshinDemo {
 
     this.renderer.xr.addEventListener("sessionstart", () => {
       this.audioBed.start();
+      this.xrWorldAnchorReady = false;
+      this.menuFallbackReady = false;
+      this.captureWorldAnchor(this.xrViewMode);
+      this.ensureMenuFallbackAnchor();
       UI.status.textContent = "VR開始。音声は一人称変身、記録再生は鏡/観察で確認します。";
       UI.btnEnterVR.textContent = "VR終了";
       this.setVoiceState(this.voiceState, "音声は一人称変身。記録再生は鏡/観察で確認します。");
     });
     this.renderer.xr.addEventListener("sessionend", () => {
+      this.xrWorldAnchorReady = false;
+      this.menuFallbackReady = false;
       UI.status.textContent = "VR終了。再開するにはVR開始を押してください。";
       UI.btnEnterVR.textContent = "VR開始";
     });
@@ -1848,6 +1867,8 @@ class QuestHenshinDemo {
       this.elapsed = 0;
       this.playing = false;
       this.xrViewMode = XR_VIEW_MODE_SELF;
+      this.xrWorldAnchorReady = false;
+      this.captureWorldAnchor(this.xrViewMode);
       UI.btnPause.textContent = "再開";
       this.setVoiceState("ready", `音声ボタン後に ${TRIGGER_PHRASE} と発声してください。`);
     }
@@ -1864,6 +1885,8 @@ class QuestHenshinDemo {
     this.completionAnnounced = false;
     this.depositionStartPromise = null;
     this.xrViewMode = XR_VIEW_MODE_SELF;
+    this.xrWorldAnchorReady = false;
+    this.captureWorldAnchor(this.xrViewMode);
     UI.btnPause.textContent = "再開";
     UI.equipState.textContent = "変身: 待機";
     UI.meterFill.style.width = "0%";
@@ -1878,6 +1901,8 @@ class QuestHenshinDemo {
   replayFromStart({ speak, audio = speak, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
     if (audio) this.audioBed.start();
     this.xrViewMode = viewMode;
+    this.xrWorldAnchorReady = false;
+    this.captureWorldAnchor(viewMode);
     this.elapsed = 0;
     this.playing = true;
     this.completionAnnounced = false;
@@ -2080,6 +2105,57 @@ class QuestHenshinDemo {
     return this.frames[index];
   }
 
+  getXrYawPose() {
+    const xrCamera = this.renderer.xr.getCamera(this.camera) || this.camera;
+    xrCamera.getWorldPosition(this.cameraPosition);
+    xrCamera.getWorldQuaternion(this.cameraQuaternion);
+    this.rigTargetEuler.setFromQuaternion(this.cameraQuaternion, "YXZ");
+    const yaw = this.rigTargetEuler.y;
+    this.viewForwardQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0, "YXZ"));
+    return yaw;
+  }
+
+  captureWorldAnchor(viewMode = this.xrViewMode) {
+    if (!this.world.session) return;
+    const yaw = this.getXrYawPose();
+    const forward = this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
+    let rigYaw = yaw;
+    this.xrWorldAnchorPosition.copy(this.cameraPosition);
+
+    if (viewMode === XR_VIEW_MODE_MIRROR) {
+      this.xrWorldAnchorPosition.add(forward.multiplyScalar(VR_REPLAY_MIRROR_DISTANCE));
+      this.xrWorldAnchorPosition.y = this.cameraPosition.y + VR_REPLAY_MIRROR_HEIGHT_OFFSET;
+      this.xrWorldAnchorScale.copy(this.mirrorScale);
+      rigYaw = yaw + Math.PI;
+    } else if (viewMode === XR_VIEW_MODE_OBSERVER) {
+      this.xrWorldAnchorPosition.add(forward.multiplyScalar(VR_REPLAY_OBSERVER_DISTANCE));
+      this.xrWorldAnchorPosition.y = this.cameraPosition.y + VR_REPLAY_OBSERVER_HEIGHT_OFFSET;
+      this.xrWorldAnchorScale.copy(this.observerScale);
+      rigYaw = yaw + Math.PI * 0.82;
+    } else {
+      this.xrWorldAnchorPosition.y = this.cameraPosition.y;
+      this.xrWorldAnchorScale.copy(this.selfScale);
+    }
+
+    this.xrWorldAnchorQuaternion.setFromEuler(new THREE.Euler(0, rigYaw, 0, "YXZ"));
+    this.xrWorldAnchorMode = viewMode;
+    this.xrWorldAnchorReady = true;
+  }
+
+  ensureMenuFallbackAnchor() {
+    if (this.menuFallbackReady || !this.world.session) return;
+    const yaw = this.getXrYawPose();
+    this.menuFallbackQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0, "YXZ"));
+    this.menuFallbackForward.set(0, 0, -1).applyQuaternion(this.menuFallbackQuaternion).normalize();
+    this.menuFallbackRight.set(1, 0, 0).applyQuaternion(this.menuFallbackQuaternion).normalize();
+    this.menuFallbackPosition
+      .copy(this.cameraPosition)
+      .add(this.menuFallbackForward.multiplyScalar(XR_MENU_FALLBACK_DISTANCE))
+      .add(this.menuFallbackRight.multiplyScalar(-XR_MENU_FALLBACK_LEFT));
+    this.menuFallbackPosition.y = this.cameraPosition.y - XR_MENU_FALLBACK_DOWN;
+    this.menuFallbackReady = true;
+  }
+
   updateRigAnchor() {
     if (!this.world.session) {
       this.rig.position.lerp(NON_VR_RIG_POSITION, 0.16);
@@ -2089,35 +2165,12 @@ class QuestHenshinDemo {
       return;
     }
 
-    const xrCamera = this.renderer.xr.getCamera(this.camera) || this.camera;
-    xrCamera.getWorldPosition(this.cameraPosition);
-    xrCamera.getWorldQuaternion(this.cameraQuaternion);
-    this.rigTargetEuler.setFromQuaternion(this.cameraQuaternion, "YXZ");
-    const yaw = this.rigTargetEuler.y;
-    const rigYaw =
-      this.xrViewMode === XR_VIEW_MODE_SELF
-        ? yaw
-        : this.xrViewMode === XR_VIEW_MODE_MIRROR
-          ? yaw + Math.PI
-          : yaw + Math.PI * 0.82;
-    this.rigTargetQuaternion.setFromEuler(new THREE.Euler(0, rigYaw, 0, "YXZ"));
-    this.viewForwardQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0, "YXZ"));
-    this.xrForward.set(0, 0, -1).applyQuaternion(this.rigTargetQuaternion).normalize();
-    if (this.xrViewMode === XR_VIEW_MODE_SELF) {
-      this.rigTargetPosition.copy(this.cameraPosition);
-      this.rigTargetPosition.y = this.cameraPosition.y;
-      this.rig.scale.lerp(this.selfScale, 0.18);
-    } else if (this.xrViewMode === XR_VIEW_MODE_MIRROR) {
-      this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
-      this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_MIRROR_DISTANCE));
-      this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_MIRROR_HEIGHT_OFFSET;
-      this.rig.scale.lerp(this.mirrorScale, 0.18);
-    } else {
-      this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
-      this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_OBSERVER_DISTANCE));
-      this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_OBSERVER_HEIGHT_OFFSET;
-      this.rig.scale.lerp(this.observerScale, 0.18);
+    if (!this.xrWorldAnchorReady || this.xrWorldAnchorMode !== this.xrViewMode) {
+      this.captureWorldAnchor(this.xrViewMode);
     }
+    this.rigTargetPosition.copy(this.xrWorldAnchorPosition);
+    this.rigTargetQuaternion.copy(this.xrWorldAnchorQuaternion);
+    this.rig.scale.lerp(this.xrWorldAnchorScale, 0.18);
     this.rig.position.lerp(this.rigTargetPosition, 0.28);
     this.rig.quaternion.slerp(this.rigTargetQuaternion, 0.22);
   }

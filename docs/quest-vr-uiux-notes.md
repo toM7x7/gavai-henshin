@@ -7,6 +7,8 @@ Date: 2026-04-26
 - Voice activation is the first-person transformation path.
 - Archive replay is a review path. It can switch between `mirror` and `observer`.
 - The in-VR menu should not stay head-locked in the center of view.
+- Transformation, mirror, and observer confirmation should be world-anchored after activation.
+- The menu should be bracelet/controller-adjacent; fallback placement should also be world-anchored, not HMD-locked.
 - Visitor-facing controls should be Japanese-first.
 
 ## References Checked
@@ -34,11 +36,12 @@ Current slice:
 
 - Move the menu away from head-locked center placement.
 - Prefer left-controller/wrist-adjacent placement.
-- Fall back to a left-side dock when controller tracking is not reliable.
+- Fall back to a left-side world dock when controller tracking is not reliable.
 - Keep controller ray selection as the stable baseline.
 - Keep hand tracking opt-in with `hands=1`.
 - Add a visible mirror frame in `mirror` archive mode so the mode is legible in VR.
 - Hide helmet and hand parts in first-person view when they would block the player's view.
+- Lock the transformation rig to the activation anchor so head movement does not drag the suit, mirror, or observer view.
 
 Next UI slice:
 

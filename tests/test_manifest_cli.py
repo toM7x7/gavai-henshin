@@ -47,6 +47,8 @@ class TestManifestCli(unittest.TestCase):
         manifest = json.loads(output.read_text(encoding="utf-8"))
         self.assertEqual(manifest["parts"]["helmet"]["catalog_part_id"], "viewer.mesh.helmet.v1")
         self.assertEqual(manifest["parts"]["left_hand"]["catalog_part_id"], "viewer.mesh.left_hand.v1")
+        self.assertEqual(manifest["fit_contract"]["module_fit_space"], "body_sim_segment")
+        self.assertEqual(manifest["texture_fallback"]["source"], "palette")
 
     def test_validate_accepts_partcatalog_seed(self) -> None:
         stdout = StringIO()

@@ -84,6 +84,12 @@
         ]
       }
     },
+    "fit_contract": {
+      "$ref": "#/$defs/fitContract"
+    },
+    "texture_fallback": {
+      "$ref": "#/$defs/textureFallback"
+    },
     "parts": {
       "type": "object",
       "additionalProperties": false,
@@ -318,6 +324,70 @@
     "colorHex": {
       "type": "string",
       "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$"
+    },
+    "fitContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_fit_stage",
+        "module_fit_space",
+        "authoring_baseline_ref",
+        "runtime_policy"
+      ],
+      "properties": {
+        "module_fit_stage": {
+          "type": "string",
+          "enum": [
+            "authoring_baseline",
+            "calibrated_body_fit",
+            "runtime_override"
+          ]
+        },
+        "module_fit_space": {
+          "type": "string",
+          "enum": [
+            "body_sim_segment",
+            "vrm_anchor_local",
+            "viewer_runtime"
+          ]
+        },
+        "authoring_baseline_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "textureFallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "source"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "palette_material",
+            "none"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "palette",
+            "part_debug_color"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
     },
     "part": {
       "type": "object",

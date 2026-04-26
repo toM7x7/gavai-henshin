@@ -429,6 +429,30 @@ async function loadSuitSpec() {
   });
 }
 
+function colorFromSuitHex(hex, fallbackHex) {
+  const color = new THREE.Color(fallbackHex);
+  if (typeof hex === "string" && hex.trim()) {
+    try {
+      color.set(hex.trim());
+    } catch {
+      color.setHex(fallbackHex);
+    }
+  }
+  return color.getHex();
+}
+
+function fallbackArmorColor(part, suitspec) {
+  if (suitspec?.texture_fallback?.mode !== "palette_material") {
+    return PART_COLORS[part] || 0xd9f6ff;
+  }
+  if (["helmet", "chest", "back", "waist"].includes(part)) {
+    return colorFromSuitHex(suitspec?.palette?.primary, 0xf4f1e8);
+  }
+  const primary = new THREE.Color(colorFromSuitHex(suitspec?.palette?.primary, 0xf4f1e8));
+  const secondary = new THREE.Color(colorFromSuitHex(suitspec?.palette?.secondary, 0x8c96a3));
+  return secondary.lerp(primary, 0.32).getHex();
+}
+
 function createMaterial(color, opacity = 0.0) {
   return new THREE.MeshStandardMaterial({
     color,
@@ -520,8 +544,8 @@ async function loadTexture(texturePath) {
   return pending;
 }
 
-async function createArmorMesh(part, module) {
-  const color = PART_COLORS[part] || 0xd9f6ff;
+async function createArmorMesh(part, module, suitspec) {
+  const color = fallbackArmorColor(part, suitspec);
   let geometry;
   try {
     geometry = await loadMeshGeometry(module?.asset_ref, part);
@@ -541,7 +565,10 @@ async function createArmorMesh(part, module) {
         mesh.material.color.setHex(0xffffff);
         mesh.material.needsUpdate = true;
       })
-      .catch((error) => console.warn(`texture fallback for ${part}`, error));
+      .catch((error) => {
+        mesh.userData.textureFallbackActive = suitspec?.texture_fallback?.mode === "palette_material";
+        console.warn(`texture fallback for ${part}`, error);
+      });
   }
   return mesh;
 }
@@ -1052,7 +1079,7 @@ class SpatialControlPanel {
     this.progressFill.renderOrder = 13;
     this.group.add(this.progressFill);
 
-    this.routeStatus = makeTextPlane("ROUTE LOCAL | TRIAL WAIT | REPLAY WAIT", {
+    this.routeStatus = makeTextPlane("FORGE LOCAL | TRIAL WAIT | ARCHIVE WAIT", {
       width: 1.02,
       height: 0.09,
       canvasWidth: 1400,
@@ -1093,7 +1120,7 @@ class SpatialControlPanel {
     this.group.add(this.listenRing);
 
     this.addButton("voice", "VOICE", -0.26, 0xffcf5a);
-    this.addButton("replay", "REPLAY", -0.43, 0x43d8ff);
+    this.addButton("replay", "ARCHIVE", -0.43, 0x43d8ff);
     this.addButton("pause", "PAUSE", -0.6, 0xf6f1df);
   }
 
@@ -1165,7 +1192,7 @@ class SpatialControlPanel {
         : state === "ok"
           ? "rgba(67, 216, 255, 0.54)"
           : "rgba(255, 207, 90, 0.42)";
-    updateTextPlane(this.routeStatus, text || "ROUTE LOCAL | TRIAL WAIT | REPLAY WAIT", {
+    updateTextPlane(this.routeStatus, text || "FORGE LOCAL | TRIAL WAIT | ARCHIVE WAIT", {
       color,
       border,
       maxLines: 1,
@@ -1405,16 +1432,16 @@ class QuestHenshinDemo {
 
   syncRoutePanel() {
     const newRoute = useNewRouteApi();
-    setBadge(UI.routeMode, newRoute ? "ROUTE: NEW" : "ROUTE: LOCAL", newRoute ? "ok" : "idle");
-    setBadge(UI.routeApi, newRoute ? "API: /v1 ARMED" : "API: OFF", newRoute ? "pending" : "idle");
+    setBadge(UI.routeMode, newRoute ? "SUIT FORGE: NEW" : "SUIT FORGE: LOCAL", newRoute ? "ok" : "idle");
+    setBadge(UI.routeApi, newRoute ? "FIT AUDIT: /v1 ARMED" : "FIT AUDIT: OFF", newRoute ? "pending" : "idle");
     setBadge(
       UI.routeTrial,
-      this.trialId ? `TRIAL: ${compactToken(this.trialId)}` : "TRIAL: WAIT",
+      this.trialId ? `HENSHIN TRIAL: ${compactToken(this.trialId)}` : "HENSHIN TRIAL: WAIT",
       this.trialId ? "ok" : "pending",
     );
     setBadge(
       UI.routeReplay,
-      this.trialReplayPath ? `REPLAY: ${compactToken(this.trialReplayPath)}` : "REPLAY: WAIT",
+      this.trialReplayPath ? `REPLAY ARCHIVE: ${compactToken(this.trialReplayPath)}` : "REPLAY ARCHIVE: WAIT",
       this.trialReplayPath ? "ok" : "pending",
     );
     this.routeState.apiLabel = newRoute ? "/v1 ARMED" : "OFF";
@@ -1427,21 +1454,21 @@ class QuestHenshinDemo {
   }
 
   setRouteApi(label, state = "pending") {
-    setBadge(UI.routeApi, `API: ${compactToken(label, 28)}`, state);
+    setBadge(UI.routeApi, `FIT AUDIT: ${compactToken(label, 28)}`, state);
     this.routeState.apiLabel = label;
     this.routeState.apiState = state;
     this.syncSpatialRouteStatus();
   }
 
   setRouteTrial(label, state = "pending") {
-    setBadge(UI.routeTrial, `TRIAL: ${compactToken(label, 30)}`, state);
+    setBadge(UI.routeTrial, `HENSHIN TRIAL: ${compactToken(label, 30)}`, state);
     this.routeState.trialLabel = label;
     this.routeState.trialState = state;
     this.syncSpatialRouteStatus();
   }
 
   setRouteReplay(label, state = "pending") {
-    setBadge(UI.routeReplay, `REPLAY: ${compactToken(label, 30)}`, state);
+    setBadge(UI.routeReplay, `REPLAY ARCHIVE: ${compactToken(label, 30)}`, state);
     this.routeState.replayLabel = label;
     this.routeState.replayState = state;
     this.syncSpatialRouteStatus();
@@ -1462,7 +1489,7 @@ class QuestHenshinDemo {
         : this.routeState.replayState === "ok"
           ? "ok"
           : "pending";
-    this.spatialPanel?.setRouteStatus(`ROUTE ${mode} | API ${api} | TRIAL ${trial} | REPLAY ${replay}`, state);
+    this.spatialPanel?.setRouteStatus(`FORGE ${mode} | FIT ${api} | TRIAL ${trial} | ARCHIVE ${replay}`, state);
   }
 
   async ensureTrial() {
@@ -1616,7 +1643,7 @@ class QuestHenshinDemo {
       const part = ARMOR_PARTS[index];
       const module = modules[part] || {};
       if (module.enabled === false) continue;
-      const mesh = await createArmorMesh(part, module);
+      const mesh = await createArmorMesh(part, module, this.suitspec);
       mesh.userData.partIndex = index;
       this.rig.add(mesh);
       this.meshes.set(part, mesh);

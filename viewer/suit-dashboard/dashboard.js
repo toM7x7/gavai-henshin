@@ -252,14 +252,14 @@ function compactLabel(value, maxLength = 32) {
   return `${text.slice(0, Math.max(4, maxLength - 4))}...`;
 }
 
-function renderLatestTrialEmpty(message = "Quest Trial未記録") {
+function renderLatestTrialEmpty(message = "HENSHIN TRIAL未記録") {
   setLatestTrialStatus(message, "pending");
   if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = "未取得";
   if (UI.latestTrialSession) UI.latestTrialSession.textContent = "-";
   if (UI.latestTrialState) UI.latestTrialState.textContent = "-";
   if (UI.latestTrialEvents) UI.latestTrialEvents.textContent = "-";
   if (UI.latestTrialReplayState) UI.latestTrialReplayState.textContent = "-";
-  if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = "ReplayScript: -";
+  if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = "Replay Archive: -";
 }
 
 function renderLatestTrial(data) {
@@ -270,7 +270,7 @@ function renderLatestTrial(data) {
   const replayPath = summary.replay_script_path || data?.trial?.artifacts?.replay_script_path || "";
   const isComplete = state === "ACTIVE" && Boolean(replayPath);
 
-  setLatestTrialStatus(isComplete ? "変身試験完了 / ReplayScript保存済み" : `Quest Trial進行: ${state}`, isComplete ? "complete" : "pending");
+  setLatestTrialStatus(isComplete ? "変身試験完了 / Replay Archive保存済み" : `HENSHIN TRIAL進行: ${state}`, isComplete ? "complete" : "pending");
   if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = `更新: ${formatTrialTimestamp(summary.updated_at)}`;
   if (UI.latestTrialSession) {
     UI.latestTrialSession.textContent = compactLabel(sessionId, 28);
@@ -280,7 +280,7 @@ function renderLatestTrial(data) {
   if (UI.latestTrialEvents) UI.latestTrialEvents.textContent = String(eventCount);
   if (UI.latestTrialReplayState) UI.latestTrialReplayState.textContent = replayPath ? "保存済み" : "未生成";
   if (UI.latestTrialReplay) {
-    UI.latestTrialReplay.textContent = `ReplayScript: ${replayPath || "-"}`;
+    UI.latestTrialReplay.textContent = `Replay Archive: ${replayPath || "-"}`;
     UI.latestTrialReplay.title = replayPath || "";
   }
 }
@@ -288,11 +288,11 @@ function renderLatestTrial(data) {
 async function refreshLatestTrial({ silent = false } = {}) {
   if (!UI.latestTrialStatus) return;
   if (UI.btnRefreshLatestTrial) UI.btnRefreshLatestTrial.disabled = true;
-  if (!silent) setLatestTrialStatus("Quest Trialを取得中...", "pending");
+  if (!silent) setLatestTrialStatus("HENSHIN TRIALを取得中...", "pending");
   try {
     const { res, data } = await fetchJson("/v1/trials/latest");
     if (res.status === 404) {
-      renderLatestTrialEmpty("Quest Trial未記録");
+      renderLatestTrialEmpty("HENSHIN TRIAL未記録");
       return;
     }
     if (!res.ok || data.ok === false) {
@@ -300,7 +300,7 @@ async function refreshLatestTrial({ silent = false } = {}) {
     }
     renderLatestTrial(data);
   } catch (err) {
-    setLatestTrialStatus("Quest Trial取得エラー", "error");
+    setLatestTrialStatus("HENSHIN TRIAL取得エラー", "error");
     if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = "取得失敗";
     if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = `error: ${String(err?.message || err)}`;
   } finally {

@@ -34,6 +34,8 @@ class TestManifestProjection(unittest.TestCase):
         self.assertEqual(manifest["parts"]["helmet"]["catalog_part_id"], "viewer.mesh.helmet.v1")
         self.assertEqual(manifest["parts"]["left_hand"]["catalog_part_id"], "viewer.mesh.left_hand.v1")
         self.assertEqual(manifest["parts"]["right_hand"]["fit"]["source"], "right_hand")
+        self.assertEqual(manifest["fit_contract"]["module_fit_stage"], "calibrated_body_fit")
+        self.assertEqual(manifest["texture_fallback"]["mode"], "palette_material")
         self.assertEqual(manifest["runtime_targets"], ["web_preview", "quest", "replay"])
 
 

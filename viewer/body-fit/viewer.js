@@ -274,6 +274,42 @@ function formatAutoFitSummaryJa(summary) {
   return `${state} | Fit ${fitScore} | アンカー ${missing} | 表面 ${surface} | ヒーロー ${hero} | 左右差 ${symmetry} | 継ぎ目 ${seam} | 表示 ${render} | テクスチャ ${textureNg}`;
 }
 
+function textureFallbackAllowsPalette(suitspec) {
+  return suitspec?.texture_fallback?.mode === "palette_material";
+}
+
+function colorFromSuitHex(hex, fallbackHex) {
+  const color = new THREE.Color(fallbackHex);
+  if (typeof hex === "string" && hex.trim()) {
+    try {
+      color.set(hex.trim());
+    } catch {
+      color.setHex(fallbackHex);
+    }
+  }
+  return color;
+}
+
+function fallbackMaterialColorForPart(partName, palette = {}) {
+  const primary = colorFromSuitHex(palette.primary, 0xf4f1e8);
+  const secondary = colorFromSuitHex(palette.secondary, 0x8c96a3);
+  if (["helmet", "chest", "back", "waist"].includes(partName)) {
+    return primary;
+  }
+  return secondary.lerp(primary, 0.32);
+}
+
+function applyPaletteTextureFallback(record, palette = {}) {
+  if (!record?.mesh?.material) return;
+  record.mesh.material.map = null;
+  record.mesh.material.color.copy(fallbackMaterialColorForPart(record.partName, palette));
+  if (record.mesh.material.emissive) {
+    record.mesh.material.emissive.copy(colorFromSuitHex(palette.emissive, 0xd8f7ff)).multiplyScalar(0.08);
+  }
+  record.mesh.material.needsUpdate = true;
+  restoreBaseGeometry(record.mesh);
+}
+
 const DEFAULT_SEGMENT_POSE = {
   chest_core: {
     position_x: 0.55,
@@ -1121,6 +1157,7 @@ class BodyFitViewer {
     for (const rec of this.meshes.values()) {
       if (!rec.texturePath) continue;
       if (!rec.renderMesh?.visible && !rec.renderGroup?.visible) continue;
+      if (!rec.texture && rec.textureFallbackActive) continue;
       if (!rec.texture || rec.mesh.material.map !== rec.texture) {
         missing.push(rec.partName);
       }
@@ -4453,7 +4490,14 @@ class BodyFitViewer {
       this.meshes.set(name, record);
       this.renderMeshes.set(name, record);
       if (record.texturePath) {
-        record.texture = await loadTextureAsset(record.texturePath).catch(() => null);
+        record.texture = await loadTextureAsset(record.texturePath).catch((error) => {
+          record.textureError = String(error?.message || error || "texture load failed");
+          if (textureFallbackAllowsPalette(this.suitspec)) {
+            record.textureFallbackActive = true;
+            applyPaletteTextureFallback(record, this.suitspec?.palette || {});
+          }
+          return null;
+        });
       }
     }
     this.updateTextureMode();
@@ -4477,7 +4521,12 @@ class BodyFitViewer {
         continue;
       }
       if (!rec.texturePath) continue;
-      if (!rec.texture) continue;
+      if (!rec.texture) {
+        if (rec.textureFallbackActive) {
+          applyPaletteTextureFallback(rec, this.suitspec?.palette || {});
+        }
+        continue;
+      }
       rec.mesh.material.map = rec.texture;
       rec.mesh.material.color.setHex(0xe7f0ff);
       rec.mesh.material.needsUpdate = true;
@@ -5070,6 +5119,8 @@ function createWearableRecord({ partName, fitGeometry, renderGeometry, config, a
     geometryMode: "dual_shell",
     texturePath,
     texture: null,
+    textureError: null,
+    textureFallbackActive: false,
     reliefApplied: false,
     lastTransform: null,
     surfaceFitNodeCount: 0,

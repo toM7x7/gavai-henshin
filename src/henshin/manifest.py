@@ -108,5 +108,8 @@ def project_suitspec_to_manifest(
     for key in ("approval_id", "morphotype_id", "blueprint", "emblem", "text"):
         if key in suitspec:
             manifest[key] = suitspec[key]
+    for key in ("fit_contract", "texture_fallback"):
+        if key in suitspec:
+            manifest[key] = suitspec[key]
 
     return manifest

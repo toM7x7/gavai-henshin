@@ -24,6 +24,12 @@ class TestSampleSuitspec(unittest.TestCase):
             self.assertEqual(module["fit"]["attach"], "center")
             self.assertLess(abs(float(module["vrm_anchor"]["offset"][0])), 0.1)
 
+    def test_sample_declares_fit_and_texture_fallback_contracts(self) -> None:
+        self.assertEqual(self.sample["fit_contract"]["module_fit_stage"], "calibrated_body_fit")
+        self.assertEqual(self.sample["fit_contract"]["module_fit_space"], "body_sim_segment")
+        self.assertEqual(self.sample["texture_fallback"]["mode"], "palette_material")
+        self.assertEqual(self.sample["texture_fallback"]["source"], "palette")
+
 
 if __name__ == "__main__":
     unittest.main()

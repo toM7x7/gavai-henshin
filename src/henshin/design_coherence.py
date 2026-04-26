@@ -52,7 +52,8 @@ def run_design_coherence_audit(
 
     findings: list[dict[str, Any]] = []
     modules = payload.get("modules") if isinstance(payload.get("modules"), dict) else {}
-    _audit_module_inventory(repo_root, modules, findings)
+    _audit_fit_contract(payload, findings)
+    _audit_module_inventory(repo_root, payload, modules, findings)
     _audit_left_right_pairs(modules, findings)
     _audit_operator_identity(payload, findings)
     _audit_canon_fit_drift(modules, canon_fit, findings)
@@ -102,7 +103,24 @@ def write_design_coherence_markdown(audit: dict[str, Any], output: str | Path) -
     return path
 
 
-def _audit_module_inventory(repo_root: Path, modules: dict[str, Any], findings: list[dict[str, Any]]) -> None:
+def _audit_fit_contract(payload: dict[str, Any], findings: list[dict[str, Any]]) -> None:
+    contract = payload.get("fit_contract") if isinstance(payload.get("fit_contract"), dict) else {}
+    if not contract:
+        findings.append(_finding("warning", "missing_fit_contract", None, "SuitSpec does not declare what module.fit means."))
+        return
+    if contract.get("module_fit_stage") not in {"authoring_baseline", "calibrated_body_fit", "runtime_override"}:
+        findings.append(_finding("warning", "unknown_fit_stage", None, "fit_contract.module_fit_stage is not recognized."))
+    if contract.get("module_fit_space") not in {"body_sim_segment", "vrm_anchor_local", "viewer_runtime"}:
+        findings.append(_finding("warning", "unknown_fit_space", None, "fit_contract.module_fit_space is not recognized."))
+
+
+def _texture_fallback_mode(payload: dict[str, Any]) -> str:
+    fallback = payload.get("texture_fallback") if isinstance(payload.get("texture_fallback"), dict) else {}
+    return str(fallback.get("mode") or "").strip()
+
+
+def _audit_module_inventory(repo_root: Path, payload: dict[str, Any], modules: dict[str, Any], findings: list[dict[str, Any]]) -> None:
+    texture_fallback_mode = _texture_fallback_mode(payload)
     for part in PART_ORDER:
         module = modules.get(part)
         if not isinstance(module, dict):
@@ -115,14 +133,24 @@ def _audit_module_inventory(repo_root: Path, modules: dict[str, Any], findings: 
         if not texture_path:
             findings.append(_finding("warning", "missing_texture_path", part, "No texture path is recorded."))
         elif _is_runtime_output(texture_path):
-            findings.append(
-                _finding(
-                    "warning",
-                    "runtime_texture_path",
-                    part,
-                    f"Canonical sample points to ignored runtime output: {texture_path}",
+            if texture_fallback_mode == "palette_material":
+                findings.append(
+                    _finding(
+                        "info",
+                        "runtime_texture_path_with_fallback",
+                        part,
+                        f"Runtime texture path uses palette fallback when missing: {texture_path}",
+                    )
                 )
-            )
+            else:
+                findings.append(
+                    _finding(
+                        "warning",
+                        "runtime_texture_path",
+                        part,
+                        f"Canonical sample points to ignored runtime output: {texture_path}",
+                    )
+                )
         elif not _resolve_repo_path(repo_root, texture_path).is_file():
             findings.append(_finding("warning", "missing_texture_file", part, f"Texture file is missing: {texture_path}"))
 

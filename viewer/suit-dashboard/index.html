@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Suit Dashboard</title>
+    <title>Suit Forge Dashboard</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -108,18 +108,18 @@
           <div id="eventLog" class="event-log">進行ログを待機中...</div>
         </div>
 
-        <div class="latest-trial-panel" aria-label="Latest Quest Trial">
+        <div class="latest-trial-panel" aria-label="Latest Henshin Trial">
           <div class="latest-trial-head">
             <div>
-              <strong>Quest実機ログ</strong>
+              <strong>HENSHIN TRIAL / Replay Archive</strong>
               <small id="latestTrialUpdated">未取得</small>
             </div>
             <button id="btnRefreshLatestTrial" type="button">更新</button>
           </div>
-          <div id="latestTrialStatus" class="latest-trial-status">Quest Trial待機中</div>
+          <div id="latestTrialStatus" class="latest-trial-status">HENSHIN TRIAL待機中</div>
           <div class="latest-trial-grid">
             <div>
-              <span>Session</span>
+              <span>Trial</span>
               <strong id="latestTrialSession">-</strong>
             </div>
             <div>
@@ -131,11 +131,11 @@
               <strong id="latestTrialEvents">-</strong>
             </div>
             <div>
-              <span>Replay</span>
+              <span>Archive</span>
               <strong id="latestTrialReplayState">-</strong>
             </div>
           </div>
-          <div id="latestTrialReplay" class="latest-trial-replay">ReplayScript: -</div>
+          <div id="latestTrialReplay" class="latest-trial-replay">Replay Archive: -</div>
         </div>
 
         <pre id="status">利用準備中...</pre>
@@ -263,7 +263,7 @@
 
             <div class="actions utility-actions">
               <button id="btnAutoFitSave">自動フィットして保存</button>
-              <button id="btnOpenBodyFit">Body Fit 調整を開く</button>
+              <button id="btnOpenBodyFit">FIT AUDITを開く</button>
             </div>
 
             <div class="field fit-panel">

@@ -10,6 +10,12 @@ Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
 
 Use this route when validating the current new-route stack locally.
 
+Current route copy standard:
+
+```text
+Web: Suit Forge -> Quest: Henshin Trial -> Replay: Archive
+```
+
 ### 1. Start Local Services
 
 Terminal 1: API, dashboard, static files.
@@ -57,10 +63,10 @@ http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&mockTrigger=1&mic=1
 
 Expected Quest signals:
 
-- The page status panel shows `ROUTE: NEW`.
+- The page status panel shows `SUIT FORGE: NEW`.
 - Voice creates a `TransformSession`.
-- Replay generation ends with `REPLAY: RPL-...`.
-- In immersive mode, the floating VR panel shows route, trial, and replay status.
+- Replay generation ends with `REPLAY ARCHIVE: RPL-...`.
+- In immersive mode, the floating VR panel shows forge, fit, trial, and archive status.
 
 ### 3. Replay Proof
 
@@ -75,7 +81,7 @@ Success criteria:
 - `summary.state` is `ACTIVE`.
 - `summary.event_count` is greater than 0.
 - `summary.replay_script_path` points to `sessions/new-route/trials/.../replay-script.json`.
-- The PC dashboard `Quest実機ログ` card shows the same latest trial.
+- The PC dashboard `HENSHIN TRIAL / Replay Archive` card shows the same latest trial.
 
 ### 4. Active New-Route Branches
 
@@ -86,6 +92,11 @@ Current local route branches:
 | `codex/new-route-quest-status-panel` | Quest page route/API/trial/replay status plus latest-trial API. |
 | `codex/new-route-dashboard-latest-trial` | PC dashboard card for latest Quest trial. |
 | `codex/new-route-vr-trial-readout` | Floating VR control panel route/trial/replay readout. |
+| `codex/new-route-canonical-identity-lock` | Canonical suit identity, fit contract, texture fallback, and lore-copy coherence. |
+
+Design coherence and visual brush-up tracking:
+
+- `docs/new-route-design-coherence-audit.md`
 
 Loreを基点に、Blueprintを実行可能にするための **SIM-first プロトタイピング基盤** です。  
 現段階は「技術検証デモを高速に回す」ことを目的に、仮案ルールで構築しています。

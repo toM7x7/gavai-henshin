@@ -15,6 +15,8 @@ This note tracks the next brush-up lane after the data route is working. The goa
 The route mechanics are now far enough along to expose visual debt:
 
 - `examples/suitspec.sample.json` is the first canonical suit seed. Its top-level operator identity is now locked to the latest generated identity metadata: `legacy / stoic / clear_white`.
+- The sample now declares `fit_contract`, so `module.fit` is explicitly treated as calibrated body-sim fit while `vrm_anchor` remains the Quest/VRM attachment path.
+- The sample also declares `texture_fallback`, so ignored runtime textures under `sessions/...` can degrade to deterministic palette materials on fresh checkouts.
 - `viewer/shared/armor-canon.js` contains baseline fit, color, VRM anchor, and part-slot conventions, but the sample `SuitSpec` overrides many values with much smaller or differently offset fit settings.
 - `viewer/assets/meshes/*.mesh.json` covers the full 18-part kit, so the base part inventory is complete.
 - `texture_path` values in the sample point into `sessions/...`, which is runtime output and ignored by git. That is fine for local proof, but it is not a portable canonical design seed.
@@ -46,16 +48,19 @@ The active palette follows that family: ceramic off-white shell, cool gray subst
 | `left_forearm` / `right_forearm` | sample scale and offset differ sharply from canon |
 | `chest` / `back` | sample is materially smaller and shifted |
 
-This may be intentional if the values belong to different coordinate meanings, but that ambiguity needs to be made explicit. One field should mean authored mesh fit, another should mean viewer/body-fit resolved fit, or the projection step should normalize them.
+This is now recorded by `fit_contract`: `module.fit` means calibrated body-sim fit in `body_sim_segment` space, not the authoring baseline in `armor-canon.js`. The audit still reports large drift as info so visual reviewers can inspect it without treating the calibrated state as a schema failure.
 
 ### 3. Texture references are not portable
 
-The canonical sample refers to generated files under `sessions/S-20260412-YOUB/...`. Those files exist locally, but `sessions/*` is ignored. A fresh checkout may have a valid schema but no visible texture family.
+The canonical sample refers to generated files under `sessions/S-20260412-YOUB/...`. Those files exist locally, but `sessions/*` is ignored. A fresh checkout may have a valid schema but no visible texture family unless a fallback rule is present.
 
-The next design pass should add either:
+The current branch adds the fallback rule:
 
-- committed baseline swatches/placeholder textures under `viewer/assets/`, or
-- a clear fallback rule that derives material colors from `palette` and `operator_profile` when textures are missing.
+- `texture_fallback.mode = palette_material`
+- Body Fit and Quest views derive material colors from `palette` when runtime texture files are absent.
+- The audit downgrades runtime texture paths from warning to info when that fallback contract is present.
+
+Committed baseline swatches or final regenerated textures remain useful for polish, but the route no longer depends on ignored local files to show a coherent suit.
 
 ### 4. Debug colors conflict with final suit identity
 
@@ -81,12 +86,12 @@ REPLAY ARCHIVE
    - Keep future generation metadata, palette, and prompt family aligned with this identity unless a deliberate new suit ID is created.
 
 2. Fit contract split
-   - Define whether `module.fit` is authored mesh fit, body-fit result, or runtime override.
-   - Add a validator or audit test that reports large drift from `armor-canon.js` unless explicitly marked as calibrated.
+   - Done: `module.fit` is declared as calibrated body-sim fit in `body_sim_segment` space.
+   - The audit reports large drift from `armor-canon.js` as info when the calibrated contract is present.
 
 3. Portable visual seed
-   - Add committed baseline material assets or deterministic palette fallback.
-   - Avoid depending on ignored `sessions/...` files for canonical appearance.
+   - Done for deterministic palette fallback.
+   - Future polish can still add committed baseline material assets.
 
 4. Part visual pass
    - Check silhouette continuity across helmet, chest, shoulders, forearms, thighs, shins, boots, and hands.
@@ -132,11 +137,17 @@ Current branch:
 codex/new-route-canonical-identity-lock
 ```
 
-This slice consumes the audit's first finding by making the sample identity internally consistent:
+This branch first consumed the audit's identity finding by making the sample identity internally consistent:
 
 - top-level operator profile matches latest generation metadata,
 - sample palette and projected manifest palette use the rescue ceramic white family,
 - design coherence audit treats `operator_identity_drift` as a regression.
+
+The active follow-up slice adds explicit route contracts:
+
+- `fit_contract` removes ambiguity around `module.fit`.
+- `texture_fallback` keeps Body Fit and Quest visual output coherent when ignored runtime textures are missing.
+- Dashboard and Quest copy move toward `SUIT FORGE`, `FIT AUDIT`, `HENSHIN TRIAL`, and `REPLAY ARCHIVE`.
 
 Command:
 
@@ -144,4 +155,4 @@ Command:
 python tools/run_henshin.py design-coherence-audit --output-md tests/.tmp/design-coherence-audit.md
 ```
 
-After this lock, the next highest-value slice is the fit contract split: make `module.fit` unambiguously mean authored fit, calibrated body-fit result, or runtime override.
+After this lock, the next highest-value slice is the part visual pass: inspect helmet/chest/shoulder silhouette continuity and decide whether committed material assets are needed before a larger UI redesign.

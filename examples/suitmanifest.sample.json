@@ -14,6 +14,17 @@
     "quest",
     "replay"
   ],
+  "fit_contract": {
+    "module_fit_stage": "calibrated_body_fit",
+    "module_fit_space": "body_sim_segment",
+    "authoring_baseline_ref": "viewer/shared/armor-canon.js#MODULE_VIS",
+    "runtime_policy": "Use module.fit as the calibrated body-sim fit. Use vrm_anchor for Quest/VRM attachment."
+  },
+  "texture_fallback": {
+    "mode": "palette_material",
+    "source": "palette",
+    "reason": "Canonical sample may reference runtime-generated textures; fresh checkouts must still render from palette."
+  },
   "parts": {
     "helmet": {
       "enabled": true,

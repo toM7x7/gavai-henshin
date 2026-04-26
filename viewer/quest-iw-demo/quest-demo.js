@@ -94,6 +94,7 @@ const UI = {
   btnEnterVR: document.getElementById("btnEnterVR"),
   btnVoice: document.getElementById("btnVoice"),
   btnReplay: document.getElementById("btnReplay"),
+  btnReplayView: document.getElementById("btnReplayView"),
   btnPause: document.getElementById("btnPause"),
   btnReset: document.getElementById("btnReset"),
   micState: document.getElementById("micState"),
@@ -113,9 +114,16 @@ const textureLoader = new THREE.TextureLoader();
 const geometryCache = new Map();
 const textureCache = new Map();
 const TAU = Math.PI * 2;
+const XR_VIEW_MODE_SELF = "self";
+const XR_VIEW_MODE_OBSERVER = "observer";
+const XR_VIEW_MODE_MIRROR = "mirror";
+const SELF_VIEW_HIDDEN_PARTS = new Set(["left_hand", "right_hand"]);
 const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
 const VR_REPLAY_OBSERVER_HEIGHT_OFFSET = -0.06;
 const VR_REPLAY_OBSERVER_SCALE = 0.88;
+const VR_REPLAY_MIRROR_DISTANCE = 1.72;
+const VR_REPLAY_MIRROR_HEIGHT_OFFSET = -0.1;
+const VR_REPLAY_MIRROR_SCALE = 0.82;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -152,43 +160,43 @@ const VR_PART_SCALE = {
 
 const VOICE_STATES = {
   ready: {
-    label: "VOICE READY",
-    hint: `Point here, pull trigger, then say ${TRIGGER_PHRASE}.`,
+    label: "音声 待機",
+    hint: `ここに向けてトリガー後、${TRIGGER_PHRASE} と発声。`,
     color: 0x43d8ff,
   },
   arming: {
-    label: "MIC ARMING",
-    hint: "Wait for SPEAK NOW before talking.",
+    label: "準備中",
+    hint: "発声案内まで少し待ってください。",
     color: 0x8edfff,
   },
   recording: {
-    label: "SPEAK NOW",
-    hint: `Say ${TRIGGER_PHRASE} clearly.`,
+    label: "発声",
+    hint: `${TRIGGER_PHRASE} と発声してください。`,
     color: 0xffcf5a,
   },
   analyzing: {
-    label: "ANALYZING",
-    hint: "Whisper is checking the command.",
+    label: "解析中",
+    hint: "音声合図を確認しています。",
     color: 0x8edfff,
   },
   detected: {
-    label: `${TRIGGER_PHRASE} DETECTED`,
-    hint: "Armor deposition is starting.",
+    label: `${TRIGGER_PHRASE} 確認`,
+    hint: "変身を開始します。",
     color: 0xfff4c8,
   },
   deposition: {
-    label: "DEPOSITION",
-    hint: "Armor is forming around you.",
+    label: "変身中",
+    hint: "装甲を展開しています。",
     color: 0xffcf5a,
   },
   complete: {
-    label: "ARMOR ONLINE",
-    hint: "Replay remains available.",
+    label: "完了",
+    hint: "記録再生できます。",
     color: 0xf6f1df,
   },
   rejected: {
-    label: "RETRY VOICE",
-    hint: `I could not confirm ${TRIGGER_PHRASE}.`,
+    label: "再試行",
+    hint: `${TRIGGER_PHRASE} を確認できませんでした。`,
     color: 0xff6b6b,
   },
 };
@@ -248,6 +256,14 @@ function useMicrophoneCapture() {
 
 function useHandTracking() {
   return params().get("hands") === "1";
+}
+
+function getArchiveViewMode() {
+  return params().get("replayView") === XR_VIEW_MODE_OBSERVER ? XR_VIEW_MODE_OBSERVER : XR_VIEW_MODE_MIRROR;
+}
+
+function formatArchiveViewMode(mode) {
+  return mode === XR_VIEW_MODE_OBSERVER ? "観察" : "鏡";
 }
 
 function makeMockAudioCapture() {
@@ -1067,6 +1083,8 @@ class SpatialControlPanel {
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
     this.forward = new THREE.Vector3();
+    this.controllerPosition = new THREE.Vector3();
+    this.menuOffset = new THREE.Vector3();
     this.controllers = [];
     this.buttons = [];
     this.hovered = null;
@@ -1091,7 +1109,7 @@ class SpatialControlPanel {
     panel.renderOrder = 10;
     this.group.add(panel);
 
-    this.status = makeTextPlane("VOICE READY", {
+    this.status = makeTextPlane("音声 待機", {
       width: 1.02,
       height: 0.12,
       fontSize: 68,
@@ -1102,7 +1120,7 @@ class SpatialControlPanel {
     this.status.position.set(0, 0.5, 0.012);
     this.group.add(this.status);
 
-    this.hint = makeTextPlane(`Trigger: ${TRIGGER_PHRASE}`, {
+    this.hint = makeTextPlane(`合図: ${TRIGGER_PHRASE}`, {
       width: 1.02,
       height: 0.12,
       canvasHeight: 220,
@@ -1132,7 +1150,7 @@ class SpatialControlPanel {
     this.progressFill.renderOrder = 13;
     this.group.add(this.progressFill);
 
-    this.routeStatus = makeTextPlane("FORGE LOCAL | TRIAL WAIT | ARCHIVE WAIT", {
+    this.routeStatus = makeTextPlane("生成 LOCAL | 試験 WAIT | 記録 WAIT", {
       width: 1.02,
       height: 0.09,
       canvasWidth: 1400,
@@ -1147,7 +1165,7 @@ class SpatialControlPanel {
     this.routeStatus.position.set(0, 0.16, 0.017);
     this.group.add(this.routeStatus);
 
-    this.debug = makeTextPlane("Voice debug: waiting.", {
+    this.debug = makeTextPlane("音声デバッグ: 待機", {
       width: 1.02,
       height: 0.18,
       canvasWidth: 1400,
@@ -1172,10 +1190,11 @@ class SpatialControlPanel {
     this.listenRing.renderOrder = 15;
     this.group.add(this.listenRing);
 
-    this.addButton("voice", "VOICE", -0.26, 0xffcf5a);
-    this.addButton("replay", "ARCHIVE", -0.43, 0x43d8ff);
-    this.addButton("pause", "PAUSE", -0.6, 0xf6f1df);
-    this.addButton("reset", "RESET", -0.77, 0xff6b6b);
+    this.addButton("voice", "音声", -0.26, 0xffcf5a);
+    this.addButton("replay", "記録再生", -0.43, 0x43d8ff);
+    this.addButton("view", "鏡", -0.6, 0x8edfff);
+    this.addButton("pause", "停止", -0.77, 0xf6f1df);
+    this.addButton("reset", "リセット", -0.94, 0xff6b6b);
   }
 
   addButton(action, label, y, color) {
@@ -1231,7 +1250,7 @@ class SpatialControlPanel {
 
   setDebug(text) {
     if (!this.debug) return;
-    updateTextPlane(this.debug, text || "Voice debug: waiting.", {
+    updateTextPlane(this.debug, text || "音声デバッグ: 待機", {
       color: "#eef9ff",
       maxLines: 4,
     });
@@ -1246,7 +1265,7 @@ class SpatialControlPanel {
         : state === "ok"
           ? "rgba(67, 216, 255, 0.54)"
           : "rgba(255, 207, 90, 0.42)";
-    updateTextPlane(this.routeStatus, text || "FORGE LOCAL | TRIAL WAIT | ARCHIVE WAIT", {
+    updateTextPlane(this.routeStatus, text || "生成 LOCAL | 試験 WAIT | 記録 WAIT", {
       color,
       border,
       maxLines: 1,
@@ -1265,7 +1284,15 @@ class SpatialControlPanel {
     this.listenRing.material.color.setHex(voiceState.color);
     for (const button of this.buttons) {
       if (button.action === "pause") {
-        updateTextPlane(button.text, this.demo.playing ? "PAUSE" : "RESUME");
+        updateTextPlane(button.text, this.demo.playing ? "停止" : "再開");
+      }
+    }
+  }
+
+  setArchiveViewMode(mode) {
+    for (const button of this.buttons) {
+      if (button.action === "view") {
+        updateTextPlane(button.text, mode === XR_VIEW_MODE_OBSERVER ? "観察" : "鏡");
       }
     }
   }
@@ -1288,9 +1315,22 @@ class SpatialControlPanel {
     xrCamera.getWorldPosition(this.cameraPosition);
     xrCamera.getWorldQuaternion(this.cameraQuaternion);
     this.forward.set(0, 0, -1).applyQuaternion(this.cameraQuaternion).normalize();
-    this.group.position.copy(this.cameraPosition).add(this.forward.multiplyScalar(1.18));
-    this.group.position.y -= 0.42;
-    this.group.quaternion.copy(this.cameraQuaternion);
+    const wrist = this.controllers[0];
+    if (wrist) {
+      wrist.getWorldPosition(this.controllerPosition);
+    }
+    const wristDistance = wrist ? this.controllerPosition.distanceTo(this.cameraPosition) : 0;
+    if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
+      this.menuOffset.set(-0.1, 0.12, -0.1).applyQuaternion(this.cameraQuaternion);
+      this.group.position.copy(this.controllerPosition).add(this.menuOffset);
+      this.group.quaternion.copy(this.cameraQuaternion);
+      this.group.scale.setScalar(0.58);
+    } else {
+      this.menuOffset.set(-0.68, -0.34, -1.15).applyQuaternion(this.cameraQuaternion);
+      this.group.position.copy(this.cameraPosition).add(this.menuOffset);
+      this.group.quaternion.copy(this.cameraQuaternion);
+      this.group.scale.setScalar(0.62);
+    }
 
     this.pulseClock += dt;
     const pulse = 1 + Math.sin(this.pulseClock * 5.8) * 0.08;
@@ -1326,7 +1366,8 @@ class SpatialControlPanel {
     this.demo.audioBed.pulse(820, 0.08);
     const action = this.hovered.userData.action;
     if (action === "voice") void this.demo.runVoiceCommand();
-    if (action === "replay") this.demo.replayFromStart({ speak: true });
+    if (action === "replay") this.demo.replayFromStart({ speak: true, viewMode: this.demo.archiveViewMode, source: "archive" });
+    if (action === "view") this.demo.cycleArchiveViewMode();
     if (action === "pause") this.demo.togglePause();
     if (action === "reset") this.demo.reset();
   }
@@ -1352,6 +1393,8 @@ class QuestHenshinDemo {
     this.trialReady = false;
     this.trialReplayPath = null;
     this.depositionStartPromise = null;
+    this.xrViewMode = XR_VIEW_MODE_SELF;
+    this.archiveViewMode = getArchiveViewMode();
     this.routeState = {
       apiLabel: useNewRouteApi() ? "/v1 ARMED" : "OFF",
       apiState: useNewRouteApi() ? "pending" : "idle",
@@ -1366,13 +1409,16 @@ class QuestHenshinDemo {
     this.xrForward = new THREE.Vector3();
     this.rigTargetPosition = new THREE.Vector3();
     this.rigTargetQuaternion = new THREE.Quaternion();
+    this.viewForwardQuaternion = new THREE.Quaternion();
     this.rigTargetEuler = new THREE.Euler(0, 0, 0, "YXZ");
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
+    this.selfScale = new THREE.Vector3(1, 1, 1);
     this.observerScale = new THREE.Vector3(
       VR_REPLAY_OBSERVER_SCALE,
       VR_REPLAY_OBSERVER_SCALE,
       VR_REPLAY_OBSERVER_SCALE,
     );
+    this.mirrorScale = new THREE.Vector3(VR_REPLAY_MIRROR_SCALE, VR_REPLAY_MIRROR_SCALE, VR_REPLAY_MIRROR_SCALE);
     this.finalPosition = new THREE.Vector3();
     this.stagePosition = new THREE.Vector3();
 
@@ -1386,6 +1432,7 @@ class QuestHenshinDemo {
     this.initScene();
     this.spatialPanel = new SpatialControlPanel(this);
     this.setVoiceState("ready");
+    this.updateArchiveViewModeLabel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
     this.syncRoutePanel();
     this.bind();
@@ -1451,35 +1498,50 @@ class QuestHenshinDemo {
 
     this.renderer.xr.addEventListener("sessionstart", () => {
       this.audioBed.start();
-      UI.status.textContent = "IWSDK immersive-vr session started. Archive replay uses a third-person observer view.";
-      UI.btnEnterVR.textContent = "Exit VR";
-      this.setVoiceState(this.voiceState, "Observer replay active. Live body attachment is still under fit audit.");
+      UI.status.textContent = "VR開始。音声は一人称変身、記録再生は鏡/観察で確認します。";
+      UI.btnEnterVR.textContent = "VR終了";
+      this.setVoiceState(this.voiceState, "音声は一人称変身。記録再生は鏡/観察で確認します。");
     });
     this.renderer.xr.addEventListener("sessionend", () => {
-      UI.status.textContent = "VR session ended. Enter VR to return to immersive mode.";
-      UI.btnEnterVR.textContent = "Enter VR";
+      UI.status.textContent = "VR終了。再開するにはVR開始を押してください。";
+      UI.btnEnterVR.textContent = "VR開始";
     });
   }
 
   bind() {
     UI.btnEnterVR.onclick = () => this.toggleVR();
     UI.btnVoice.onclick = () => this.runVoiceCommand();
-    UI.btnReplay.onclick = () => this.replayFromStart({ speak: true });
+    UI.btnReplay.onclick = () => this.replayFromStart({ speak: true, viewMode: this.archiveViewMode, source: "archive" });
+    if (UI.btnReplayView) UI.btnReplayView.onclick = () => this.cycleArchiveViewMode();
     UI.btnPause.onclick = () => this.togglePause();
     UI.btnReset.onclick = () => this.reset();
+  }
+
+  updateArchiveViewModeLabel() {
+    const label = formatArchiveViewMode(this.archiveViewMode);
+    if (UI.btnReplayView) UI.btnReplayView.textContent = label;
+    this.spatialPanel?.setArchiveViewMode(this.archiveViewMode);
+  }
+
+  cycleArchiveViewMode() {
+    this.archiveViewMode =
+      this.archiveViewMode === XR_VIEW_MODE_MIRROR ? XR_VIEW_MODE_OBSERVER : XR_VIEW_MODE_MIRROR;
+    this.updateArchiveViewModeLabel();
+    UI.status.textContent = `記録再生の視点: ${formatArchiveViewMode(this.archiveViewMode)}`;
+    this.setVoiceState(this.voiceState, `記録再生は${formatArchiveViewMode(this.archiveViewMode)}視点で再生します。`);
   }
 
   setVoiceState(state, detail = "", options = {}) {
     this.voiceState = state;
     const voiceState = VOICE_STATES[state] || VOICE_STATES.ready;
-    UI.triggerState.textContent = `VOICE: ${voiceState.label}`;
+    UI.triggerState.textContent = `音声: ${voiceState.label}`;
     UI.micState.textContent = detail || voiceState.hint;
     if (options.status) UI.status.textContent = options.status;
     this.spatialPanel?.setVoiceState(state, detail);
   }
 
   updateVoiceDebug(text) {
-    const value = text || "Voice debug: waiting.";
+    const value = text || "音声デバッグ: 待機";
     if (UI.voiceDebug) UI.voiceDebug.textContent = value;
     this.spatialPanel?.setDebug(value);
   }
@@ -1492,16 +1554,16 @@ class QuestHenshinDemo {
 
   syncRoutePanel() {
     const newRoute = useNewRouteApi();
-    setBadge(UI.routeMode, newRoute ? "SUIT FORGE: NEW" : "SUIT FORGE: LOCAL", newRoute ? "ok" : "idle");
-    setBadge(UI.routeApi, newRoute ? "FIT AUDIT: /v1 ARMED" : "FIT AUDIT: OFF", newRoute ? "pending" : "idle");
+    setBadge(UI.routeMode, newRoute ? "生成: NEW" : "生成: LOCAL", newRoute ? "ok" : "idle");
+    setBadge(UI.routeApi, newRoute ? "適合監査: /v1" : "適合監査: OFF", newRoute ? "pending" : "idle");
     setBadge(
       UI.routeTrial,
-      this.trialId ? `HENSHIN TRIAL: ${compactToken(this.trialId)}` : "HENSHIN TRIAL: WAIT",
+      this.trialId ? `変身試験: ${compactToken(this.trialId)}` : "変身試験: WAIT",
       this.trialId ? "ok" : "pending",
     );
     setBadge(
       UI.routeReplay,
-      this.trialReplayPath ? `REPLAY ARCHIVE: ${compactToken(this.trialReplayPath)}` : "REPLAY ARCHIVE: WAIT",
+      this.trialReplayPath ? `記録保管: ${compactToken(this.trialReplayPath)}` : "記録保管: WAIT",
       this.trialReplayPath ? "ok" : "pending",
     );
     setRouteContract(UI.routeContract, this.suitspec);
@@ -1515,21 +1577,21 @@ class QuestHenshinDemo {
   }
 
   setRouteApi(label, state = "pending") {
-    setBadge(UI.routeApi, `FIT AUDIT: ${compactToken(label, 28)}`, state);
+    setBadge(UI.routeApi, `適合監査: ${compactToken(label, 28)}`, state);
     this.routeState.apiLabel = label;
     this.routeState.apiState = state;
     this.syncSpatialRouteStatus();
   }
 
   setRouteTrial(label, state = "pending") {
-    setBadge(UI.routeTrial, `HENSHIN TRIAL: ${compactToken(label, 30)}`, state);
+    setBadge(UI.routeTrial, `変身試験: ${compactToken(label, 30)}`, state);
     this.routeState.trialLabel = label;
     this.routeState.trialState = state;
     this.syncSpatialRouteStatus();
   }
 
   setRouteReplay(label, state = "pending") {
-    setBadge(UI.routeReplay, `REPLAY ARCHIVE: ${compactToken(label, 30)}`, state);
+    setBadge(UI.routeReplay, `記録保管: ${compactToken(label, 30)}`, state);
     this.routeState.replayLabel = label;
     this.routeState.replayState = state;
     this.syncSpatialRouteStatus();
@@ -1550,7 +1612,7 @@ class QuestHenshinDemo {
         : this.routeState.replayState === "ok"
           ? "ok"
           : "pending";
-    this.spatialPanel?.setRouteStatus(`FORGE ${mode} | FIT ${api} | TRIAL ${trial} | ARCHIVE ${replay}`, state);
+    this.spatialPanel?.setRouteStatus(`生成 ${mode} | 適合 ${api} | 試験 ${trial} | 記録 ${replay}`, state);
   }
 
   async ensureTrial() {
@@ -1636,7 +1698,7 @@ class QuestHenshinDemo {
 
   togglePause() {
     this.playing = !this.playing;
-    UI.btnPause.textContent = this.playing ? "Pause" : "Resume";
+    UI.btnPause.textContent = this.playing ? "停止" : "再開";
     this.spatialPanel?.setVoiceState(this.voiceState);
   }
 
@@ -1651,14 +1713,14 @@ class QuestHenshinDemo {
 
   async updateVRAvailability() {
     if (!navigator.xr?.isSessionSupported) {
-      UI.micState.textContent = "WebXR is not exposed. Use Quest Browser or IWSDK Vite emulator.";
+      UI.micState.textContent = "WebXRを利用できません。Quest BrowserまたはIWSDK Vite emulatorで確認してください。";
       return;
     }
     const supported = await navigator.xr.isSessionSupported(SessionMode.ImmersiveVR).catch(() => false);
     UI.btnEnterVR.disabled = !supported;
     UI.micState.textContent = supported
-      ? "IWSDK immersive-vr is available. Enter VR from Quest Browser."
-      : "immersive-vr is not available in this browser context.";
+      ? "immersive-vr利用可能。Quest BrowserからVR開始できます。"
+      : "このブラウザではimmersive-vrを利用できません。";
   }
 
   startRenderLoop() {
@@ -1720,23 +1782,23 @@ class QuestHenshinDemo {
     UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets. FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
   }
 
-  async applyReplay(replay, { speak, autoplay = true }) {
+  async applyReplay(replay, { speak, autoplay = true, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
     this.replay = replay;
     this.frames = replay?.deposition?.body_sim_path
       ? await this.loadBodySim(replay.deposition.body_sim_path)
       : [];
     UI.sessionId.textContent = replay.session_id || "SESSION";
-    UI.triggerState.textContent = replay.trigger?.detected ? `VOICE: ${replay.trigger.phrase || TRIGGER_PHRASE}` : "VOICE: WAIT";
-    UI.equipState.textContent = autoplay && replay.deposition?.completed ? "DEPOSITION: COMPLETE" : "DEPOSITION: READY";
+    UI.triggerState.textContent = replay.trigger?.detected ? `音声: ${replay.trigger.phrase || TRIGGER_PHRASE}` : "音声: 待機";
+    UI.equipState.textContent = autoplay && replay.deposition?.completed ? "変身: 完了" : "変身: 待機";
     UI.voiceLine.textContent = replay.tts?.text || "";
     if (autoplay) {
-      this.replayFromStart({ speak });
+      this.replayFromStart({ speak, viewMode, source });
     } else {
       this.elapsed = 0;
       this.playing = false;
-      UI.btnPause.textContent = "Resume";
-      this.setVoiceState("ready", "Whisper trigger required. Say 生成 after pressing Voice.");
-      this.setVoiceState("ready", `Whisper trigger required. Say ${TRIGGER_PHRASE} after pressing Voice.`);
+      this.xrViewMode = XR_VIEW_MODE_SELF;
+      UI.btnPause.textContent = "再開";
+      this.setVoiceState("ready", `音声ボタン後に ${TRIGGER_PHRASE} と発声してください。`);
     }
   }
 
@@ -1750,27 +1812,36 @@ class QuestHenshinDemo {
     this.playing = false;
     this.completionAnnounced = false;
     this.depositionStartPromise = null;
-    UI.btnPause.textContent = "Resume";
-    UI.equipState.textContent = "DEPOSITION: READY";
+    this.xrViewMode = XR_VIEW_MODE_SELF;
+    UI.btnPause.textContent = "再開";
+    UI.equipState.textContent = "変身: 待機";
     UI.meterFill.style.width = "0%";
-    UI.status.textContent = "Reset. Use Archive or Voice to run the third-person deposition replay again.";
+    UI.status.textContent = "リセット完了。音声で一人称変身、記録再生で鏡/観察を確認できます。";
     this.setVoiceState("ready");
+    this.updateArchiveViewModeLabel();
     this.syncRoutePanel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: reset\ntrigger: 生成");
     this.updateVoiceDebug(`VOICE DEBUG\nresult: reset\ntrigger: ${TRIGGER_PHRASE}`);
   }
 
-  replayFromStart({ speak, audio = speak }) {
+  replayFromStart({ speak, audio = speak, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
     if (audio) this.audioBed.start();
+    this.xrViewMode = viewMode;
     this.elapsed = 0;
     this.playing = true;
     this.completionAnnounced = false;
-    UI.btnPause.textContent = "Pause";
-    UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Third-person armor deposition replay running.`;
-    this.setVoiceState("deposition", "Archive replay is staged in front of you for review.");
+    UI.btnPause.textContent = "停止";
+    const archive = source === "archive";
+    UI.status.textContent = archive
+      ? `記録再生: ${formatArchiveViewMode(viewMode)}視点で身体トレースを確認します。`
+      : `音声合図 ${TRIGGER_PHRASE} を確認。一人称変身を開始します。`;
+    this.setVoiceState(
+      "deposition",
+      archive ? `記録再生は${formatArchiveViewMode(viewMode)}視点です。` : "一人称変身中。手先表示は安全のため抑制中です。",
+    );
     this.depositionStartPromise = this.appendTrialEvent("DEPOSITION_STARTED", {
       stateAfter: "DEPOSITION",
-      payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE },
+      payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE, view_mode: viewMode, replay_source: source },
       idempotencyKey: "deposition-started",
     });
     void this.depositionStartPromise;
@@ -1875,12 +1946,19 @@ class QuestHenshinDemo {
       if (data.replay && data.result?.tts?.audio_path && !data.replay.tts?.audio_path) {
         data.replay.tts = data.result.tts;
       }
-      if (data.replay) await this.applyReplay(data.replay, { speak: Boolean(data.ok), autoplay: true });
+      if (data.replay) {
+        await this.applyReplay(data.replay, {
+          speak: Boolean(data.ok),
+          autoplay: true,
+          viewMode: XR_VIEW_MODE_SELF,
+          source: "voice",
+        });
+      }
     } catch (error) {
       console.error(error);
       const message = String(error?.message || error);
-      UI.status.textContent = "Voice rejected. Read the Voice debug panel for transcript and audio details.";
-      UI.equipState.textContent = "DEPOSITION: CHECK";
+      UI.status.textContent = "音声を確認できません。音声デバッグを確認してください。";
+      UI.equipState.textContent = "変身: 確認";
       if (useNewRouteApi()) this.setRouteApi("VOICE ERROR", "error");
       this.setVoiceState("rejected", message.length > 92 ? `${message.slice(0, 89)}...` : message);
       if (UI.voiceDebug && UI.voiceDebug.textContent.startsWith("VOICE DEBUG")) {
@@ -1964,13 +2042,33 @@ class QuestHenshinDemo {
     xrCamera.getWorldPosition(this.cameraPosition);
     xrCamera.getWorldQuaternion(this.cameraQuaternion);
     this.rigTargetEuler.setFromQuaternion(this.cameraQuaternion, "YXZ");
-    this.rigTargetQuaternion.setFromEuler(new THREE.Euler(0, this.rigTargetEuler.y, 0, "YXZ"));
+    const yaw = this.rigTargetEuler.y;
+    const rigYaw =
+      this.xrViewMode === XR_VIEW_MODE_SELF
+        ? yaw
+        : this.xrViewMode === XR_VIEW_MODE_MIRROR
+          ? yaw + Math.PI
+          : yaw + Math.PI * 0.82;
+    this.rigTargetQuaternion.setFromEuler(new THREE.Euler(0, rigYaw, 0, "YXZ"));
+    this.viewForwardQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0, "YXZ"));
     this.xrForward.set(0, 0, -1).applyQuaternion(this.rigTargetQuaternion).normalize();
-    this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_OBSERVER_DISTANCE));
-    this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_OBSERVER_HEIGHT_OFFSET;
+    if (this.xrViewMode === XR_VIEW_MODE_SELF) {
+      this.rigTargetPosition.copy(this.cameraPosition);
+      this.rigTargetPosition.y = this.cameraPosition.y;
+      this.rig.scale.lerp(this.selfScale, 0.18);
+    } else if (this.xrViewMode === XR_VIEW_MODE_MIRROR) {
+      this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
+      this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_MIRROR_DISTANCE));
+      this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_MIRROR_HEIGHT_OFFSET;
+      this.rig.scale.lerp(this.mirrorScale, 0.18);
+    } else {
+      this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
+      this.rigTargetPosition.copy(this.cameraPosition).add(this.xrForward.multiplyScalar(VR_REPLAY_OBSERVER_DISTANCE));
+      this.rigTargetPosition.y = this.cameraPosition.y + VR_REPLAY_OBSERVER_HEIGHT_OFFSET;
+      this.rig.scale.lerp(this.observerScale, 0.18);
+    }
     this.rig.position.lerp(this.rigTargetPosition, 0.28);
     this.rig.quaternion.slerp(this.rigTargetQuaternion, 0.22);
-    this.rig.scale.lerp(this.observerScale, 0.18);
   }
 
   updateScene(dt) {
@@ -1979,7 +2077,7 @@ class QuestHenshinDemo {
     if (this.playing) {
       this.elapsed = Math.min(this.elapsed + dt, this.duration);
       if (this.elapsed >= this.duration && !this.completionAnnounced) {
-        UI.status.textContent = "Armor deposition complete. Replay remains available for review.";
+        UI.status.textContent = "変身完了。記録再生で確認できます。";
         this.setVoiceState("complete");
         this.audioBed.pulse(1180, 0.18);
         void Promise.resolve(this.depositionStartPromise)
@@ -2003,16 +2101,18 @@ class QuestHenshinDemo {
     UI.meterFill.style.width = `${Math.round(progress * 100)}%`;
 
     let order = 0;
+    const inXr = Boolean(this.world.session);
+    const selfView = inXr && this.xrViewMode === XR_VIEW_MODE_SELF;
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];
-      if (!pose) {
+      if (!pose || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
         mesh.visible = false;
         order += 1;
         continue;
       }
       applySegmentPose(mesh, pose, part, reveal, {
-        centered: Boolean(this.world.session),
+        centered: selfView,
         progress,
         finalPosition: this.finalPosition,
         stagePosition: this.stagePosition,

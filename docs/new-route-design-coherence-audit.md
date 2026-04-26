@@ -174,7 +174,8 @@ Current performance slice:
 - Quest should load armor mesh geometry concurrently, then attach the results in canonical part order.
 - Quest voice capture should always release microphone tracks and Web Audio nodes, including failure paths.
 - Quest builds should split large vendor chunks so Web/Quest iteration does not force every change through one oversized bundle.
-- Quest replay should stay third-person until live body anchoring is proven; first-person/body-centered deposition is a fit-audit milestone, not the default review mode.
+- Quest voice activation should stay first-person; Quest archive replay can switch between mirror and observer review modes and should show the body-sim trace rather than the first-person body-centered staging.
+- Quest spatial controls should avoid head-locked center placement. Prefer a wrist/controller-adjacent menu with Japanese visitor-facing labels, falling back to a side dock only when controller tracking is unavailable.
 - Quest hand tracking stays opt-in with `hands=1` while the spatial panel uses controller rays, so hand meshes do not mask the replay view.
 - Quest armor parts without body-sim pose data should stay hidden; no mesh should fall back to the XR camera origin.
 

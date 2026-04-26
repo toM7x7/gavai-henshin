@@ -13,27 +13,28 @@
       <section class="hud" aria-label="IW henshin demo controls">
         <p class="eyebrow">IWSDK / mocopi / Sakura AI Engine bridge</p>
         <h1>&#29983;&#25104;&#35013;&#30528;</h1>
-        <p id="status" class="status">Quest 3 VR ready. Tap Voice, say &#29983;&#25104;, then replay the deposition.</p>
+        <p id="status" class="status">Quest 3 VR準備完了。音声で変身、記録再生で鏡/観察を確認します。</p>
         <div class="meter" aria-hidden="true"><span id="meterFill"></span></div>
         <div class="route-panel" aria-label="New Route status">
-          <span id="routeMode">SUIT FORGE: LOCAL</span>
-          <span id="routeApi">FIT AUDIT: WAIT</span>
-          <span id="routeTrial">HENSHIN TRIAL: WAIT</span>
-          <span id="routeReplay">REPLAY ARCHIVE: WAIT</span>
+          <span id="routeMode">生成: LOCAL</span>
+          <span id="routeApi">適合監査: WAIT</span>
+          <span id="routeTrial">変身試験: WAIT</span>
+          <span id="routeReplay">記録保管: WAIT</span>
         </div>
         <p id="routeContract" class="route-contract">FIT CONTRACT: WAIT / TEXTURE FALLBACK: WAIT</p>
         <div class="actions">
-          <button id="btnEnterVR" type="button">Enter VR</button>
-          <button id="btnVoice" type="button">Voice</button>
-          <button id="btnReplay" type="button">3rd Replay</button>
-          <button id="btnPause" type="button">Pause</button>
-          <button id="btnReset" type="button">Reset</button>
+          <button id="btnEnterVR" type="button">VR開始</button>
+          <button id="btnVoice" type="button">音声</button>
+          <button id="btnReplay" type="button">記録再生</button>
+          <button id="btnReplayView" type="button">鏡</button>
+          <button id="btnPause" type="button">停止</button>
+          <button id="btnReset" type="button">リセット</button>
         </div>
-        <p id="micState" class="mic-state">Whisper waits behind the local API.</p>
+        <p id="micState" class="mic-state">音声処理はローカルAPI経由で待機します。</p>
         <p id="voiceLine" class="voice-line"></p>
         <details id="debugPanel" class="debug-panel" open>
-          <summary>Voice debug</summary>
-          <pre id="voiceDebug">Waiting for voice capture.</pre>
+          <summary>音声デバッグ</summary>
+          <pre id="voiceDebug">音声待機中。</pre>
         </details>
       </section>
 

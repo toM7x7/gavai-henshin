@@ -133,7 +133,11 @@ const LIVE_MIRROR_SHOW_PROGRESS = 0.78;
 const XR_MENU_FALLBACK_DISTANCE = 1.14;
 const XR_MENU_FALLBACK_LEFT = 0.62;
 const XR_MENU_FALLBACK_DOWN = 0.32;
-const WATCH_PANEL_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0.08, 0, "XYZ"));
+const WATCH_AXIS_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0, "XYZ"));
+const WATCH_PLANE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2, "XYZ"));
+const WATCH_PANEL_ROTATION = WATCH_PLANE_ROTATION.clone().multiply(WATCH_AXIS_ROTATION);
+const WATCH_PANEL_SCALE = 0.4;
+const WATCH_PANEL_FALLBACK_SCALE = 0.46;
 const LIVE_MOTION_SAMPLE_INTERVAL = 0.1;
 const LIVE_MOTION_MAX_FRAMES = 48;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
@@ -1390,15 +1394,15 @@ class SpatialControlPanel {
     }
     const wristDistance = wrist ? this.controllerPosition.distanceTo(this.cameraPosition) : 0;
     if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
-      this.menuOffset.set(-0.14, 0.08, -0.12).applyQuaternion(this.controllerQuaternion);
+      this.menuOffset.set(-0.1, 0.06, -0.09).applyQuaternion(this.controllerQuaternion);
       this.group.position.copy(this.controllerPosition).add(this.menuOffset);
       this.group.quaternion.copy(this.controllerQuaternion).multiply(WATCH_PANEL_ROTATION);
-      this.group.scale.setScalar(0.58);
+      this.group.scale.setScalar(WATCH_PANEL_SCALE);
     } else {
       this.demo.ensureMenuFallbackAnchor();
       this.group.position.copy(this.demo.menuFallbackPosition);
       this.group.quaternion.copy(this.demo.menuFallbackQuaternion);
-      this.group.scale.setScalar(0.62);
+      this.group.scale.setScalar(WATCH_PANEL_FALLBACK_SCALE);
     }
 
     this.pulseClock += dt;

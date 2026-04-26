@@ -79,10 +79,19 @@ Expected behavior over HTTP:
 - The demo saves the canonical `SuitSpec`.
 - It projects a `SuitManifest`.
 - It creates a `TransformSession`.
+- The Quest page shows a `New Route` status panel for route mode, API step, trial id, and replay generation.
 - `Replay`, `Pause`, and `Reset` work in the page.
 - With `mockTrigger=1`, `Voice` uses synthetic mock audio and does not require microphone permission.
 - Voice/mock trigger events are appended to `/v1/trials/{trialId}/events`.
 - ReplayScript can be generated from `/v1/trials/{trialId}/replay`.
+
+After a Quest smoke test, confirm the latest recorded trial:
+
+```powershell
+Invoke-RestMethod http://localhost:8010/v1/trials/latest
+```
+
+The important fields are `summary.state`, `summary.event_count`, and `summary.replay_script_path`.
 
 Expected limitation over HTTP:
 

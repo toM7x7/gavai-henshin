@@ -99,6 +99,10 @@ const UI = {
   micState: document.getElementById("micState"),
   voiceLine: document.getElementById("voiceLine"),
   voiceDebug: document.getElementById("voiceDebug"),
+  routeMode: document.getElementById("routeMode"),
+  routeApi: document.getElementById("routeApi"),
+  routeTrial: document.getElementById("routeTrial"),
+  routeReplay: document.getElementById("routeReplay"),
   sessionId: document.getElementById("sessionId"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
@@ -310,6 +314,18 @@ async function getJson(path) {
 
 function sleep(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function compactToken(value, maxLength = 34) {
+  const text = String(value || "");
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(4, maxLength - 4))}...`;
+}
+
+function setBadge(element, text, state = "idle") {
+  if (!element) return;
+  element.textContent = text;
+  element.dataset.state = state;
 }
 
 function normalizeTriggerText(text) {
@@ -1222,6 +1238,7 @@ class QuestHenshinDemo {
     this.trialId = null;
     this.trialReady = false;
     this.trialReplayPath = null;
+    this.depositionStartPromise = null;
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
@@ -1244,6 +1261,7 @@ class QuestHenshinDemo {
     this.spatialPanel = new SpatialControlPanel(this);
     this.setVoiceState("ready");
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
+    this.syncRoutePanel();
     this.bind();
   }
 
@@ -1346,20 +1364,55 @@ class QuestHenshinDemo {
     this.updateVoiceDebug(next);
   }
 
+  syncRoutePanel() {
+    const newRoute = useNewRouteApi();
+    setBadge(UI.routeMode, newRoute ? "ROUTE: NEW" : "ROUTE: LOCAL", newRoute ? "ok" : "idle");
+    setBadge(UI.routeApi, newRoute ? "API: /v1 ARMED" : "API: OFF", newRoute ? "pending" : "idle");
+    setBadge(
+      UI.routeTrial,
+      this.trialId ? `TRIAL: ${compactToken(this.trialId)}` : "TRIAL: WAIT",
+      this.trialId ? "ok" : "pending",
+    );
+    setBadge(
+      UI.routeReplay,
+      this.trialReplayPath ? `REPLAY: ${compactToken(this.trialReplayPath)}` : "REPLAY: WAIT",
+      this.trialReplayPath ? "ok" : "pending",
+    );
+  }
+
+  setRouteApi(label, state = "pending") {
+    setBadge(UI.routeApi, `API: ${compactToken(label, 28)}`, state);
+  }
+
+  setRouteTrial(label, state = "pending") {
+    setBadge(UI.routeTrial, `TRIAL: ${compactToken(label, 30)}`, state);
+  }
+
+  setRouteReplay(label, state = "pending") {
+    setBadge(UI.routeReplay, `REPLAY: ${compactToken(label, 30)}`, state);
+  }
+
   async ensureTrial() {
     if (!useNewRouteApi()) return null;
-    if (this.trialReady && this.trialId) return this.trialId;
+    if (this.trialReady && this.trialId) {
+      this.setRouteTrial(this.trialId, "ok");
+      return this.trialId;
+    }
     this.trialId = this.trialId || makeTrialId();
     const suitId = getSuitId();
     const manifestId = getManifestId();
+    this.setRouteApi("SUIT POST", "pending");
+    this.setRouteTrial(this.trialId, "pending");
     await postJson("/v1/suits", {
       suitspec: this.suitspec,
       overwrite: true,
     });
+    this.setRouteApi("MANIFEST", "pending");
     await postJson(`/v1/suits/${suitId}/manifest`, {
       manifest_id: manifestId,
       status: "READY",
     });
+    this.setRouteApi("TRIAL CREATE", "pending");
     const trial = await postJson("/v1/trials", {
       manifest_id: manifestId,
       suit_id: suitId,
@@ -1372,6 +1425,8 @@ class QuestHenshinDemo {
     this.trialId = trial.trial_id || trial.session_id || this.trialId;
     this.trialReady = true;
     UI.sessionId.textContent = this.trialId;
+    this.setRouteApi("TRIAL READY", "ok");
+    this.setRouteTrial(this.trialId, "ok");
     this.appendVoiceDebug(`trial: ${this.trialId}`);
     return this.trialId;
   }
@@ -1381,6 +1436,7 @@ class QuestHenshinDemo {
     try {
       const trialId = await this.ensureTrial();
       if (!trialId) return null;
+      this.setRouteApi(eventType, "pending");
       const event = await postJson(`/v1/trials/${trialId}/events`, {
         event_type: eventType,
         state_after: options.stateAfter,
@@ -1389,10 +1445,13 @@ class QuestHenshinDemo {
         idempotency_key: options.idempotencyKey,
       });
       this.appendVoiceDebug(`trial event: ${event.event?.event_type || eventType} #${event.event?.sequence}`);
+      const sequence = event.event?.sequence ? ` #${event.event.sequence}` : "";
+      this.setRouteApi(`${event.event?.event_type || eventType}${sequence}`, "ok");
       return event;
     } catch (error) {
       console.warn(error);
       this.appendVoiceDebug(`trial api: ${error?.message || error}`);
+      this.setRouteApi("EVENT ERROR", "error");
       return null;
     }
   }
@@ -1400,13 +1459,16 @@ class QuestHenshinDemo {
   async generateTrialReplay() {
     if (!useNewRouteApi() || !this.trialId) return null;
     try {
+      this.setRouteReplay("BUILDING", "pending");
       const replay = await getJson(`/v1/trials/${this.trialId}/replay`);
       this.trialReplayPath = replay.replay_path || null;
       this.appendVoiceDebug(`trial replay: ${replay.replay_id || this.trialReplayPath}`);
+      this.setRouteReplay(replay.replay_id || this.trialReplayPath || "READY", "ok");
       return replay;
     } catch (error) {
       console.warn(error);
       this.appendVoiceDebug(`trial replay: ${error?.message || error}`);
+      this.setRouteReplay("ERROR", "error");
       return null;
     }
   }
@@ -1520,6 +1582,7 @@ class QuestHenshinDemo {
     UI.btnPause.textContent = "Resume";
     UI.status.textContent = "Reset. Use Replay or Voice to run the deposition again.";
     this.setVoiceState("ready");
+    this.syncRoutePanel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: reset\ntrigger: 生成");
     this.updateVoiceDebug(`VOICE DEBUG\nresult: reset\ntrigger: ${TRIGGER_PHRASE}`);
   }
@@ -1532,11 +1595,12 @@ class QuestHenshinDemo {
     UI.btnPause.textContent = "Pause";
     UI.status.textContent = `Voice command detected: ${TRIGGER_PHRASE}. Armor deposition replay running.`;
     this.setVoiceState("deposition");
-    void this.appendTrialEvent("DEPOSITION_STARTED", {
+    this.depositionStartPromise = this.appendTrialEvent("DEPOSITION_STARTED", {
       stateAfter: "DEPOSITION",
       payload: { source: "quest-iw-demo", trigger_phrase: TRIGGER_PHRASE },
       idempotencyKey: "deposition-started",
     });
+    void this.depositionStartPromise;
     if (speak) this.speakExplanation();
   }
 
@@ -1609,7 +1673,7 @@ class QuestHenshinDemo {
       const transcript = data.result?.transcript || data.replay?.trigger?.transcript || "";
       const debugText = formatVoiceDebug(data, transcript, data.result?.error || data.error || "");
       this.updateVoiceDebug(debugText);
-      void this.appendTrialEvent("VOICE_CAPTURED", {
+      await this.appendTrialEvent("VOICE_CAPTURED", {
         stateAfter: "POSTED",
         payload: { transcript, audio_stats: stats, trigger_phrase: TRIGGER_PHRASE },
         idempotencyKey: `voice-captured-${trialId}`,
@@ -1628,7 +1692,7 @@ class QuestHenshinDemo {
       if (!triggerMatched) {
         throw new Error(formatVoiceRetryDetail(data, transcript));
       }
-      void this.appendTrialEvent("TRIGGER_DETECTED", {
+      await this.appendTrialEvent("TRIGGER_DETECTED", {
         stateAfter: "TRY_ON",
         payload: { transcript, trigger_phrase: TRIGGER_PHRASE },
         idempotencyKey: `trigger-detected-${trialId}`,
@@ -1644,6 +1708,7 @@ class QuestHenshinDemo {
       const message = String(error?.message || error);
       UI.status.textContent = "Voice rejected. Read the Voice debug panel for transcript and audio details.";
       UI.equipState.textContent = "DEPOSITION: CHECK";
+      if (useNewRouteApi()) this.setRouteApi("VOICE ERROR", "error");
       this.setVoiceState("rejected", message.length > 92 ? `${message.slice(0, 89)}...` : message);
       if (UI.voiceDebug && UI.voiceDebug.textContent.startsWith("VOICE DEBUG")) {
         UI.voiceDebug.textContent += `\nerror: ${message}`;
@@ -1742,11 +1807,15 @@ class QuestHenshinDemo {
         UI.status.textContent = "Armor deposition complete. Replay remains available for review.";
         this.setVoiceState("complete");
         this.audioBed.pulse(1180, 0.18);
-        void this.appendTrialEvent("DEPOSITION_COMPLETED", {
-          stateAfter: "ACTIVE",
-          payload: { source: "quest-iw-demo", completed: true },
-          idempotencyKey: "deposition-completed",
-        }).then(() => this.generateTrialReplay());
+        void Promise.resolve(this.depositionStartPromise)
+          .then(() =>
+            this.appendTrialEvent("DEPOSITION_COMPLETED", {
+              stateAfter: "ACTIVE",
+              payload: { source: "quest-iw-demo", completed: true },
+              idempotencyKey: "deposition-completed",
+            }),
+          )
+          .then(() => this.generateTrialReplay());
         this.completionAnnounced = true;
       }
     }

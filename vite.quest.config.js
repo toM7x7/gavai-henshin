@@ -9,6 +9,14 @@ const pfxPath = process.env.QUEST_HTTPS_PFX;
 const pfxPassword = process.env.QUEST_HTTPS_PFX_PASSWORD || "";
 const certPath = process.env.QUEST_HTTPS_CERT;
 const keyPath = process.env.QUEST_HTTPS_KEY;
+function questManualChunks(id) {
+  const normalized = id.replace(/\\/g, "/");
+  if (!normalized.includes("/node_modules/")) return undefined;
+  if (normalized.includes("/node_modules/three/")) return "vendor-three";
+  if (normalized.includes("/node_modules/@iwsdk/")) return "vendor-iwsdk";
+  return "vendor";
+}
+
 const https =
   pfxPath
     ? {
@@ -40,8 +48,12 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       input: "viewer/quest-iw-demo/index.html",
+      output: {
+        manualChunks: questManualChunks,
+      },
     },
   },
   plugins: [

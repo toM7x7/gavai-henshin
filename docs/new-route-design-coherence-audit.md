@@ -157,3 +157,28 @@ python tools/run_henshin.py design-coherence-audit --output-md tests/.tmp/design
 ```
 
 After this lock, the next highest-value slice is the part visual pass: inspect helmet/chest/shoulder silhouette continuity and decide whether committed material assets are needed before a larger UI redesign.
+
+## Performance And Rebuild Gates
+
+Use these gates when the new route feels slow, visually wrong, or too hard to tune:
+
+- `keep`: the route contract is correct and the issue is viewer polish, copy, camera framing, or status visibility.
+- `optimize`: silhouette, anchors, and replay evidence are correct, but load time, bundle shape, texture fallback, material count, or audio resource cleanup is causing friction.
+- `tune`: the issue is repeated loading, fallback noise, cache behavior, part offset, material fallback, or platform-specific browser behavior.
+- `rebuild`: the issue is the part model itself: helmet/chest/shoulder/back silhouette does not read as one suit family, limb pairs are structurally asymmetric, or `authoring-audit` classifies the part as `rebuild`.
+
+Current performance slice:
+
+- Body Fit should attach the Three.js `TransformControls` helper to the scene, not the controls object itself, so newer Three versions do not emit runtime errors.
+- Quest and Body Fit should cache texture misses when `texture_fallback.mode = palette_material`, because ignored `sessions/...` textures are expected to be absent on a fresh checkout.
+- Quest should load armor mesh geometry concurrently, then attach the results in canonical part order.
+- Quest voice capture should always release microphone tracks and Web Audio nodes, including failure paths.
+- Quest builds should split large vendor chunks so Web/Quest iteration does not force every change through one oversized bundle.
+
+The platform rule remains:
+
+```text
+Web: Suit Forge -> Quest: Henshin Trial -> Replay: Archive
+```
+
+PlayCanvas, GCP, 8thWall, Unity, and other stacks can be evaluated, but only after the failing surface is named: browser delivery, headset runtime, AI/TTS/service hosting, asset authoring, or replay/archive operations.

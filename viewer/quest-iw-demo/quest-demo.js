@@ -536,10 +536,11 @@ async function loadMeshGeometry(assetRef, part) {
   return geometry.clone();
 }
 
-async function loadTexture(texturePath) {
+async function loadTexture(texturePath, options = {}) {
   const key = normalizePath(texturePath);
   if (!key) return null;
   if (textureCache.has(key)) return textureCache.get(key);
+  const allowPaletteFallback = Boolean(options.allowPaletteFallback);
   const pending = new Promise((resolve, reject) => {
     textureLoader.load(
       key,
@@ -553,6 +554,9 @@ async function loadTexture(texturePath) {
       (error) => reject(error || new Error(`Texture load failed: ${key}`)),
     );
   }).catch((error) => {
+    if (allowPaletteFallback) {
+      return null;
+    }
     textureCache.delete(key);
     throw error;
   });
@@ -574,15 +578,19 @@ async function createArmorMesh(part, module, suitspec) {
   mesh.name = part;
   mesh.userData.module = module || {};
   if (module?.texture_path) {
-    loadTexture(module.texture_path)
+    const allowPaletteFallback = suitspec?.texture_fallback?.mode === "palette_material";
+    loadTexture(module.texture_path, { allowPaletteFallback })
       .then((texture) => {
-        if (!texture) return;
+        if (!texture) {
+          mesh.userData.textureFallbackActive = allowPaletteFallback;
+          return;
+        }
         mesh.material.map = texture;
         mesh.material.color.setHex(0xffffff);
         mesh.material.needsUpdate = true;
       })
       .catch((error) => {
-        mesh.userData.textureFallbackActive = suitspec?.texture_fallback?.mode === "palette_material";
+        mesh.userData.textureFallbackActive = allowPaletteFallback;
         console.warn(`texture fallback for ${part}`, error);
       });
   }
@@ -851,40 +859,55 @@ async function getMicrophoneStream() {
   });
 }
 
+function stopMediaStream(stream) {
+  stream?.getTracks?.().forEach((track) => track.stop());
+}
+
+function disconnectAudioNode(node) {
+  try {
+    node?.disconnect?.();
+  } catch {
+    // Web Audio nodes throw if they were never connected.
+  }
+}
+
 async function recordAudioWebm(seconds, options = {}) {
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
     throw new Error("This browser does not expose MediaRecorder audio capture.");
   }
   const stream = await getMicrophoneStream();
-  const mimeType = pickAudioMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  const chunks = [];
-  recorder.addEventListener("dataavailable", (event) => {
-    if (event.data?.size) chunks.push(event.data);
-  });
-  const stopped = new Promise((resolve, reject) => {
-    recorder.addEventListener("stop", resolve, { once: true });
-    recorder.addEventListener("error", () => reject(recorder.error), { once: true });
-  });
-  options.onReady?.();
-  await sleep((options.armDelaySec || 0) * 1000);
-  options.onStart?.();
-  recorder.start();
-  await sleep(seconds * 1000);
-  recorder.stop();
-  await stopped;
-  stream.getTracks().forEach((track) => track.stop());
-  const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
-  return {
-    blob,
-    stats: {
-      mode: "webm",
-      mime_type: blob.type,
-      duration_sec: seconds,
-      arm_delay_sec: options.armDelaySec || 0,
-      bytes: blob.size,
-    },
-  };
+  try {
+    const mimeType = pickAudioMimeType();
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const chunks = [];
+    recorder.addEventListener("dataavailable", (event) => {
+      if (event.data?.size) chunks.push(event.data);
+    });
+    const stopped = new Promise((resolve, reject) => {
+      recorder.addEventListener("stop", resolve, { once: true });
+      recorder.addEventListener("error", () => reject(recorder.error), { once: true });
+    });
+    options.onReady?.();
+    await sleep((options.armDelaySec || 0) * 1000);
+    options.onStart?.();
+    recorder.start();
+    await sleep(seconds * 1000);
+    recorder.stop();
+    await stopped;
+    const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+    return {
+      blob,
+      stats: {
+        mode: "webm",
+        mime_type: blob.type,
+        duration_sec: seconds,
+        arm_delay_sec: options.armDelaySec || 0,
+        bytes: blob.size,
+      },
+    };
+  } finally {
+    stopMediaStream(stream);
+  }
 }
 
 async function recordAudioWav(seconds, options = {}) {
@@ -911,26 +934,34 @@ async function recordAudioWav(seconds, options = {}) {
     totalLength += chunk.length;
   };
 
-  source.connect(processor);
-  processor.connect(silent);
-  silent.connect(context.destination);
-  options.onReady?.();
-  await sleep((options.armDelaySec || 0) * 1000);
-  capturing = true;
-  options.onStart?.();
-  await sleep(seconds * 1000);
-  capturing = false;
-  source.disconnect();
-  processor.disconnect();
-  silent.disconnect();
-  stream.getTracks().forEach((track) => track.stop());
-  await context.close?.();
+  try {
+    source.connect(processor);
+    processor.connect(silent);
+    silent.connect(context.destination);
+    options.onReady?.();
+    await sleep((options.armDelaySec || 0) * 1000);
+    capturing = true;
+    options.onStart?.();
+    await sleep(seconds * 1000);
+    capturing = false;
 
-  const samples = mergeFloat32Chunks(chunks, totalLength);
-  const wav = encodeWavMono(samples, sampleRate);
-  const stats = calculatePcmStats(samples, sampleRate, seconds, options.armDelaySec || 0);
-  stats.bytes = wav.byteLength;
-  return { blob: new Blob([wav], { type: "audio/wav" }), stats };
+    const samples = mergeFloat32Chunks(chunks, totalLength);
+    const wav = encodeWavMono(samples, sampleRate);
+    const stats = calculatePcmStats(samples, sampleRate, seconds, options.armDelaySec || 0);
+    stats.bytes = wav.byteLength;
+    return { blob: new Blob([wav], { type: "audio/wav" }), stats };
+  } finally {
+    capturing = false;
+    disconnectAudioNode(source);
+    disconnectAudioNode(processor);
+    disconnectAudioNode(silent);
+    stopMediaStream(stream);
+    try {
+      await context.close?.();
+    } catch {
+      // Closing an already-interrupted context should not mask the capture error.
+    }
+  }
 }
 
 async function recordAudio(seconds, options = {}) {
@@ -1656,14 +1687,17 @@ class QuestHenshinDemo {
 
   async loadArmorMeshes() {
     const modules = this.suitspec?.modules || {};
-    for (let index = 0; index < ARMOR_PARTS.length; index += 1) {
-      const part = ARMOR_PARTS[index];
+    const loadedMeshes = await Promise.all(ARMOR_PARTS.map(async (part, index) => {
       const module = modules[part] || {};
-      if (module.enabled === false) continue;
+      if (module.enabled === false) return null;
       const mesh = await createArmorMesh(part, module, this.suitspec);
-      mesh.userData.partIndex = index;
-      this.rig.add(mesh);
-      this.meshes.set(part, mesh);
+      return { index, mesh, part };
+    }));
+    for (const record of loadedMeshes) {
+      if (!record) continue;
+      record.mesh.userData.partIndex = record.index;
+      this.rig.add(record.mesh);
+      this.meshes.set(record.part, record.mesh);
     }
     const fallbackText =
       this.suitspec?.texture_fallback?.mode === "palette_material"

@@ -798,10 +798,18 @@ class BodyFitViewer {
     this.controls.maxDistance = 5.0;
     this.controls.minDistance = 1.0;
     this.transformControls = new TransformControls(this.camera, this.canvas);
-    this.transformControls.visible = false;
+    this.transformControlsHelper =
+      typeof this.transformControls.getHelper === "function"
+        ? this.transformControls.getHelper()
+        : this.transformControls;
+    if (this.transformControlsHelper) {
+      this.transformControlsHelper.visible = false;
+      if (this.transformControlsHelper.isObject3D) {
+        this.scene.add(this.transformControlsHelper);
+      }
+    }
     this.transformControls.setMode("translate");
     this.transformControls.setSpace("local");
-    this.scene.add(this.transformControls);
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
@@ -1714,7 +1722,12 @@ class BodyFitViewer {
     const rec = this.meshes.get(partName);
     const canAttach = Boolean(this.gizmo.enabled && rec?.group?.visible);
     this.transformControls.enabled = canAttach;
-    this.transformControls.visible = canAttach;
+    if ("visible" in this.transformControls) {
+      this.transformControls.visible = canAttach;
+    }
+    if (this.transformControlsHelper) {
+      this.transformControlsHelper.visible = canAttach;
+    }
     if (!canAttach) {
       this.transformControls.detach();
       return;
@@ -4506,14 +4519,20 @@ class BodyFitViewer {
       this.meshes.set(name, record);
       this.renderMeshes.set(name, record);
       if (record.texturePath) {
-        record.texture = await loadTextureAsset(record.texturePath).catch((error) => {
+        const allowPaletteFallback = textureFallbackAllowsPalette(this.suitspec);
+        record.texture = await loadTextureAsset(record.texturePath, { allowPaletteFallback }).catch((error) => {
           record.textureError = String(error?.message || error || "texture load failed");
-          if (textureFallbackAllowsPalette(this.suitspec)) {
+          if (allowPaletteFallback) {
             record.textureFallbackActive = true;
             applyPaletteTextureFallback(record, this.suitspec?.palette || {});
           }
           return null;
         });
+        if (!record.texture && allowPaletteFallback && !record.textureFallbackActive) {
+          record.textureError = "texture fallback material active";
+          record.textureFallbackActive = true;
+          applyPaletteTextureFallback(record, this.suitspec?.palette || {});
+        }
       }
     }
     this.updateTextureMode();
@@ -5180,12 +5199,13 @@ async function loadMeshGeometryFromAsset(assetPath) {
   return geometry.clone();
 }
 
-async function loadTextureAsset(texturePath) {
+async function loadTextureAsset(texturePath, options = {}) {
   const key = normalizePath(texturePath);
   if (!key) return null;
   if (textureAssetCache.has(key)) {
     return textureAssetCache.get(key);
   }
+  const allowPaletteFallback = Boolean(options.allowPaletteFallback);
   const pending = new Promise((resolve, reject) => {
     textureLoader.load(
       key,
@@ -5199,6 +5219,9 @@ async function loadTextureAsset(texturePath) {
       (error) => reject(error || new Error(`Failed to load texture: ${key}`))
     );
   }).catch((error) => {
+    if (allowPaletteFallback) {
+      return null;
+    }
     textureAssetCache.delete(key);
     throw error;
   });

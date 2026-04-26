@@ -100,11 +100,20 @@ const UI = {
   latestTrialEvents: document.getElementById("latestTrialEvents"),
   latestTrialReplayState: document.getElementById("latestTrialReplayState"),
   latestTrialReplay: document.getElementById("latestTrialReplay"),
+  latestReplayUpdated: document.getElementById("latestReplayUpdated"),
+  latestReplayStatus: document.getElementById("latestReplayStatus"),
+  latestReplayId: document.getElementById("latestReplayId"),
+  latestReplayDuration: document.getElementById("latestReplayDuration"),
+  latestReplaySegments: document.getElementById("latestReplaySegments"),
+  latestReplayEvents: document.getElementById("latestReplayEvents"),
+  latestReplayPath: document.getElementById("latestReplayPath"),
+  latestReplayTimeline: document.getElementById("latestReplayTimeline"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
   btnRefreshSuits: document.getElementById("btnRefreshSuits"),
   btnLoadSuit: document.getElementById("btnLoadSuit"),
   btnRefreshLatestTrial: document.getElementById("btnRefreshLatestTrial"),
+  btnRefreshLatestReplay: document.getElementById("btnRefreshLatestReplay"),
   btnGenerate: document.getElementById("btnGenerate"),
   btnCancelGenerate: document.getElementById("btnCancelGenerate"),
   btnAutoFitSave: document.getElementById("btnAutoFitSave"),
@@ -305,6 +314,120 @@ async function refreshLatestTrial({ silent = false } = {}) {
     if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = `error: ${String(err?.message || err)}`;
   } finally {
     if (UI.btnRefreshLatestTrial) UI.btnRefreshLatestTrial.disabled = false;
+  }
+}
+
+function setLatestReplayStatus(text, state = "") {
+  if (!UI.latestReplayStatus) return;
+  UI.latestReplayStatus.classList.remove("complete", "pending", "error");
+  if (state) UI.latestReplayStatus.classList.add(state);
+  UI.latestReplayStatus.textContent = text;
+}
+
+function formatReplayDuration(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  return `${numeric.toFixed(numeric < 10 ? 1 : 0)}s`;
+}
+
+function replayWebPath(rawPath) {
+  const text = String(rawPath || "");
+  if (!text) return "";
+  if (text.startsWith("/")) return text;
+  return `/${text}`;
+}
+
+function renderLatestReplayEmpty(message = "Replay未記録") {
+  setLatestReplayStatus(message, "pending");
+  if (UI.latestReplayUpdated) UI.latestReplayUpdated.textContent = "未取得";
+  if (UI.latestReplayId) UI.latestReplayId.textContent = "-";
+  if (UI.latestReplayDuration) UI.latestReplayDuration.textContent = "-";
+  if (UI.latestReplaySegments) UI.latestReplaySegments.textContent = "-";
+  if (UI.latestReplayEvents) UI.latestReplayEvents.textContent = "-";
+  if (UI.latestReplayPath) {
+    UI.latestReplayPath.textContent = "ReplayScript: -";
+    UI.latestReplayPath.removeAttribute("href");
+    UI.latestReplayPath.title = "";
+  }
+  if (UI.latestReplayTimeline) UI.latestReplayTimeline.textContent = "Timeline: -";
+}
+
+function replayActionLabel(action) {
+  const params = action?.params || {};
+  const eventType = params.event_type || action?.action_type || "event";
+  const stateAfter = params.state_after ? ` -> ${params.state_after}` : "";
+  return `${eventType}${stateAfter}`;
+}
+
+function renderReplayTimeline(replay) {
+  if (!UI.latestReplayTimeline) return;
+  UI.latestReplayTimeline.textContent = "";
+  const timeline = Array.isArray(replay?.timeline) ? replay.timeline.slice(0, 6) : [];
+  if (!timeline.length) {
+    UI.latestReplayTimeline.textContent = "Timeline: -";
+    return;
+  }
+  for (const segment of timeline) {
+    const row = document.createElement("div");
+    row.className = "replay-timeline-row";
+    const time = document.createElement("time");
+    time.textContent = formatReplayDuration(segment.start_time_sec || 0);
+    const label = document.createElement("span");
+    const action = Array.isArray(segment.actions) ? segment.actions[0] : null;
+    label.textContent = replayActionLabel(action);
+    row.append(time, label);
+    UI.latestReplayTimeline.appendChild(row);
+  }
+}
+
+function renderLatestReplay(data) {
+  const summary = data?.summary || {};
+  const replay = data?.replay || {};
+  const replayId = summary.replay_id || data?.replay_id || replay.replay_id || "-";
+  const path = summary.replay_script_path || "";
+
+  setLatestReplayStatus("ReplayScript保存済み / 体験ログ再生可能", "complete");
+  if (UI.latestReplayUpdated) UI.latestReplayUpdated.textContent = `生成: ${formatTrialTimestamp(summary.generated_at || summary.updated_at)}`;
+  if (UI.latestReplayId) {
+    UI.latestReplayId.textContent = compactLabel(replayId, 24);
+    UI.latestReplayId.title = replayId;
+  }
+  if (UI.latestReplayDuration) UI.latestReplayDuration.textContent = formatReplayDuration(summary.duration_sec);
+  if (UI.latestReplaySegments) UI.latestReplaySegments.textContent = String(summary.segment_count ?? replay.timeline?.length ?? "-");
+  if (UI.latestReplayEvents) UI.latestReplayEvents.textContent = String(summary.source_event_count ?? "-");
+  if (UI.latestReplayPath) {
+    UI.latestReplayPath.textContent = `ReplayScript: ${path || "-"}`;
+    UI.latestReplayPath.title = path || "";
+    const href = replayWebPath(path);
+    if (href) {
+      UI.latestReplayPath.href = href;
+    } else {
+      UI.latestReplayPath.removeAttribute("href");
+    }
+  }
+  renderReplayTimeline(replay);
+}
+
+async function refreshLatestReplay({ silent = false } = {}) {
+  if (!UI.latestReplayStatus) return;
+  if (UI.btnRefreshLatestReplay) UI.btnRefreshLatestReplay.disabled = true;
+  if (!silent) setLatestReplayStatus("Replay Archiveを取得中...", "pending");
+  try {
+    const { res, data } = await fetchJson("/v1/replays/latest");
+    if (res.status === 404) {
+      renderLatestReplayEmpty("Replay未記録");
+      return;
+    }
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `Latest replay fetch failed: ${res.status}`);
+    }
+    renderLatestReplay(data);
+  } catch (err) {
+    setLatestReplayStatus("Replay取得エラー", "error");
+    if (UI.latestReplayUpdated) UI.latestReplayUpdated.textContent = "取得失敗";
+    if (UI.latestReplayTimeline) UI.latestReplayTimeline.textContent = `error: ${String(err?.message || err)}`;
+  } finally {
+    if (UI.btnRefreshLatestReplay) UI.btnRefreshLatestReplay.disabled = false;
   }
 }
 
@@ -2717,6 +2840,13 @@ function bindEvents() {
   if (UI.btnRefreshLatestTrial) {
     UI.btnRefreshLatestTrial.onclick = async () => {
       await refreshLatestTrial();
+      await refreshLatestReplay({ silent: true });
+    };
+  }
+
+  if (UI.btnRefreshLatestReplay) {
+    UI.btnRefreshLatestReplay.onclick = async () => {
+      await refreshLatestReplay();
     };
   }
 
@@ -2987,7 +3117,9 @@ async function init() {
   if (UI.btnCancelGenerate) UI.btnCancelGenerate.disabled = true;
   if (UI.eventLog) UI.eventLog.textContent = "進行ログを待機中...";
   renderLatestTrialEmpty();
+  renderLatestReplayEmpty();
   void refreshLatestTrial({ silent: true });
+  void refreshLatestReplay({ silent: true });
 
   try {
     const detected = await discoverDefaultVrmPath();

@@ -440,7 +440,7 @@ button:hover {
   margin-bottom: 12px;
   border: 1px solid #d7e0ef;
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px;
 }
 
@@ -530,6 +530,7 @@ button:hover {
 }
 
 .latest-trial-replay {
+  display: block;
   margin-top: 8px;
   border: 1px solid #d9e3f2;
   border-radius: 8px;
@@ -538,6 +539,49 @@ button:hover {
   padding: 8px;
   font-size: 11px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.replay-link {
+  text-decoration: none;
+}
+
+.replay-link[href]:hover {
+  border-color: #8aa9d4;
+  color: #17335f;
+}
+
+.latest-replay-timeline {
+  margin-top: 8px;
+  border: 1px solid #d9e3f2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #24466f;
+  max-height: 132px;
+  overflow: auto;
+  padding: 6px;
+  font-size: 11px;
+}
+
+.replay-timeline-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 8px;
+  padding: 5px 4px;
+  border-bottom: 1px solid #e6edf7;
+}
+
+.replay-timeline-row:last-child {
+  border-bottom: 0;
+}
+
+.replay-timeline-row time {
+  color: #4b6793;
+  font-weight: 800;
+}
+
+.replay-timeline-row span {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 

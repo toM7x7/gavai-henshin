@@ -61,6 +61,36 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(response.body["trial_id"], "S-TRIAL-DASH-0001")
 
+    def test_new_route_latest_replay_is_served_by_dashboard_handler(self) -> None:
+        root = Path(".").resolve()
+        suitspec = json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store_root = Path(tmp) / "suits"
+            api = NewRouteApi(root, suit_store_root=suit_store_root)
+            api.post("/v1/suits", {"suitspec": suitspec})
+            api.post(
+                "/v1/suits/VDA-AXIS-OP-00-0001/manifest",
+                {"manifest_id": "MNF-20260424-ABCD", "status": "READY"},
+            )
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-DASH-0001"})
+            api.post(
+                "/v1/trials/S-TRIAL-DASH-0001/events",
+                {"event_type": "DEPOSITION_COMPLETED", "state_after": "ACTIVE"},
+            )
+            api.get("/v1/trials/S-TRIAL-DASH-0001/replay")
+
+            response = DashboardHandler._new_route_response_for_test(
+                root,
+                "/v1/replays/latest",
+                suit_store_root=suit_store_root,
+            )
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body["trial_id"], "S-TRIAL-DASH-0001")
+        self.assertTrue(response.body["summary"]["replay_script_path"].endswith("replay-script.json"))
+
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))
         job.emit({"type": "job_started", "stage": "scan", "status": "started", "requested_count": 2})

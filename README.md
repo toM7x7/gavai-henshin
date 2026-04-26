@@ -70,12 +70,19 @@ After the Quest trial, confirm the latest durable record:
 Invoke-RestMethod http://localhost:8010/v1/trials/latest | ConvertTo-Json -Depth 6
 ```
 
+Replay archive endpoint:
+
+```powershell
+Invoke-RestMethod http://localhost:8010/v1/replays/latest | ConvertTo-Json -Depth 8
+```
+
 Success criteria:
 
 - `summary.state` is `ACTIVE`.
 - `summary.event_count` is greater than 0.
 - `summary.replay_script_path` points to `sessions/new-route/trials/.../replay-script.json`.
 - The PC dashboard `Quest実機ログ` card shows the same latest trial.
+- The PC dashboard `Replay Archive` panel shows the latest replay id, duration, segment count, event count, script link, and timeline preview.
 
 ### 4. Active New-Route Branches
 

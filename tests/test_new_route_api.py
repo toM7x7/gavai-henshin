@@ -231,6 +231,48 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(listed.body["count"], 2)
             self.assertEqual(listed.body["latest"]["session_id"], "S-TRIAL-UNIT-0001")
 
+    def test_list_replays_returns_persisted_replay_summaries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0002"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_COMPLETED", "state_after": "ACTIVE"},
+            )
+            api.get("/v1/trials/S-TRIAL-UNIT-0001/replay")
+
+            response = api.get("/v1/replays")
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.body["count"], 1)
+            self.assertEqual(response.body["latest"]["session_id"], "S-TRIAL-UNIT-0001")
+            self.assertRegex(response.body["latest"]["replay_id"], r"^RPL-[0-9]{8}-[A-Z0-9]{4}$")
+            self.assertEqual(response.body["latest"]["segment_count"], 2)
+            self.assertEqual(response.body["latest"]["source_event_count"], 2)
+
+    def test_get_latest_replay_returns_script_and_trial(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = self._api_with_manifest(Path(tmp) / "suits")
+            api.post("/v1/trials", {"suit_id": "VDA-AXIS-OP-00-0001", "session_id": "S-TRIAL-UNIT-0001"})
+            api.post(
+                "/v1/trials/S-TRIAL-UNIT-0001/events",
+                {"event_type": "DEPOSITION_COMPLETED", "state_after": "ACTIVE"},
+            )
+            api.get("/v1/trials/S-TRIAL-UNIT-0001/replay")
+
+            response = api.get("/v1/replays/latest")
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.body["trial_id"], "S-TRIAL-UNIT-0001")
+            self.assertEqual(response.body["replay"]["session_id"], "S-TRIAL-UNIT-0001")
+            self.assertEqual(response.body["trial"]["state"], "ACTIVE")
+            self.assertTrue(response.body["links"]["script"].endswith("/replay-script.json"))
+
     def _sample_suitspec(self) -> dict:
         return json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
 

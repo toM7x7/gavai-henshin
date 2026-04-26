@@ -363,6 +363,43 @@ class NewRouteApi:
             },
         )
 
+    def list_replays(self) -> ApiResponse:
+        records = self._all_replay_records()
+        summaries = [record["summary"] for record in records]
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "count": len(summaries),
+                "latest": summaries[0] if summaries else None,
+                "replays": summaries,
+            },
+        )
+
+    def get_latest_replay(self) -> ApiResponse:
+        records = self._all_replay_records()
+        if not records:
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": "No replay scripts have been recorded"})
+        latest = records[0]
+        summary = latest["summary"]
+        session_id = str(summary["session_id"])
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "replay_id": summary["replay_id"],
+                "trial_id": session_id,
+                "summary": summary,
+                "replay": latest["replay"],
+                "trial": latest["trial"],
+                "links": {
+                    "trial": f"/v1/trials/{session_id}",
+                    "replay": f"/v1/trials/{session_id}/replay",
+                    "script": f"/{summary['replay_script_path']}",
+                },
+            },
+        )
+
     def get_trial_replay(self, session_id: str) -> ApiResponse:
         if not _SESSION_ID_RE.fullmatch(session_id):
             return self._bad_request("session_id format is invalid")
@@ -519,6 +556,10 @@ class NewRouteApi:
             return self.list_trials()
         if normalized == "/v1/trials/latest":
             return self.get_latest_trial()
+        if normalized == "/v1/replays":
+            return self.list_replays()
+        if normalized == "/v1/replays/latest":
+            return self.get_latest_replay()
         prefix = "/v1/manifests/"
         if normalized.startswith(prefix):
             return self.get_manifest(normalized[len(prefix) :])
@@ -600,6 +641,49 @@ class NewRouteApi:
         trials = [self._read_json(path) for path in self.trial_store_root.glob("*/transform-session.json")]
         return sorted(trials, key=self._trial_sort_key, reverse=True)
 
+    def _all_replay_records(self) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for trial in self._all_trials():
+            replay_path = self._replay_path_for_trial(trial)
+            if replay_path is None or not replay_path.is_file():
+                continue
+            try:
+                replay = self._read_json(replay_path)
+                validate_against_schema(replay, "replay-script")
+            except (OSError, ValueError, json.JSONDecodeError):
+                continue
+            records.append(
+                {
+                    "trial": trial,
+                    "replay": replay,
+                    "summary": self._replay_summary(trial, replay, replay_path),
+                }
+            )
+        return sorted(records, key=lambda record: str(record["summary"].get("updated_at") or ""), reverse=True)
+
+    def _replay_path_for_trial(self, trial: dict[str, Any]) -> Path | None:
+        session_id = trial.get("session_id")
+        if not isinstance(session_id, str):
+            return None
+        artifacts = trial.get("artifacts") if isinstance(trial.get("artifacts"), dict) else {}
+        raw_path = artifacts.get("replay_script_path")
+        if isinstance(raw_path, str) and raw_path:
+            raw_candidate = Path(raw_path)
+            candidate = raw_candidate.resolve() if raw_candidate.is_absolute() else (self.repo_root / raw_path).resolve()
+            if not self._is_readable_artifact_path(candidate):
+                return None
+            return candidate
+        return self._replay_path(session_id)
+
+    def _is_readable_artifact_path(self, path: Path) -> bool:
+        for root in (self.repo_root, self.trial_store_root):
+            try:
+                path.relative_to(root.resolve())
+                return True
+            except ValueError:
+                continue
+        return False
+
     def _trial_sort_key(self, trial: dict[str, Any]) -> str:
         metadata = trial.get("metadata") if isinstance(trial.get("metadata"), dict) else {}
         return str(metadata.get("updated_at") or trial.get("completed_at") or trial.get("started_at") or "")
@@ -618,6 +702,30 @@ class NewRouteApi:
             "last_event_type": last_event.get("event_type"),
             "replay_script_path": artifacts.get("replay_script_path"),
             "updated_at": metadata.get("updated_at") or trial.get("completed_at") or trial.get("started_at"),
+        }
+
+    def _replay_summary(self, trial: dict[str, Any], replay: dict[str, Any], replay_path: Path) -> dict[str, Any]:
+        events = trial.get("events") if isinstance(trial.get("events"), list) else []
+        source_events = replay.get("source_events") if isinstance(replay.get("source_events"), dict) else {}
+        event_ids = source_events.get("event_ids") if isinstance(source_events.get("event_ids"), list) else []
+        timeline = replay.get("timeline") if isinstance(replay.get("timeline"), list) else []
+        metadata = replay.get("metadata") if isinstance(replay.get("metadata"), dict) else {}
+        last_event = events[-1] if events and isinstance(events[-1], dict) else {}
+        generated_at = metadata.get("created_at")
+        return {
+            "replay_id": replay.get("replay_id"),
+            "session_id": replay.get("session_id") or trial.get("session_id"),
+            "suit_id": trial.get("suit_id"),
+            "manifest_id": replay.get("manifest_id") or trial.get("manifest_id"),
+            "state": trial.get("state"),
+            "duration_sec": replay.get("duration_sec"),
+            "segment_count": len(timeline),
+            "source_event_count": len(event_ids),
+            "event_count": len(events),
+            "last_event_type": last_event.get("event_type"),
+            "replay_script_path": self._relative_path(replay_path),
+            "generated_at": generated_at,
+            "updated_at": generated_at or self._trial_sort_key(trial),
         }
 
     def _non_regressive_state_after(self, state_before: str, requested_state_after: str) -> str:

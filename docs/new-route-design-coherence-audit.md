@@ -5,7 +5,7 @@ Date: 2026-04-26
 Lore baseline:
 
 ```text
-Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
+Web: Suit Forge -> Quest: Henshin Trial -> Replay: Archive
 ```
 
 This note tracks the next brush-up lane after the data route is working. The goal is not only to make the mockups prettier. The goal is to make the armor identity, part geometry, UI language, and replay evidence point to the same suit.
@@ -14,7 +14,7 @@ This note tracks the next brush-up lane after the data route is working. The goa
 
 The route mechanics are now far enough along to expose visual debt:
 
-- `examples/suitspec.sample.json` is the first canonical suit seed, but it mixes top-level operator identity with older generated metadata.
+- `examples/suitspec.sample.json` is the first canonical suit seed. Its top-level operator identity is now locked to the latest generated identity metadata: `legacy / stoic / clear_white`.
 - `viewer/shared/armor-canon.js` contains baseline fit, color, VRM anchor, and part-slot conventions, but the sample `SuitSpec` overrides many values with much smaller or differently offset fit settings.
 - `viewer/assets/meshes/*.mesh.json` covers the full 18-part kit, so the base part inventory is complete.
 - `texture_path` values in the sample point into `sessions/...`, which is runtime output and ignored by git. That is fine for local proof, but it is not a portable canonical design seed.
@@ -22,17 +22,9 @@ The route mechanics are now far enough along to expose visual debt:
 
 ## Coherence Risks
 
-### 1. Canonical identity is split
+### 1. Canonical identity is locked
 
-The top-level sample operator profile says:
-
-```text
-protect_archetype: citizens
-temperament_bias: calm
-color_mood: industrial_gray
-```
-
-The generation metadata embedded later in the same sample points toward:
+The sample now keeps the top-level operator profile aligned with the latest generation metadata:
 
 ```text
 protect_archetype: legacy
@@ -41,7 +33,7 @@ color_mood: clear_white
 palette_family: Rescue ceramic white
 ```
 
-This is the first thing to resolve. Otherwise every generated texture, UI label, and replay thumbnail can be individually good but collectively feel like different suits.
+The active palette follows that family: ceramic off-white shell, cool gray substructure, and blue-white emissive. Stored part prompts remain as generation trace; future texture regeneration should preserve the locked profile.
 
 ### 2. Fit values have two competing baselines
 
@@ -85,8 +77,8 @@ REPLAY ARCHIVE
 ## Brush-Up Order
 
 1. Canonical identity lock
-   - Decide whether `VDA-AXIS-OP-00-0001` is `industrial_gray/calm/citizens` or `clear_white/stoic/legacy`.
-   - Update the sample so top-level identity, generation metadata, palette, and prompt family agree.
+   - Done for `VDA-AXIS-OP-00-0001`: `clear_white / stoic / legacy`.
+   - Keep future generation metadata, palette, and prompt family aligned with this identity unless a deliberate new suit ID is created.
 
 2. Fit contract split
    - Define whether `module.fit` is authored mesh fit, body-fit result, or runtime override.
@@ -132,21 +124,19 @@ Use this as the acceptance gate for the next visual pass.
 - Voice and TTS stay on the Sakura AI path; `mockTrigger=1` remains clearly local smoke only.
 - Trial completion leaves a ReplayScript record that the PC dashboard can verify.
 
-## Next Implementation Slice
+## Current Implementation Slice
 
-Smallest safe slice:
+Current branch:
 
 ```text
-codex/new-route-design-coherence-audit
+codex/new-route-canonical-identity-lock
 ```
 
-Implement a non-destructive design audit command or test that checks:
+This slice consumes the audit's first finding by making the sample identity internally consistent:
 
-- all module asset refs exist,
-- all texture refs either exist or have a palette fallback,
-- left/right pairs have mirrored attachment slots and close fit values,
-- sample identity fields do not contradict stored generation metadata,
-- large drift from `armor-canon.js` is reported with part names.
+- top-level operator profile matches latest generation metadata,
+- sample palette and projected manifest palette use the rescue ceramic white family,
+- design coherence audit treats `operator_identity_drift` as a regression.
 
 Command:
 
@@ -154,4 +144,4 @@ Command:
 python tools/run_henshin.py design-coherence-audit --output-md tests/.tmp/design-coherence-audit.md
 ```
 
-After the audit is executable, the actual visual redesign can proceed with clear acceptance criteria instead of subjective polish.
+After this lock, the next highest-value slice is the fit contract split: make `module.fit` unambiguously mean authored fit, calibrated body-fit result, or runtime override.

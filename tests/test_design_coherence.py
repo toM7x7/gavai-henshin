@@ -12,8 +12,9 @@ def test_design_coherence_audit_reports_current_visual_debt() -> None:
 
     codes = {finding["code"] for finding in audit["findings"]}
     assert "runtime_texture_path" in codes
-    assert "operator_identity_drift" in codes
+    assert "operator_identity_drift" not in codes
     assert "canon_fit_drift" in codes
+    assert audit["counts"]["warning"] == 18
 
     drift_parts = {finding["part"] for finding in audit["findings"] if finding["code"] == "canon_fit_drift"}
     assert {"left_forearm", "right_forearm", "left_thigh", "right_thigh"}.issubset(drift_parts)

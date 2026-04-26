@@ -2121,6 +2121,12 @@ class QuestHenshinDemo {
 
   async applyReplay(replay, { speak, autoplay = true, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
     this.replay = replay;
+    const replayScript = Array.isArray(replay?.replay?.timeline) ? replay.replay : replay;
+    const replayMotionFrames = motionFramesFromReplayScript(replayScript);
+    this.setArchiveMotionFrames(replayMotionFrames);
+    if (replayMotionFrames.length && Number.isFinite(Number(replayScript?.duration_sec))) {
+      this.duration = clamp(Number(replayScript.duration_sec), 0.8, 12);
+    }
     this.frames = replay?.deposition?.body_sim_path
       ? await this.loadBodySim(replay.deposition.body_sim_path)
       : [];
@@ -2577,8 +2583,9 @@ class QuestHenshinDemo {
   }
 
   playbackMotionFrames() {
+    if (this.playbackSource !== "archive") return [];
     if (this.xrViewMode === XR_VIEW_MODE_SELF) return [];
-    return this.archiveMotionFrames.length ? this.archiveMotionFrames : this.liveMotionFrames;
+    return this.archiveMotionFrames;
   }
 
   currentReplayMotionFrame(elapsed = this.elapsed) {
@@ -2755,14 +2762,15 @@ class QuestHenshinDemo {
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];
-      if ((!useLiveSuit && !pose && !replayMotionFrame) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
+      const useReplayMotion = !pose && replayMotionFrame;
+      if ((!useLiveSuit && !pose && !useReplayMotion) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
         mesh.visible = false;
         order += 1;
         continue;
       }
       if (useLiveSuit) {
         this.applyLiveSuitPose(mesh, part, reveal);
-      } else if (replayMotionFrame) {
+      } else if (useReplayMotion) {
         this.applyMotionSuitPose(mesh, part, replayMotionFrame, reveal);
       } else {
         applySegmentPose(mesh, pose, part, reveal, {

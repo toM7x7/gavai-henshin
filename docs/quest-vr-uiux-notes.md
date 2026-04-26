@@ -48,6 +48,7 @@ Current slice:
 - Right controller trigger can enter the transformation bank when it is not selecting a menu item.
 - The transformation item should glow during voice standby/recording/deposition so the next action is obvious.
 - Store compact `quest-live-pose.v0` HMD/controller samples in the trial event log as the bridge toward motion replay.
+- Expand recorded live pose samples into compact ReplayScript `deposition_progress` actions and use them for mirror/observer archive replay.
 - Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
 - Keep the bracelet panel compact. Its local horizontal axis should align with the controller laser axis, with the panel plane rotated 90 degrees counterclockwise for a watch-like wrist read.
 
@@ -58,7 +59,7 @@ Next UI slice:
 - Add a world-lock mode for longer inspection.
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
 - Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
-- ReplayScript generation now expands recorded live pose samples into `deposition_progress` timeline actions when motion capture exists.
+- Add replay diagnostics for whether archive playback is using live-pose frames, body-sim frames, or static fallback.
 
 ## Fit And Suit Visibility Rule
 

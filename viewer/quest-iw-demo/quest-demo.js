@@ -452,6 +452,75 @@ function formatVoiceDebug(data, transcript, reason = "") {
   return lines.join("\n");
 }
 
+function numericMotionVector(value, fallback = [0, 0, 0]) {
+  const source = Array.isArray(value) && value.length >= 3 ? value : fallback;
+  return source.slice(0, 3).map((item, index) => {
+    const number = Number(item);
+    return Number.isFinite(number) ? number : Number(fallback[index] || 0);
+  });
+}
+
+function normalizeMotionFrame(frame, atTimeSec = null) {
+  if (!frame || typeof frame !== "object") return null;
+  const rawTime = Number(frame.t);
+  const fallbackTime = Number(atTimeSec);
+  const t = Number.isFinite(rawTime)
+    ? rawTime
+    : Number.isFinite(fallbackTime)
+      ? fallbackTime
+      : 0;
+  return {
+    ...frame,
+    t: Math.max(0, Number(t.toFixed(3))),
+    progress: Number.isFinite(Number(frame.progress)) ? clamp(Number(frame.progress), 0, 1) : 0,
+    head: numericMotionVector(frame.head, [0, 1.56, 0]),
+    left_hand: numericMotionVector(frame.left_hand, [-0.42, 0.76, -0.34]),
+    right_hand: numericMotionVector(frame.right_hand, [0.42, 0.76, -0.34]),
+    torso_yaw: Number.isFinite(Number(frame.torso_yaw)) ? Number(frame.torso_yaw) : 0,
+    left_hand_tracked: frame.left_hand_tracked !== false,
+    right_hand_tracked: frame.right_hand_tracked !== false,
+  };
+}
+
+function lerpMotionVector(a, b, amount) {
+  return [
+    lerp(a[0], b[0], amount),
+    lerp(a[1], b[1], amount),
+    lerp(a[2], b[2], amount),
+  ];
+}
+
+function interpolateMotionFrame(a, b, elapsed) {
+  if (!a || !b || a === b) return a || b || null;
+  const span = Math.max(0.001, b.t - a.t);
+  const amount = clamp((elapsed - a.t) / span, 0, 1);
+  return {
+    ...a,
+    t: Number(elapsed.toFixed(3)),
+    progress: lerp(a.progress || 0, b.progress || 0, amount),
+    head: lerpMotionVector(a.head, b.head, amount),
+    left_hand: lerpMotionVector(a.left_hand, b.left_hand, amount),
+    right_hand: lerpMotionVector(a.right_hand, b.right_hand, amount),
+    torso_yaw: lerp(a.torso_yaw || 0, b.torso_yaw || 0, amount),
+    left_hand_tracked: amount < 0.5 ? a.left_hand_tracked : b.left_hand_tracked,
+    right_hand_tracked: amount < 0.5 ? a.right_hand_tracked : b.right_hand_tracked,
+  };
+}
+
+function motionFramesFromReplayScript(replayScript) {
+  const timeline = Array.isArray(replayScript?.timeline) ? replayScript.timeline : [];
+  const frames = [];
+  for (const segment of timeline) {
+    const actions = Array.isArray(segment?.actions) ? segment.actions : [];
+    for (const action of actions) {
+      const motionFrame = action?.params?.motion_frame;
+      const normalized = normalizeMotionFrame(motionFrame, action?.at_time_sec);
+      if (normalized) frames.push(normalized);
+    }
+  }
+  return frames.sort((a, b) => a.t - b.t);
+}
+
 async function loadJson(path) {
   const normalized = normalizePath(path);
   const response = await fetch(normalized, { cache: "no-store" });
@@ -1484,6 +1553,7 @@ class SpatialControlPanel {
     }
     if (this.controllerHandedness(controller) === "right") {
       this.demo.audioBed.pulse(1040, 0.1);
+      if (!this.demo.canRunVoiceCommand()) return;
       void this.demo.runVoiceCommand();
     }
   }
@@ -1512,6 +1582,7 @@ class QuestHenshinDemo {
     this.depositionStartPromise = null;
     this.xrViewMode = XR_VIEW_MODE_SELF;
     this.archiveViewMode = getArchiveViewMode();
+    this.playbackSource = "voice";
     this.routeState = {
       apiLabel: useNewRouteApi() ? "/v1 ARMED" : "OFF",
       apiState: useNewRouteApi() ? "pending" : "idle",
@@ -1552,7 +1623,12 @@ class QuestHenshinDemo {
     this.rightHandTracked = false;
     this.liveTorsoYaw = 0;
     this.liveMotionFrames = [];
+    this.archiveMotionFrames = [];
     this.lastLiveMotionSampleAt = -Infinity;
+    this.motionHeadPosition = new THREE.Vector3();
+    this.motionPartPosition = new THREE.Vector3();
+    this.motionPartPositionB = new THREE.Vector3();
+    this.motionPartPositionC = new THREE.Vector3();
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
     this.selfScale = new THREE.Vector3(1, 1, 1);
     this.observerScale = new THREE.Vector3(
@@ -1932,6 +2008,11 @@ class QuestHenshinDemo {
       this.setRouteReplay("BUILDING", "pending");
       const replay = await getJson(`/v1/trials/${this.trialId}/replay`);
       this.trialReplayPath = replay.replay_path || null;
+      const motionFrames = motionFramesFromReplayScript(replay.replay);
+      if (motionFrames.length) {
+        this.setArchiveMotionFrames(motionFrames);
+        this.appendVoiceDebug(`motion replay: ${motionFrames.length} pose frames`);
+      }
       this.appendVoiceDebug(`trial replay: ${replay.replay_id || this.trialReplayPath}`);
       this.setRouteReplay(replay.replay_id || this.trialReplayPath || "READY", "ok");
       return replay;
@@ -2089,10 +2170,12 @@ class QuestHenshinDemo {
   replayFromStart({ speak, audio = speak, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
     if (audio) this.audioBed.start();
     this.xrViewMode = viewMode;
+    this.playbackSource = source;
     this.xrWorldAnchorReady = false;
     this.captureWorldAnchor(viewMode);
     if (source !== "archive") {
       this.liveMotionFrames = [];
+      this.archiveMotionFrames = [];
       this.lastLiveMotionSampleAt = -Infinity;
     }
     this.elapsed = 0;
@@ -2100,8 +2183,9 @@ class QuestHenshinDemo {
     this.completionAnnounced = false;
     UI.btnPause.textContent = "停止";
     const archive = source === "archive";
+    const motionCount = archive ? this.playbackMotionFrames().length : 0;
     UI.status.textContent = archive
-      ? `記録再生: ${formatArchiveViewMode(viewMode)}視点で身体トレースを確認します。`
+      ? `記録再生: ${formatArchiveViewMode(viewMode)}視点で身体トレースを確認します。${motionCount ? `姿勢 ${motionCount} フレーム。` : ""}`
       : `音声合図 ${TRIGGER_PHRASE} を確認。一人称変身を開始します。`;
     this.setVoiceState(
       "deposition",
@@ -2117,7 +2201,7 @@ class QuestHenshinDemo {
   }
 
   async runVoiceCommand() {
-    if (this.voiceState === "arming" || this.voiceState === "recording" || this.voiceState === "analyzing") return;
+    if (!this.canRunVoiceCommand()) return;
     this.audioBed.start();
     UI.btnVoice.disabled = true;
     try {
@@ -2239,6 +2323,10 @@ class QuestHenshinDemo {
     } finally {
       UI.btnVoice.disabled = false;
     }
+  }
+
+  canRunVoiceCommand() {
+    return !this.playing && !["arming", "recording", "analyzing", "detected", "deposition"].includes(this.voiceState);
   }
 
   speakExplanation() {
@@ -2468,11 +2556,103 @@ class QuestHenshinDemo {
     return {
       format: "quest-live-pose.v0",
       tracking: "hmd_plus_controllers",
+      timebase: "deposition_elapsed_sec",
+      coordinate_space: {
+        root: "xr_world_anchor",
+        head: "rig_local",
+        left_hand: "rig_local",
+        right_hand: "rig_local",
+      },
       sample_interval_sec: LIVE_MOTION_SAMPLE_INTERVAL,
       frame_count: this.liveMotionFrames.length,
       frames: this.liveMotionFrames,
       note: "Hips, torso twist, and feet are estimated until mocopi/IK/VRM retargeting is connected.",
     };
+  }
+
+  setArchiveMotionFrames(frames) {
+    this.archiveMotionFrames = Array.isArray(frames)
+      ? frames.map((frame) => normalizeMotionFrame(frame)).filter(Boolean).sort((a, b) => a.t - b.t)
+      : [];
+  }
+
+  playbackMotionFrames() {
+    if (this.xrViewMode === XR_VIEW_MODE_SELF) return [];
+    return this.archiveMotionFrames.length ? this.archiveMotionFrames : this.liveMotionFrames;
+  }
+
+  currentReplayMotionFrame(elapsed = this.elapsed) {
+    const frames = this.playbackMotionFrames();
+    if (!frames.length) return null;
+    if (frames.length === 1) return frames[0];
+    const time = clamp(elapsed, frames[0].t, frames.at(-1).t);
+    let upperIndex = frames.findIndex((frame) => frame.t >= time);
+    if (upperIndex <= 0) return frames[0];
+    if (upperIndex < 0) return frames.at(-1);
+    const lower = frames[upperIndex - 1];
+    const upper = frames[upperIndex];
+    return interpolateMotionFrame(lower, upper, time);
+  }
+
+  setMotionBodyOffset(frame, target, x, y, z) {
+    this.motionHeadPosition.fromArray(frame.head || [0, 1.56, 0]);
+    const yaw = Number(frame.torso_yaw || 0);
+    const sin = Math.sin(yaw);
+    const cos = Math.cos(yaw);
+    return target.set(
+      this.motionHeadPosition.x + x * cos - z * sin,
+      this.motionHeadPosition.y + y,
+      this.motionHeadPosition.z + x * sin + z * cos,
+    );
+  }
+
+  getMotionHandPosition(frame, hand, target) {
+    const side = hand === "left" ? -1 : 1;
+    const tracked = hand === "left" ? frame.left_hand_tracked : frame.right_hand_tracked;
+    const source = hand === "left" ? frame.left_hand : frame.right_hand;
+    if (tracked && Array.isArray(source)) {
+      target.fromArray(source);
+      return target;
+    }
+    return this.setMotionBodyOffset(frame, target, side * 0.46, -0.92, -0.34);
+  }
+
+  getMotionBodyPartPosition(part, frame, target) {
+    const side = part.startsWith("left_") ? -1 : part.startsWith("right_") ? 1 : 0;
+    if (part === "helmet") return this.setMotionBodyOffset(frame, target, 0, -0.08, -0.02);
+    if (part === "chest") return this.setMotionBodyOffset(frame, target, 0, -0.48, -0.08);
+    if (part === "back") return this.setMotionBodyOffset(frame, target, 0, -0.48, 0.12);
+    if (part === "waist") return this.setMotionBodyOffset(frame, target, 0, -0.84, -0.02);
+    if (part === "left_thigh" || part === "right_thigh") return this.setMotionBodyOffset(frame, target, side * 0.16, -1.08, -0.06);
+    if (part === "left_shin" || part === "right_shin") return this.setMotionBodyOffset(frame, target, side * 0.18, -1.4, -0.08);
+    if (part === "left_boot" || part === "right_boot") return this.setMotionBodyOffset(frame, target, side * 0.18, -1.66, -0.12);
+
+    const hand = side < 0 ? "left" : "right";
+    const shoulder = this.setMotionBodyOffset(frame, this.motionPartPositionB, side * 0.32, -0.43, -0.08);
+    const handPosition = this.getMotionHandPosition(frame, hand, this.motionPartPositionC);
+    if (part.endsWith("_shoulder")) return target.copy(shoulder);
+    if (part.endsWith("_upperarm")) return target.lerpVectors(shoulder, handPosition, 0.36);
+    if (part.endsWith("_forearm")) return target.lerpVectors(shoulder, handPosition, 0.72);
+    if (part.endsWith("_hand")) return target.copy(handPosition);
+
+    const fallback = VR_BODY_PART_POSES[part];
+    if (fallback) return target.fromArray(fallback);
+    return this.setMotionBodyOffset(frame, target, 0, -0.5, 0);
+  }
+
+  applyMotionSuitPose(mesh, part, frame, reveal) {
+    this.getMotionBodyPartPosition(part, frame, this.motionPartPosition);
+    mesh.position.copy(this.motionPartPosition);
+    mesh.rotation.set(Math.PI / 2, 0, Number(frame.torso_yaw || 0));
+    const fit = mesh.userData.module?.fit || {};
+    const minScale = Array.isArray(fit.minScale) ? fit.minScale : [0.16, 0.16, 0.16];
+    const fitScale = Array.isArray(fit.scale) ? fit.scale : [0.2, 0.48, 0.2];
+    const sx = Math.max(Number(fitScale[0] || 0.18) * 4.8, Number(minScale[0] || 0.1));
+    const sy = Math.max(Number(fitScale[1] || 0.44) * 3.0, Number(minScale[1] || 0.1));
+    const sz = Math.max(Number(fitScale[2] || 0.18) * 4.8, Number(minScale[2] || 0.1));
+    const emerge = lerp(0.08, 1, reveal);
+    const vrScale = VR_PART_SCALE[part] || 0.28;
+    mesh.scale.set(sx * emerge * vrScale, sy * emerge * vrScale, sz * emerge * vrScale);
   }
 
   updateLiveMirrorAvatar(progress, reveal) {
@@ -2557,6 +2737,7 @@ class QuestHenshinDemo {
     const reveal = easeOutCubic(progress);
     const frame = this.currentFrame(progress) || this.frames.at(-1);
     const segments = frame?.segments || {};
+    const replayMotionFrame = this.currentReplayMotionFrame(this.elapsed);
 
     UI.meterFill.style.width = `${Math.round(progress * 100)}%`;
 
@@ -2574,13 +2755,15 @@ class QuestHenshinDemo {
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];
-      if ((!useLiveSuit && !pose) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
+      if ((!useLiveSuit && !pose && !replayMotionFrame) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
         mesh.visible = false;
         order += 1;
         continue;
       }
       if (useLiveSuit) {
         this.applyLiveSuitPose(mesh, part, reveal);
+      } else if (replayMotionFrame) {
+        this.applyMotionSuitPose(mesh, part, replayMotionFrame, reveal);
       } else {
         applySegmentPose(mesh, pose, part, reveal, {
           centered: selfView,

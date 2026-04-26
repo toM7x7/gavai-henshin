@@ -223,9 +223,11 @@ class TestNewRouteApi(unittest.TestCase):
                         "motion_capture": {
                             "format": "quest-live-pose.v0",
                             "tracking": "hmd_plus_controllers",
+                            "timebase": "deposition_elapsed_sec",
+                            "coordinate_space": {"head": "rig_local", "right_hand": "rig_local"},
                             "frames": [
-                                {"t": 0.0, "head": [0, 1.6, 0], "right_hand": [0.3, 1.2, -0.2]},
                                 {"t": 0.2, "head": [0, 1.6, 0], "right_hand": [0.5, 1.2, -0.2]},
+                                {"t": 0.0, "head": [0, 1.6, 0], "right_hand": [0.3, 1.2, -0.2]},
                             ],
                         }
                     },
@@ -244,9 +246,21 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(len(motion_segments), 1)
             self.assertEqual(motion_segments[0]["duration_sec"], 0.2)
             self.assertEqual(len(motion_segments[0]["actions"]), 2)
+            action_times = [action["at_time_sec"] for action in motion_segments[0]["actions"]]
+            self.assertEqual(action_times, sorted(action_times))
+            self.assertAlmostEqual(action_times[0], motion_segments[0]["start_time_sec"], places=3)
+            self.assertEqual(round(action_times[1] - action_times[0], 3), 0.2)
             self.assertEqual(motion_segments[0]["actions"][1]["action_type"], "deposition_progress")
             self.assertEqual(motion_segments[0]["actions"][1]["params"]["motion_capture_format"], "quest-live-pose.v0")
+            self.assertEqual(motion_segments[0]["actions"][1]["params"]["timebase"], "deposition_elapsed_sec")
             self.assertEqual(motion_segments[0]["actions"][1]["params"]["motion_frame"]["right_hand"], [0.5, 1.2, -0.2])
+            event_segment = next(
+                segment for segment in response.body["replay"]["timeline"]
+                if segment["segment_id"] == "SEG-0002"
+            )
+            compact_motion = event_segment["actions"][0]["params"]["payload"]["motion_capture"]
+            self.assertEqual(compact_motion["frame_count"], 2)
+            self.assertNotIn("frames", compact_motion)
 
     def test_get_latest_trial_returns_replay_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

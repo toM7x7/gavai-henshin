@@ -75,6 +75,7 @@ _TRANSFORM_EVENT_TYPES = {
     "ERROR_RECORDED",
     "SESSION_ARCHIVED",
 }
+_MAX_REPLAY_MOTION_FRAMES = 240
 
 
 @dataclass(frozen=True, slots=True)
@@ -670,7 +671,7 @@ class NewRouteApi:
                 "source_event_ids": [event["event_id"]],
                 "actions": [self._replay_action_for_event(event, starts[idx])],
             })
-            motion_segment = self._motion_replay_segment(event, deposition_start_sec, idx)
+            motion_segment = self._motion_replay_segment(event, starts[idx], deposition_start_sec, idx)
             if motion_segment:
                 timeline.append(motion_segment)
         duration_sec = max((segment["start_time_sec"] + segment["duration_sec"] for segment in timeline), default=0)
@@ -689,7 +690,13 @@ class NewRouteApi:
             "metadata": {"created_at": self._utc_now(), "generator": "new-route-api"},
         }
 
-    def _motion_replay_segment(self, event: dict[str, Any], deposition_start_sec: float, index: int) -> dict[str, Any] | None:
+    def _motion_replay_segment(
+        self,
+        event: dict[str, Any],
+        event_start_sec: float,
+        deposition_start_sec: float,
+        index: int,
+    ) -> dict[str, Any] | None:
         payload = event.get("payload")
         if not isinstance(payload, dict):
             return None
@@ -700,23 +707,42 @@ class NewRouteApi:
         if not isinstance(frames, list) or not frames:
             return None
 
-        actions: list[dict[str, Any]] = []
-        last_t = 0.0
-        for frame in frames:
+        timebase = str(motion_capture.get("timebase") or "").lower()
+        if timebase in {"event", "event_elapsed_sec"}:
+            segment_start_sec = event_start_sec
+        elif timebase in {"deposition", "deposition_elapsed_sec"}:
+            segment_start_sec = deposition_start_sec
+        elif event.get("event_type") in {"DEPOSITION_COMPLETED", "DEPOSITION_PROGRESS"}:
+            segment_start_sec = deposition_start_sec
+        else:
+            segment_start_sec = event_start_sec
+
+        normalized_frames: list[tuple[float, int, dict[str, Any]]] = []
+        for original_index, frame in enumerate(frames[:_MAX_REPLAY_MOTION_FRAMES]):
             if not isinstance(frame, dict):
                 continue
             try:
                 frame_t = max(0.0, float(frame.get("t", 0.0)))
             except (TypeError, ValueError):
                 frame_t = 0.0
+            normalized_frames.append((frame_t, original_index, frame))
+        if not normalized_frames:
+            return None
+        normalized_frames.sort(key=lambda item: (item[0], item[1]))
+
+        actions: list[dict[str, Any]] = []
+        last_t = 0.0
+        for frame_t, _original_index, frame in normalized_frames:
             last_t = max(last_t, frame_t)
             actions.append({
                 "action_type": "deposition_progress",
-                "at_time_sec": round(deposition_start_sec + frame_t, 3),
+                "at_time_sec": round(segment_start_sec + frame_t, 3),
                 "params": {
                     "event_type": "TRACKING_FRAME_BATCH",
                     "motion_capture_format": motion_capture.get("format", "unknown"),
                     "tracking": motion_capture.get("tracking"),
+                    "timebase": timebase or "auto",
+                    "coordinate_space": motion_capture.get("coordinate_space"),
                     "motion_frame": frame,
                 },
             })
@@ -725,7 +751,7 @@ class NewRouteApi:
 
         return {
             "segment_id": f"SEG-MOTION-{index:04d}",
-            "start_time_sec": deposition_start_sec,
+            "start_time_sec": segment_start_sec,
             "duration_sec": round(last_t, 3),
             "source_event_ids": [event["event_id"]],
             "actions": actions,
@@ -755,9 +781,22 @@ class NewRouteApi:
                 "event_type": event_type,
                 "state_before": event.get("state_before"),
                 "state_after": event.get("state_after"),
-                "payload": event.get("payload", {}),
+                "payload": self._replay_payload_summary(event.get("payload", {})),
             },
         }
+
+    def _replay_payload_summary(self, payload: Any) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return {}
+        summary = self._clone_json(payload)
+        motion_capture = summary.get("motion_capture")
+        if isinstance(motion_capture, dict) and isinstance(motion_capture.get("frames"), list):
+            frames = motion_capture["frames"]
+            compact_motion = {key: value for key, value in motion_capture.items() if key != "frames"}
+            compact_motion["frame_count"] = len(frames)
+            compact_motion["frames_ref"] = "timeline.deposition_progress.params.motion_frame"
+            summary["motion_capture"] = compact_motion
+        return summary
 
     def _build_replay_id(self, session_id: str, occurred_at: str) -> str:
         date = datetime.now(timezone.utc).strftime("%Y%m%d")

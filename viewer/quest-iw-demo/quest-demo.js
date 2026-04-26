@@ -126,9 +126,14 @@ const VR_REPLAY_MIRROR_HEIGHT_OFFSET = -0.1;
 const VR_REPLAY_MIRROR_SCALE = 0.82;
 const MIRROR_FRAME_WIDTH = 1.34;
 const MIRROR_FRAME_HEIGHT = 2.08;
+const LIVE_MIRROR_DISTANCE = 1.9;
+const LIVE_MIRROR_HEIGHT_OFFSET = -0.12;
+const LIVE_MIRROR_SCALE = 0.82;
+const LIVE_MIRROR_SHOW_PROGRESS = 0.78;
 const XR_MENU_FALLBACK_DISTANCE = 1.14;
 const XR_MENU_FALLBACK_LEFT = 0.62;
 const XR_MENU_FALLBACK_DOWN = 0.32;
+const WATCH_PANEL_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.82, 0.18, 0.02, "XYZ"));
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -1240,6 +1245,10 @@ class SpatialControlPanel {
   initControllers() {
     for (let index = 0; index < 2; index += 1) {
       const controller = this.demo.renderer.xr.getController(index);
+      controller.userData.controllerIndex = index;
+      controller.addEventListener("connected", (event) => {
+        controller.userData.handedness = event.data?.handedness || controller.userData.handedness;
+      });
       controller.addEventListener("selectstart", () => this.activateHovered());
       const line = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]),
@@ -1248,9 +1257,50 @@ class SpatialControlPanel {
       line.name = "XR-Menu-Ray";
       line.scale.z = 1.4;
       controller.add(line);
+      const device = this.createTransformDevice();
+      controller.add(device);
+      controller.userData.transformDevice = device;
       this.demo.scene.add(controller);
       this.controllers.push(controller);
     }
+  }
+
+  createTransformDevice() {
+    const device = new THREE.Group();
+    device.name = "XR-Right-Hand-Henshin-Device";
+    device.visible = false;
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.045, 0.16),
+      new THREE.MeshBasicMaterial({ color: 0x061116, transparent: true, opacity: 0.88, side: THREE.DoubleSide }),
+    );
+    body.position.set(0, -0.025, -0.055);
+    device.add(body);
+    const lens = new THREE.Mesh(
+      new THREE.RingGeometry(0.032, 0.042, 28),
+      new THREE.MeshBasicMaterial({ color: 0xffcf5a, transparent: true, opacity: 0.9, side: THREE.DoubleSide }),
+    );
+    lens.position.set(0, -0.025, -0.14);
+    lens.rotation.x = Math.PI / 2;
+    device.add(lens);
+    const glow = new THREE.PointLight(0xffcf5a, 0.45, 0.45);
+    glow.position.set(0, -0.02, -0.1);
+    device.add(glow);
+    return device;
+  }
+
+  controllerHandedness(controller) {
+    if (!controller) return "";
+    return controller.userData.handedness || (controller.userData.controllerIndex === 0 ? "left" : "right");
+  }
+
+  getControllerByHand(hand) {
+    return this.controllers.find((controller) => this.controllerHandedness(controller) === hand)
+      || (hand === "left" ? this.controllers[0] : this.controllers[1])
+      || null;
+  }
+
+  getMenuController() {
+    return this.getControllerByHand("left") || this.controllers[0] || null;
   }
 
   setDebug(text) {
@@ -1313,13 +1363,15 @@ class SpatialControlPanel {
       controller.visible = inVR;
       const ray = controller.getObjectByName("XR-Menu-Ray");
       if (ray) ray.visible = inVR;
+      const device = controller.userData.transformDevice;
+      if (device) device.visible = inVR && this.controllerHandedness(controller) === "right";
     }
     if (!inVR) return;
 
     const xrCamera = this.demo.renderer.xr.getCamera(this.demo.camera) || this.demo.camera;
     xrCamera.getWorldPosition(this.cameraPosition);
     xrCamera.getWorldQuaternion(this.cameraQuaternion);
-    const wrist = this.controllers[0];
+    const wrist = this.getMenuController();
     if (wrist) {
       wrist.getWorldPosition(this.controllerPosition);
       wrist.getWorldQuaternion(this.controllerQuaternion);
@@ -1328,7 +1380,7 @@ class SpatialControlPanel {
     if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
       this.menuOffset.set(-0.14, 0.08, -0.12).applyQuaternion(this.controllerQuaternion);
       this.group.position.copy(this.controllerPosition).add(this.menuOffset);
-      this.group.quaternion.copy(this.controllerQuaternion);
+      this.group.quaternion.copy(this.controllerQuaternion).multiply(WATCH_PANEL_ROTATION);
       this.group.scale.setScalar(0.58);
     } else {
       this.demo.ensureMenuFallbackAnchor();
@@ -1393,6 +1445,7 @@ class QuestHenshinDemo {
     this.frames = [];
     this.suitspec = null;
     this.meshes = new Map();
+    this.liveMirrorMeshes = new Map();
     this.voiceState = "ready";
     this.trialId = null;
     this.trialReady = false;
@@ -1426,6 +1479,18 @@ class QuestHenshinDemo {
     this.menuFallbackQuaternion = new THREE.Quaternion();
     this.menuFallbackRight = new THREE.Vector3();
     this.menuFallbackForward = new THREE.Vector3();
+    this.liveMirrorReady = false;
+    this.liveMirrorPosition = new THREE.Vector3();
+    this.liveMirrorQuaternion = new THREE.Quaternion();
+    this.liveMirrorScale = new THREE.Vector3(LIVE_MIRROR_SCALE, LIVE_MIRROR_SCALE, LIVE_MIRROR_SCALE);
+    this.liveHeadPosition = new THREE.Vector3();
+    this.liveLeftHandPosition = new THREE.Vector3();
+    this.liveRightHandPosition = new THREE.Vector3();
+    this.livePartPosition = new THREE.Vector3();
+    this.livePartPositionB = new THREE.Vector3();
+    this.livePartPositionC = new THREE.Vector3();
+    this.leftHandTracked = false;
+    this.rightHandTracked = false;
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
     this.selfScale = new THREE.Vector3(1, 1, 1);
     this.observerScale = new THREE.Vector3(
@@ -1555,6 +1620,53 @@ class QuestHenshinDemo {
     this.mirrorFrame.add(mirrorLabel);
     this.rig.add(this.mirrorFrame);
 
+    this.liveMirror = new THREE.Group();
+    this.liveMirror.name = "XR-Live-Suit-Mirror";
+    this.liveMirror.visible = false;
+    const liveGlass = new THREE.Mesh(
+      new THREE.PlaneGeometry(MIRROR_FRAME_WIDTH * 1.08, MIRROR_FRAME_HEIGHT * 1.02),
+      new THREE.MeshBasicMaterial({
+        color: 0x9eefff,
+        transparent: true,
+        opacity: 0.07,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    liveGlass.position.set(0, -0.58, 0.32);
+    this.liveMirror.add(liveGlass);
+    const liveFrameMaterial = new THREE.MeshBasicMaterial({
+      color: 0x43d8ff,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    for (const [geometry, x, y] of [
+      [new THREE.PlaneGeometry(MIRROR_FRAME_WIDTH + 0.18, 0.035), 0, 0.48],
+      [new THREE.PlaneGeometry(MIRROR_FRAME_WIDTH + 0.18, 0.035), 0, -1.64],
+      [new THREE.PlaneGeometry(0.035, MIRROR_FRAME_HEIGHT + 0.1), -0.73, -0.58],
+      [new THREE.PlaneGeometry(0.035, MIRROR_FRAME_HEIGHT + 0.1), 0.73, -0.58],
+    ]) {
+      const bar = new THREE.Mesh(geometry, liveFrameMaterial.clone());
+      bar.position.set(x, y, 0.34);
+      this.liveMirror.add(bar);
+    }
+    const liveLabel = makeTextPlane("装着確認", {
+      width: 0.42,
+      height: 0.08,
+      fontSize: 48,
+      color: "#d7f8ff",
+      background: "rgba(4, 13, 17, 0.44)",
+      border: "rgba(67, 216, 255, 0.46)",
+    });
+    liveLabel.position.set(0, 0.6, 0.36);
+    this.liveMirror.add(liveLabel);
+    this.liveMirrorAvatar = new THREE.Group();
+    this.liveMirrorAvatar.name = "XR-Live-Mirror-Avatar";
+    this.liveMirror.add(this.liveMirrorAvatar);
+    this.scene.add(this.liveMirror);
+
     const title = makeTextSprite(TRIGGER_PHRASE);
     title.position.set(0, 1.18, -0.3);
     this.rig.add(title);
@@ -1564,6 +1676,7 @@ class QuestHenshinDemo {
       this.audioBed.start();
       this.xrWorldAnchorReady = false;
       this.menuFallbackReady = false;
+      this.liveMirrorReady = false;
       this.captureWorldAnchor(this.xrViewMode);
       this.ensureMenuFallbackAnchor();
       UI.status.textContent = "VR開始。音声は一人称変身、記録再生は鏡/観察で確認します。";
@@ -1573,6 +1686,8 @@ class QuestHenshinDemo {
     this.renderer.xr.addEventListener("sessionend", () => {
       this.xrWorldAnchorReady = false;
       this.menuFallbackReady = false;
+      this.liveMirrorReady = false;
+      if (this.liveMirror) this.liveMirror.visible = false;
       UI.status.textContent = "VR終了。再開するにはVR開始を押してください。";
       UI.btnEnterVR.textContent = "VR開始";
     });
@@ -1843,6 +1958,15 @@ class QuestHenshinDemo {
       record.mesh.userData.partIndex = record.index;
       this.rig.add(record.mesh);
       this.meshes.set(record.part, record.mesh);
+      if (this.liveMirrorAvatar) {
+        const mirrorMesh = record.mesh.clone();
+        mirrorMesh.material = record.mesh.material.clone();
+        mirrorMesh.visible = false;
+        mirrorMesh.userData.partIndex = record.index;
+        mirrorMesh.userData.module = record.mesh.userData.module;
+        this.liveMirrorAvatar.add(mirrorMesh);
+        this.liveMirrorMeshes.set(record.part, mirrorMesh);
+      }
     }
     const fallbackText =
       this.suitspec?.texture_fallback?.mode === "palette_material"
@@ -2121,6 +2245,12 @@ class QuestHenshinDemo {
     const forward = this.xrForward.set(0, 0, -1).applyQuaternion(this.viewForwardQuaternion).normalize();
     let rigYaw = yaw;
     this.xrWorldAnchorPosition.copy(this.cameraPosition);
+    this.liveMirrorPosition
+      .copy(this.cameraPosition)
+      .add(this.livePartPosition.copy(forward).multiplyScalar(LIVE_MIRROR_DISTANCE));
+    this.liveMirrorPosition.y = this.cameraPosition.y + LIVE_MIRROR_HEIGHT_OFFSET;
+    this.liveMirrorQuaternion.setFromEuler(new THREE.Euler(0, yaw + Math.PI, 0, "YXZ"));
+    this.liveMirrorReady = true;
 
     if (viewMode === XR_VIEW_MODE_MIRROR) {
       this.xrWorldAnchorPosition.add(forward.multiplyScalar(VR_REPLAY_MIRROR_DISTANCE));
@@ -2154,6 +2284,111 @@ class QuestHenshinDemo {
       .add(this.menuFallbackRight.multiplyScalar(-XR_MENU_FALLBACK_LEFT));
     this.menuFallbackPosition.y = this.cameraPosition.y - XR_MENU_FALLBACK_DOWN;
     this.menuFallbackReady = true;
+  }
+
+  updateLiveBodyAnchors() {
+    if (!this.world.session) return;
+    const xrCamera = this.renderer.xr.getCamera(this.camera) || this.camera;
+    xrCamera.getWorldPosition(this.cameraPosition);
+    this.liveHeadPosition.copy(this.cameraPosition);
+    this.rig.worldToLocal(this.liveHeadPosition);
+
+    this.leftHandTracked = this.updateControllerLocalPosition("left", this.liveLeftHandPosition);
+    this.rightHandTracked = this.updateControllerLocalPosition("right", this.liveRightHandPosition);
+  }
+
+  updateControllerLocalPosition(hand, target) {
+    const controller = this.spatialPanel?.getControllerByHand(hand);
+    if (!controller) return false;
+    controller.getWorldPosition(target);
+    const distance = target.distanceTo(this.cameraPosition);
+    if (distance < 0.08 || distance > 2.2) return false;
+    this.rig.worldToLocal(target);
+    return true;
+  }
+
+  getEstimatedHandPosition(hand, target) {
+    const side = hand === "left" ? -1 : 1;
+    const tracked = hand === "left" ? this.leftHandTracked : this.rightHandTracked;
+    const source = hand === "left" ? this.liveLeftHandPosition : this.liveRightHandPosition;
+    if (tracked) {
+      target.copy(source);
+      return target;
+    }
+    target.set(side * 0.46, this.liveHeadPosition.y - 0.92, -0.34);
+    return target;
+  }
+
+  getLiveBodyPartPosition(part, target) {
+    const head = this.liveHeadPosition;
+    const side = part.startsWith("left_") ? -1 : part.startsWith("right_") ? 1 : 0;
+    if (part === "helmet") return target.set(head.x, head.y - 0.08, head.z - 0.02);
+    if (part === "chest") return target.set(head.x, head.y - 0.48, head.z - 0.08);
+    if (part === "back") return target.set(head.x, head.y - 0.48, head.z + 0.12);
+    if (part === "waist") return target.set(head.x, head.y - 0.84, head.z - 0.02);
+    if (part === "left_thigh" || part === "right_thigh") return target.set(head.x + side * 0.16, head.y - 1.08, head.z - 0.06);
+    if (part === "left_shin" || part === "right_shin") return target.set(head.x + side * 0.18, head.y - 1.4, head.z - 0.08);
+    if (part === "left_boot" || part === "right_boot") return target.set(head.x + side * 0.18, head.y - 1.66, head.z - 0.12);
+
+    const hand = side < 0 ? "left" : "right";
+    const shoulder = this.livePartPositionB.set(head.x + side * 0.32, head.y - 0.43, head.z - 0.08);
+    const handPosition = this.getEstimatedHandPosition(hand, this.livePartPositionC);
+    if (part.endsWith("_shoulder")) return target.copy(shoulder);
+    if (part.endsWith("_upperarm")) return target.lerpVectors(shoulder, handPosition, 0.36);
+    if (part.endsWith("_forearm")) return target.lerpVectors(shoulder, handPosition, 0.72);
+    if (part.endsWith("_hand")) return target.copy(handPosition);
+
+    const fallback = VR_BODY_PART_POSES[part];
+    if (fallback) return target.fromArray(fallback);
+    return target.set(head.x, head.y - 0.5, head.z);
+  }
+
+  applyLiveSuitPose(mesh, part, reveal) {
+    this.getLiveBodyPartPosition(part, this.livePartPosition);
+    mesh.position.copy(this.livePartPosition);
+    mesh.rotation.set(Math.PI / 2, 0, 0);
+    const fit = mesh.userData.module?.fit || {};
+    const minScale = Array.isArray(fit.minScale) ? fit.minScale : [0.16, 0.16, 0.16];
+    const fitScale = Array.isArray(fit.scale) ? fit.scale : [0.2, 0.48, 0.2];
+    const sx = Math.max(Number(fitScale[0] || 0.18) * 4.8, Number(minScale[0] || 0.1));
+    const sy = Math.max(Number(fitScale[1] || 0.44) * 3.0, Number(minScale[1] || 0.1));
+    const sz = Math.max(Number(fitScale[2] || 0.18) * 4.8, Number(minScale[2] || 0.1));
+    const emerge = lerp(0.08, 1, reveal);
+    const vrScale = VR_PART_SCALE[part] || 0.28;
+    mesh.scale.set(sx * emerge * vrScale, sy * emerge * vrScale, sz * emerge * vrScale);
+  }
+
+  updateLiveMirrorAvatar(progress, reveal) {
+    if (!this.liveMirror) return;
+    const visible =
+      Boolean(this.world.session)
+      && this.xrViewMode === XR_VIEW_MODE_SELF
+      && this.liveMirrorReady
+      && progress >= LIVE_MIRROR_SHOW_PROGRESS;
+    this.liveMirror.visible = visible;
+    if (!visible) {
+      for (const mesh of this.liveMirrorMeshes.values()) mesh.visible = false;
+      return;
+    }
+
+    this.liveMirror.position.lerp(this.liveMirrorPosition, 0.22);
+    this.liveMirror.quaternion.slerp(this.liveMirrorQuaternion, 0.18);
+    this.liveMirror.scale.lerp(this.liveMirrorScale, 0.16);
+    let order = 0;
+    for (const [part, mesh] of this.liveMirrorMeshes.entries()) {
+      const sourceMesh = this.meshes.get(part);
+      if (sourceMesh?.material?.map && mesh.material.map !== sourceMesh.material.map) {
+        mesh.material.map = sourceMesh.material.map;
+        mesh.material.color.setHex(0xffffff);
+        mesh.material.needsUpdate = true;
+      }
+      this.applyLiveSuitPose(mesh, part, reveal);
+      const stagger = clamp((progress * ARMOR_PARTS.length - order) / 3.2, 0, 1);
+      mesh.material.opacity = 0.08 + easeOutCubic(stagger) * 0.86;
+      mesh.material.emissiveIntensity = this.world.session ? 0.35 + stagger * 0.75 : 0.18;
+      mesh.visible = mesh.material.opacity > 0.09;
+      order += 1;
+    }
   }
 
   updateRigAnchor() {
@@ -2207,29 +2442,36 @@ class QuestHenshinDemo {
     let order = 0;
     const inXr = Boolean(this.world.session);
     const selfView = inXr && this.xrViewMode === XR_VIEW_MODE_SELF;
+    const useLiveSuit = selfView && this.xrWorldAnchorReady;
+    if (useLiveSuit) this.updateLiveBodyAnchors();
     if (this.mirrorFrame) {
       this.mirrorFrame.visible = inXr && this.xrViewMode === XR_VIEW_MODE_MIRROR;
     }
     for (const [part, mesh] of this.meshes.entries()) {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];
-      if (!pose || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
+      if ((!useLiveSuit && !pose) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
         mesh.visible = false;
         order += 1;
         continue;
       }
-      applySegmentPose(mesh, pose, part, reveal, {
-        centered: selfView,
-        progress,
-        finalPosition: this.finalPosition,
-        stagePosition: this.stagePosition,
-      });
+      if (useLiveSuit) {
+        this.applyLiveSuitPose(mesh, part, reveal);
+      } else {
+        applySegmentPose(mesh, pose, part, reveal, {
+          centered: selfView,
+          progress,
+          finalPosition: this.finalPosition,
+          stagePosition: this.stagePosition,
+        });
+      }
       const stagger = clamp((progress * ARMOR_PARTS.length - order) / 3.2, 0, 1);
       mesh.material.opacity = 0.08 + easeOutCubic(stagger) * 0.86;
       mesh.material.emissiveIntensity = this.world.session ? 0.35 + stagger * 0.75 : 0.18;
       mesh.visible = mesh.material.opacity > 0.09;
       order += 1;
     }
+    this.updateLiveMirrorAvatar(progress, reveal);
 
     for (let i = 0; i < this.rings.length; i += 1) {
       const ring = this.rings[i];

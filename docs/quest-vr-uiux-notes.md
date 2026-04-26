@@ -42,6 +42,9 @@ Current slice:
 - Add a visible mirror frame in `mirror` archive mode so the mode is legible in VR.
 - Hide helmet and hand parts in first-person view when they would block the player's view.
 - Lock the transformation rig to the activation anchor so head movement does not drag the suit, mirror, or observer view.
+- Add a VRC-like live mirror after transformation so hand/controller movement can be checked against a front-facing suit avatar.
+- Treat the right hand as the transformation item lane and the left hand as the bracelet/menu lane.
+- Use HMD + controllers as the temporary live body anchors. Feet and full-body motion need a later IK/VRM lane.
 
 Next UI slice:
 
@@ -49,6 +52,7 @@ Next UI slice:
 - Let users open/close the full panel from the compact state.
 - Add a world-lock mode for longer inspection.
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
+- Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
 
 ## Fit And Suit Visibility Rule
 
@@ -56,4 +60,5 @@ Next UI slice:
 - Mirror/archive should show the full body-sim trace where possible.
 - Mirror mode is a staged "front-facing suit check", not a real reflection pass yet.
 - Full-suit credibility depends on the fit lane, not only the Quest UI lane.
+- Current Quest hardware anchors head and hands only. Legs/feet are estimated until full-body IK or VRM retargeting is introduced.
 - Helmet/chest/shoulder/back remain the next high-value fit and silhouette audit targets.

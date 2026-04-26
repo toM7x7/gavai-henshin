@@ -80,8 +80,10 @@ Expected behavior over HTTP:
 - It projects a `SuitManifest`.
 - It creates a `TransformSession`.
 - The Quest page shows a `New Route` status panel for route mode, API step, trial id, and replay generation.
+- In immersive mode, the floating VR control panel also shows a compact route/trial/replay line.
 - `Replay`, `Pause`, and `Reset` work in the page.
 - With `mockTrigger=1`, `Voice` uses synthetic mock audio and does not require microphone permission.
+- Real voice recognition and TTS stay on the Sakura AI Engine path; `mockTrigger=1` is only the local smoke-test bypass.
 - Voice/mock trigger events are appended to `/v1/trials/{trialId}/events`.
 - ReplayScript can be generated from `/v1/trials/{trialId}/replay`.
 

@@ -51,15 +51,17 @@ Current slice:
 - Expand recorded live pose samples into compact ReplayScript `deposition_progress` actions and use them for mirror/observer archive replay.
 - Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
 - Keep the bracelet panel compact. Its local horizontal axis should align with the controller laser axis, with the panel plane rotated 90 degrees counterclockwise for a watch-like wrist read.
+- Default the bracelet to a compact `メニュー` state; left trigger opens/closes the full panel.
+- Let the full panel switch into a world-locked `固定` state for longer inspection, then return to wrist follow with `追従`.
+- Auto-return the open wrist panel to compact mode after a short no-input interval.
+- Snap the live mirror into its target position when it first appears so it reads as a stable check mirror rather than a moving panel.
 
 Next UI slice:
 
-- Add a compact `メニュー` bracelet state.
-- Let users open/close the full panel from the compact state.
-- Add a world-lock mode for longer inspection.
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
 - Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
 - Add replay diagnostics for whether archive playback is using live-pose frames, body-sim frames, or static fallback.
+- Add a stronger transform-item affordance once the bracelet state feels stable on Quest.
 
 ## Fit And Suit Visibility Rule
 

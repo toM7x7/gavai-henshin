@@ -133,10 +133,16 @@ const LIVE_MIRROR_SHOW_PROGRESS = 0.78;
 const XR_MENU_FALLBACK_DISTANCE = 1.14;
 const XR_MENU_FALLBACK_LEFT = 0.62;
 const XR_MENU_FALLBACK_DOWN = 0.32;
+const XR_MENU_FALLBACK_REANCHOR_DISTANCE = 1.85;
+const XR_MENU_MODE_COMPACT = "compact";
+const XR_MENU_MODE_OPEN = "open";
+const XR_MENU_MODE_WORLD_LOCKED = "worldLocked";
+const XR_MENU_OPEN_AUTO_COMPACT_MS = 8000;
 const WATCH_AXIS_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0, "XYZ"));
 const WATCH_PLANE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2, "XYZ"));
 const WATCH_PANEL_ROTATION = WATCH_PLANE_ROTATION.clone().multiply(WATCH_AXIS_ROTATION);
 const WATCH_PANEL_SCALE = 0.4;
+const WATCH_COMPACT_SCALE = 0.34;
 const WATCH_PANEL_FALLBACK_SCALE = 0.46;
 const LIVE_MOTION_SAMPLE_INTERVAL = 0.1;
 const LIVE_MOTION_MAX_FRAMES = 48;
@@ -1175,6 +1181,14 @@ class SpatialControlPanel {
     this.buttons = [];
     this.hovered = null;
     this.hoveredController = null;
+    this.menuMode = XR_MENU_MODE_COMPACT;
+    this.fullPanelElements = [];
+    this.compactGroup = null;
+    this.worldLockReady = false;
+    this.worldLockPosition = new THREE.Vector3();
+    this.worldLockQuaternion = new THREE.Quaternion();
+    this.worldLockScale = new THREE.Vector3(1, 1, 1);
+    this.lastMenuInteractionAt = performance.now();
     this.pulseClock = 0;
 
     this.buildPanel();
@@ -1184,7 +1198,7 @@ class SpatialControlPanel {
 
   buildPanel() {
     const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.22, 1.68),
+      new THREE.PlaneGeometry(1.22, 2.08),
       new THREE.MeshBasicMaterial({
         color: 0x061116,
         transparent: true,
@@ -1282,6 +1296,66 @@ class SpatialControlPanel {
     this.addButton("view", "鏡", -0.6, 0x8edfff);
     this.addButton("pause", "停止", -0.77, 0xf6f1df);
     this.addButton("reset", "リセット", -0.94, 0xff6b6b);
+    this.addButton("lock", "固定", -1.11, 0x8edfff);
+    this.addButton("close", "戻る", -1.28, 0x43d8ff);
+    this.fullPanelElements = [...this.group.children];
+    this.buildCompactPanel();
+    this.applyMenuMode();
+  }
+
+  buildCompactPanel() {
+    const group = new THREE.Group();
+    group.name = "XR-Compact-Bracelet-Menu";
+    group.position.z = 0.026;
+
+    const base = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.72, 0.28),
+      new THREE.MeshBasicMaterial({
+        color: 0x061116,
+        transparent: true,
+        opacity: 0.82,
+        side: THREE.DoubleSide,
+        depthTest: false,
+      }),
+    );
+    base.renderOrder = 22;
+    group.add(base);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.05, 0.058, 36),
+      new THREE.MeshBasicMaterial({ color: 0xffcf5a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthTest: false }),
+    );
+    ring.position.set(-0.27, 0, 0.011);
+    ring.renderOrder = 23;
+    group.add(ring);
+    this.compactRing = ring;
+
+    this.compactTitle = makeTextPlane("メニュー", {
+      width: 0.42,
+      height: 0.07,
+      canvasWidth: 720,
+      canvasHeight: 140,
+      fontSize: 54,
+      color: "#fff4c8",
+      background: null,
+    });
+    this.compactTitle.position.set(0.08, 0.055, 0.012);
+    group.add(this.compactTitle);
+
+    this.compactStatus = makeTextPlane("音声 待機", {
+      width: 0.5,
+      height: 0.055,
+      canvasWidth: 760,
+      canvasHeight: 120,
+      fontSize: 40,
+      color: "#d7f8ff",
+      background: null,
+    });
+    this.compactStatus.position.set(0.08, -0.055, 0.013);
+    group.add(this.compactStatus);
+
+    this.compactGroup = group;
+    this.group.add(group);
   }
 
   addButton(action, label, y, color) {
@@ -1317,6 +1391,73 @@ class SpatialControlPanel {
 
     this.group.add(button);
     this.buttons.push({ action, group: button, hit, text });
+  }
+
+  applyMenuMode() {
+    const compact = this.menuMode === XR_MENU_MODE_COMPACT;
+    for (const element of this.fullPanelElements) {
+      element.visible = !compact;
+    }
+    if (this.compactGroup) this.compactGroup.visible = compact;
+    this.updateMenuModeLabels();
+  }
+
+  markMenuInteraction() {
+    this.lastMenuInteractionAt = performance.now();
+  }
+
+  setMenuMode(mode) {
+    const nextMode = [XR_MENU_MODE_COMPACT, XR_MENU_MODE_OPEN, XR_MENU_MODE_WORLD_LOCKED].includes(mode)
+      ? mode
+      : XR_MENU_MODE_COMPACT;
+    if (nextMode === XR_MENU_MODE_WORLD_LOCKED) {
+      this.captureWorldLockAnchor();
+    } else {
+      this.worldLockReady = false;
+    }
+    this.menuMode = nextMode;
+    this.markMenuInteraction();
+    this.applyMenuMode();
+  }
+
+  togglePanelOpen() {
+    if (this.menuMode === XR_MENU_MODE_COMPACT) {
+      this.setMenuMode(XR_MENU_MODE_OPEN);
+      return;
+    }
+    if (this.menuMode === XR_MENU_MODE_WORLD_LOCKED) {
+      this.setMenuMode(XR_MENU_MODE_OPEN);
+      return;
+    }
+    this.setMenuMode(XR_MENU_MODE_COMPACT);
+  }
+
+  toggleWorldLock() {
+    this.setMenuMode(this.menuMode === XR_MENU_MODE_WORLD_LOCKED ? XR_MENU_MODE_OPEN : XR_MENU_MODE_WORLD_LOCKED);
+  }
+
+  captureWorldLockAnchor() {
+    this.worldLockPosition.copy(this.group.position);
+    this.worldLockQuaternion.copy(this.group.quaternion);
+    this.worldLockScale.copy(this.group.scale);
+    this.worldLockReady = true;
+  }
+
+  updateMenuModeLabels() {
+    for (const button of this.buttons) {
+      if (button.action === "lock") {
+        updateTextPlane(button.text, this.menuMode === XR_MENU_MODE_WORLD_LOCKED ? "追従" : "固定");
+      }
+    }
+    if (this.compactTitle) updateTextPlane(this.compactTitle, "メニュー");
+  }
+
+  canUseRightTriggerShortcut() {
+    return this.menuMode !== XR_MENU_MODE_OPEN;
+  }
+
+  compactForTransformStart() {
+    if (this.menuMode !== XR_MENU_MODE_COMPACT) this.setMenuMode(XR_MENU_MODE_COMPACT);
   }
 
   initControllers() {
@@ -1417,7 +1558,13 @@ class SpatialControlPanel {
     updateTextPlane(this.hint, detail || voiceState.hint, {
       color: state === "rejected" ? "#ffd2d2" : "#d7f8ff",
     });
+    if (this.compactStatus) {
+      updateTextPlane(this.compactStatus, voiceState.label, {
+        color: state === "rejected" ? "#ffd2d2" : "#d7f8ff",
+      });
+    }
     this.listenRing.material.color.setHex(voiceState.color);
+    if (this.compactRing) this.compactRing.material.color.setHex(voiceState.color);
     for (const button of this.buttons) {
       if (button.action === "pause") {
         updateTextPlane(button.text, this.demo.playing ? "停止" : "再開");
@@ -1440,6 +1587,12 @@ class SpatialControlPanel {
   update(dt) {
     const inVR = Boolean(this.demo.world.session);
     this.group.visible = inVR;
+    if (
+      this.menuMode === XR_MENU_MODE_OPEN
+      && performance.now() - this.lastMenuInteractionAt > XR_MENU_OPEN_AUTO_COMPACT_MS
+    ) {
+      this.setMenuMode(XR_MENU_MODE_COMPACT);
+    }
     for (const controller of this.controllers) {
       controller.visible = inVR;
       const ray = controller.getObjectByName("XR-Menu-Ray");
@@ -1462,22 +1615,33 @@ class SpatialControlPanel {
       wrist.getWorldQuaternion(this.controllerQuaternion);
     }
     const wristDistance = wrist ? this.controllerPosition.distanceTo(this.cameraPosition) : 0;
-    if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
+    if (this.menuMode === XR_MENU_MODE_WORLD_LOCKED && this.worldLockReady) {
+      this.group.position.copy(this.worldLockPosition);
+      this.group.quaternion.copy(this.worldLockQuaternion);
+      this.group.scale.copy(this.worldLockScale);
+    } else if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
       this.menuOffset.set(-0.1, 0.06, -0.09).applyQuaternion(this.controllerQuaternion);
       this.group.position.copy(this.controllerPosition).add(this.menuOffset);
       this.group.quaternion.copy(this.controllerQuaternion).multiply(WATCH_PANEL_ROTATION);
-      this.group.scale.setScalar(WATCH_PANEL_SCALE);
+      this.group.scale.setScalar(this.menuMode === XR_MENU_MODE_COMPACT ? WATCH_COMPACT_SCALE : WATCH_PANEL_SCALE);
     } else {
-      this.demo.ensureMenuFallbackAnchor();
-      this.group.position.copy(this.demo.menuFallbackPosition);
+      const needsReanchor =
+        !this.demo.menuFallbackReady
+        || this.demo.menuFallbackPosition.distanceTo(this.cameraPosition) > XR_MENU_FALLBACK_REANCHOR_DISTANCE;
+      this.demo.ensureMenuFallbackAnchor({ force: needsReanchor });
+      this.group.position.lerp(this.demo.menuFallbackPosition, 0.35);
       this.group.quaternion.copy(this.demo.menuFallbackQuaternion);
-      this.group.scale.setScalar(WATCH_PANEL_FALLBACK_SCALE);
+      this.group.scale.setScalar(this.menuMode === XR_MENU_MODE_COMPACT ? WATCH_COMPACT_SCALE : WATCH_PANEL_FALLBACK_SCALE);
     }
 
     this.pulseClock += dt;
     const pulse = 1 + Math.sin(this.pulseClock * 5.8) * 0.08;
     this.listenRing.scale.setScalar(pulse);
     this.listenRing.material.opacity = this.demo.voiceState === "recording" ? 0.95 : 0.45 + Math.sin(this.pulseClock * 3.0) * 0.18;
+    if (this.compactRing) {
+      this.compactRing.scale.setScalar(pulse);
+      this.compactRing.material.opacity = this.listenRing.material.opacity;
+    }
 
     this.updateHover();
   }
@@ -1515,10 +1679,14 @@ class SpatialControlPanel {
       this.tempMatrix.identity().extractRotation(controller.matrixWorld);
       this.raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
       this.raycaster.ray.direction.set(0, 0, -1).applyMatrix4(this.tempMatrix);
-      const intersections = this.raycaster.intersectObjects(this.buttons.map((button) => button.hit), false);
+      const activeHits = this.buttons
+        .filter((button) => button.group.visible && button.hit.visible)
+        .map((button) => button.hit);
+      const intersections = activeHits.length ? this.raycaster.intersectObjects(activeHits, false) : [];
       if (intersections.length) {
         nextHover = intersections[0].object;
         nextController = controller;
+        this.markMenuInteraction();
         break;
       }
     }
@@ -1537,6 +1705,7 @@ class SpatialControlPanel {
 
   activateHovered() {
     if (!this.group.visible || !this.hovered) return;
+    this.markMenuInteraction();
     this.demo.audioBed.pulse(820, 0.08);
     const action = this.hovered.userData.action;
     if (action === "voice") void this.demo.runVoiceCommand();
@@ -1544,6 +1713,8 @@ class SpatialControlPanel {
     if (action === "view") this.demo.cycleArchiveViewMode();
     if (action === "pause") this.demo.togglePause();
     if (action === "reset") this.demo.reset();
+    if (action === "lock") this.toggleWorldLock();
+    if (action === "close") this.setMenuMode(XR_MENU_MODE_COMPACT);
   }
 
   activateController(controller) {
@@ -1551,9 +1722,16 @@ class SpatialControlPanel {
       this.activateHovered();
       return;
     }
+    if (this.controllerHandedness(controller) === "left") {
+      this.markMenuInteraction();
+      this.demo.audioBed.pulse(620, 0.08);
+      this.togglePanelOpen();
+      return;
+    }
     if (this.controllerHandedness(controller) === "right") {
       this.demo.audioBed.pulse(1040, 0.1);
-      if (!this.demo.canRunVoiceCommand()) return;
+      if (!this.canUseRightTriggerShortcut() || !this.demo.canRunVoiceCommand()) return;
+      this.compactForTransformStart();
       void this.demo.runVoiceCommand();
     }
   }
@@ -1815,6 +1993,7 @@ class QuestHenshinDemo {
       this.xrWorldAnchorReady = false;
       this.menuFallbackReady = false;
       this.liveMirrorReady = false;
+      this.spatialPanel?.setMenuMode(XR_MENU_MODE_COMPACT);
       this.captureWorldAnchor(this.xrViewMode);
       this.ensureMenuFallbackAnchor();
       UI.status.textContent = "VR開始。音声は一人称変身、記録再生は鏡/観察で確認します。";
@@ -1825,6 +2004,7 @@ class QuestHenshinDemo {
       this.xrWorldAnchorReady = false;
       this.menuFallbackReady = false;
       this.liveMirrorReady = false;
+      this.spatialPanel?.setMenuMode(XR_MENU_MODE_COMPACT);
       if (this.liveMirror) this.liveMirror.visible = false;
       UI.status.textContent = "VR終了。再開するにはVR開始を押してください。";
       UI.btnEnterVR.textContent = "VR開始";
@@ -2434,8 +2614,8 @@ class QuestHenshinDemo {
     this.xrWorldAnchorReady = true;
   }
 
-  ensureMenuFallbackAnchor() {
-    if (this.menuFallbackReady || !this.world.session) return;
+  ensureMenuFallbackAnchor({ force = false } = {}) {
+    if ((!force && this.menuFallbackReady) || !this.world.session) return;
     const yaw = this.getXrYawPose();
     this.menuFallbackQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0, "YXZ"));
     this.menuFallbackForward.set(0, 0, -1).applyQuaternion(this.menuFallbackQuaternion).normalize();
@@ -2664,20 +2844,28 @@ class QuestHenshinDemo {
 
   updateLiveMirrorAvatar(progress, reveal) {
     if (!this.liveMirror) return;
+    const wasVisible = this.liveMirror.visible;
     const visible =
       Boolean(this.world.session)
       && this.xrViewMode === XR_VIEW_MODE_SELF
       && this.liveMirrorReady
       && progress >= LIVE_MIRROR_SHOW_PROGRESS;
-    this.liveMirror.visible = visible;
     if (!visible) {
+      this.liveMirror.visible = false;
       for (const mesh of this.liveMirrorMeshes.values()) mesh.visible = false;
       return;
     }
 
-    this.liveMirror.position.lerp(this.liveMirrorPosition, 0.22);
-    this.liveMirror.quaternion.slerp(this.liveMirrorQuaternion, 0.18);
-    this.liveMirror.scale.lerp(this.liveMirrorScale, 0.16);
+    if (!wasVisible) {
+      this.liveMirror.position.copy(this.liveMirrorPosition);
+      this.liveMirror.quaternion.copy(this.liveMirrorQuaternion);
+      this.liveMirror.scale.copy(this.liveMirrorScale);
+    } else {
+      this.liveMirror.position.lerp(this.liveMirrorPosition, 0.22);
+      this.liveMirror.quaternion.slerp(this.liveMirrorQuaternion, 0.18);
+      this.liveMirror.scale.lerp(this.liveMirrorScale, 0.16);
+    }
+    this.liveMirror.visible = true;
     let order = 0;
     for (const [part, mesh] of this.liveMirrorMeshes.entries()) {
       const sourceMesh = this.meshes.get(part);

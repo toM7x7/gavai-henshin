@@ -45,6 +45,10 @@ Current slice:
 - Add a VRC-like live mirror after transformation so hand/controller movement can be checked against a front-facing suit avatar.
 - Treat the right hand as the transformation item lane and the left hand as the bracelet/menu lane.
 - Use HMD + controllers as the temporary live body anchors. Feet and full-body motion need a later IK/VRM lane.
+- Right controller trigger can enter the transformation bank when it is not selecting a menu item.
+- The transformation item should glow during voice standby/recording/deposition so the next action is obvious.
+- Store compact `quest-live-pose.v0` HMD/controller samples in the trial event log as the bridge toward motion replay.
+- Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
 
 Next UI slice:
 
@@ -53,6 +57,7 @@ Next UI slice:
 - Add a world-lock mode for longer inspection.
 - Keep `音声`, `記録再生`, `鏡/観察`, `停止`, `リセット` as the visitor-facing command set.
 - Evaluate a lightweight VRM humanoid as the live-suit carrier once the controller/HMD anchor behavior feels correct.
+- Wire ReplayScript generation to prefer recorded live pose samples over the canned body-sim path when motion capture exists.
 
 ## Fit And Suit Visibility Rule
 
@@ -61,4 +66,5 @@ Next UI slice:
 - Mirror mode is a staged "front-facing suit check", not a real reflection pass yet.
 - Full-suit credibility depends on the fit lane, not only the Quest UI lane.
 - Current Quest hardware anchors head and hands only. Legs/feet are estimated until full-body IK or VRM retargeting is introduced.
+- mocopi remains the likely path for torso twist, hips, and leg motion if the experience needs credible full-body replay.
 - Helmet/chest/shoulder/back remain the next high-value fit and silhouette audit targets.

@@ -133,7 +133,9 @@ const LIVE_MIRROR_SHOW_PROGRESS = 0.78;
 const XR_MENU_FALLBACK_DISTANCE = 1.14;
 const XR_MENU_FALLBACK_LEFT = 0.62;
 const XR_MENU_FALLBACK_DOWN = 0.32;
-const WATCH_PANEL_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.82, 0.18, 0.02, "XYZ"));
+const WATCH_PANEL_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0.08, 0, "XYZ"));
+const LIVE_MOTION_SAMPLE_INTERVAL = 0.1;
+const LIVE_MOTION_MAX_FRAMES = 48;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
 const VR_BODY_PART_POSES = {
   helmet: [0, -0.04, -0.2],
@@ -1095,9 +1097,11 @@ class SpatialControlPanel {
     this.controllerQuaternion = new THREE.Quaternion();
     this.controllerPosition = new THREE.Vector3();
     this.menuOffset = new THREE.Vector3();
+    this.deviceScaleTarget = new THREE.Vector3(1, 1, 1);
     this.controllers = [];
     this.buttons = [];
     this.hovered = null;
+    this.hoveredController = null;
     this.pulseClock = 0;
 
     this.buildPanel();
@@ -1249,7 +1253,7 @@ class SpatialControlPanel {
       controller.addEventListener("connected", (event) => {
         controller.userData.handedness = event.data?.handedness || controller.userData.handedness;
       });
-      controller.addEventListener("selectstart", () => this.activateHovered());
+      controller.addEventListener("selectstart", () => this.activateController(controller));
       const line = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]),
         new THREE.LineBasicMaterial({ color: 0xffcf5a, transparent: true, opacity: 0.55 }),
@@ -1285,6 +1289,10 @@ class SpatialControlPanel {
     const glow = new THREE.PointLight(0xffcf5a, 0.45, 0.45);
     glow.position.set(0, -0.02, -0.1);
     device.add(glow);
+    device.userData.body = body;
+    device.userData.lens = lens;
+    device.userData.glow = glow;
+    device.userData.baseScale = 1;
     return device;
   }
 
@@ -1364,7 +1372,11 @@ class SpatialControlPanel {
       const ray = controller.getObjectByName("XR-Menu-Ray");
       if (ray) ray.visible = inVR;
       const device = controller.userData.transformDevice;
-      if (device) device.visible = inVR && this.controllerHandedness(controller) === "right";
+      if (device) {
+        const isRightHand = this.controllerHandedness(controller) === "right";
+        device.visible = inVR && isRightHand;
+        if (isRightHand) this.updateTransformDevice(device, dt);
+      }
     }
     if (!inVR) return;
 
@@ -1397,8 +1409,35 @@ class SpatialControlPanel {
     this.updateHover();
   }
 
+  updateTransformDevice(device, dt) {
+    const lens = device.userData.lens;
+    const glow = device.userData.glow;
+    const body = device.userData.body;
+    const active = ["arming", "recording", "detected", "deposition"].includes(this.demo.voiceState);
+    const ready = this.demo.voiceState === "ready";
+    const complete = this.demo.voiceState === "complete";
+    const pulse = 0.5 + Math.sin(this.pulseClock * (active ? 9.0 : 3.4)) * 0.5;
+    const color = active ? 0xffcf5a : complete ? 0x43d8ff : ready ? 0x8edfff : 0xff6b6b;
+    if (lens) {
+      lens.material.color.setHex(color);
+      lens.material.opacity = active ? 0.95 : ready ? 0.72 + pulse * 0.16 : 0.56;
+    }
+    if (body) {
+      body.material.color.setHex(active ? 0x15100a : 0x061116);
+      body.material.opacity = active ? 0.96 : 0.84;
+    }
+    if (glow) {
+      glow.color.setHex(color);
+      glow.intensity = active ? 1.0 + pulse * 1.05 : ready ? 0.38 + pulse * 0.36 : 0.28;
+    }
+    const scale = active ? 1.0 + pulse * 0.08 : 1.0;
+    this.deviceScaleTarget.set(scale, scale, scale);
+    device.scale.lerp(this.deviceScaleTarget, Math.min(1, dt * 10));
+  }
+
   updateHover() {
     let nextHover = null;
+    let nextController = null;
     for (const controller of this.controllers) {
       this.tempMatrix.identity().extractRotation(controller.matrixWorld);
       this.raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
@@ -1406,16 +1445,21 @@ class SpatialControlPanel {
       const intersections = this.raycaster.intersectObjects(this.buttons.map((button) => button.hit), false);
       if (intersections.length) {
         nextHover = intersections[0].object;
+        nextController = controller;
         break;
       }
     }
-    if (nextHover === this.hovered) return;
+    if (nextHover === this.hovered) {
+      this.hoveredController = nextController;
+      return;
+    }
     for (const button of this.buttons) {
       const hovered = button.hit === nextHover;
       button.hit.material.color.setHex(hovered ? button.hit.userData.hoverColor : button.hit.userData.baseColor);
       button.group.scale.setScalar(hovered ? 1.045 : 1);
     }
     this.hovered = nextHover;
+    this.hoveredController = nextController;
   }
 
   activateHovered() {
@@ -1427,6 +1471,17 @@ class SpatialControlPanel {
     if (action === "view") this.demo.cycleArchiveViewMode();
     if (action === "pause") this.demo.togglePause();
     if (action === "reset") this.demo.reset();
+  }
+
+  activateController(controller) {
+    if (this.group.visible && this.hovered && this.hoveredController === controller) {
+      this.activateHovered();
+      return;
+    }
+    if (this.controllerHandedness(controller) === "right") {
+      this.demo.audioBed.pulse(1040, 0.1);
+      void this.demo.runVoiceCommand();
+    }
   }
 }
 
@@ -1491,6 +1546,9 @@ class QuestHenshinDemo {
     this.livePartPositionC = new THREE.Vector3();
     this.leftHandTracked = false;
     this.rightHandTracked = false;
+    this.liveTorsoYaw = 0;
+    this.liveMotionFrames = [];
+    this.lastLiveMotionSampleAt = -Infinity;
     this.nonVrScale = new THREE.Vector3(0.68, 0.68, 0.68);
     this.selfScale = new THREE.Vector3(1, 1, 1);
     this.observerScale = new THREE.Vector3(
@@ -2008,6 +2066,8 @@ class QuestHenshinDemo {
     this.playing = false;
     this.completionAnnounced = false;
     this.depositionStartPromise = null;
+    this.liveMotionFrames = [];
+    this.lastLiveMotionSampleAt = -Infinity;
     this.xrViewMode = XR_VIEW_MODE_SELF;
     this.xrWorldAnchorReady = false;
     this.captureWorldAnchor(this.xrViewMode);
@@ -2027,6 +2087,10 @@ class QuestHenshinDemo {
     this.xrViewMode = viewMode;
     this.xrWorldAnchorReady = false;
     this.captureWorldAnchor(viewMode);
+    if (source !== "archive") {
+      this.liveMotionFrames = [];
+      this.lastLiveMotionSampleAt = -Infinity;
+    }
     this.elapsed = 0;
     this.playing = true;
     this.completionAnnounced = false;
@@ -2295,6 +2359,13 @@ class QuestHenshinDemo {
 
     this.leftHandTracked = this.updateControllerLocalPosition("left", this.liveLeftHandPosition);
     this.rightHandTracked = this.updateControllerLocalPosition("right", this.liveRightHandPosition);
+    let torsoYawTarget = 0;
+    if (this.leftHandTracked && this.rightHandTracked) {
+      const dx = this.liveRightHandPosition.x - this.liveLeftHandPosition.x;
+      const dz = this.liveRightHandPosition.z - this.liveLeftHandPosition.z;
+      torsoYawTarget = clamp(Math.atan2(dz, Math.max(0.22, Math.abs(dx))), -0.48, 0.48);
+    }
+    this.liveTorsoYaw = lerp(this.liveTorsoYaw, torsoYawTarget, 0.18);
   }
 
   updateControllerLocalPosition(hand, target) {
@@ -2315,23 +2386,31 @@ class QuestHenshinDemo {
       target.copy(source);
       return target;
     }
-    target.set(side * 0.46, this.liveHeadPosition.y - 0.92, -0.34);
-    return target;
+    return this.setLiveBodyOffset(target, side * 0.46, -0.92, -0.34);
+  }
+
+  setLiveBodyOffset(target, x, y, z) {
+    const sin = Math.sin(this.liveTorsoYaw);
+    const cos = Math.cos(this.liveTorsoYaw);
+    return target.set(
+      this.liveHeadPosition.x + x * cos - z * sin,
+      this.liveHeadPosition.y + y,
+      this.liveHeadPosition.z + x * sin + z * cos,
+    );
   }
 
   getLiveBodyPartPosition(part, target) {
-    const head = this.liveHeadPosition;
     const side = part.startsWith("left_") ? -1 : part.startsWith("right_") ? 1 : 0;
-    if (part === "helmet") return target.set(head.x, head.y - 0.08, head.z - 0.02);
-    if (part === "chest") return target.set(head.x, head.y - 0.48, head.z - 0.08);
-    if (part === "back") return target.set(head.x, head.y - 0.48, head.z + 0.12);
-    if (part === "waist") return target.set(head.x, head.y - 0.84, head.z - 0.02);
-    if (part === "left_thigh" || part === "right_thigh") return target.set(head.x + side * 0.16, head.y - 1.08, head.z - 0.06);
-    if (part === "left_shin" || part === "right_shin") return target.set(head.x + side * 0.18, head.y - 1.4, head.z - 0.08);
-    if (part === "left_boot" || part === "right_boot") return target.set(head.x + side * 0.18, head.y - 1.66, head.z - 0.12);
+    if (part === "helmet") return this.setLiveBodyOffset(target, 0, -0.08, -0.02);
+    if (part === "chest") return this.setLiveBodyOffset(target, 0, -0.48, -0.08);
+    if (part === "back") return this.setLiveBodyOffset(target, 0, -0.48, 0.12);
+    if (part === "waist") return this.setLiveBodyOffset(target, 0, -0.84, -0.02);
+    if (part === "left_thigh" || part === "right_thigh") return this.setLiveBodyOffset(target, side * 0.16, -1.08, -0.06);
+    if (part === "left_shin" || part === "right_shin") return this.setLiveBodyOffset(target, side * 0.18, -1.4, -0.08);
+    if (part === "left_boot" || part === "right_boot") return this.setLiveBodyOffset(target, side * 0.18, -1.66, -0.12);
 
     const hand = side < 0 ? "left" : "right";
-    const shoulder = this.livePartPositionB.set(head.x + side * 0.32, head.y - 0.43, head.z - 0.08);
+    const shoulder = this.setLiveBodyOffset(this.livePartPositionB, side * 0.32, -0.43, -0.08);
     const handPosition = this.getEstimatedHandPosition(hand, this.livePartPositionC);
     if (part.endsWith("_shoulder")) return target.copy(shoulder);
     if (part.endsWith("_upperarm")) return target.lerpVectors(shoulder, handPosition, 0.36);
@@ -2340,13 +2419,13 @@ class QuestHenshinDemo {
 
     const fallback = VR_BODY_PART_POSES[part];
     if (fallback) return target.fromArray(fallback);
-    return target.set(head.x, head.y - 0.5, head.z);
+    return this.setLiveBodyOffset(target, 0, -0.5, 0);
   }
 
   applyLiveSuitPose(mesh, part, reveal) {
     this.getLiveBodyPartPosition(part, this.livePartPosition);
     mesh.position.copy(this.livePartPosition);
-    mesh.rotation.set(Math.PI / 2, 0, 0);
+    mesh.rotation.set(Math.PI / 2, 0, this.liveTorsoYaw);
     const fit = mesh.userData.module?.fit || {};
     const minScale = Array.isArray(fit.minScale) ? fit.minScale : [0.16, 0.16, 0.16];
     const fitScale = Array.isArray(fit.scale) ? fit.scale : [0.2, 0.48, 0.2];
@@ -2356,6 +2435,40 @@ class QuestHenshinDemo {
     const emerge = lerp(0.08, 1, reveal);
     const vrScale = VR_PART_SCALE[part] || 0.28;
     mesh.scale.set(sx * emerge * vrScale, sy * emerge * vrScale, sz * emerge * vrScale);
+  }
+
+  vectorSample(vector) {
+    return [vector.x, vector.y, vector.z].map((value) => Number(value.toFixed(4)));
+  }
+
+  captureLiveMotionSample(progress) {
+    if (!this.playing || this.xrViewMode !== XR_VIEW_MODE_SELF) return;
+    if (this.liveMotionFrames.length >= LIVE_MOTION_MAX_FRAMES) return;
+    if (this.elapsed - this.lastLiveMotionSampleAt < LIVE_MOTION_SAMPLE_INTERVAL) return;
+    this.lastLiveMotionSampleAt = this.elapsed;
+    this.liveMotionFrames.push({
+      t: Number(this.elapsed.toFixed(3)),
+      progress: Number(progress.toFixed(4)),
+      root: this.vectorSample(this.xrWorldAnchorPosition),
+      head: this.vectorSample(this.liveHeadPosition),
+      left_hand: this.vectorSample(this.liveLeftHandPosition),
+      right_hand: this.vectorSample(this.liveRightHandPosition),
+      torso_yaw: Number(this.liveTorsoYaw.toFixed(4)),
+      left_hand_tracked: this.leftHandTracked,
+      right_hand_tracked: this.rightHandTracked,
+    });
+  }
+
+  motionCapturePayload() {
+    if (!this.liveMotionFrames.length) return null;
+    return {
+      format: "quest-live-pose.v0",
+      tracking: "hmd_plus_controllers",
+      sample_interval_sec: LIVE_MOTION_SAMPLE_INTERVAL,
+      frame_count: this.liveMotionFrames.length,
+      frames: this.liveMotionFrames,
+      note: "Hips, torso twist, and feet are estimated until mocopi/IK/VRM retargeting is connected.",
+    };
   }
 
   updateLiveMirrorAvatar(progress, reveal) {
@@ -2423,7 +2536,11 @@ class QuestHenshinDemo {
           .then(() =>
             this.appendTrialEvent("DEPOSITION_COMPLETED", {
               stateAfter: "ACTIVE",
-              payload: { source: "quest-iw-demo", completed: true },
+              payload: {
+                source: "quest-iw-demo",
+                completed: true,
+                motion_capture: this.motionCapturePayload(),
+              },
               idempotencyKey: "deposition-completed",
             }),
           )
@@ -2443,7 +2560,10 @@ class QuestHenshinDemo {
     const inXr = Boolean(this.world.session);
     const selfView = inXr && this.xrViewMode === XR_VIEW_MODE_SELF;
     const useLiveSuit = selfView && this.xrWorldAnchorReady;
-    if (useLiveSuit) this.updateLiveBodyAnchors();
+    if (useLiveSuit) {
+      this.updateLiveBodyAnchors();
+      this.captureLiveMotionSample(progress);
+    }
     if (this.mirrorFrame) {
       this.mirrorFrame.visible = inXr && this.xrViewMode === XR_VIEW_MODE_MIRROR;
     }

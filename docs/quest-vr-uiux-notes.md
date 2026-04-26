@@ -50,7 +50,8 @@ Current slice:
 - Store compact `quest-live-pose.v0` HMD/controller samples in the trial event log as the bridge toward motion replay.
 - Expand recorded live pose samples into compact ReplayScript `deposition_progress` actions and use them for mirror/observer archive replay.
 - Estimate a small torso twist from the left/right hand line as a Quest-only fallback, but do not treat it as full body tracking.
-- Keep the bracelet panel compact. Its local horizontal axis should align with the controller laser axis, with the panel plane rotated 90 degrees counterclockwise for a watch-like wrist read.
+- Keep the bracelet panel compact. Its local horizontal axis should align with the controller laser axis, with the panel plane rotated 90 degrees clockwise for the current wrist read.
+- Treat the left controller as the bottom-center anchor of the bracelet panel; the compact chip and full horizontal panel should expand upward from that anchor instead of hanging over the player.
 - Default the bracelet to a compact `メニュー` state; left trigger opens/closes the full panel.
 - Let the full panel switch into a world-locked `固定` state for longer inspection, then return to wrist follow with `追従`.
 - Auto-return the open wrist panel to compact mode after a short no-input interval.

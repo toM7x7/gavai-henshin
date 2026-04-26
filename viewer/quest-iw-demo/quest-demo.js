@@ -139,11 +139,17 @@ const XR_MENU_MODE_OPEN = "open";
 const XR_MENU_MODE_WORLD_LOCKED = "worldLocked";
 const XR_MENU_OPEN_AUTO_COMPACT_MS = 8000;
 const WATCH_AXIS_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0, "XYZ"));
-const WATCH_PLANE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2, "XYZ"));
+const WATCH_PLANE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 2, "XYZ"));
 const WATCH_PANEL_ROTATION = WATCH_PLANE_ROTATION.clone().multiply(WATCH_AXIS_ROTATION);
+const WATCH_PANEL_WIDTH = 1.74;
+const WATCH_PANEL_HEIGHT = 1.06;
+const WATCH_COMPACT_PANEL_WIDTH = 0.76;
+const WATCH_COMPACT_PANEL_HEIGHT = 0.28;
 const WATCH_PANEL_SCALE = 0.4;
 const WATCH_COMPACT_SCALE = 0.34;
 const WATCH_PANEL_FALLBACK_SCALE = 0.46;
+const WATCH_PANEL_BOTTOM_CLEARANCE = 0.035;
+const WATCH_PANEL_SURFACE_GAP = 0.07;
 const LIVE_MOTION_SAMPLE_INTERVAL = 0.1;
 const LIVE_MOTION_MAX_FRAMES = 48;
 const NON_VR_RIG_POSITION = new THREE.Vector3(0, 0.78, -2.55);
@@ -1176,6 +1182,7 @@ class SpatialControlPanel {
     this.controllerQuaternion = new THREE.Quaternion();
     this.controllerPosition = new THREE.Vector3();
     this.menuOffset = new THREE.Vector3();
+    this.panelAnchorLift = new THREE.Vector3();
     this.deviceScaleTarget = new THREE.Vector3(1, 1, 1);
     this.controllers = [];
     this.buttons = [];
@@ -1198,7 +1205,7 @@ class SpatialControlPanel {
 
   buildPanel() {
     const panel = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.22, 2.08),
+      new THREE.PlaneGeometry(WATCH_PANEL_WIDTH, WATCH_PANEL_HEIGHT),
       new THREE.MeshBasicMaterial({
         color: 0x061116,
         transparent: true,
@@ -1211,18 +1218,18 @@ class SpatialControlPanel {
     this.group.add(panel);
 
     this.status = makeTextPlane("音声 待機", {
-      width: 1.02,
+      width: 0.72,
       height: 0.12,
       fontSize: 68,
       color: "#fff4c8",
       background: "rgba(10, 26, 32, 0.82)",
       border: "rgba(255, 207, 90, 0.72)",
     });
-    this.status.position.set(0, 0.5, 0.012);
+    this.status.position.set(-0.38, 0.37, 0.012);
     this.group.add(this.status);
 
     this.hint = makeTextPlane(`合図: ${TRIGGER_PHRASE}`, {
-      width: 1.02,
+      width: 0.78,
       height: 0.12,
       canvasHeight: 220,
       fontSize: 34,
@@ -1230,29 +1237,29 @@ class SpatialControlPanel {
       background: "rgba(4, 13, 17, 0.58)",
       maxLines: 2,
     });
-    this.hint.position.set(0, 0.35, 0.014);
+    this.hint.position.set(0.46, 0.37, 0.014);
     this.group.add(this.hint);
 
     this.progressBack = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.74, 0.025),
+      new THREE.PlaneGeometry(1.3, 0.025),
       new THREE.MeshBasicMaterial({ color: 0x223139, transparent: true, opacity: 0.8, depthTest: false }),
     );
-    this.progressBack.position.set(0, 0.24, 0.014);
+    this.progressBack.position.set(0.03, 0.25, 0.014);
     this.progressBack.renderOrder = 12;
     this.group.add(this.progressBack);
 
     this.progressFill = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.74, 0.025),
+      new THREE.PlaneGeometry(1.3, 0.025),
       new THREE.MeshBasicMaterial({ color: 0xffcf5a, transparent: true, opacity: 0.95, depthTest: false }),
     );
-    this.progressFill.position.set(-0.37, 0.24, 0.016);
+    this.progressFill.position.set(-0.62, 0.25, 0.016);
     this.progressFill.scale.x = 0.001;
-    this.progressFill.geometry.translate(0.37, 0, 0);
+    this.progressFill.geometry.translate(0.65, 0, 0);
     this.progressFill.renderOrder = 13;
     this.group.add(this.progressFill);
 
     this.routeStatus = makeTextPlane("生成 LOCAL | 試験 WAIT | 記録 WAIT", {
-      width: 1.02,
+      width: 1.42,
       height: 0.09,
       canvasWidth: 1400,
       canvasHeight: 160,
@@ -1263,12 +1270,12 @@ class SpatialControlPanel {
       border: "rgba(255, 207, 90, 0.42)",
       maxLines: 1,
     });
-    this.routeStatus.position.set(0, 0.16, 0.017);
+    this.routeStatus.position.set(0, 0.15, 0.017);
     this.group.add(this.routeStatus);
 
     this.debug = makeTextPlane("音声デバッグ: 待機", {
-      width: 1.02,
-      height: 0.18,
+      width: 1.42,
+      height: 0.2,
       canvasWidth: 1400,
       canvasHeight: 280,
       fontSize: 28,
@@ -1280,24 +1287,24 @@ class SpatialControlPanel {
       border: "rgba(67, 216, 255, 0.34)",
       maxLines: 4,
     });
-    this.debug.position.set(0, 0.005, 0.018);
+    this.debug.position.set(0, -0.005, 0.018);
     this.group.add(this.debug);
 
     this.listenRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.17, 0.185, 64),
+      new THREE.RingGeometry(0.07, 0.08, 64),
       new THREE.MeshBasicMaterial({ color: 0x43d8ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthTest: false }),
     );
-    this.listenRing.position.set(-0.36, -0.285, 0.019);
+    this.listenRing.position.set(-0.74, 0.25, 0.019);
     this.listenRing.renderOrder = 15;
     this.group.add(this.listenRing);
 
-    this.addButton("voice", "音声", -0.26, 0xffcf5a);
-    this.addButton("replay", "記録再生", -0.43, 0x43d8ff);
-    this.addButton("view", "鏡", -0.6, 0x8edfff);
-    this.addButton("pause", "停止", -0.77, 0xf6f1df);
-    this.addButton("reset", "リセット", -0.94, 0xff6b6b);
-    this.addButton("lock", "固定", -1.11, 0x8edfff);
-    this.addButton("close", "戻る", -1.28, 0x43d8ff);
+    this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a);
+    this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff);
+    this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff);
+    this.addButton("pause", "停止", 0.6, -0.31, 0xf6f1df);
+    this.addButton("reset", "リセット", -0.42, -0.45, 0xff6b6b);
+    this.addButton("lock", "固定", 0, -0.45, 0x8edfff);
+    this.addButton("close", "戻る", 0.42, -0.45, 0x43d8ff);
     this.fullPanelElements = [...this.group.children];
     this.buildCompactPanel();
     this.applyMenuMode();
@@ -1309,7 +1316,7 @@ class SpatialControlPanel {
     group.position.z = 0.026;
 
     const base = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.72, 0.28),
+      new THREE.PlaneGeometry(WATCH_COMPACT_PANEL_WIDTH, WATCH_COMPACT_PANEL_HEIGHT),
       new THREE.MeshBasicMaterial({
         color: 0x061116,
         transparent: true,
@@ -1358,13 +1365,15 @@ class SpatialControlPanel {
     this.group.add(group);
   }
 
-  addButton(action, label, y, color) {
+  addButton(action, label, x, y, color, options = {}) {
+    const width = options.width || 0.36;
+    const height = options.height || 0.105;
     const button = new THREE.Group();
     button.name = `XR-Button-${action}`;
-    button.position.set(0.08, y, 0.025);
+    button.position.set(x, y, 0.025);
 
     const hit = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.58, 0.115),
+      new THREE.PlaneGeometry(width, height),
       new THREE.MeshBasicMaterial({
         color: 0x0a1d24,
         transparent: true,
@@ -1380,9 +1389,9 @@ class SpatialControlPanel {
     button.add(hit);
 
     const text = makeTextPlane(label, {
-      width: 0.5,
-      height: 0.08,
-      fontSize: 56,
+      width: Math.max(0.1, width - 0.045),
+      height: 0.074,
+      fontSize: options.fontSize || 42,
       color: "#eef9ff",
       background: null,
     });
@@ -1620,10 +1629,16 @@ class SpatialControlPanel {
       this.group.quaternion.copy(this.worldLockQuaternion);
       this.group.scale.copy(this.worldLockScale);
     } else if (wrist && wristDistance > 0.08 && wristDistance < 1.7) {
-      this.menuOffset.set(-0.1, 0.06, -0.09).applyQuaternion(this.controllerQuaternion);
-      this.group.position.copy(this.controllerPosition).add(this.menuOffset);
+      const compact = this.menuMode === XR_MENU_MODE_COMPACT;
+      const menuScale = compact ? WATCH_COMPACT_SCALE : WATCH_PANEL_SCALE;
+      const panelHeight = compact ? WATCH_COMPACT_PANEL_HEIGHT : WATCH_PANEL_HEIGHT;
       this.group.quaternion.copy(this.controllerQuaternion).multiply(WATCH_PANEL_ROTATION);
-      this.group.scale.setScalar(this.menuMode === XR_MENU_MODE_COMPACT ? WATCH_COMPACT_SCALE : WATCH_PANEL_SCALE);
+      this.group.scale.setScalar(menuScale);
+      this.menuOffset.set(0, 0, -WATCH_PANEL_SURFACE_GAP).applyQuaternion(this.controllerQuaternion);
+      this.panelAnchorLift
+        .set(0, panelHeight * menuScale * 0.5 + WATCH_PANEL_BOTTOM_CLEARANCE, 0)
+        .applyQuaternion(this.group.quaternion);
+      this.group.position.copy(this.controllerPosition).add(this.menuOffset).add(this.panelAnchorLift);
     } else {
       const needsReanchor =
         !this.demo.menuFallbackReady

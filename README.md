@@ -67,6 +67,7 @@ Expected Quest signals:
 - Voice creates a `TransformSession`.
 - Replay generation ends with `REPLAY ARCHIVE: RPL-...`.
 - In immersive mode, the floating VR panel shows forge, fit, trial, and archive status.
+- The Quest status line exposes the active fit contract and texture fallback mode.
 
 ### 3. Replay Proof
 
@@ -82,6 +83,7 @@ Success criteria:
 - `summary.event_count` is greater than 0.
 - `summary.replay_script_path` points to `sessions/new-route/trials/.../replay-script.json`.
 - The PC dashboard `HENSHIN TRIAL / Replay Archive` card shows the same latest trial.
+- The PC dashboard route contract box shows `FIT CONTRACT` and `TEXTURE FALLBACK`.
 
 ### 4. Active New-Route Branches
 

@@ -91,6 +91,7 @@ const UI = {
   stageSummary: document.getElementById("stageSummary"),
   stageScanline: document.getElementById("stageScanline"),
   stageMeta: document.getElementById("stageMeta"),
+  routeContractStatus: document.getElementById("routeContractStatus"),
   stageParts: document.getElementById("stageParts"),
   eventLog: document.getElementById("eventLog"),
   latestTrialUpdated: document.getElementById("latestTrialUpdated"),
@@ -426,6 +427,48 @@ function eventLabel(type) {
 function setStageSummary(summary, meta = "") {
   if (UI.stageSummary) UI.stageSummary.textContent = summary;
   if (UI.stageMeta) UI.stageMeta.textContent = meta;
+}
+
+function isRuntimeTexturePath(path) {
+  return /^sessions[\\/]/.test(String(path || ""));
+}
+
+function formatFitContract(suitspec) {
+  const contract = suitspec?.fit_contract || {};
+  const stage = contract.module_fit_stage || "missing";
+  const space = contract.module_fit_space || "missing";
+  return `${stage} / ${space}`;
+}
+
+function formatTextureFallback(suitspec) {
+  const fallback = suitspec?.texture_fallback || {};
+  const mode = fallback.mode || "missing";
+  const source = fallback.source || "missing";
+  return `${mode} / ${source}`;
+}
+
+function textureFallbackAllowsPalette(suitspec) {
+  return suitspec?.texture_fallback?.mode === "palette_material";
+}
+
+function textureStatusLabel(suitspec, module) {
+  if (!module?.texture_path) return "Texture: none";
+  if (isRuntimeTexturePath(module.texture_path) && textureFallbackAllowsPalette(suitspec)) {
+    return "Texture: runtime + palette fallback";
+  }
+  return "Texture: linked";
+}
+
+function renderRouteContractStatus(suitspec) {
+  if (!UI.routeContractStatus) return;
+  UI.routeContractStatus.textContent = [
+    `FIT CONTRACT: ${formatFitContract(suitspec)}`,
+    `TEXTURE FALLBACK: ${formatTextureFallback(suitspec)}`,
+  ].join("\n");
+  UI.routeContractStatus.classList.toggle(
+    "is-warning",
+    !suitspec?.fit_contract || !suitspec?.texture_fallback
+  );
 }
 
 function setBodyStageOverlay(visible, text = "") {
@@ -1526,6 +1569,8 @@ class BodyFrontPreview {
       `VRMモデル: ${this.vrmModel ? "LOADED" : "NONE"} ${this.vrmModelPath ? `(${this.vrmModelPath})` : ""}`,
       `VRMボーン数: ${this.vrmBoneMap?.size || 0}`,
       `VRMアンカー: ${this.anchorRecords.size} / visible=${this.anchorVisible ? "ON" : "OFF"}`,
+      `Fit契約: ${formatFitContract(currentSuit)}`,
+      `Texture fallback: ${formatTextureFallback(currentSuit)}`,
       `接続ペア: ${stats.pairCount}`,
       `平均すき間: ${stats.meanGap.toFixed(3)}`,
       `平均食い込み: ${stats.meanPenetration.toFixed(3)}`,
@@ -2312,7 +2357,7 @@ function renderPartCards(suitspec) {
     card.innerHTML = `
       <div class="card-head">
         <h3>${name}</h3>
-        <small>${mod.texture_path ? "テクスチャあり" : "テクスチャ未設定"}</small>
+        <small>${textureStatusLabel(suitspec, mod)}</small>
       </div>
       <div class="view-tabs">
         <button class="view-btn" data-view="mesh">3D</button>
@@ -2416,6 +2461,7 @@ async function loadSuit(path) {
 
   currentSuitPath = path;
   currentSuit = data.suitspec;
+  renderRouteContractStatus(currentSuit);
   applyOperatorProfileToUi(currentSuit?.operator_profile || null);
 
   const enabled = readEnabledModules(currentSuit);
@@ -2443,7 +2489,14 @@ async function loadSuit(path) {
   }
 
   markSuitSaved("部位を選んで数値を動かすと、プレビューへ即時反映されます。");
-  setStatus(`読込完了: ${path}\n有効パーツ: ${enabled.length}`);
+  setStatus(
+    [
+      `読込完了: ${path}`,
+      `有効パーツ: ${enabled.length}`,
+      `FIT CONTRACT: ${formatFitContract(currentSuit)}`,
+      `TEXTURE FALLBACK: ${formatTextureFallback(currentSuit)}`,
+    ].join("\n")
+  );
 }
 
 function stageLabel(stage) {

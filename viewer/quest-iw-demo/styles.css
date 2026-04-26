@@ -133,6 +133,17 @@ h1 {
   color: #ffd2d2;
 }
 
+.route-contract {
+  width: min(440px, 100%);
+  margin: 10px 0 0;
+  color: #b8cbd4;
+  font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

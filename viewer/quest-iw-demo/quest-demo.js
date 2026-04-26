@@ -103,6 +103,7 @@ const UI = {
   routeApi: document.getElementById("routeApi"),
   routeTrial: document.getElementById("routeTrial"),
   routeReplay: document.getElementById("routeReplay"),
+  routeContract: document.getElementById("routeContract"),
   sessionId: document.getElementById("sessionId"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
@@ -328,6 +329,11 @@ function setBadge(element, text, state = "idle") {
   element.dataset.state = state;
 }
 
+function setRouteContract(element, suitspec) {
+  if (!element) return;
+  element.textContent = `FIT CONTRACT: ${formatFitContract(suitspec)} / TEXTURE FALLBACK: ${formatTextureFallback(suitspec)}`;
+}
+
 function normalizeTriggerText(text) {
   return String(text || "")
     .normalize("NFKC")
@@ -451,6 +457,16 @@ function fallbackArmorColor(part, suitspec) {
   const primary = new THREE.Color(colorFromSuitHex(suitspec?.palette?.primary, 0xf4f1e8));
   const secondary = new THREE.Color(colorFromSuitHex(suitspec?.palette?.secondary, 0x8c96a3));
   return secondary.lerp(primary, 0.32).getHex();
+}
+
+function formatFitContract(suitspec) {
+  const contract = suitspec?.fit_contract || {};
+  return `${contract.module_fit_stage || "missing"} / ${contract.module_fit_space || "missing"}`;
+}
+
+function formatTextureFallback(suitspec) {
+  const fallback = suitspec?.texture_fallback || {};
+  return `${fallback.mode || "missing"} / ${fallback.source || "missing"}`;
 }
 
 function createMaterial(color, opacity = 0.0) {
@@ -1444,6 +1460,7 @@ class QuestHenshinDemo {
       this.trialReplayPath ? `REPLAY ARCHIVE: ${compactToken(this.trialReplayPath)}` : "REPLAY ARCHIVE: WAIT",
       this.trialReplayPath ? "ok" : "pending",
     );
+    setRouteContract(UI.routeContract, this.suitspec);
     this.routeState.apiLabel = newRoute ? "/v1 ARMED" : "OFF";
     this.routeState.apiState = newRoute ? "pending" : "idle";
     this.routeState.trialLabel = this.trialId || "WAIT";
@@ -1648,7 +1665,12 @@ class QuestHenshinDemo {
       this.rig.add(mesh);
       this.meshes.set(part, mesh);
     }
-    UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets with SuitSpec textures.`;
+    const fallbackText =
+      this.suitspec?.texture_fallback?.mode === "palette_material"
+        ? "Palette fallback armed for missing runtime textures."
+        : "No texture fallback contract.";
+    setRouteContract(UI.routeContract, this.suitspec);
+    UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets. FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
   }
 
   async applyReplay(replay, { speak, autoplay = true }) {

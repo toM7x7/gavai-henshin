@@ -148,6 +148,7 @@ The active follow-up slice adds explicit route contracts:
 - `fit_contract` removes ambiguity around `module.fit`.
 - `texture_fallback` keeps Body Fit and Quest visual output coherent when ignored runtime textures are missing.
 - Dashboard and Quest copy move toward `SUIT FORGE`, `FIT AUDIT`, `HENSHIN TRIAL`, and `REPLAY ARCHIVE`.
+- Dashboard, Body Fit, and Quest now expose the active fit contract and texture fallback state in visible status/meta readouts.
 
 Command:
 

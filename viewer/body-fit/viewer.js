@@ -278,6 +278,16 @@ function textureFallbackAllowsPalette(suitspec) {
   return suitspec?.texture_fallback?.mode === "palette_material";
 }
 
+function formatFitContract(suitspec) {
+  const contract = suitspec?.fit_contract || {};
+  return `${contract.module_fit_stage || "missing"} / ${contract.module_fit_space || "missing"}`;
+}
+
+function formatTextureFallback(suitspec) {
+  const fallback = suitspec?.texture_fallback || {};
+  return `${fallback.mode || "missing"} / ${fallback.source || "missing"}`;
+}
+
 function colorFromSuitHex(hex, fallbackHex) {
   const color = new THREE.Color(fallbackHex);
   if (typeof hex === "string" && hex.trim()) {
@@ -1017,6 +1027,11 @@ class BodyFitViewer {
       equip_frame: sim.equip_frame ?? -1,
       equipped: sim.equipped ?? false,
       textures: this.useTextures,
+      fit_contract: formatFitContract(this.suitspec),
+      texture_fallback: formatTextureFallback(this.suitspec),
+      texture_fallback_active_parts: Array.from(this.meshes.values())
+        .filter((rec) => rec.textureFallbackActive)
+        .map((rec) => rec.partName),
       geometry_mode: this.geometryMode,
       fit_shell_overlay: this.showFitShell,
       theme: this.darkTheme ? "dark" : "bright",
@@ -4194,6 +4209,7 @@ class BodyFitViewer {
       `Textures: ${this.useTextures ? "ON" : "OFF"} | Relief: ${this.reliefStrength.toFixed(2)} | Theme: ${
         this.darkTheme ? "Dark" : "Bright"
       }`,
+      `FIT CONTRACT: ${formatFitContract(this.suitspec)} | TEXTURE FALLBACK: ${formatTextureFallback(this.suitspec)}`,
       `Bridges: ${this.bridgeEnabled ? "ON" : "OFF"} | Visible: ${this.bridgeVisibleCount} | Thickness: ${this.bridgeThickness.toFixed(
         2
       )}`,
@@ -4426,8 +4442,8 @@ class BodyFitViewer {
     const hasFrames = this.frames.length > 0;
     this.setStatus(
       hasFrames
-        ? `Loaded. frames=${this.frames.length}, parts=${this.meshes.size}`
-        : `Loaded, but no frames found in ${normalizePath(simPath)}`,
+        ? `Loaded. frames=${this.frames.length}, parts=${this.meshes.size} | FIT ${formatFitContract(this.suitspec)} | TEX ${formatTextureFallback(this.suitspec)}`
+        : `Loaded, but no frames found in ${normalizePath(simPath)} | FIT ${formatFitContract(this.suitspec)} | TEX ${formatTextureFallback(this.suitspec)}`,
       !hasFrames
     );
     this.updateMetaPanel();
@@ -4710,6 +4726,7 @@ class BodyFitViewer {
       "body-fit の現在状態",
       `フレーム ${frameText} | 装着状態: ${equipped ? "装着済み" : "未装着"} | 再生速度 x${this.speed.toFixed(2)}`,
       `テクスチャ ${jaOnOff(this.useTextures)} | 凹凸 ${this.reliefStrength.toFixed(2)} | 表示テーマ ${this.darkTheme ? "ソフト" : "明"}`,
+      `FIT CONTRACT: ${formatFitContract(this.suitspec)} | TEXTURE FALLBACK: ${formatTextureFallback(this.suitspec)}`,
       `Fitシェル ${jaOnOff(this.showFitShell)} | 接続ブリッジ ${jaOnOff(this.bridgeEnabled)} | 表示数 ${this.bridgeVisibleCount} | 太さ ${this.bridgeThickness.toFixed(2)}`,
       `鎧表示 ${jaOnOff(this.armorVisible)} | 待機モーション ${jaOnOff(this.vrm.idleEnabled)} x${this.vrm.idleSpeed.toFixed(2)} | 装着基準 ${VRM_ATTACH_MODE_LABELS[normalizeVrmAttachMode(this.vrm.attachMode)] || "ハイブリッド"}`,
       `VRM ${this.vrm.path ? "読込済み" : "未読込"} | Source ${this.vrm.source || "-"} | Humanoid ${jaYesNo(Boolean(this.vrm.instance?.humanoid))} | Bones ${this.vrm.boneCount || 0} | 骨表示 ${jaOnOff(this.vrm.visible)}`,

@@ -14,6 +14,7 @@ from .archive import ensure_session_dir, save_session_bundle
 from .bodyfit import BodyFrame, CoverScale as BodyCoverScale, SegmentSpec, Vec2 as BodyVec2, run_body_sequence
 from .constants import REFUSAL_CODES
 from .dashboard_server import serve_dashboard
+from .design_coherence import run_design_coherence_audit, write_design_coherence_markdown
 from .fit_regression import DEFAULT_BASELINE_MANIFEST, run_fit_regression, write_fit_regression_output
 from .forge import create_draft_morphotype, create_draft_suitspec, write_json
 from .gemini_image import (
@@ -481,6 +482,19 @@ def _cmd_authoring_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_design_coherence(args: argparse.Namespace) -> int:
+    try:
+        audit = run_design_coherence_audit(root=args.root, suitspec=args.suitspec, canon=args.canon)
+    except (ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    if args.output_md:
+        audit["output_md"] = str(write_design_coherence_markdown(audit, args.output_md))
+    print(json.dumps(audit, ensure_ascii=False))
+    return 0 if audit.get("ok") else 1
+
+
 def _cmd_iw_henshin(args: argparse.Namespace) -> int:
     try:
         mocopi_payload = load_json(args.mocopi) if args.mocopi else None
@@ -697,6 +711,16 @@ def build_parser() -> argparse.ArgumentParser:
     authoring_audit.add_argument("--output-json", help="Optional JSON output path")
     authoring_audit.add_argument("--output-md", help="Optional Markdown output path")
     authoring_audit.set_defaults(func=_cmd_authoring_audit)
+
+    design_coherence = sub.add_parser(
+        "design-coherence-audit",
+        help="Audit canonical suit identity, part assets, fit drift, and design portability",
+    )
+    design_coherence.add_argument("--root", default=".")
+    design_coherence.add_argument("--suitspec", default="examples/suitspec.sample.json")
+    design_coherence.add_argument("--canon", default="viewer/shared/armor-canon.js")
+    design_coherence.add_argument("--output-md", help="Optional Markdown output path")
+    design_coherence.set_defaults(func=_cmd_design_coherence)
 
     iw_henshin = sub.add_parser(
         "iw-henshin",

@@ -863,9 +863,9 @@
     }
   },
   "palette": {
-    "primary": "#1E2A3A",
-    "secondary": "#A8B3C6",
-    "emissive": "#3AC7FF"
+    "primary": "#F4F1E8",
+    "secondary": "#8C96A3",
+    "emissive": "#D8F7FF"
   },
   "effects": {
     "deposition_seconds": 7.5,

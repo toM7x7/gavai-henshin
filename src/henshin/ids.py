@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 _SUIT_ID_PARTS_RE = re.compile(r"^VDA-([A-Z0-9]+)-([A-Z0-9]+)-([0-9]{2})-([0-9]{4})$")
 _RECALL_CODE_RE = re.compile(r"^[A-Z0-9]{4}$")
-_RECALL_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+_RECALL_CODE_ALPHABET = string.digits
 
 
 def _utcnow() -> datetime:

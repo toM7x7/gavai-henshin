@@ -180,6 +180,13 @@ class TestDashboardServer(unittest.TestCase):
             "submitRecallCodeFromInput",
             "onkeydown",
             "recallDisplayCode",
+            "setCodeInputMode",
+            "codeMode",
+            "codeDigit",
+            "codeBackspace",
+            "codeClear",
+            "codeSubmit",
+            "appendRecallDigit",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)

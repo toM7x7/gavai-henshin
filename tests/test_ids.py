@@ -41,7 +41,7 @@ class TestIDs(unittest.TestCase):
     def test_recall_code_is_four_alphanumeric_characters(self) -> None:
         code = generate_recall_code()
         self.assertTrue(re.fullmatch(r"[A-Z0-9]{4}", code))
-        self.assertTrue(re.fullmatch(r"[A-HJKMNP-Z2-9]{4}", code))
+        self.assertTrue(re.fullmatch(r"[0-9]{4}", code))
         self.assertEqual(normalize_recall_code("a1-b2"), "A1B2")
 
     def test_next_recall_code_skips_existing_code(self) -> None:
@@ -52,8 +52,8 @@ class TestIDs(unittest.TestCase):
             def choice(self, alphabet: str) -> str:
                 return alphabet[next(self.values)]
 
-        code = next_recall_code(["2222"], rng=FixedRng())
-        self.assertEqual(code, "2223")
+        code = next_recall_code(["0000"], rng=FixedRng())
+        self.assertEqual(code, "0001")
 
     def test_approval_id_format(self) -> None:
         approval_id = generate_approval_id()

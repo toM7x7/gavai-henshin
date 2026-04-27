@@ -219,6 +219,7 @@ class TestNewRouteApi(unittest.TestCase):
             assert duplicate is not None and quest is not None
             self.assertEqual(first.status, 201)
             self.assertRegex(first.body["recall_code"], r"^[A-Z0-9]{4}$")
+            self.assertRegex(first.body["recall_code"], r"^[0-9]{4}$")
             self.assertEqual(duplicate.status, 400)
             self.assertIn("recall_code", duplicate.body["error"])
             self.assertEqual(quest.status, 200)

@@ -892,7 +892,15 @@ class NewRouteApi:
     def _resolve_recall_code(self, value: Any, *, suit_id: str, previous_suit: dict[str, Any] | None = None) -> str:
         previous_code = self._recall_code_from_suit(previous_suit or {})
         if value is None or str(value).strip() == "":
-            return previous_code or next_recall_code(self._all_recall_codes(exclude_suit_id=suit_id))
+            if previous_code:
+                return previous_code
+            existing_codes = self._all_recall_codes(exclude_suit_id=suit_id)
+            for _ in range(128):
+                code = next_recall_code(existing_codes)
+                if self._find_suit_id_by_recall_code(code) is None:
+                    return code
+                existing_codes.append(code)
+            raise ValueError("Unable to allocate a unique recall_code")
         code = normalize_recall_code(str(value))
         owner = self._find_suit_id_by_recall_code(code)
         if owner is not None and owner != suit_id:

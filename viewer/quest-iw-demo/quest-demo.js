@@ -13,7 +13,7 @@ const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
 const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
 const RECALL_CODE_RE = /^[A-Z0-9]{4}$/;
 const XR_RECALL_CODE_EMPTY = "----";
-const XR_RECALL_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const XR_RECALL_CHARS = "0123456789";
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -276,6 +276,10 @@ function recallDraftToCode(value) {
   const draft = String(value || "");
   if (draft.length !== 4 || draft.includes("-")) return "";
   return normalizeRecallCodeInput(draft);
+}
+
+function recallDraftToInputValue(value) {
+  return String(value || "").replace(/-/g, "");
 }
 
 function formatSpatialRecallDraft(value, slot) {
@@ -1295,6 +1299,9 @@ class SpatialControlPanel {
     this.hoveredController = null;
     this.menuMode = XR_MENU_MODE_COMPACT;
     this.fullPanelElements = [];
+    this.normalInputElements = [];
+    this.codeInputElements = [];
+    this.codeInputMode = false;
     this.compactGroup = null;
     this.worldLockReady = false;
     this.worldLockPosition = new THREE.Vector3();
@@ -1419,16 +1426,69 @@ class SpatialControlPanel {
     this.recallDisplay.position.set(0, -0.18, 0.02);
     this.group.add(this.recallDisplay);
 
-    this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a);
-    this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff);
-    this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff);
-    this.addButton("pause", "停止", 0.6, -0.31, 0xf6f1df);
-    this.addButton("reset", "リセット", -0.42, -0.45, 0xff6b6b);
-    this.addButton("lock", "固定", 0, -0.45, 0x8edfff);
-    this.addButton("close", "戻る", 0.42, -0.45, 0x43d8ff);
+    this.normalInputElements.push(this.addButton("codeMode", "コード", -0.58, -0.18, 0xffcf5a, { width: 0.28, height: 0.085, fontSize: 34 }).group);
+    this.normalInputElements.push(this.addButton("codeSubmit", "呼出", 0.58, -0.18, 0x43d8ff, { width: 0.28, height: 0.085, fontSize: 34 }).group);
+    this.normalInputElements.push(this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a).group);
+    this.normalInputElements.push(this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff).group);
+    this.normalInputElements.push(this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff).group);
+    this.normalInputElements.push(this.addButton("pause", "停止", 0.6, -0.31, 0xf6f1df).group);
+    this.normalInputElements.push(this.addButton("reset", "リセット", -0.42, -0.45, 0xff6b6b).group);
+    this.normalInputElements.push(this.addButton("lock", "固定", 0, -0.45, 0x8edfff).group);
+    this.normalInputElements.push(this.addButton("close", "戻る", 0.42, -0.45, 0x43d8ff).group);
+    this.buildCodeInputPanel();
     this.fullPanelElements = [...this.group.children];
     this.buildCompactPanel();
     this.applyMenuMode();
+  }
+
+  buildCodeInputPanel() {
+    this.codeInputHint = makeTextPlane("VRコード入力: 数字を押して4桁にします", {
+      width: 1.24,
+      height: 0.09,
+      canvasWidth: 1200,
+      canvasHeight: 150,
+      fontSize: 34,
+      fontWeight: 780,
+      color: "#d7f8ff",
+      background: "rgba(4, 13, 17, 0.68)",
+      border: "rgba(67, 216, 255, 0.34)",
+      maxLines: 1,
+    });
+    this.codeInputHint.position.set(0, 0.18, 0.022);
+    this.group.add(this.codeInputHint);
+    this.codeInputElements.push(this.codeInputHint);
+
+    const rows = [
+      ["1", "2", "3"],
+      ["4", "5", "6"],
+      ["7", "8", "9"],
+      ["消", "0", "呼出"],
+      ["戻る", "全消", ""],
+    ];
+    const xs = [-0.34, 0, 0.34];
+    const ys = [-0.08, -0.185, -0.29, -0.395, -0.5];
+    rows.forEach((row, rowIndex) => {
+      row.forEach((label, colIndex) => {
+        if (!label) return;
+        const action = /^[0-9]$/.test(label)
+          ? `codeDigit${label}`
+          : label === "消"
+            ? "codeBackspace"
+            : label === "全消"
+              ? "codeClear"
+              : label === "呼出"
+                ? "codeSubmit"
+                : "codeBack";
+        const width = label === "呼出" ? 0.32 : 0.26;
+        const color = label === "呼出" ? 0x43d8ff : label === "戻る" ? 0x8edfff : label === "全消" || label === "消" ? 0xff6b6b : 0xffcf5a;
+        const button = this.addButton(action, label, xs[colIndex], ys[rowIndex], color, {
+          width,
+          height: 0.085,
+          fontSize: /^[0-9]$/.test(label) ? 46 : 34,
+        });
+        this.codeInputElements.push(button.group);
+      });
+    });
   }
 
   buildCompactPanel() {
@@ -1520,7 +1580,9 @@ class SpatialControlPanel {
     button.add(text);
 
     this.group.add(button);
-    this.buttons.push({ action, group: button, hit, text });
+    const entry = { action, group: button, hit, text };
+    this.buttons.push(entry);
+    return entry;
   }
 
   applyMenuMode() {
@@ -1529,7 +1591,24 @@ class SpatialControlPanel {
       element.visible = !compact;
     }
     if (this.compactGroup) this.compactGroup.visible = compact;
+    this.applyCodeInputModeVisibility();
     this.updateMenuModeLabels();
+  }
+
+  applyCodeInputModeVisibility() {
+    const panelOpen = this.menuMode !== XR_MENU_MODE_COMPACT;
+    for (const element of this.normalInputElements) {
+      element.visible = panelOpen && !this.codeInputMode;
+    }
+    for (const element of this.codeInputElements) {
+      element.visible = panelOpen && this.codeInputMode;
+    }
+    for (const element of [this.progressBack, this.progressFill, this.routeStatus, this.debug, this.listenRing]) {
+      if (element) element.visible = panelOpen && !this.codeInputMode;
+    }
+    if (this.recallDisplay) {
+      this.recallDisplay.position.set(0, this.codeInputMode ? 0.055 : -0.18, 0.02);
+    }
   }
 
   markMenuInteraction() {
@@ -1548,6 +1627,17 @@ class SpatialControlPanel {
     this.menuMode = nextMode;
     this.markMenuInteraction();
     this.applyMenuMode();
+  }
+
+  setCodeInputMode(enabled) {
+    this.codeInputMode = Boolean(enabled);
+    if (this.codeInputMode) {
+      this.setMenuMode(this.menuMode === XR_MENU_MODE_COMPACT ? XR_MENU_MODE_OPEN : this.menuMode);
+      this.setRecallDraft(UI.recallCodeInput?.value || this.demo.recallCode || XR_RECALL_CODE_EMPTY, { syncInput: false });
+    }
+    this.markMenuInteraction();
+    this.applyCodeInputModeVisibility();
+    this.updateRecallDisplay();
   }
 
   togglePanelOpen() {
@@ -1598,6 +1688,7 @@ class SpatialControlPanel {
   }
 
   recallDisplayCode() {
+    if (this.codeInputMode) return formatSpatialRecallDraft(this.recallDraft, this.recallSlot);
     return this.demo.recallCode || recallDraftToCode(this.recallDraft) || "未呼出";
   }
 
@@ -1606,7 +1697,7 @@ class SpatialControlPanel {
     this.recallDraft = next;
     this.recallSlot = clamp(this.recallSlot, 0, 3);
     if (options.syncInput !== false && UI.recallCodeInput) {
-      UI.recallCodeInput.value = recallDraftToCode(next);
+      UI.recallCodeInput.value = recallDraftToInputValue(next);
     }
     this.updateRecallDisplay(options.state || "pending");
   }
@@ -1625,17 +1716,41 @@ class SpatialControlPanel {
     this.setRecallDraft(draft.join(""));
   }
 
+  appendRecallDigit(digit) {
+    if (!/^[0-9]$/.test(String(digit))) return;
+    const draft = Array.from(normalizeSpatialRecallDraft(this.recallDraft));
+    const slot = draft.indexOf("-");
+    if (slot < 0) return;
+    draft[slot] = String(digit);
+    this.recallSlot = clamp(slot + 1, 0, 3);
+    this.setRecallDraft(draft.join(""));
+  }
+
+  backspaceRecallDigit() {
+    const draft = Array.from(normalizeSpatialRecallDraft(this.recallDraft));
+    let slot = draft.indexOf("-");
+    slot = slot < 0 ? 3 : Math.max(0, slot - 1);
+    draft[slot] = "-";
+    this.recallSlot = slot;
+    this.setRecallDraft(draft.join(""));
+  }
+
+  clearRecallDraft() {
+    this.recallSlot = 0;
+    this.setRecallDraft(XR_RECALL_CODE_EMPTY);
+  }
+
   async loadRecallDraft() {
     const code = recallDraftToCode(this.recallDraft);
     if (!RECALL_CODE_RE.test(code)) {
       this.updateRecallDisplay("error");
-      this.demo.setRecallCodeState("VRコードは4桁英数字です。", "error");
+      this.demo.setRecallCodeState("VRコードは数字4桁です。", "error");
       this.demo.setRouteApi("CODE INPUT", "error");
       return;
     }
     try {
       await this.demo.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
-      this.setRecallDraft(code, { state: "ok" });
+      this.setCodeInputMode(false);
     } catch (error) {
       this.updateRecallDisplay("error");
       this.demo.setRecallCodeState(String(error?.message || error), "error");
@@ -1912,9 +2027,12 @@ class SpatialControlPanel {
     if (action === "reset") this.demo.reset();
     if (action === "lock") this.toggleWorldLock();
     if (action === "close") this.setMenuMode(XR_MENU_MODE_COMPACT);
-    if (action === "codeNext") this.cycleRecallSlot();
-    if (action === "codeInc") this.cycleRecallChar(1);
-    if (action === "codeLoad") void this.loadRecallDraft();
+    if (action === "codeMode") this.setCodeInputMode(true);
+    if (action === "codeBack") this.setCodeInputMode(false);
+    if (action === "codeClear") this.clearRecallDraft();
+    if (action === "codeBackspace") this.backspaceRecallDigit();
+    if (action === "codeSubmit") void this.loadRecallDraft();
+    if (action.startsWith("codeDigit")) this.appendRecallDigit(action.slice("codeDigit".length));
   }
 
   activateController(controller) {

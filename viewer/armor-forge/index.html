@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GAVAI Armor Forge</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="forge-panel" aria-label="武装生成フォーム">
+        <div class="panel-head">
+          <p>Webでスーツ成立</p>
+          <h1>装着する武装を生成</h1>
+        </div>
+
+        <form id="forgeForm" class="forge-form">
+          <label>
+            <span>記名</span>
+            <input id="displayName" name="displayName" type="text" maxlength="80" placeholder="例: 試作一号 / 来場者名" />
+          </label>
+
+          <div class="field-grid">
+            <label>
+              <span>守る対象</span>
+              <select id="archetype" name="archetype">
+                <option value="citizens">市民</option>
+                <option value="team">チーム</option>
+                <option value="city">街</option>
+                <option value="memory">記憶</option>
+              </select>
+            </label>
+            <label>
+              <span>気質</span>
+              <select id="temperament" name="temperament">
+                <option value="calm">冷静</option>
+                <option value="bold">大胆</option>
+                <option value="swift">俊敏</option>
+                <option value="sentinel">堅守</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="swatches" aria-label="配色">
+            <label>
+              <span>基礎</span>
+              <input id="primaryColor" type="color" value="#F4F1E8" />
+            </label>
+            <label>
+              <span>外装</span>
+              <input id="secondaryColor" type="color" value="#8C96A3" />
+            </label>
+            <label>
+              <span>発光</span>
+              <input id="emissiveColor" type="color" value="#43D8FF" />
+            </label>
+          </div>
+
+          <fieldset class="part-fieldset">
+            <legend>外装パーツ</legend>
+            <div id="partGrid" class="part-grid"></div>
+          </fieldset>
+
+          <label>
+            <span>生成メモ</span>
+            <textarea id="brief" rows="4" maxlength="500" placeholder="例: 白い基礎スーツに、胸と腕へ発光ラインが走る救助型の鎧"></textarea>
+          </label>
+
+          <button id="forgeButton" class="primary-action" type="submit">
+            <span>生成して番号発行</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="stand-panel" aria-label="鎧立てプレビュー">
+        <div class="stand-stage">
+          <canvas id="armorCanvas" aria-label="Tポーズ鎧立て"></canvas>
+          <div id="emptyStand" class="empty-stand">
+            <strong>鎧立て待機中</strong>
+            <span>入力を終えると、この場所に装着予定モデルが立ち上がります。</span>
+          </div>
+        </div>
+
+        <aside class="result-panel" aria-label="生成結果">
+          <div>
+            <span>Quest入力コード</span>
+            <strong id="recallCode">----</strong>
+          </div>
+          <div>
+            <span>内部ID</span>
+            <strong id="suitId">未発行</strong>
+          </div>
+          <div>
+            <span>Manifest</span>
+            <strong id="manifestId">未発行</strong>
+          </div>
+          <div id="forgeStatus" class="forge-status pending">入力待機中</div>
+          <a id="questLink" class="quest-link disabled" href="#" aria-disabled="true">Quest呼び出しURL</a>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="./forge.js"></script>
+  </body>
+</html>

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -16,7 +17,14 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
-from .ids import next_recall_code, next_suit_id, normalize_recall_code, parse_suit_id
+from .ids import (
+    generate_approval_id,
+    generate_morphotype_id,
+    next_recall_code,
+    next_suit_id,
+    normalize_recall_code,
+    parse_suit_id,
+)
 from .manifest import project_suitspec_to_manifest
 from .validators import validate_against_schema, validate_suitspec
 
@@ -58,6 +66,21 @@ _TRANSFORM_STATE_ORDER = [
     "REFUSED",
 ]
 _TRANSFORM_STATE_RANK = {state: index for index, state in enumerate(_TRANSFORM_STATE_ORDER)}
+_FORGE_DEFAULT_PARTS = {
+    "helmet",
+    "chest",
+    "back",
+    "waist",
+    "left_shoulder",
+    "right_shoulder",
+    "left_forearm",
+    "right_forearm",
+    "left_shin",
+    "right_shin",
+    "left_boot",
+    "right_boot",
+}
+_FORGE_REQUIRED_PARTS = {"helmet", "chest", "back"}
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
     "TRIGGER_DETECTED",
@@ -237,6 +260,66 @@ class NewRouteApi:
                 "suit": suit,
                 "links": {"create_suit": "/v1/suits", "suit": f"/v1/suits/{suit_id}"},
                 "storage": self._storage_info(suit_path),
+            },
+        )
+
+    def forge_suit(self, payload: dict[str, Any]) -> ApiResponse:
+        if not isinstance(payload, dict):
+            return self._bad_request("request body must be a JSON object")
+
+        display_name = self._display_name(payload.get("display_name") or payload.get("name"))
+        try:
+            rev = int(payload.get("rev", 0))
+            suit_id = next_suit_id(
+                self._all_suit_ids(),
+                series=str(payload.get("series", "AXIS")),
+                role=str(payload.get("role", "WEB")),
+                rev=rev,
+            )
+            recall_code = self._resolve_recall_code(payload.get("recall_code"), suit_id=suit_id)
+            self._forge_palette(
+                payload.get("palette"),
+                {"primary": "#F4F1E8", "secondary": "#8C96A3", "emissive": "#D8F7FF"},
+            )
+            self._forge_enabled_parts(payload)
+        except (TypeError, ValueError) as exc:
+            return self._bad_request(str(exc))
+        try:
+            suitspec = self._forge_suitspec_from_payload(payload, suit_id=suit_id, display_name=display_name)
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+
+        create = self.create_suit({
+            "suitspec": suitspec,
+            "display_name": display_name,
+            "recall_code": recall_code,
+            "overwrite": True,
+        })
+        if create.status != HTTPStatus.CREATED:
+            return create
+
+        manifest_response = self.attach_manifest(suit_id, {"status": "READY"})
+        if manifest_response.status != HTTPStatus.CREATED:
+            self._discard_suit(suit_id)
+            return manifest_response
+
+        return ApiResponse(
+            status=HTTPStatus.CREATED,
+            body={
+                "ok": True,
+                "suit_id": suit_id,
+                "recall_code": recall_code,
+                "display_name": display_name,
+                "status": "READY",
+                "manifest_id": manifest_response.body["manifest_id"],
+                "suit": manifest_response.body["suit"],
+                "suitspec": create.body["suitspec"],
+                "manifest": manifest_response.body["manifest"],
+                "links": {
+                    "quest_recall": f"/v1/quest/recall/{recall_code}",
+                    "suit": f"/v1/suits/{suit_id}",
+                    "manifest": f"/v1/suits/{suit_id}/manifest",
+                },
             },
         )
 
@@ -693,6 +776,8 @@ class NewRouteApi:
 
     def post(self, path: str, payload: dict[str, Any]) -> ApiResponse | None:
         normalized = "/" + path.strip("/")
+        if normalized == "/v1/suits/forge":
+            return self.forge_suit(payload)
         if normalized == "/v1/suits/issue-id":
             return self.issue_suit_id(payload)
         if normalized == "/v1/suits":
@@ -795,6 +880,117 @@ class NewRouteApi:
         if owner is not None and owner != suit_id:
             raise ValueError(f"recall_code already exists: {code}")
         return code
+
+    def _forge_suitspec_from_payload(self, payload: dict[str, Any], *, suit_id: str, display_name: str) -> dict[str, Any]:
+        suitspec = self._clone_json(self._load_json("examples/suitspec.sample.json"))
+        suitspec["suit_id"] = suit_id
+        suitspec["approval_id"] = generate_approval_id()
+        suitspec["morphotype_id"] = generate_morphotype_id()
+        suitspec["palette"] = self._forge_palette(payload.get("palette"), suitspec.get("palette", {}))
+        suitspec["operator_profile"] = self._forge_operator_profile(payload)
+        suitspec["style_tags"] = self._forge_style_tags(payload)
+        suitspec["generation"] = self._forge_generation(payload, suitspec["style_tags"])
+        suitspec["text"] = self._forge_text(payload, display_name)
+
+        enabled_parts = self._forge_enabled_parts(payload)
+        modules = suitspec.get("modules")
+        if not isinstance(modules, dict):
+            raise ValueError("forge template modules must be a JSON object")
+        for part_name, module in modules.items():
+            if not isinstance(module, dict):
+                continue
+            module["enabled"] = part_name in enabled_parts
+            module.pop("texture_path", None)
+        return suitspec
+
+    def _forge_palette(self, value: Any, fallback: dict[str, Any]) -> dict[str, str]:
+        payload = value if isinstance(value, dict) else {}
+        return {
+            "primary": self._forge_color(payload.get("primary"), fallback.get("primary", "#F4F1E8")),
+            "secondary": self._forge_color(payload.get("secondary"), fallback.get("secondary", "#8C96A3")),
+            "emissive": self._forge_color(payload.get("emissive"), fallback.get("emissive", "#D8F7FF")),
+        }
+
+    def _forge_color(self, value: Any, fallback: Any) -> str:
+        text = str(value or fallback or "").strip()
+        if re.fullmatch(r"#[0-9A-Fa-f]{6}", text):
+            return text.upper()
+        raise ValueError(f"color must be #RRGGBB: {text}")
+
+    def _forge_operator_profile(self, payload: dict[str, Any]) -> dict[str, str]:
+        profile = payload.get("operator_profile") if isinstance(payload.get("operator_profile"), dict) else {}
+        archetype = str(payload.get("archetype") or profile.get("protect_archetype") or "citizens").strip()[:40]
+        temperament = str(payload.get("temperament") or profile.get("temperament_bias") or "calm").strip()[:40]
+        mood = str(payload.get("color_mood") or profile.get("color_mood") or "clear_white").strip()[:40]
+        note = str(payload.get("brief") or profile.get("note") or "Web forge base-suit overlay request.").strip()[:180]
+        return {
+            "protect_archetype": archetype or "citizens",
+            "temperament_bias": temperament or "calm",
+            "color_mood": mood or "clear_white",
+            "note": note or "Web forge base-suit overlay request.",
+        }
+
+    def _forge_style_tags(self, payload: dict[str, Any]) -> list[str]:
+        raw_tags = payload.get("style_tags")
+        tags = []
+        if isinstance(raw_tags, list):
+            tags.extend(str(tag).strip() for tag in raw_tags if str(tag).strip())
+        motif = str(payload.get("motif") or payload.get("archetype") or "guardian").strip()
+        tags.extend(["base_suit", "armor_overlay", motif])
+        cleaned = []
+        for tag in tags:
+            normalized = "".join(ch for ch in tag.lower().replace(" ", "_") if ch.isalnum() or ch in {"_", "-"})
+            if normalized and normalized not in cleaned:
+                cleaned.append(normalized[:32])
+        return cleaned[:12] or ["base_suit", "armor_overlay"]
+
+    def _forge_generation(self, payload: dict[str, Any], style_tags: list[str]) -> dict[str, Any]:
+        brief = str(payload.get("brief") or "Generate a fitted base suit with selected armor overlays.").strip()
+        prompt = (
+            f"{brief} "
+            f"Style tags: {', '.join(style_tags)}. "
+            "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
+        )
+        return {
+            "model_id": "local-web-forge-v0",
+            "prompt": prompt[:1200],
+            "part_prompts": {
+                part: f"{part} armor overlay, compatible with a fitted base suit"
+                for part in sorted(self._forge_enabled_parts(payload))
+            },
+        }
+
+    def _forge_text(self, payload: dict[str, Any], display_name: str) -> dict[str, Any]:
+        callout = str(payload.get("callout") or display_name or "Web forge suit").strip()[:120]
+        return {
+            "callout": callout,
+            "deposition_log_lines": [
+                "Web forge accepted the operator parameters.",
+                "Base suit substrate locked.",
+                "Armor overlay manifest ready for Quest recall.",
+            ],
+        }
+
+    def _forge_enabled_parts(self, payload: dict[str, Any]) -> set[str]:
+        modules = self._load_json("examples/suitspec.sample.json").get("modules", {})
+        allowed = set(modules.keys()) if isinstance(modules, dict) else set()
+        raw_parts = payload.get("parts")
+        if isinstance(raw_parts, list):
+            selected = {str(part).strip() for part in raw_parts if str(part).strip()}
+        else:
+            selected = set(_FORGE_DEFAULT_PARTS)
+        unknown = sorted(part for part in selected if part not in allowed)
+        if unknown:
+            raise ValueError(f"unknown forge parts: {unknown}")
+        return (selected | _FORGE_REQUIRED_PARTS) & allowed
+
+    def _discard_suit(self, suit_id: str) -> None:
+        target = (self.suit_store_root / suit_id).resolve()
+        root = self.suit_store_root.resolve()
+        if target.parent != root or not _SUIT_ID_RE.fullmatch(suit_id):
+            raise ValueError(f"refusing to discard invalid suit path: {suit_id}")
+        if target.exists():
+            shutil.rmtree(target)
 
     def _all_suit_ids(self) -> list[str]:
         if not self.suit_store_root.exists():

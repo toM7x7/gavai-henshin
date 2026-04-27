@@ -88,6 +88,18 @@ Future GLB/glTF assets should preserve those fields through metadata or sidecar 
 
 The dashboard can be redesigned, but this contract should remain visible: base suit, overlay parts, armor stand, recall code.
 
+## Standalone Web Forge
+
+The standalone Web forge is the public-facing slice of the same route. It should not expose the full internal dashboard. Its job is narrower:
+
+1. Ask for a display name, protection archetype, palette, generation brief, and selected overlay parts.
+2. Call `POST /v1/suits/forge`.
+3. Receive a ready `suit_id`, four-character `recall_code`, SuitSpec, and SuitManifest.
+4. Render the T-pose armor stand immediately.
+5. Provide the Quest recall URL based on the same `recall_code`.
+
+This page is allowed to generate a template-based suit before the full AI texture pipeline is complete. The preview must still respect the base suit plus overlay distinction: the fitted base is the substrate, and selected modules are the visible armor overlay.
+
 ## Quest Flow
 
 1. Visitor or operator enters `recall_code`.
@@ -104,4 +116,3 @@ Quest should not overwrite SuitSpec for a recalled suit. If no manifest is ready
 - Fit quality: base suit follows VRM/body proxy; overlay stays within mount/clearance policy.
 - UV quality: base suit is seam-safe and low-frequency; overlay reserves hero motif zones.
 - Runtime quality: `recall_code` lookup works, manifest exists, and Quest can create a trial without rewriting authoring data.
-

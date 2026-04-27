@@ -87,6 +87,24 @@ class TestDashboardServer(unittest.TestCase):
         self.assertTrue(response.body["suitspec_ready"])
         self.assertTrue(response.body["manifest_ready"])
 
+    def test_armor_forge_page_exposes_public_workflow_contract(self) -> None:
+        html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+
+        for dom_id in {
+            "forgeForm",
+            "partGrid",
+            "armorCanvas",
+            "recallCode",
+            "suitId",
+            "manifestId",
+            "questLink",
+        }:
+            self.assertIn(f'id="{dom_id}"', html)
+            self.assertIn(f'getElementById("{dom_id}")', js)
+        self.assertIn("/v1/suits/forge", js)
+        self.assertIn("Quest入力コード", html)
+
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))
         job.emit({"type": "job_started", "stage": "scan", "status": "started", "requested_count": 2})

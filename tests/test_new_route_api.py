@@ -142,6 +142,72 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(second.status, 400)
             self.assertIn("recall_code", second.body["error"])
 
+    def test_forge_suit_creates_ready_manifest_and_recall_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            response = api.post(
+                "/v1/suits/forge",
+                {
+                    "display_name": "来場者A",
+                    "recall_code": "F9A1",
+                    "palette": {"primary": "#112233", "secondary": "#445566", "emissive": "#77CCFF"},
+                    "archetype": "city",
+                    "temperament": "swift",
+                    "brief": "街を守る軽量外装",
+                    "parts": ["helmet", "chest", "back", "left_forearm", "right_forearm"],
+                },
+            )
+            quest = api.get("/v1/quest/recall/F9A1")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(quest)
+            assert response is not None and quest is not None
+            self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["recall_code"], "F9A1")
+            self.assertEqual(response.body["status"], "READY")
+            self.assertRegex(response.body["manifest_id"], r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
+            self.assertEqual(response.body["suitspec"]["palette"]["primary"], "#112233")
+            self.assertTrue(response.body["suitspec"]["modules"]["helmet"]["enabled"])
+            self.assertTrue(response.body["suitspec"]["modules"]["left_forearm"]["enabled"])
+            self.assertFalse(response.body["suitspec"]["modules"]["left_shin"]["enabled"])
+            self.assertNotIn("texture_path", response.body["suitspec"]["modules"]["helmet"])
+            self.assertEqual(quest.status, 200)
+            self.assertTrue(quest.body["manifest_ready"])
+            self.assertEqual(quest.body["suit_id"], response.body["suit_id"])
+
+    def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            first = api.post("/v1/suits/forge", {"display_name": "Visitor"})
+            self.assertIsNotNone(first)
+            assert first is not None
+            duplicate = api.post("/v1/suits/forge", {"display_name": "Other", "recall_code": first.body["recall_code"]})
+            quest = api.get(f"/v1/quest/recall/{first.body['recall_code']}")
+
+            self.assertIsNotNone(duplicate)
+            self.assertIsNotNone(quest)
+            assert duplicate is not None and quest is not None
+            self.assertEqual(first.status, 201)
+            self.assertRegex(first.body["recall_code"], r"^[A-Z0-9]{4}$")
+            self.assertEqual(duplicate.status, 400)
+            self.assertIn("recall_code", duplicate.body["error"])
+            self.assertEqual(quest.status, 200)
+            self.assertTrue(quest.body["manifest_ready"])
+
+    def test_forge_suit_rejects_invalid_public_parameters_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store_root = Path(tmp) / "suits"
+            api = NewRouteApi(Path("."), suit_store_root=suit_store_root)
+            response = api.post(
+                "/v1/suits/forge",
+                {"palette": {"primary": "blue"}, "parts": ["helmet"]},
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 400)
+            self.assertFalse(suit_store_root.exists())
+
     def test_recall_code_lookup_rejects_invalid_or_unknown_codes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")

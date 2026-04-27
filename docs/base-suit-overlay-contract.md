@@ -109,11 +109,23 @@ The Web forge now emits an `asset_pipeline` contract alongside the public previe
 
 - Model substrate: VRM baseline body-fit first, then the 18 canonical overlay part keys.
 - Shape contract: current `mesh.v1` overlay assets remain seed/proxy parts; validated GLB/glTF is a derived runtime artifact after fit and bounds checks.
+- Fit status: `preview_vrm_bone_metrics` means the Web Forge armor stand is using the baseline VRM bones/body measurements for preview placement, but a saved fit-audit artifact is still the next gate.
 - Texture provider: `nano_banana` provider profile, using Gemini-backed image generation through the existing `part_generation.py` provider abstraction.
 - Texture mode: `mesh_uv` with UV guide references, `uv_refine=true`, 2K square atlases, and SuitSpec texture write-back as the intended job default.
+- Surface status: `planned_not_generated` means the Web forge has issued a suit and generated the job contract, but it has not yet produced final texture atlases or written `texture_path` fields.
 - Planned quality gates: mesh bounds, fit clearance, UV contract, and Quest recall readiness must stay visible before the suit is treated as exhibition-ready. Texture quality remains warning-only until the asynchronous generation job completes.
 
 This deliberately separates "the suit is issued and recallable" from "final generated surface assets are complete." The public Web flow can issue a code immediately, then advance texture generation asynchronously without breaking Quest recall.
+
+## Fit-First Platform Boundary
+
+The fitting mechanism is the root contract. Three.js, PlayCanvas, and Unity should consume the same `SuitSpec`/`SuitManifest`/PartCatalog facts instead of each inventing armor placement:
+
+- Current Three.js Web Forge: verification lane for VRM baseline, declared height, and T-pose armor stand preview. It must use VRM bone/body measurements before showing overlay parts.
+- Future PlayCanvas surface: browser preview/editor adapter for the same manifest and GLB outputs. It may provide nicer editing UX, but it is not the authoring source of truth.
+- Future Unity/OpenXR surface: Quest runtime adapter for transformation, tracking, mirror/replay, and exhibition-grade input. It should consume prepared manifests and assets rather than generating or correcting them live.
+
+The next model-quality milestone is therefore `VRM measurement -> body surface/mounts -> overlay bounds -> UV/texture job`. Texture generation should not be treated as final until the fit and mount gates are good enough to keep parts on the human body.
 
 ## Quest Flow
 

@@ -89,6 +89,8 @@ _FORGE_TEXTURE_PROVIDER_PROFILE = "nano_banana"
 _FORGE_TEXTURE_MODE = "mesh_uv"
 _FORGE_UV_REFINE = True
 _FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
+_FORGE_FIT_STATUS = "preview_vrm_bone_metrics"
+_FORGE_SURFACE_GENERATION_STATUS = "planned_not_generated"
 _RECALL_AMBIGUOUS_TRANSLATION = str.maketrans({"0": "O", "O": "O", "1": "I", "I": "I", "L": "I"})
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
@@ -1009,6 +1011,7 @@ class NewRouteApi:
         texture_plan = {
             "provider_profile": _FORGE_TEXTURE_PROVIDER_PROFILE,
             "texture_mode": _FORGE_TEXTURE_MODE,
+            "status": _FORGE_SURFACE_GENERATION_STATUS,
             "uv_refine": _FORGE_UV_REFINE,
             "update_suitspec": True,
             "use_cache": True,
@@ -1019,6 +1022,7 @@ class NewRouteApi:
             "asset_contract": _FORGE_ASSET_CONTRACT,
             "base_suit": "VRM baseline body-fit substrate",
             "overlay_parts": enabled_parts,
+            "fit_solver": "web_forge_vrm_bone_metrics_preview",
             "runtime_target": "validated GLB/gltf derived artifact",
             "material_slots": ["base_surface", "accent", "emissive", "trim"],
         }
@@ -1028,6 +1032,8 @@ class NewRouteApi:
             "body_profile": body_profile,
             "model_plan": model_plan,
             "texture_plan": texture_plan,
+            "fit_status": _FORGE_FIT_STATUS,
+            "surface_generation_status": _FORGE_SURFACE_GENERATION_STATUS,
             "planned_quality_gates": ["mesh_bounds", "fit_clearance", "uv_contract", "quest_recall_ready"],
             "quality_policy": {
                 "texture_quality": "warning_only_until_generation_completes",
@@ -1094,6 +1100,8 @@ class NewRouteApi:
         return {
             "model_plan": self._clone_json(model_plan),
             "texture_plan": self._clone_json(texture_plan),
+            "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
+            "surface_generation_status": str(generation.get("surface_generation_status") or _FORGE_SURFACE_GENERATION_STATUS),
             "job_defaults": self._clone_json(job_defaults),
             "planned_quality_gates": self._clone_json(planned_quality_gates),
             "quality_policy": self._clone_json(quality_policy),

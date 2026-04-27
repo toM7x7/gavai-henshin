@@ -1,5 +1,12 @@
 import * as THREE from "../body-fit/vendor/three/build/three.module.js";
 import { loadVrmScene } from "../body-fit/vrm-loader.js";
+import {
+  VRM_BONE_ALIASES,
+  effectiveFitFor,
+  effectiveVrmAnchorFor,
+  normalizeBoneName,
+} from "../shared/armor-canon.js";
+import { applyApproximateVrmTPose } from "../shared/auto-fit-engine.js";
 
 const PARTS = [
   ["helmet", "ヘルメット", true],
@@ -27,6 +34,13 @@ const MIN_HEIGHT_CM = 90;
 const MAX_HEIGHT_CM = 230;
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
 const DEFAULT_QUEST_DEV_PORT = 5173;
+const VRM_BONE_ALIAS_INDEX = new Map();
+for (const [canonical, aliases] of Object.entries(VRM_BONE_ALIASES)) {
+  VRM_BONE_ALIAS_INDEX.set(normalizeBoneName(canonical), canonical);
+  for (const alias of aliases) {
+    VRM_BONE_ALIAS_INDEX.set(normalizeBoneName(alias), canonical);
+  }
+}
 
 const PART_POSES = {
   helmet: { p: [0, 1.68, 0.02], s: [0.22, 0.22, 0.22] },
@@ -140,6 +154,52 @@ function fitVector(value, fallback) {
 
 function softFitFactor(value, baseline) {
   return clamp(1 + (numberOr(value, baseline) - baseline) * 0.22, 0.82, 1.28);
+}
+
+function softFitSize(part, module, size) {
+  const fit = effectiveFitFor(part, module);
+  const baseline = FIT_SHAPE_BASELINES[String(fit.shape || "box").toLowerCase()] || FIT_SHAPE_BASELINES.box;
+  const fitScale = fitVector(fit.scale, baseline);
+  return new THREE.Vector3(
+    size.x * softFitFactor(fitScale[0], baseline[0]),
+    size.y * softFitFactor(fitScale[1], baseline[1]),
+    size.z * softFitFactor(fitScale[2], baseline[2]),
+  );
+}
+
+function midpoint(a, b) {
+  if (!a && !b) return null;
+  if (!a) return b.clone();
+  if (!b) return a.clone();
+  return a.clone().add(b).multiplyScalar(0.5);
+}
+
+function distanceOr(a, b, fallback) {
+  return a && b ? Math.max(a.distanceTo(b), 0.001) : fallback;
+}
+
+function addOffset(vector, offset = [0, 0, 0]) {
+  const next = vector.clone();
+  next.x += numberOr(offset[0], 0);
+  next.y += numberOr(offset[1], 0);
+  next.z += numberOr(offset[2], 0);
+  return next;
+}
+
+function rotationZFromSegment(start, end, fallback = 0) {
+  if (!start || !end) return fallback;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (Math.hypot(dx, dy) < 0.001) return fallback;
+  return Math.atan2(-dx, dy);
+}
+
+function scaleForTarget(sourceSize, targetSize) {
+  return new THREE.Vector3(
+    clamp(targetSize.x / Math.max(sourceSize.x, 0.001), 0.04, 2.4),
+    clamp(targetSize.y / Math.max(sourceSize.y, 0.001), 0.04, 2.4),
+    clamp(targetSize.z / Math.max(sourceSize.z, 0.001), 0.04, 2.4),
+  );
 }
 
 function armorStandPoseFor(part, module) {
@@ -260,7 +320,7 @@ function renderAssetPipeline(data = null) {
   if (!pipeline) {
     UI.assetPipeline.classList.add("pending");
     UI.assetPipelineTitle.textContent = "待機中";
-    UI.assetPipelineDetail.textContent = "VRM基準 / Nano Banana mesh-UV";
+    UI.assetPipelineDetail.textContent = "planned only / surface not generated";
     return;
   }
   const modelPlan = pipeline.model_plan || {};
@@ -268,10 +328,12 @@ function renderAssetPipeline(data = null) {
   const parts = Array.isArray(modelPlan.overlay_parts) ? modelPlan.overlay_parts : selectedParts();
   const provider = texturePlan.provider_profile || "nano_banana";
   const mode = texturePlan.texture_mode || "mesh_uv";
+  const status = texturePlan.status || pipeline.surface_generation_status || "planned_not_generated";
+  const fitStatus = pipeline.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
   const refine = texturePlan.uv_refine ? "UV再構成" : "UVガイド";
   UI.assetPipeline.classList.add("planned");
-  UI.assetPipelineTitle.textContent = `${parts.length}部位 / ${provider}`;
-  UI.assetPipelineDetail.textContent = `${mode} + ${refine} / ${modelPlan.asset_contract || "vrm-base-suit+mesh-v1-overlay"}`;
+  UI.assetPipelineTitle.textContent = `${parts.length}部位 / ${provider} / planned`;
+  UI.assetPipelineDetail.textContent = `${fitStatus} / ${status}: ${mode} + ${refine} / ${modelPlan.asset_contract || "vrm-base-suit+mesh-v1-overlay"}`;
 }
 
 function materialForPart(part, palette) {
@@ -329,12 +391,13 @@ function meshGeometryFromPayload(payload) {
 async function createArmorMesh(part, module, palette) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
   const payload = await fetchJson(asset);
-  const mesh = new THREE.Mesh(meshGeometryFromPayload(payload), materialForPart(part, palette));
-  const pose = armorStandPoseFor(part, module);
+  const geometry = meshGeometryFromPayload(payload);
+  const sourceSize = new THREE.Vector3();
+  geometry.computeBoundingBox();
+  geometry.boundingBox.getSize(sourceSize);
+  const mesh = new THREE.Mesh(geometry, materialForPart(part, palette));
   mesh.name = part;
-  mesh.position.set(...pose.p);
-  mesh.rotation.set(Math.PI / 2, 0, 0);
-  mesh.scale.set(...pose.s);
+  mesh.userData.sourceSize = sourceSize;
   addArmorEdges(mesh, palette);
   return mesh;
 }
@@ -355,6 +418,8 @@ class ArmorStand {
     this.avatarGroup = new THREE.Group();
     this.heightCm = DEFAULT_HEIGHT_CM;
     this.vrmModel = null;
+    this.boneMap = new Map();
+    this.metricsCache = null;
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xeef9ff, 0x222018, 2.1));
     const key = new THREE.DirectionalLight(0xfff2cc, 2.6);
@@ -362,7 +427,7 @@ class ArmorStand {
     this.scene.add(key);
     this.buildBaseSuit();
     this.group.add(this.avatarGroup);
-    this.loadBaselineVrm(DEFAULT_VRM_PATH);
+    this.vrmReady = this.loadBaselineVrm(DEFAULT_VRM_PATH);
     this.animate();
     window.addEventListener("resize", () => this.resize());
   }
@@ -408,16 +473,248 @@ class ArmorStand {
       const { model } = await loadVrmScene(normalizePath(path));
       if (!model) throw new Error("VRM model is empty.");
       this.prepareVrmMannequin(model);
+      applyApproximateVrmTPose({ vrmModel: model });
       this.avatarGroup.clear();
       this.avatarGroup.add(model);
       this.vrmModel = model;
+      this.indexVrmBones(model);
       this.ghostGroup.visible = false;
       this.fitVrmToStand(model);
       this.setHeightCm(this.heightCm);
     } catch (error) {
+      this.vrmModel = null;
+      this.boneMap = new Map();
+      this.metricsCache = null;
       this.ghostGroup.visible = true;
       console.warn(`VRM baseline fallback: ${error?.message || error}`);
     }
+  }
+
+  indexVrmBones(model) {
+    this.boneMap = new Map();
+    model?.traverse?.((obj) => {
+      if (!obj?.isBone || !obj.name) return;
+      this.boneMap.set(normalizeBoneName(obj.name), obj);
+    });
+    this.metricsCache = null;
+  }
+
+  resolveBone(boneName) {
+    const canonical = VRM_BONE_ALIAS_INDEX.get(normalizeBoneName(boneName)) || boneName;
+    const candidates = [boneName, canonical, ...(VRM_BONE_ALIASES[canonical] || [])];
+    const seen = new Set();
+    for (const candidate of candidates) {
+      const key = normalizeBoneName(candidate);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bone = this.boneMap.get(key);
+      if (bone) return bone;
+    }
+    return null;
+  }
+
+  boneLocalPosition(boneName) {
+    const bone = this.resolveBone(boneName);
+    if (!bone) return null;
+    const world = new THREE.Vector3();
+    bone.updateMatrixWorld(true);
+    bone.getWorldPosition(world);
+    return this.group.worldToLocal(world.clone());
+  }
+
+  measureVrmMetrics() {
+    if (this.metricsCache) return this.metricsCache;
+    const p = (boneName) => this.boneLocalPosition(boneName);
+    const metrics = {
+      head: p("head"),
+      neck: p("neck"),
+      upperChest: p("upperChest") || p("chest"),
+      chest: p("chest") || p("upperChest"),
+      spine: p("spine"),
+      hips: p("hips"),
+      leftShoulder: p("leftShoulder"),
+      rightShoulder: p("rightShoulder"),
+      leftUpperArm: p("leftUpperArm"),
+      rightUpperArm: p("rightUpperArm"),
+      leftLowerArm: p("leftLowerArm"),
+      rightLowerArm: p("rightLowerArm"),
+      leftHand: p("leftHand"),
+      rightHand: p("rightHand"),
+      leftUpperLeg: p("leftUpperLeg"),
+      rightUpperLeg: p("rightUpperLeg"),
+      leftLowerLeg: p("leftLowerLeg"),
+      rightLowerLeg: p("rightLowerLeg"),
+      leftFoot: p("leftFoot"),
+      rightFoot: p("rightFoot"),
+    };
+    metrics.shoulderWidth = distanceOr(metrics.leftShoulder, metrics.rightShoulder, 0.68);
+    metrics.torsoHeight = distanceOr(metrics.upperChest, metrics.hips, 0.78);
+    metrics.headHeight = distanceOr(metrics.head, metrics.neck, 0.2);
+    metrics.upperArmLength = distanceOr(metrics.leftUpperArm, metrics.leftLowerArm, 0.34);
+    metrics.forearmLength = distanceOr(metrics.leftLowerArm, metrics.leftHand, 0.34);
+    metrics.thighLength = distanceOr(metrics.leftUpperLeg, metrics.leftLowerLeg, 0.46);
+    metrics.shinLength = distanceOr(metrics.leftLowerLeg, metrics.leftFoot, 0.46);
+    metrics.torsoCenter = midpoint(metrics.upperChest, metrics.hips) || new THREE.Vector3(0, 0.96, 0);
+    metrics.shouldersCenter = midpoint(metrics.leftShoulder, metrics.rightShoulder) || metrics.upperChest || new THREE.Vector3(0, 1.3, 0);
+    this.metricsCache = metrics;
+    return metrics;
+  }
+
+  segmentForPart(part, metrics) {
+    const side = part.startsWith("left_") ? "left" : part.startsWith("right_") ? "right" : "";
+    const sideKey = (name) => (side ? `${side}${name}` : name);
+    if (part.endsWith("upperarm")) return [metrics[sideKey("UpperArm")], metrics[sideKey("LowerArm")]];
+    if (part.endsWith("forearm")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];
+    if (part.endsWith("thigh")) return [metrics[sideKey("UpperLeg")], metrics[sideKey("LowerLeg")]];
+    if (part.endsWith("shin")) return [metrics[sideKey("LowerLeg")], metrics[sideKey("Foot")]];
+    return [null, null];
+  }
+
+  targetSizeForPart(part, module, metrics) {
+    const shoulder = metrics.shoulderWidth;
+    const torso = metrics.torsoHeight;
+    const arm = Math.max(metrics.upperArmLength, 0.24);
+    const forearm = Math.max(metrics.forearmLength, 0.24);
+    const thigh = Math.max(metrics.thighLength, 0.36);
+    const shin = Math.max(metrics.shinLength, 0.36);
+    let size;
+    switch (part) {
+      case "helmet":
+        size = new THREE.Vector3(shoulder * 0.42, Math.max(metrics.headHeight * 1.7, 0.28), shoulder * 0.38);
+        break;
+      case "chest":
+        size = new THREE.Vector3(shoulder * 0.94, torso * 0.64, shoulder * 0.24);
+        break;
+      case "back":
+        size = new THREE.Vector3(shoulder * 0.88, torso * 0.66, shoulder * 0.2);
+        break;
+      case "waist":
+        size = new THREE.Vector3(shoulder * 0.72, torso * 0.22, shoulder * 0.28);
+        break;
+      case "left_shoulder":
+      case "right_shoulder":
+        size = new THREE.Vector3(shoulder * 0.28, shoulder * 0.18, shoulder * 0.24);
+        break;
+      case "left_upperarm":
+      case "right_upperarm":
+        size = new THREE.Vector3(shoulder * 0.16, arm * 0.86, shoulder * 0.16);
+        break;
+      case "left_forearm":
+      case "right_forearm":
+        size = new THREE.Vector3(shoulder * 0.15, forearm * 0.82, shoulder * 0.15);
+        break;
+      case "left_hand":
+      case "right_hand":
+        size = new THREE.Vector3(shoulder * 0.17, shoulder * 0.12, shoulder * 0.2);
+        break;
+      case "left_thigh":
+      case "right_thigh":
+        size = new THREE.Vector3(shoulder * 0.2, thigh * 0.86, shoulder * 0.19);
+        break;
+      case "left_shin":
+      case "right_shin":
+        size = new THREE.Vector3(shoulder * 0.17, shin * 0.86, shoulder * 0.17);
+        break;
+      case "left_boot":
+      case "right_boot":
+        size = new THREE.Vector3(shoulder * 0.18, shoulder * 0.13, shoulder * 0.42);
+        break;
+      default:
+        size = new THREE.Vector3(0.24, 0.24, 0.24);
+    }
+    return softFitSize(part, module, size);
+  }
+
+  targetCenterForPart(part, module, metrics) {
+    const fit = effectiveFitFor(part, module);
+    const anchor = effectiveVrmAnchorFor(part, module);
+    const front = part === "back" ? -1 : 1;
+    let center = null;
+    switch (part) {
+      case "helmet":
+        center = metrics.head?.clone().add(new THREE.Vector3(0, 0.04, metrics.shoulderWidth * 0.04));
+        break;
+      case "chest":
+        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, metrics.shoulderWidth * 0.13));
+        break;
+      case "back":
+        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, -metrics.shoulderWidth * 0.13));
+        break;
+      case "waist":
+        center = metrics.hips?.clone().add(new THREE.Vector3(0, metrics.torsoHeight * 0.05, metrics.shoulderWidth * 0.08));
+        break;
+      case "left_shoulder":
+        center = metrics.leftShoulder?.clone().add(new THREE.Vector3(-metrics.shoulderWidth * 0.08, 0, metrics.shoulderWidth * 0.04));
+        break;
+      case "right_shoulder":
+        center = metrics.rightShoulder?.clone().add(new THREE.Vector3(metrics.shoulderWidth * 0.08, 0, metrics.shoulderWidth * 0.04));
+        break;
+      case "left_hand":
+        center = metrics.leftHand?.clone().add(new THREE.Vector3(0, 0, metrics.shoulderWidth * 0.05));
+        break;
+      case "right_hand":
+        center = metrics.rightHand?.clone().add(new THREE.Vector3(0, 0, metrics.shoulderWidth * 0.05));
+        break;
+      case "left_boot":
+        center = metrics.leftFoot?.clone().add(new THREE.Vector3(0, 0.02, metrics.shoulderWidth * 0.1));
+        break;
+      case "right_boot":
+        center = metrics.rightFoot?.clone().add(new THREE.Vector3(0, 0.02, metrics.shoulderWidth * 0.1));
+        break;
+      default: {
+        const [start, end] = this.segmentForPart(part, metrics);
+        center = midpoint(start, end);
+      }
+    }
+    if (!center) {
+      const anchorBone = this.boneLocalPosition(anchor.bone);
+      if (anchorBone) center = anchorBone;
+    }
+    if (!center) return null;
+    center = addOffset(center, anchor.offset);
+    center.y += clamp(numberOr(fit.offsetY, 0), -0.42, 0.42) * 0.12;
+    center.z += clamp(numberOr(fit.zOffset, 0), -0.25, 0.25) * 0.55 * front;
+    return center;
+  }
+
+  vrmPoseFor(part, module, mesh) {
+    if (!this.vrmModel || !this.boneMap.size) return null;
+    const metrics = this.measureVrmMetrics();
+    const center = this.targetCenterForPart(part, module, metrics);
+    if (!center) return null;
+    const targetSize = this.targetSizeForPart(part, module, metrics);
+    const sourceSize = mesh.userData?.sourceSize || new THREE.Vector3(1, 1, 1);
+    const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);
+    const anchor = effectiveVrmAnchorFor(part, module);
+    const rotation = fitVector(anchor.rotation, [0, 0, 0]).map((degrees) => THREE.MathUtils.degToRad(degrees));
+    const anchorScale = fitVector(anchor.scale, [1, 1, 1]);
+    const scale = scaleForTarget(sourceSize, targetSize);
+    scale.set(
+      clamp(scale.x * Math.max(anchorScale[0], 0.01), 0.04, 2.4),
+      clamp(scale.y * Math.max(anchorScale[1], 0.01), 0.04, 2.4),
+      clamp(scale.z * Math.max(anchorScale[2], 0.01), 0.04, 2.4),
+    );
+    rotation[2] += rotationZFromSegment(segmentStart, segmentEnd, 0);
+    return {
+      p: center.toArray(),
+      s: scale.toArray(),
+      r: rotation,
+      source: "vrm_bone_metrics",
+    };
+  }
+
+  applyPreviewPose(mesh, part, module) {
+    const fallbackPose = armorStandPoseFor(part, module);
+    const pose = this.vrmPoseFor(part, module, mesh) || {
+      p: fallbackPose.p,
+      s: fallbackPose.s,
+      r: [0, 0, 0],
+      source: "fallback_pose",
+    };
+    mesh.position.set(...pose.p);
+    mesh.rotation.set(...pose.r);
+    mesh.scale.set(...pose.s);
+    mesh.userData.fitPreview = pose.source;
   }
 
   prepareVrmMannequin(model) {
@@ -482,13 +779,18 @@ class ArmorStand {
   }
 
   async renderSuit(suitspec) {
+    await this.vrmReady;
     this.clearArmor();
     this.setHeightCm(suitspec?.body_profile?.height_cm || DEFAULT_HEIGHT_CM);
+    this.metricsCache = null;
     const modules = suitspec?.modules || {};
     const palette = suitspec?.palette || {};
     const records = Object.entries(modules).filter(([, module]) => module?.enabled);
     const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette)));
-    for (const mesh of meshes) {
+    for (let index = 0; index < meshes.length; index += 1) {
+      const [part, module] = records[index];
+      const mesh = meshes[index];
+      this.applyPreviewPose(mesh, part, module);
       mesh.userData.armorPart = true;
       this.group.add(mesh);
     }

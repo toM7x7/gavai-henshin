@@ -86,6 +86,8 @@ Replay source of truth:
 - GCP should carry durable boundaries: Cloud Run for API, Cloud SQL for source/version rows, GCS for artifacts, Firestore for live state, Cloud Tasks for heavy async work.
 - Quest Browser/IWSDK is the fastest validation path. Unity/OpenXR should follow once manifest runtime behavior is stable.
 - 3D model work should stay `VRM first -> armor authoring -> parametric variation`; GLB is a derived runtime artifact.
+- Fit comes before surface generation: Web Forge may issue a recall code while `asset_pipeline.surface_generation_status=planned_not_generated`, but final Nano Banana texture work should wait for VRM measurement, mount placement, mesh bounds, and UV gates.
+- The current Three.js Forge preview is the local fit verifier. PlayCanvas should later improve web editing/preview ergonomics, and Unity/OpenXR should later improve Quest runtime fidelity; neither should replace the `SuitSpec`/`SuitManifest` contract.
 
 ## User Preparation
 

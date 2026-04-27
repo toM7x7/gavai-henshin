@@ -407,6 +407,15 @@ def _display_path(path: str | Path, repo_root: Path | None) -> str:
     return str(raw).replace("\\", "/")
 
 
+def _order_part_dict(data: dict[str, Any], requested: list[str]) -> dict[str, Any]:
+    return {part: data[part] for part in requested if part in data}
+
+
+def _order_part_list(parts: list[str], requested: list[str]) -> list[str]:
+    rank = {part: index for index, part in enumerate(requested)}
+    return sorted(parts, key=lambda part: rank.get(part, len(rank)))
+
+
 def _resolve_paths(request: GenerationRequest, *, repo_root: Path | None = None) -> tuple[Path, Path, Path | None]:
     if repo_root is not None:
         session_root = (repo_root / request.root).resolve()
@@ -958,6 +967,12 @@ def run_generate_parts(
         write_json(suitspec_path, spec)
 
     summary_path = parts_dir / "parts.generation.summary.json"
+    ordered_generated = _order_part_dict(generated, requested)
+    ordered_errors = _order_part_dict(errors, requested)
+    ordered_part_metrics = _order_part_dict(part_metrics, requested)
+    ordered_fallback_used = _order_part_list(fallback_used, requested)
+    ordered_cache_hits = _order_part_list(cache_hits, requested)
+    ordered_cancelled_parts = _order_part_list(cancelled_parts, requested)
     summary = {
         "session_id": session_id,
         "provider_profile": request.provider_profile,
@@ -992,13 +1007,13 @@ def run_generate_parts(
         "prompts": prompts,
         "refine_prompts": refine_prompts,
         "fallback_dir": _display_path(fallback_dir, repo_root) if fallback_dir else None,
-        "fallback_used": fallback_used,
-        "cache_hits": cache_hits,
-        "generated": generated,
+        "fallback_used": ordered_fallback_used,
+        "cache_hits": ordered_cache_hits,
+        "generated": ordered_generated,
         "hero_result": hero_result,
-        "errors": errors,
-        "part_metrics": part_metrics,
-        "cancelled_parts": cancelled_parts,
+        "errors": ordered_errors,
+        "part_metrics": ordered_part_metrics,
+        "cancelled_parts": ordered_cancelled_parts,
         "total_elapsed_sec": round(time.perf_counter() - started_at, 3),
     }
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

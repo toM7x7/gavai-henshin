@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -260,6 +261,44 @@ class TestPartGeneration(unittest.TestCase):
 
         self.assertTrue(result["ok"])
         self.assertEqual(call_count["value"], 1)
+
+    def test_generation_summary_orders_parts_by_request(self) -> None:
+        def fake_provider(*args, **kwargs):
+            prompt = kwargs["prompt"]
+            if "Target module: helmet" in prompt:
+                time.sleep(0.05)
+            return GeneratedImage(
+                provider="fal",
+                model_id="fal-ai/flux/schnell",
+                mime_type="image/png",
+                image_bytes=b"fakepng",
+                prompt=prompt,
+                response_id="resp-1",
+                timestamp="2026-04-09T00:00:00+00:00",
+                queue_wait_ms=0,
+                inference_ms=10,
+                total_ms=10,
+            )
+
+        with patch("henshin.part_generation._provider_attempt", side_effect=fake_provider):
+            result = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-SUMMARY-ORDER",
+                    parts=["helmet", "chest"],
+                    use_cache=False,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    max_parallel=2,
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(result["ok"])
+        summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(list(summary["generated"].keys()), ["helmet", "chest"])
+        self.assertEqual(list(summary["part_metrics"].keys()), ["helmet", "chest"])
 
     def test_run_generate_parts_dry_run_returns_uv_contracts_and_design_dna(self) -> None:
         result = run_generate_parts(

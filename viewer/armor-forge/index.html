@@ -42,6 +42,17 @@
             </label>
           </div>
 
+          <div class="height-field">
+            <div class="height-head">
+              <label for="heightCm">身長</label>
+              <output id="heightValue" for="heightCm heightRange">170cm</output>
+            </div>
+            <div class="height-controls">
+              <input id="heightCm" name="heightCm" type="number" min="90" max="230" step="1" value="170" inputmode="numeric" />
+              <input id="heightRange" type="range" min="90" max="230" step="1" value="170" aria-label="身長スライダー" />
+            </div>
+          </div>
+
           <div class="swatches" aria-label="配色">
             <label>
               <span>基礎</span>
@@ -78,28 +89,31 @@
           <canvas id="armorCanvas" aria-label="Tポーズ鎧立て"></canvas>
           <div id="emptyStand" class="empty-stand">
             <strong>鎧立て待機中</strong>
-            <span>入力を終えると、この場所に装着予定モデルが立ち上がります。</span>
+            <span>入力を終えると、この場所にVRM基準の装着予定モデルが立ち上がります。</span>
           </div>
         </div>
 
         <aside class="result-panel" aria-label="生成結果">
-          <div>
+          <div class="code-card">
             <span>Quest入力コード</span>
             <strong id="recallCode">----</strong>
-          </div>
-          <div>
-            <span>内部ID</span>
-            <strong id="suitId">未発行</strong>
-          </div>
-          <div>
-            <span>Manifest</span>
-            <strong id="manifestId">未発行</strong>
+            <small>Questでこの4文字を入力</small>
           </div>
           <div id="forgeStatus" class="forge-status pending">入力待機中</div>
-          <a id="questLink" class="quest-link disabled" href="#" aria-disabled="true">Quest呼び出しURL</a>
+          <a id="questLink" class="quest-link disabled" href="#" aria-disabled="true">Questで確認する</a>
         </aside>
       </section>
     </main>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../body-fit/vendor/three/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+          "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.4.4/lib/three-vrm.module.min.js"
+        }
+      }
+    </script>
     <script type="module" src="./forge.js"></script>
   </body>
 </html>

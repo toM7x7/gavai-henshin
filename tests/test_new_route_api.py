@@ -153,6 +153,7 @@ class TestNewRouteApi(unittest.TestCase):
                     "palette": {"primary": "#112233", "secondary": "#445566", "emissive": "#77CCFF"},
                     "archetype": "city",
                     "temperament": "swift",
+                    "height_cm": 182,
                     "brief": "街を守る軽量外装",
                     "parts": ["helmet", "chest", "back", "left_forearm", "right_forearm"],
                 },
@@ -165,15 +166,22 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.status, 201)
             self.assertEqual(response.body["recall_code"], "F9A1")
             self.assertEqual(response.body["status"], "READY")
-            self.assertRegex(response.body["manifest_id"], r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
-            self.assertEqual(response.body["suitspec"]["palette"]["primary"], "#112233")
-            self.assertTrue(response.body["suitspec"]["modules"]["helmet"]["enabled"])
-            self.assertTrue(response.body["suitspec"]["modules"]["left_forearm"]["enabled"])
-            self.assertFalse(response.body["suitspec"]["modules"]["left_shin"]["enabled"])
-            self.assertNotIn("texture_path", response.body["suitspec"]["modules"]["helmet"])
+            self.assertNotIn("suit_id", response.body)
+            self.assertNotIn("manifest_id", response.body)
+            self.assertNotIn("suitspec", response.body)
+            self.assertNotIn("manifest", response.body)
+            self.assertEqual(response.body["body_profile"]["height_cm"], 182.0)
+            self.assertEqual(response.body["preview"]["body_profile"]["height_cm"], 182.0)
+            self.assertEqual(response.body["preview"]["body_profile"]["vrm_baseline_ref"], "viewer/assets/vrm/default.vrm")
+            self.assertEqual(response.body["preview"]["palette"]["primary"], "#112233")
+            self.assertTrue(response.body["preview"]["modules"]["helmet"]["enabled"])
+            self.assertTrue(response.body["preview"]["modules"]["left_forearm"]["enabled"])
+            self.assertFalse(response.body["preview"]["modules"]["left_shin"]["enabled"])
+            self.assertNotIn("texture_path", response.body["preview"]["modules"]["helmet"])
             self.assertEqual(quest.status, 200)
             self.assertTrue(quest.body["manifest_ready"])
-            self.assertEqual(quest.body["suit_id"], response.body["suit_id"])
+            self.assertRegex(quest.body["manifest_id"], r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
+            self.assertEqual(quest.body["suitspec"]["body_profile"]["height_cm"], 182.0)
 
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -193,6 +201,18 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertIn("recall_code", duplicate.body["error"])
             self.assertEqual(quest.status, 200)
             self.assertTrue(quest.body["manifest_ready"])
+
+    def test_forge_suit_rejects_invalid_height_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store_root = Path(tmp) / "suits"
+            api = NewRouteApi(Path("."), suit_store_root=suit_store_root)
+            response = api.post("/v1/suits/forge", {"height_cm": 400})
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 400)
+            self.assertIn("height_cm", response.body["error"])
+            self.assertFalse(suit_store_root.exists())
 
     def test_forge_suit_rejects_invalid_public_parameters_before_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,4 +1,5 @@
 import * as THREE from "../body-fit/vendor/three/build/three.module.js";
+import { loadVrmScene } from "../body-fit/vrm-loader.js";
 
 const PARTS = [
   ["helmet", "ヘルメット", true],
@@ -20,6 +21,11 @@ const PARTS = [
   ["left_hand", "左手甲", false],
   ["right_hand", "右手甲", false],
 ];
+
+const DEFAULT_HEIGHT_CM = 170;
+const MIN_HEIGHT_CM = 90;
+const MAX_HEIGHT_CM = 230;
+const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
 
 const PART_POSES = {
   helmet: { p: [0, 1.68, 0.02], s: [0.22, 0.22, 0.22] },
@@ -49,13 +55,14 @@ const UI = {
   canvas: document.getElementById("armorCanvas"),
   emptyStand: document.getElementById("emptyStand"),
   recallCode: document.getElementById("recallCode"),
-  suitId: document.getElementById("suitId"),
-  manifestId: document.getElementById("manifestId"),
   status: document.getElementById("forgeStatus"),
   questLink: document.getElementById("questLink"),
   displayName: document.getElementById("displayName"),
   archetype: document.getElementById("archetype"),
   temperament: document.getElementById("temperament"),
+  heightCm: document.getElementById("heightCm"),
+  heightRange: document.getElementById("heightRange"),
+  heightValue: document.getElementById("heightValue"),
   primaryColor: document.getElementById("primaryColor"),
   secondaryColor: document.getElementById("secondaryColor"),
   emissiveColor: document.getElementById("emissiveColor"),
@@ -83,6 +90,25 @@ function setStatus(text, state = "pending") {
   UI.status.textContent = text;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function declaredHeightCm() {
+  const parsed = Number.parseFloat(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
+  if (!Number.isFinite(parsed)) return DEFAULT_HEIGHT_CM;
+  return clamp(Math.round(parsed), MIN_HEIGHT_CM, MAX_HEIGHT_CM);
+}
+
+function syncHeightControls(sourceValue) {
+  const height = clamp(Math.round(Number.parseFloat(sourceValue || DEFAULT_HEIGHT_CM)), MIN_HEIGHT_CM, MAX_HEIGHT_CM);
+  if (UI.heightCm) UI.heightCm.value = String(height);
+  if (UI.heightRange) UI.heightRange.value = String(height);
+  if (UI.heightValue) UI.heightValue.textContent = `${height}cm`;
+  armorStand?.setHeightCm(height);
+  return height;
+}
+
 function selectedParts() {
   return Array.from(UI.partGrid.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
 }
@@ -101,10 +127,17 @@ function renderPartGrid() {
 }
 
 function formPayload() {
+  const heightCm = declaredHeightCm();
   return {
     display_name: UI.displayName.value.trim(),
     archetype: UI.archetype.value,
     temperament: UI.temperament.value,
+    height_cm: heightCm,
+    body_profile: {
+      height_cm: heightCm,
+      source: "web_forge_declared",
+      vrm_baseline_ref: DEFAULT_VRM_PATH,
+    },
     palette: {
       primary: UI.primaryColor.value,
       secondary: UI.secondaryColor.value,
@@ -179,12 +212,19 @@ class ArmorStand {
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.05, 40);
     this.camera.position.set(0, 0.95, 4.1);
     this.group = new THREE.Group();
+    this.ghostGroup = new THREE.Group();
+    this.standGroup = new THREE.Group();
+    this.avatarGroup = new THREE.Group();
+    this.heightCm = DEFAULT_HEIGHT_CM;
+    this.vrmModel = null;
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xeef9ff, 0x222018, 2.1));
     const key = new THREE.DirectionalLight(0xfff2cc, 2.6);
     key.position.set(2.4, 3.4, 3);
     this.scene.add(key);
     this.buildBaseSuit();
+    this.group.add(this.avatarGroup);
+    this.loadBaselineVrm(DEFAULT_VRM_PATH);
     this.animate();
     window.addEventListener("resize", () => this.resize());
   }
@@ -199,10 +239,10 @@ class ArmorStand {
     const standMat = new THREE.MeshBasicMaterial({ color: 0xf4c766, transparent: true, opacity: 0.45 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
     torso.position.y = 0.98;
-    this.group.add(torso);
+    this.ghostGroup.add(torso);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 32, 20), ghost);
     head.position.y = 1.58;
-    this.group.add(head);
+    this.ghostGroup.add(head);
     for (const [x, y, h, r] of [
       [-0.58, 0.86, 0.82, -0.2],
       [0.58, 0.86, 0.82, 0.2],
@@ -212,15 +252,81 @@ class ArmorStand {
       const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, h, 20), ghost);
       limb.position.set(x, y, -0.03);
       limb.rotation.z = r;
-      this.group.add(limb);
+      this.ghostGroup.add(limb);
     }
     const base = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.01, 8, 96), standMat);
     base.rotation.x = Math.PI / 2;
     base.position.y = -0.43;
-    this.group.add(base);
+    this.standGroup.add(base);
     const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 2.1, 12), standMat);
     spine.position.set(0, 0.62, -0.28);
-    this.group.add(spine);
+    this.standGroup.add(spine);
+    this.group.add(this.ghostGroup);
+    this.group.add(this.standGroup);
+  }
+
+  async loadBaselineVrm(path) {
+    try {
+      const { model } = await loadVrmScene(normalizePath(path));
+      if (!model) throw new Error("VRM model is empty.");
+      this.prepareVrmMannequin(model);
+      this.avatarGroup.clear();
+      this.avatarGroup.add(model);
+      this.vrmModel = model;
+      this.ghostGroup.visible = false;
+      this.fitVrmToStand(model);
+      this.setHeightCm(this.heightCm);
+    } catch (error) {
+      this.ghostGroup.visible = true;
+      console.warn(`VRM baseline fallback: ${error?.message || error}`);
+    }
+  }
+
+  prepareVrmMannequin(model) {
+    model.traverse((obj) => {
+      if (!obj.isMesh) return;
+      obj.renderOrder = 1;
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      obj.material = materials.map((material) => {
+        const clone = material?.clone ? material.clone() : new THREE.MeshStandardMaterial({ color: 0x87dceb });
+        clone.transparent = true;
+        clone.opacity = 0.26;
+        clone.depthWrite = false;
+        return clone;
+      });
+      if (obj.material.length === 1) obj.material = obj.material[0];
+    });
+  }
+
+  fitVrmToStand(model) {
+    model.position.set(0, 0, 0);
+    model.rotation.set(0, 0, 0);
+    model.scale.setScalar(1);
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
+    if (box.isEmpty()) return;
+    const sourceHeight = Math.max(box.max.y - box.min.y, 0.001);
+    const targetHeight = 1.96;
+    model.scale.setScalar(targetHeight / sourceHeight);
+    model.updateMatrixWorld(true);
+    const scaledBox = new THREE.Box3().setFromObject(model);
+    const center = scaledBox.getCenter(new THREE.Vector3());
+    model.position.add(new THREE.Vector3(-center.x, -0.36 - scaledBox.min.y, -center.z - 0.02));
+    model.updateMatrixWorld(true);
+  }
+
+  setHeightCm(heightCm) {
+    this.heightCm = clamp(Number(heightCm) || DEFAULT_HEIGHT_CM, MIN_HEIGHT_CM, MAX_HEIGHT_CM);
+    const scale = this.heightCm / DEFAULT_HEIGHT_CM;
+    this.group.scale.setScalar(scale);
+    this.updateCameraDistance();
+  }
+
+  updateCameraDistance() {
+    const aspect = this.camera.aspect || 1;
+    const heightScale = Math.max(this.heightCm / DEFAULT_HEIGHT_CM, 1);
+    const narrowCompensation = aspect < 1.05 ? 1.05 / Math.max(aspect, 0.2) : 1;
+    this.camera.position.set(0, 0.96 * Math.min(heightScale, 1.18), 4.15 * heightScale * narrowCompensation);
   }
 
   clearArmor() {
@@ -234,6 +340,7 @@ class ArmorStand {
 
   async renderSuit(suitspec) {
     this.clearArmor();
+    this.setHeightCm(suitspec?.body_profile?.height_cm || DEFAULT_HEIGHT_CM);
     const modules = suitspec?.modules || {};
     const palette = suitspec?.palette || {};
     const records = Object.entries(modules).filter(([, module]) => module?.enabled);
@@ -249,12 +356,13 @@ class ArmorStand {
     const height = this.canvas.clientHeight || 640;
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
+    this.updateCameraDistance();
     this.camera.updateProjectionMatrix();
   }
 
   animate() {
     this.resize();
-    this.group.rotation.y = Math.sin(performance.now() * 0.00028) * 0.18;
+    this.group.rotation.y = Math.sin(performance.now() * 0.00028) * 0.08;
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(() => this.animate());
   }
@@ -262,10 +370,17 @@ class ArmorStand {
 
 const armorStand = new ArmorStand(UI.canvas);
 
+if (UI.heightCm) {
+  UI.heightCm.addEventListener("input", () => syncHeightControls(UI.heightCm.value));
+  UI.heightCm.addEventListener("change", () => syncHeightControls(UI.heightCm.value));
+}
+if (UI.heightRange) {
+  UI.heightRange.addEventListener("input", () => syncHeightControls(UI.heightRange.value));
+}
+syncHeightControls(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
+
 function applyResult(data) {
   UI.recallCode.textContent = data.recall_code || "----";
-  UI.suitId.textContent = data.suit_id || "未発行";
-  UI.manifestId.textContent = data.manifest_id || "未発行";
   UI.questLink.href = `/viewer/quest-iw-demo/?code=${encodeURIComponent(data.recall_code)}&newRoute=1`;
   UI.questLink.classList.remove("disabled");
   UI.questLink.setAttribute("aria-disabled", "false");
@@ -275,6 +390,7 @@ function applyResult(data) {
 async function submitForge(event) {
   event.preventDefault();
   UI.button.disabled = true;
+  syncHeightControls(UI.heightCm?.value);
   setStatus("生成条件を送信中...", "pending");
   try {
     const data = await fetchJson("/v1/suits/forge", {
@@ -282,10 +398,10 @@ async function submitForge(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formPayload()),
     });
-    setStatus("鎧立てを構築中...", "pending");
-    await armorStand.renderSuit(data.suitspec);
+    setStatus("VRM基準の鎧立てを構築中...", "pending");
+    await armorStand.renderSuit(data.preview);
     applyResult(data);
-    setStatus("生成完了 / Quest呼び出し準備OK", "complete");
+    setStatus("生成完了 / Quest入力準備OK", "complete");
   } catch (error) {
     setStatus(String(error?.message || error), "error");
   } finally {

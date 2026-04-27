@@ -79,6 +79,39 @@
         }
       }
     },
+    "body_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "height_cm",
+        "source",
+        "vrm_baseline_ref"
+      ],
+      "properties": {
+        "height_cm": {
+          "type": "number",
+          "minimum": 90,
+          "maximum": 230
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "web_forge_declared",
+            "operator_declared",
+            "estimated",
+            "unknown"
+          ]
+        },
+        "vrm_baseline_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fit_note": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
     "fit_contract": {
       "$ref": "#/$defs/fitContract"
     },

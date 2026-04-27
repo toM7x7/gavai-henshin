@@ -81,6 +81,10 @@ _FORGE_DEFAULT_PARTS = {
     "right_boot",
 }
 _FORGE_REQUIRED_PARTS = {"helmet", "chest", "back"}
+_FORGE_DEFAULT_HEIGHT_CM = 170.0
+_FORGE_MIN_HEIGHT_CM = 90.0
+_FORGE_MAX_HEIGHT_CM = 230.0
+_FORGE_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
     "TRIGGER_DETECTED",
@@ -277,6 +281,7 @@ class NewRouteApi:
                 rev=rev,
             )
             recall_code = self._resolve_recall_code(payload.get("recall_code"), suit_id=suit_id)
+            body_profile = self._forge_body_profile(payload)
             self._forge_palette(
                 payload.get("palette"),
                 {"primary": "#F4F1E8", "secondary": "#8C96A3", "emissive": "#D8F7FF"},
@@ -307,18 +312,14 @@ class NewRouteApi:
             status=HTTPStatus.CREATED,
             body={
                 "ok": True,
-                "suit_id": suit_id,
                 "recall_code": recall_code,
                 "display_name": display_name,
                 "status": "READY",
-                "manifest_id": manifest_response.body["manifest_id"],
-                "suit": manifest_response.body["suit"],
-                "suitspec": create.body["suitspec"],
-                "manifest": manifest_response.body["manifest"],
+                "body_profile": body_profile,
+                "preview": self._forge_public_preview(create.body["suitspec"]),
                 "links": {
                     "quest_recall": f"/v1/quest/recall/{recall_code}",
-                    "suit": f"/v1/suits/{suit_id}",
-                    "manifest": f"/v1/suits/{suit_id}/manifest",
+                    "quest_viewer": f"/viewer/quest-iw-demo/?code={recall_code}&newRoute=1",
                 },
             },
         )
@@ -888,8 +889,9 @@ class NewRouteApi:
         suitspec["morphotype_id"] = generate_morphotype_id()
         suitspec["palette"] = self._forge_palette(payload.get("palette"), suitspec.get("palette", {}))
         suitspec["operator_profile"] = self._forge_operator_profile(payload)
+        suitspec["body_profile"] = self._forge_body_profile(payload)
         suitspec["style_tags"] = self._forge_style_tags(payload)
-        suitspec["generation"] = self._forge_generation(payload, suitspec["style_tags"])
+        suitspec["generation"] = self._forge_generation(payload, suitspec["style_tags"], suitspec["body_profile"])
         suitspec["text"] = self._forge_text(payload, display_name)
 
         enabled_parts = self._forge_enabled_parts(payload)
@@ -916,6 +918,22 @@ class NewRouteApi:
         if re.fullmatch(r"#[0-9A-Fa-f]{6}", text):
             return text.upper()
         raise ValueError(f"color must be #RRGGBB: {text}")
+
+    def _forge_body_profile(self, payload: dict[str, Any]) -> dict[str, Any]:
+        profile = payload.get("body_profile") if isinstance(payload.get("body_profile"), dict) else {}
+        raw_height = payload.get("height_cm", profile.get("height_cm", _FORGE_DEFAULT_HEIGHT_CM))
+        try:
+            height_cm = round(float(raw_height), 1)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("height_cm must be a number") from exc
+        if not (_FORGE_MIN_HEIGHT_CM <= height_cm <= _FORGE_MAX_HEIGHT_CM):
+            raise ValueError(f"height_cm must be between {int(_FORGE_MIN_HEIGHT_CM)} and {int(_FORGE_MAX_HEIGHT_CM)}")
+        return {
+            "height_cm": height_cm,
+            "source": "web_forge_declared",
+            "vrm_baseline_ref": str(profile.get("vrm_baseline_ref") or _FORGE_VRM_BASELINE_REF),
+            "fit_note": "Declared height scales the Web armor stand and seeds later body-fit calibration.",
+        }
 
     def _forge_operator_profile(self, payload: dict[str, Any]) -> dict[str, str]:
         profile = payload.get("operator_profile") if isinstance(payload.get("operator_profile"), dict) else {}
@@ -944,16 +962,23 @@ class NewRouteApi:
                 cleaned.append(normalized[:32])
         return cleaned[:12] or ["base_suit", "armor_overlay"]
 
-    def _forge_generation(self, payload: dict[str, Any], style_tags: list[str]) -> dict[str, Any]:
+    def _forge_generation(
+        self,
+        payload: dict[str, Any],
+        style_tags: list[str],
+        body_profile: dict[str, Any],
+    ) -> dict[str, Any]:
         brief = str(payload.get("brief") or "Generate a fitted base suit with selected armor overlays.").strip()
         prompt = (
             f"{brief} "
+            f"Declared wearer height: {body_profile['height_cm']}cm. "
             f"Style tags: {', '.join(style_tags)}. "
             "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
         )
         return {
             "model_id": "local-web-forge-v0",
             "prompt": prompt[:1200],
+            "body_profile": body_profile,
             "part_prompts": {
                 part: f"{part} armor overlay, compatible with a fitted base suit"
                 for part in sorted(self._forge_enabled_parts(payload))
@@ -969,6 +994,22 @@ class NewRouteApi:
                 "Base suit substrate locked.",
                 "Armor overlay manifest ready for Quest recall.",
             ],
+        }
+
+    def _forge_public_preview(self, suitspec: dict[str, Any]) -> dict[str, Any]:
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        preview_modules = {}
+        for part_name, module in modules.items():
+            if not isinstance(module, dict):
+                continue
+            preview_modules[part_name] = {
+                "enabled": bool(module.get("enabled")),
+                "asset_ref": module.get("asset_ref"),
+            }
+        return {
+            "palette": self._clone_json(suitspec.get("palette", {})),
+            "body_profile": self._clone_json(suitspec.get("body_profile", {})),
+            "modules": preview_modules,
         }
 
     def _forge_enabled_parts(self, payload: dict[str, Any]) -> set[str]:

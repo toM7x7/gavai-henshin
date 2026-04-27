@@ -92,13 +92,15 @@ The dashboard can be redesigned, but this contract should remain visible: base s
 
 The standalone Web forge is the public-facing slice of the same route. It should not expose the full internal dashboard. Its job is narrower:
 
-1. Ask for a display name, protection archetype, palette, generation brief, and selected overlay parts.
+1. Ask for a display name, declared height, protection archetype, palette, generation brief, and selected overlay parts.
 2. Call `POST /v1/suits/forge`.
-3. Receive a ready `suit_id`, four-character `recall_code`, SuitSpec, and SuitManifest.
-4. Render the T-pose armor stand immediately.
-5. Provide the Quest recall URL based on the same `recall_code`.
+3. Receive a ready internal suit record plus a four-character `recall_code`, SuitSpec, and SuitManifest.
+4. Render the T-pose armor stand immediately, using the Body Fit baseline VRM where available and declared height as the first body-scale parameter.
+5. Show only the Quest input code and Quest recall action on the public page.
 
 This page is allowed to generate a template-based suit before the full AI texture pipeline is complete. The preview must still respect the base suit plus overlay distinction: the fitted base is the substrate, and selected modules are the visible armor overlay.
+
+Internal `suit_id` and `manifest_id` remain required for storage, versioning, DB rows, and artifact paths. They should not be primary public UI. Cloud SQL should later hold suit/version rows, while public Quest lookup remains the short `recall_code`.
 
 ## Quest Flow
 

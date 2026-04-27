@@ -96,14 +96,16 @@ class TestDashboardServer(unittest.TestCase):
             "partGrid",
             "armorCanvas",
             "recallCode",
-            "suitId",
-            "manifestId",
+            "heightCm",
+            "heightRange",
             "questLink",
         }:
             self.assertIn(f'id="{dom_id}"', html)
             self.assertIn(f'getElementById("{dom_id}")', js)
         self.assertIn("/v1/suits/forge", js)
         self.assertIn("Quest入力コード", html)
+        self.assertNotIn('id="suitId"', html)
+        self.assertNotIn('id="manifestId"', html)
 
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))

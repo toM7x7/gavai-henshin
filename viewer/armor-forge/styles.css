@@ -131,6 +131,43 @@ a:focus-visible {
   gap: 12px;
 }
 
+.height-field {
+  display: grid;
+  gap: 10px;
+}
+
+.height-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.height-head label,
+.height-head output {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.height-head output {
+  color: var(--accent);
+  font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
+}
+
+.height-controls {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.25fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.height-controls input[type="range"] {
+  min-height: 46px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 .swatches {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -232,7 +269,7 @@ a:focus-visible {
 
 .result-panel {
   display: grid;
-  grid-template-columns: minmax(130px, 0.64fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(170px, 0.72fr) minmax(0, 1fr) minmax(0, 0.9fr);
   gap: 12px;
   padding: 18px clamp(18px, 3vw, 32px) 24px;
   border-top: 1px solid var(--line);
@@ -257,6 +294,12 @@ a:focus-visible {
   font-size: 16px;
 }
 
+.result-panel small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 #recallCode {
   color: var(--accent);
   font-size: clamp(30px, 5vw, 58px);
@@ -275,7 +318,6 @@ a:focus-visible {
 }
 
 .forge-status {
-  grid-column: span 2;
   border: 1px solid rgba(90, 216, 255, 0.28);
   color: #d7f7ff;
 }
@@ -322,16 +364,13 @@ a:focus-visible {
   .result-panel {
     grid-template-columns: 1fr;
   }
-
-  .forge-status {
-    grid-column: auto;
-  }
 }
 
 @media (max-width: 560px) {
   .field-grid,
   .swatches,
-  .part-grid {
+  .part-grid,
+  .height-controls {
     grid-template-columns: 1fr;
   }
 

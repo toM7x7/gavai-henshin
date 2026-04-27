@@ -2221,6 +2221,19 @@ class QuestHenshinDemo {
     });
   }
 
+  async submitRecallCodeFromInput() {
+    try {
+      const code = normalizeRecallCodeInput(UI.recallCodeInput?.value || "");
+      if (!RECALL_CODE_RE.test(code)) {
+        throw new Error("Quest recall code must be 4 alphanumeric characters.");
+      }
+      await this.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
+    } catch (error) {
+      this.setRecallCodeState(String(error?.message || error), "error");
+      this.setRouteApi("CODE ERROR", "error");
+    }
+  }
+
   bind() {
     UI.btnEnterVR.onclick = () => this.toggleVR();
     UI.btnVoice.onclick = () => this.runVoiceCommand();
@@ -2235,17 +2248,15 @@ class QuestHenshinDemo {
         this.spatialPanel?.setRecallDraft(code || XR_RECALL_CODE_EMPTY, { syncInput: false });
         this.setRecallCodeState(code ? `${code.length}/4` : "4桁コード未指定");
       };
+      UI.recallCodeInput.onkeydown = (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        void this.submitRecallCodeFromInput();
+      };
     }
     if (UI.btnLoadRecallCode) {
-      UI.btnLoadRecallCode.onclick = async () => {
-        try {
-          const code = normalizeRecallCodeInput(UI.recallCodeInput?.value || "");
-          if (!RECALL_CODE_RE.test(code)) throw new Error("Quest入力コードは4桁英数字です。");
-          await this.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
-        } catch (error) {
-          this.setRecallCodeState(String(error?.message || error), "error");
-          this.setRouteApi("CODE ERROR", "error");
-        }
+      UI.btnLoadRecallCode.onclick = () => {
+        void this.submitRecallCodeFromInput();
       };
     }
   }

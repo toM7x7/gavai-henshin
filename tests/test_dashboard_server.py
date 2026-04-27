@@ -176,6 +176,8 @@ class TestDashboardServer(unittest.TestCase):
             "codeInc",
             "codeLoad",
             "loadRecallDraft",
+            "submitRecallCodeFromInput",
+            "onkeydown",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)

@@ -194,12 +194,37 @@ def build_generation_cache_key(
     )
 
 
+GENERATION_RUNTIME_KEYS = frozenset(
+    {
+        "last_generation_brief",
+        "last_generation_brief_raw",
+        "last_operator_profile_raw",
+        "last_operator_profile_resolved",
+        "last_user_armor_profile",
+        "last_emotion_profile_raw",
+        "last_emotion_profile_resolved",
+        "last_style_variation",
+        "last_resolved_defaults",
+        "part_prompts",
+        "provider_profile",
+        "texture_mode",
+        "tracking_source",
+        "uv_refine",
+    }
+)
+
+
 def _summary_generation_version(spec: dict[str, Any]) -> str:
     generation = spec.get("generation", {})
     if isinstance(generation, dict):
         if generation.get("version"):
             return str(generation["version"])
-        serialized = json.dumps(generation, ensure_ascii=False, sort_keys=True)
+        semantic_generation = {
+            key: value
+            for key, value in generation.items()
+            if key not in GENERATION_RUNTIME_KEYS and not key.startswith("last_")
+        }
+        serialized = json.dumps(semantic_generation, ensure_ascii=False, sort_keys=True)
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:12]
     return "nogeneration"
 
@@ -819,7 +844,8 @@ def run_generate_parts(
                 "wave_parts": wave,
             },
         )
-        with ThreadPoolExecutor(max_workers=min(request.max_parallel, len(wave))) as executor:
+        max_workers = max(1, min(int(request.max_parallel or 1), len(wave)))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(generate_part, part, wave_index): part for part in wave}
             for future in as_completed(futures):
                 part, info, error = future.result()

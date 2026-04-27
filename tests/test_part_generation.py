@@ -170,6 +170,97 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(call_count["value"], 1)
         self.assertEqual(second["cache_hit_count"], 1)
 
+    def test_update_suitspec_runtime_metadata_does_not_poison_cache(self) -> None:
+        call_count = {"value": 0}
+
+        def fake_provider(*args, **kwargs):
+            call_count["value"] += 1
+            return GeneratedImage(
+                provider="fal",
+                model_id="fal-ai/flux/schnell",
+                mime_type="image/png",
+                image_bytes=b"fakepng",
+                prompt=kwargs["prompt"],
+                response_id=f"resp-{call_count['value']}",
+                timestamp="2026-04-09T00:00:00+00:00",
+                queue_wait_ms=12,
+                inference_ms=34,
+                total_ms=46,
+            )
+
+        with patch("henshin.part_generation._provider_attempt", side_effect=fake_provider):
+            first = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-CACHE-STABLE-1",
+                    parts=["helmet"],
+                    use_cache=True,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    update_suitspec=True,
+                ),
+                repo_root=self.root,
+            )
+            second = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-CACHE-STABLE-2",
+                    parts=["helmet"],
+                    use_cache=True,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    update_suitspec=True,
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(first["ok"])
+        self.assertTrue(second["ok"])
+        self.assertEqual(call_count["value"], 1)
+        self.assertEqual(second["cache_hit_count"], 1)
+        saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        self.assertIn("part_prompts", saved_spec["generation"])
+        expected_texture_path = second["summary_path"].rsplit("/", 1)[0] + "/helmet.generated.png"
+        self.assertEqual(saved_spec["modules"]["helmet"]["texture_path"], expected_texture_path)
+
+    def test_run_generate_parts_clamps_zero_parallelism(self) -> None:
+        call_count = {"value": 0}
+
+        def fake_provider(*args, **kwargs):
+            call_count["value"] += 1
+            return GeneratedImage(
+                provider="fal",
+                model_id="fal-ai/flux/schnell",
+                mime_type="image/png",
+                image_bytes=b"fakepng",
+                prompt=kwargs["prompt"],
+                response_id="resp-1",
+                timestamp="2026-04-09T00:00:00+00:00",
+                queue_wait_ms=0,
+                inference_ms=10,
+                total_ms=10,
+            )
+
+        with patch("henshin.part_generation._provider_attempt", side_effect=fake_provider):
+            result = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-PARALLEL-ZERO",
+                    parts=["helmet"],
+                    use_cache=False,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    max_parallel=0,
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(call_count["value"], 1)
+
     def test_run_generate_parts_dry_run_returns_uv_contracts_and_design_dna(self) -> None:
         result = run_generate_parts(
             GenerationRequest(

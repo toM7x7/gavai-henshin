@@ -455,6 +455,84 @@ button:hover {
   white-space: pre-wrap;
 }
 
+.quest-preflight-panel {
+  margin-bottom: 12px;
+  border: 1px solid #d7e0ef;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.quest-preflight-status {
+  border: 1px solid #c8d8f1;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #24466f;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quest-preflight-status.complete {
+  border-color: #4a8a54;
+  background: #eef8ef;
+  color: #1d5a28;
+}
+
+.quest-preflight-status.pending {
+  border-color: #d6bd55;
+  background: #fff9df;
+  color: #6d5510;
+}
+
+.quest-preflight-status.error {
+  border-color: #a84759;
+  background: #fff0f2;
+  color: #8d1f35;
+}
+
+.quest-preflight-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 8px;
+}
+
+.quest-preflight-grid div {
+  min-width: 0;
+  border: 1px solid #d9e3f2;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 7px 8px;
+}
+
+.quest-preflight-grid span {
+  display: block;
+  color: #4b6793;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.quest-preflight-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: #17335f;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.quest-preflight-grid strong.complete {
+  color: #1d5a28;
+}
+
+.quest-preflight-grid strong.pending {
+  color: #6d5510;
+}
+
+.quest-preflight-grid strong.error {
+  color: #8d1f35;
+}
+
 .latest-trial-panel {
   margin-bottom: 12px;
   border: 1px solid #d7e0ef;

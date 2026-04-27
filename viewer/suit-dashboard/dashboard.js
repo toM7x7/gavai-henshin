@@ -92,6 +92,11 @@ const UI = {
   stageScanline: document.getElementById("stageScanline"),
   stageMeta: document.getElementById("stageMeta"),
   routeContractStatus: document.getElementById("routeContractStatus"),
+  questPreflightStatus: document.getElementById("questPreflightStatus"),
+  questPreflightGeneration: document.getElementById("questPreflightGeneration"),
+  questPreflightDiff: document.getElementById("questPreflightDiff"),
+  questPreflightFit: document.getElementById("questPreflightFit"),
+  questPreflightReplay: document.getElementById("questPreflightReplay"),
   stageParts: document.getElementById("stageParts"),
   eventLog: document.getElementById("eventLog"),
   latestTrialUpdated: document.getElementById("latestTrialUpdated"),
@@ -148,6 +153,8 @@ let lastSummary = null;
 let isSyncingTuneControls = false;
 let generationRun = null;
 let hasUnsavedSuitChanges = false;
+let latestTrialSnapshot = { state: "missing", replayPath: "", eventCount: 0, replayReady: false };
+let lastGenerationSnapshot = null;
 
 const OPERATOR_PROFILE_DEFAULTS = {
   protect_archetype: "citizens",
@@ -254,6 +261,7 @@ function compactLabel(value, maxLength = 32) {
 }
 
 function renderLatestTrialEmpty(message = "HENSHIN TRIAL未記録") {
+  latestTrialSnapshot = { state: "missing", replayPath: "", eventCount: 0, replayReady: false };
   setLatestTrialStatus(message, "pending");
   if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = "未取得";
   if (UI.latestTrialSession) UI.latestTrialSession.textContent = "-";
@@ -261,6 +269,7 @@ function renderLatestTrialEmpty(message = "HENSHIN TRIAL未記録") {
   if (UI.latestTrialEvents) UI.latestTrialEvents.textContent = "-";
   if (UI.latestTrialReplayState) UI.latestTrialReplayState.textContent = "-";
   if (UI.latestTrialReplay) UI.latestTrialReplay.textContent = "Replay Archive: -";
+  updateQuestPreflight();
 }
 
 function renderLatestTrial(data) {
@@ -270,6 +279,7 @@ function renderLatestTrial(data) {
   const eventCount = summary.event_count ?? data?.trial?.events?.length ?? "-";
   const replayPath = summary.replay_script_path || data?.trial?.artifacts?.replay_script_path || "";
   const isComplete = state === "ACTIVE" && Boolean(replayPath);
+  latestTrialSnapshot = { state, replayPath, eventCount, replayReady: isComplete };
 
   setLatestTrialStatus(isComplete ? "変身試験完了 / Replay Archive保存済み" : `HENSHIN TRIAL進行: ${state}`, isComplete ? "complete" : "pending");
   if (UI.latestTrialUpdated) UI.latestTrialUpdated.textContent = `更新: ${formatTrialTimestamp(summary.updated_at)}`;
@@ -284,6 +294,7 @@ function renderLatestTrial(data) {
     UI.latestTrialReplay.textContent = `Replay Archive: ${replayPath || "-"}`;
     UI.latestTrialReplay.title = replayPath || "";
   }
+  updateQuestPreflight();
 }
 
 async function refreshLatestTrial({ silent = false } = {}) {
@@ -347,11 +358,13 @@ function updateBodyTuneStatus(message = "") {
 function markSuitDirty(message = "") {
   hasUnsavedSuitChanges = true;
   updateBodyTuneStatus(message);
+  updateQuestPreflight();
 }
 
 function markSuitSaved(message = "") {
   hasUnsavedSuitChanges = false;
   updateBodyTuneStatus(message);
+  updateQuestPreflight();
 }
 
 function setBodyTunePart(partName, { announce = false } = {}) {
@@ -469,6 +482,113 @@ function renderRouteContractStatus(suitspec) {
     "is-warning",
     !suitspec?.fit_contract || !suitspec?.texture_fallback
   );
+}
+
+function setQuestPreflightStatus(text, state = "pending") {
+  if (!UI.questPreflightStatus) return;
+  UI.questPreflightStatus.classList.remove("complete", "pending", "error");
+  UI.questPreflightStatus.classList.add(state);
+  UI.questPreflightStatus.textContent = text;
+}
+
+function setQuestPreflightLine(node, text, state = "pending") {
+  if (!node) return;
+  node.classList.remove("complete", "pending", "error");
+  node.classList.add(state);
+  node.textContent = text;
+}
+
+function moduleTextureReady(module) {
+  return Boolean(module?.texture_path);
+}
+
+function suitHasFitContract(suitspec) {
+  const contract = suitspec?.fit_contract || {};
+  return Boolean(contract.module_fit_stage && contract.module_fit_space);
+}
+
+function suitHasTextureFallback(suitspec) {
+  const fallback = suitspec?.texture_fallback || {};
+  return Boolean(fallback.mode && fallback.source);
+}
+
+function updateQuestPreflight() {
+  if (!UI.questPreflightStatus) return;
+
+  const enabled = currentSuit ? readEnabledModules(currentSuit) : [];
+  const totalParts = enabled.length;
+  const textureReadyCount = enabled.filter(([, module]) => moduleTextureReady(module)).length;
+  const allTexturesReady = totalParts > 0 && textureReadyCount === totalParts;
+  const fitReady = suitHasFitContract(currentSuit);
+  const fallbackReady = suitHasTextureFallback(currentSuit);
+  const replayReady = Boolean(latestTrialSnapshot?.replayReady);
+  const generationSnapshot = lastGenerationSnapshot || {};
+
+  let generationText = currentSuit ? `既存 ${textureReadyCount}/${totalParts}` : "未読込";
+  let generationState = allTexturesReady ? "complete" : "pending";
+  if (generationRun) {
+    generationText = `生成中 ${generationRun.completed.size}/${generationRun.requestedParts.length}`;
+    generationState = "pending";
+  } else if (generationSnapshot.status === "completed") {
+    const completed = generationSnapshot.generatedCount ?? generationSnapshot.completedCount ?? textureReadyCount;
+    const requested = generationSnapshot.requestedCount || totalParts || completed;
+    generationText = generationSnapshot.suitspecApplied === false ? `完了 ${completed}/${requested} / 未反映` : `完了 ${completed}/${requested}`;
+    generationState = generationSnapshot.suitspecApplied === false ? "pending" : "complete";
+  } else if (generationSnapshot.status === "failed" || generationSnapshot.status === "cancelled") {
+    generationText = generationSnapshot.status === "cancelled" ? "停止済み" : `失敗 ${generationSnapshot.errorCount || 1}部位`;
+    generationState = "error";
+  }
+
+  let diffText = currentSuit ? (UI.useCache?.checked ? "Cache ON" : "Cache OFF") : "未確認";
+  let diffState = "pending";
+  if (generationRun) {
+    diffText = "実行中";
+  } else if (generationSnapshot.status === "completed" || generationSnapshot.status === "failed") {
+    const generatedCount = Number(generationSnapshot.generatedCount || 0);
+    const cacheHitCount = Number(generationSnapshot.cacheHitCount || 0);
+    const fallbackUsedCount = Number(generationSnapshot.fallbackUsedCount || 0);
+    const updatedCount = Math.max(0, generatedCount - cacheHitCount - fallbackUsedCount);
+    diffText = `更新 ${updatedCount} / Cache ${cacheHitCount} / 予備 ${fallbackUsedCount}`;
+    diffState = generationSnapshot.status === "failed" ? "error" : "complete";
+  }
+
+  const fitText = !currentSuit
+    ? "未読込"
+    : hasUnsavedSuitChanges
+      ? "未保存"
+      : fitReady && fallbackReady
+        ? "OK"
+        : `要確認 ${fitReady ? "Fit" : "Fitなし"} / ${fallbackReady ? "Fallback" : "Fallbackなし"}`;
+  const fitState = !currentSuit ? "pending" : hasUnsavedSuitChanges ? "pending" : fitReady && fallbackReady ? "complete" : "error";
+  const replayText = replayReady ? `保存済み ${latestTrialSnapshot.eventCount ?? "-"}ev` : "未生成 / 試験後保存";
+  const replayState = replayReady ? "complete" : "pending";
+
+  setQuestPreflightLine(UI.questPreflightGeneration, generationText, generationState);
+  setQuestPreflightLine(UI.questPreflightDiff, diffText, diffState);
+  setQuestPreflightLine(UI.questPreflightFit, fitText, fitState);
+  setQuestPreflightLine(UI.questPreflightReplay, replayText, replayState);
+
+  const suitSpecNotApplied = generationSnapshot.status === "completed" && generationSnapshot.suitspecApplied === false;
+  const blocked =
+    !currentSuit ||
+    generationSnapshot.status === "failed" ||
+    generationSnapshot.status === "cancelled" ||
+    suitSpecNotApplied ||
+    !allTexturesReady ||
+    !fitReady ||
+    !fallbackReady;
+  const needsReview = hasUnsavedSuitChanges;
+  if (generationRun) {
+    setQuestPreflightStatus("Quest送信前チェック: 生成中", "pending");
+  } else if (suitSpecNotApplied) {
+    setQuestPreflightStatus("Quest送信前チェック: 保存未反映", "pending");
+  } else if (blocked) {
+    setQuestPreflightStatus("Quest送信前チェック: Quest確認 不可", "error");
+  } else if (needsReview) {
+    setQuestPreflightStatus("Quest送信前チェック: 要確認", "pending");
+  } else {
+    setQuestPreflightStatus(replayReady ? "Quest送信前チェック: Quest確認 完了" : "Quest送信前チェック: Quest確認 可", "complete");
+  }
 }
 
 function setBodyStageOverlay(visible, text = "") {
@@ -2459,9 +2579,14 @@ async function loadSuit(path) {
   const { data } = await fetchJson(`/api/suitspec?path=${encodeURIComponent(path)}`);
   if (!data.ok) throw new Error(data.error || "SuitSpec読込に失敗しました。");
 
+  const previousSuitPath = currentSuitPath;
   currentSuitPath = path;
+  if (previousSuitPath && previousSuitPath !== currentSuitPath) {
+    lastGenerationSnapshot = null;
+  }
   currentSuit = data.suitspec;
   renderRouteContractStatus(currentSuit);
+  updateQuestPreflight();
   applyOperatorProfileToUi(currentSuit?.operator_profile || null);
 
   const enabled = readEnabledModules(currentSuit);
@@ -2489,6 +2614,7 @@ async function loadSuit(path) {
   }
 
   markSuitSaved("部位を選んで数値を動かすと、プレビューへ即時反映されます。");
+  updateQuestPreflight();
   setStatus(
     [
       `読込完了: ${path}`,
@@ -2540,6 +2666,15 @@ function beginGenerationState(requestedParts) {
     fallbackRevealed: false,
     fallbackTimer: null,
   };
+  lastGenerationSnapshot = {
+    status: "running",
+    requestedCount: requestedParts.length,
+    completedCount: 0,
+    errorCount: 0,
+    cacheHitCount: 0,
+    fallbackUsedCount: 0,
+    suitspecApplied: false,
+  };
   renderStageParts(requestedParts);
   clearHeroPoster();
   UI.stageScanline?.classList.add("running");
@@ -2548,6 +2683,7 @@ function beginGenerationState(requestedParts) {
   setBodyStageOverlay(true, "装甲プロトコル起動中");
   setStageSummary("生成準備", `完了: 0/${requestedParts.length}\n次の部位: ${requestedParts[0] || "-"}`);
   UI.eventLog.textContent = "生成準備を開始しました";
+  updateQuestPreflight();
   hideRequestedParts(requestedParts);
   const coreParts = ["helmet", "chest", "left_shoulder", "right_shoulder"].filter((part) => requestedParts.includes(part));
   generationRun.fallbackTimer = window.setTimeout(() => {
@@ -2557,6 +2693,24 @@ function beginGenerationState(requestedParts) {
     appendEventLog("8秒経過: ベースシェルを先行表示");
     setBodyStageOverlay(true, "ベースシェルを先行表示");
   }, 8000);
+}
+
+function failGenerationStart(requestedParts, message) {
+  lastGenerationSnapshot = {
+    status: "failed",
+    requestedCount: requestedParts.length,
+    completedCount: generationRun?.completed?.size || 0,
+    generatedCount: generationRun?.completed?.size || 0,
+    errorCount: 1,
+    cacheHitCount: 0,
+    fallbackUsedCount: 0,
+    suitspecApplied: false,
+  };
+  revealFallbackShell(requestedParts);
+  stopGenerationRun();
+  setBodyStageOverlay(false, "");
+  updateQuestPreflight();
+  setStatus(`生成開始失敗\n${message || "不明なエラー"}`, true);
 }
 
 async function completeGenerationRun(finalEvent, failed = false) {
@@ -2600,7 +2754,18 @@ async function completeGenerationRun(finalEvent, failed = false) {
       ].join("\n")
     );
   }
+  lastGenerationSnapshot = {
+    status: failed ? (finalEvent?.type === "job_cancelled" ? "cancelled" : "failed") : "completed",
+    requestedCount: generationRun.requestedParts.length,
+    completedCount: generationRun.completed.size,
+    generatedCount: finalEvent?.generated_count ?? generationRun.completed.size,
+    errorCount: finalEvent?.error_count ?? generationRun.failed.size,
+    cacheHitCount: finalEvent?.cache_hit_count ?? 0,
+    fallbackUsedCount: finalEvent?.fallback_used_count ?? 0,
+    suitspecApplied: !failed && Boolean(UI.updateSuitspec?.checked),
+  };
   stopGenerationRun();
+  updateQuestPreflight();
 }
 
 async function handleGenerationEvent(event) {
@@ -2662,6 +2827,11 @@ async function handleGenerationEvent(event) {
     default:
       break;
   }
+  if (lastGenerationSnapshot && generationRun) {
+    lastGenerationSnapshot.completedCount = generationRun.completed.size;
+    lastGenerationSnapshot.errorCount = generationRun.failed.size;
+  }
+  updateQuestPreflight();
 }
 
 async function openGenerationStream(jobId) {
@@ -2729,17 +2899,21 @@ async function runGenerate() {
   beginGenerationState(requestedParts);
   setStatus("生成ジョブを作成中...");
 
-  const { data } = await fetchJson("/api/generation-jobs", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let data = null;
+  try {
+    const response = await fetchJson("/api/generation-jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    data = response.data;
+  } catch (err) {
+    failGenerationStart(requestedParts, String(err?.message || err || "不明なエラー"));
+    return;
+  }
 
   if (!data.ok) {
-    revealFallbackShell(requestedParts);
-    stopGenerationRun();
-    setBodyStageOverlay(false, "");
-    setStatus(`生成開始失敗\n${data.error || "不明なエラー"}`, true);
+    failGenerationStart(requestedParts, data.error || "不明なエラー");
     return;
   }
 

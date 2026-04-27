@@ -4,14 +4,21 @@
 
 ## 優先度A: 生成速度の短縮
 
-- [ ] `generate-parts` の並列化（2〜4並列、レート制限に合わせて可変）
+- [x] `generate-parts` の並列化（2〜4並列、レート制限に合わせて可変）
 - [ ] 差分生成（前回生成との hash 比較で未変更パーツはスキップ）
-- [ ] キャッシュ（`model_id + texture_mode + uv_refine + prompt_hash + mesh_hash`）
+- [x] キャッシュ（`model_id + texture_mode + uv_refine + prompt_hash + mesh_hash`）
 - [x] 計測基盤（全体時間/パーツ別時間）
+- [x] キャッシュキー安定化（`update_suitspec` の runtime metadata 書き戻しで cache miss しない）
+- [x] `max_parallel=0` 入力の防御
 
 完了条件:
-- `parts.generation.summary.json` に `total_elapsed_sec` と `part_durations_sec` が出力される
+- `parts.generation.summary.json` に `total_elapsed_sec` と `part_metrics` が出力される
 - 将来的に p50/p95 の観測を追加可能な形になっている
+
+2026-04-27 status:
+- 波ごとの `ThreadPoolExecutor` 並列実行と per-part cache は実装済み。
+- `generation.last_*` / `part_prompts` などの運用メタ情報は cache key から除外済み。
+- 未変更パーツを既存 session output のまま明示 skip する「差分生成」は未実装。次の速度改善候補。
 
 ## 優先度A: 非表示/視認不良対策（helmet/chest/body全景）
 

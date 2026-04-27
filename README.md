@@ -14,6 +14,7 @@ Status note:
 
 - `Webでスーツ成立` is the lore/product target, not the current external-ready state.
 - Current Web/dashboard surfaces are internal operator tools for generation, contract checks, trial records, and replay proof.
+- The PC dashboard now shows `Quest送信前チェック` so operators can see generation, cache/diff, fit, and replay readiness before moving to Quest.
 - The active visitor-facing experience lane is the Quest transformation PoC plus local Replay verification.
 
 Current route copy standard:

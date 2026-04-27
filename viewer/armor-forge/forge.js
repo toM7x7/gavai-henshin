@@ -26,6 +26,7 @@ const DEFAULT_HEIGHT_CM = 170;
 const MIN_HEIGHT_CM = 90;
 const MAX_HEIGHT_CM = 230;
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
+const DEFAULT_QUEST_DEV_PORT = 5173;
 
 const PART_POSES = {
   helmet: { p: [0, 1.68, 0.02], s: [0.22, 0.22, 0.22] },
@@ -57,6 +58,8 @@ const UI = {
   recallCode: document.getElementById("recallCode"),
   status: document.getElementById("forgeStatus"),
   questLink: document.getElementById("questLink"),
+  questUrl: document.getElementById("questUrl"),
+  questUrlHint: document.getElementById("questUrlHint"),
   displayName: document.getElementById("displayName"),
   archetype: document.getElementById("archetype"),
   temperament: document.getElementById("temperament"),
@@ -68,6 +71,9 @@ const UI = {
   emissiveColor: document.getElementById("emissiveColor"),
   brief: document.getElementById("brief"),
 };
+
+let runtimeInfo = null;
+let runtimeInfoPromise = null;
 
 function normalizePath(path) {
   const raw = String(path || "").replace(/\\/g, "/");
@@ -82,6 +88,26 @@ async function fetchJson(path, options = {}) {
     throw new Error(data.error || `${path} failed with ${response.status}`);
   }
   return data;
+}
+
+function isLocalHost(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+async function loadRuntimeInfo() {
+  try {
+    runtimeInfo = await fetchJson("/api/runtime-info");
+  } catch (error) {
+    console.warn(`runtime-info unavailable: ${error?.message || error}`);
+    runtimeInfo = null;
+  }
+  return runtimeInfo;
+}
+
+async function ensureRuntimeInfo() {
+  if (runtimeInfo) return runtimeInfo;
+  runtimeInfoPromise ||= loadRuntimeInfo();
+  return runtimeInfoPromise;
 }
 
 function setStatus(text, state = "pending") {
@@ -146,6 +172,47 @@ function formPayload() {
     brief: UI.brief.value.trim(),
     parts: selectedParts(),
   };
+}
+
+function questViewerUrl(hostname, code) {
+  const questPort = Number(runtimeInfo?.quest_dev_port || DEFAULT_QUEST_DEV_PORT);
+  const scheme = runtimeInfo?.quest_runtime_scheme || (window.location.protocol === "https:" ? "https" : "http");
+  const url = new URL(`${scheme}://${hostname}:${questPort}/viewer/quest-iw-demo/`);
+  url.searchParams.set("newRoute", "1");
+  if (code) url.searchParams.set("code", code);
+  return url.toString();
+}
+
+function questLinkOptions(code) {
+  const currentHost = window.location.hostname || "localhost";
+  const lanHost = runtimeInfo?.preferred_lan_host || "";
+  const localhostUrl = questViewerUrl("localhost", code);
+  const lanUrl = lanHost ? questViewerUrl(lanHost, code) : "";
+  if (isLocalHost(currentHost) && lanUrl) {
+    return {
+      url: lanUrl,
+      hint: "Questでlocalhostが404になる場合はこのLAN URLを使うか、ADB reverse後にlocalhost:5173を開いてください。VR内では4桁コード入力でも呼び出せます。",
+    };
+  }
+  if (isLocalHost(currentHost)) {
+    return {
+      url: localhostUrl,
+      hint: "Questでlocalhostを使うにはADB reverseが必要です。VR内では左手メニューから4桁コードを入力できます。",
+    };
+  }
+  return {
+    url: questViewerUrl(currentHost, code),
+    hint: "同じネットワークのQuest Browserで開き、VR内の4桁コード入力から呼び出せます。",
+  };
+}
+
+function assertForgeReadiness(data) {
+  if (!data?.readiness?.suitspec_ready) {
+    throw new Error("Quest呼び出し準備が未完了です。");
+  }
+  if (!data?.readiness?.manifest_ready) {
+    throw new Error("Quest Manifestが未発行です。");
+  }
 }
 
 function materialForPart(part, palette) {
@@ -380,10 +447,13 @@ if (UI.heightRange) {
 syncHeightControls(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
 
 function applyResult(data) {
+  const quest = questLinkOptions(data.recall_code || "");
   UI.recallCode.textContent = data.recall_code || "----";
-  UI.questLink.href = `/viewer/quest-iw-demo/?code=${encodeURIComponent(data.recall_code)}&newRoute=1`;
+  UI.questLink.href = quest.url;
   UI.questLink.classList.remove("disabled");
   UI.questLink.setAttribute("aria-disabled", "false");
+  if (UI.questUrl) UI.questUrl.value = quest.url;
+  if (UI.questUrlHint) UI.questUrlHint.textContent = quest.hint;
   UI.emptyStand.classList.add("hidden");
 }
 
@@ -400,6 +470,9 @@ async function submitForge(event) {
     });
     setStatus("VRM基準の鎧立てを構築中...", "pending");
     await armorStand.renderSuit(data.preview);
+    setStatus("Quest接続情報を確認中...", "pending");
+    await ensureRuntimeInfo();
+    assertForgeReadiness(data);
     applyResult(data);
     setStatus("生成完了 / Quest入力準備OK", "complete");
   } catch (error) {
@@ -410,4 +483,5 @@ async function submitForge(event) {
 }
 
 renderPartGrid();
+runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);

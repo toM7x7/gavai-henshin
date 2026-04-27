@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import threading
 import time
 import base64
@@ -320,6 +321,36 @@ def _load_json_if_present(root: Path, raw_path: str | None) -> dict[str, Any] | 
     return json.loads(target.read_text(encoding="utf-8"))
 
 
+def _local_ipv4_addresses() -> list[str]:
+    addresses: set[str] = set()
+    try:
+        hostname = socket.gethostname()
+        for item in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            address = item[4][0]
+            if address and not address.startswith("127."):
+                addresses.add(address)
+    except OSError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("8.8.8.8", 80))
+            address = probe.getsockname()[0]
+            if address and not address.startswith("127."):
+                addresses.add(address)
+    except OSError:
+        pass
+    def rank(address: str) -> tuple[int, str]:
+        if address.startswith("192.168."):
+            return (0, address)
+        if address.startswith("10."):
+            return (1, address)
+        if address.startswith("172."):
+            return (2, address)
+        return (3, address)
+
+    return sorted(addresses, key=rank)
+
+
 def _normalize_replay_paths(root: Path, replay: dict[str, Any]) -> dict[str, Any]:
     deposition = replay.get("deposition")
     if isinstance(deposition, dict):
@@ -417,6 +448,39 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     ):
         return NewRouteApi(root, suit_store_root=suit_store_root).post(path, payload)
 
+    @staticmethod
+    def _runtime_info_for_test(root: Path, *, host: str = "localhost:8010", port: int = 8010) -> dict[str, Any]:
+        return DashboardHandler._runtime_info(root, host=host, port=port)
+
+    @staticmethod
+    def _runtime_info(root: Path, *, host: str, port: int) -> dict[str, Any]:
+        lan_hosts = _local_ipv4_addresses()
+        preferred_lan_host = lan_hosts[0] if lan_hosts else None
+        quest_dev_port = int(os.getenv("QUEST_PORT", "5173"))
+        quest_path = "/viewer/quest-iw-demo/?newRoute=1"
+        quest_scheme = "https" if any(
+            os.getenv(name)
+            for name in ("QUEST_HTTPS_PFX", "QUEST_HTTPS_CERT", "QUEST_HTTPS_KEY")
+        ) else "http"
+        quest_localhost_origin = f"{quest_scheme}://localhost:{quest_dev_port}"
+        quest_lan_origin = f"{quest_scheme}://{preferred_lan_host}:{quest_dev_port}" if preferred_lan_host else ""
+        payload = {
+            "ok": True,
+            "dashboard_host": host,
+            "dashboard_port": port,
+            "quest_dev_port": quest_dev_port,
+            "quest_runtime_scheme": quest_scheme,
+            "quest_runtime_origin": quest_lan_origin or quest_localhost_origin,
+            "preferred_lan_host": preferred_lan_host,
+            "quest_viewer_path": quest_path,
+            "quest_viewer_localhost": f"{quest_localhost_origin}{quest_path}",
+            "quest_viewer_lan": f"{quest_lan_origin}{quest_path}" if quest_lan_origin else "",
+            "note": "Quest localhost requires adb reverse. Without adb reverse, open the LAN host URL from Quest Browser.",
+        }
+        if os.getenv("HENSHIN_RUNTIME_INFO_DEBUG") == "1":
+            payload["debug"] = {"repo_root": str(root), "lan_hosts": lan_hosts}
+        return payload
+
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -467,6 +531,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/health":
             self._write_json({"ok": True})
+            return
+        if parsed.path == "/api/runtime-info":
+            host = self.headers.get("Host", f"localhost:{self.server.server_address[1]}")
+            self._write_json(self._runtime_info(self.repo_root, host=host, port=int(self.server.server_address[1])))
             return
         if parsed.path == "/api/suitspecs":
             self._write_json({"ok": True, "items": discover_suitspec_paths(self.repo_root)})

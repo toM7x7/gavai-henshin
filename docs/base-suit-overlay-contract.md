@@ -94,9 +94,10 @@ The standalone Web forge is the public-facing slice of the same route. It should
 
 1. Ask for a display name, declared height, protection archetype, palette, generation brief, and selected overlay parts.
 2. Call `POST /v1/suits/forge`.
-3. Receive a ready internal suit record plus a four-character `recall_code`, SuitSpec, and SuitManifest.
-4. Render the T-pose armor stand immediately, using the Body Fit baseline VRM where available and declared height as the first body-scale parameter.
+3. Receive a four-character `recall_code`, readiness flags, and public preview data; SuitSpec and SuitManifest are stored internally for Quest recall.
+4. Render the T-pose armor stand immediately from the public preview, using the Body Fit baseline VRM where available and declared height as the first body-scale parameter.
 5. Show only the Quest input code and Quest recall action on the public page.
+6. Explain that local development has two surfaces: dashboard/API on `8010`, Quest VR runtime on Vite `5173`.
 
 This page is allowed to generate a template-based suit before the full AI texture pipeline is complete. The preview must still respect the base suit plus overlay distinction: the fitted base is the substrate, and selected modules are the visible armor overlay.
 
@@ -104,7 +105,7 @@ Internal `suit_id` and `manifest_id` remain required for storage, versioning, DB
 
 ## Quest Flow
 
-1. Visitor or operator enters `recall_code`.
+1. Visitor or operator opens the Quest runtime page and enters `recall_code`; in VR this is available from the left-hand spatial menu.
 2. Quest calls `/v1/quest/recall/{recallCode}`.
 3. The scene imports the prepared suit with an import/standby animation.
 4. Transformation starts from first-person view.

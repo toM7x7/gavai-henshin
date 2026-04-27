@@ -49,6 +49,14 @@ Quest LAN smoke URL:
 http://{PC_LAN_IP}:5173/viewer/quest-iw-demo/?newRoute=1&mockTrigger=1
 ```
 
+Web Forge issues the four-character Quest input code from the dashboard server:
+
+```text
+http://localhost:8010/viewer/armor-forge/
+```
+
+The Quest runtime page is the Vite app on port `5173`, not the dashboard port. If Quest Browser gets `404` from a `localhost` URL, either run `npm run dev:quest:adb` first so Quest `localhost` is reversed to the PC, or open the PC LAN IP URL from Quest Browser. The VR scene also has a left-hand menu code input, so the visitor can open `/viewer/quest-iw-demo/?newRoute=1` and enter the four-character code inside VR.
+
 ### 2. Quest Trial
 
 For HTTP LAN smoke, `mockTrigger=1` lets the Voice button exercise the new-route API without microphone permission. This is only a local smoke-test bypass.
@@ -215,6 +223,8 @@ Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the
 `GET /v1/suits/code/{recallCode}` returns the full local registry record for dashboard/operator use. `GET /v1/quest/recall/{recallCode}` is the Quest-facing recall path: it resolves the code to the prepared suit and manifest without requiring the Quest user to type the internal `VDA-...` ID. Four-character codes are not authentication; they are local exhibition lookup labels.
 
 `POST /v1/suits/forge` is the standalone Web service path for the new route. It accepts a small public form payload such as display name, declared height, color palette, archetype, brief, and selected armor parts, then issues a `recall_code`, writes a SuitSpec, projects a READY manifest, and returns everything needed for the T-pose armor-stand preview. The corresponding local page is `http://localhost:8010/viewer/armor-forge/`. The public page should show the four-character Quest code, not the internal `suit_id` or `manifest_id`; those IDs remain storage/DB concerns for the later Cloud SQL and GCS design.
+
+`GET /api/runtime-info` lets the Web Forge page explain the local development split: dashboard/API on port `8010`, Quest VR runtime on Vite port `5173`. The displayed Quest URL is a convenience; the durable handoff is still the four-character `recall_code`, and the Quest page can load it from the in-VR left-hand menu.
 
 Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creates a schema-valid `TransformSession`, and `POST /v1/trials/{trialId}/events` appends canonical transform events with server-side event ids and sequence numbers. Local storage writes under `sessions/new-route/trials/...`; later GCP should map sessions/events to Cloud SQL and live state to Firestore.
 

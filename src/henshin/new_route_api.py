@@ -315,6 +315,10 @@ class NewRouteApi:
                 "recall_code": recall_code,
                 "display_name": display_name,
                 "status": "READY",
+                "readiness": {
+                    "suitspec_ready": True,
+                    "manifest_ready": manifest_response.body["manifest"]["status"] == "READY",
+                },
                 "body_profile": body_profile,
                 "preview": self._forge_public_preview(create.body["suitspec"]),
                 "links": {

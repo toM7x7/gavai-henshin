@@ -12,6 +12,8 @@ const DEFAULT_MOCOPI = "examples/mocopi_sequence.sample.json";
 const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
 const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
 const RECALL_CODE_RE = /^[A-Z0-9]{4}$/;
+const XR_RECALL_CODE_EMPTY = "----";
+const XR_RECALL_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -258,6 +260,29 @@ function params() {
 
 function normalizeRecallCodeInput(value) {
   return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+}
+
+function normalizeSpatialRecallDraft(value) {
+  const source = String(value || "").toUpperCase();
+  let draft = "";
+  for (const char of source) {
+    if (XR_RECALL_CHARS.includes(char)) draft += char;
+    if (draft.length >= 4) break;
+  }
+  return draft.padEnd(4, "-");
+}
+
+function recallDraftToCode(value) {
+  const draft = String(value || "");
+  if (draft.length !== 4 || draft.includes("-")) return "";
+  return normalizeRecallCodeInput(draft);
+}
+
+function formatSpatialRecallDraft(value, slot) {
+  const draft = normalizeSpatialRecallDraft(value);
+  return Array.from(draft)
+    .map((char, index) => (index === slot ? `[${char}]` : ` ${char} `))
+    .join("");
 }
 
 function getRecallCode() {
@@ -1277,6 +1302,8 @@ class SpatialControlPanel {
     this.worldLockScale = new THREE.Vector3(1, 1, 1);
     this.lastMenuInteractionAt = performance.now();
     this.pulseClock = 0;
+    this.recallSlot = 0;
+    this.recallDraft = normalizeSpatialRecallDraft(this.demo.recallCode || UI.recallCodeInput?.value || "");
 
     this.buildPanel();
     this.initControllers();
@@ -1377,6 +1404,24 @@ class SpatialControlPanel {
     this.listenRing.position.set(-0.74, 0.25, 0.019);
     this.listenRing.renderOrder = 15;
     this.group.add(this.listenRing);
+
+    this.recallDisplay = makeTextPlane(`CODE ${formatSpatialRecallDraft(this.recallDraft, this.recallSlot)}`, {
+      width: 0.64,
+      height: 0.09,
+      canvasWidth: 900,
+      canvasHeight: 150,
+      fontSize: 42,
+      fontWeight: 850,
+      color: "#fff4c8",
+      background: "rgba(4, 13, 17, 0.76)",
+      border: "rgba(255, 207, 90, 0.42)",
+    });
+    this.recallDisplay.position.set(0, -0.18, 0.02);
+    this.group.add(this.recallDisplay);
+
+    this.addButton("codeNext", "桁", -0.52, -0.18, 0x8edfff, { width: 0.2, height: 0.085, fontSize: 36 });
+    this.addButton("codeInc", "+", -0.34, -0.18, 0xffcf5a, { width: 0.14, height: 0.085, fontSize: 48 });
+    this.addButton("codeLoad", "呼出", 0.52, -0.18, 0x43d8ff, { width: 0.24, height: 0.085, fontSize: 34 });
 
     this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a);
     this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff);
@@ -1539,6 +1584,63 @@ class SpatialControlPanel {
       }
     }
     if (this.compactTitle) updateTextPlane(this.compactTitle, "メニュー");
+  }
+
+  updateRecallDisplay(state = "pending") {
+    if (!this.recallDisplay) return;
+    const color = state === "error" ? "#ffd2d2" : state === "ok" ? "#d7f8ff" : "#fff4c8";
+    const border =
+      state === "error"
+        ? "rgba(255, 107, 107, 0.72)"
+        : state === "ok"
+          ? "rgba(67, 216, 255, 0.58)"
+          : "rgba(255, 207, 90, 0.42)";
+    updateTextPlane(this.recallDisplay, `CODE ${formatSpatialRecallDraft(this.recallDraft, this.recallSlot)}`, {
+      color,
+      border,
+    });
+  }
+
+  setRecallDraft(code, options = {}) {
+    const next = normalizeSpatialRecallDraft(code || XR_RECALL_CODE_EMPTY);
+    this.recallDraft = next;
+    this.recallSlot = clamp(this.recallSlot, 0, 3);
+    if (options.syncInput !== false && UI.recallCodeInput) {
+      UI.recallCodeInput.value = recallDraftToCode(next);
+    }
+    this.updateRecallDisplay(options.state || "pending");
+  }
+
+  cycleRecallSlot() {
+    this.recallSlot = (this.recallSlot + 1) % 4;
+    this.updateRecallDisplay();
+  }
+
+  cycleRecallChar(delta = 1) {
+    const draft = Array.from(normalizeSpatialRecallDraft(this.recallDraft));
+    const current = draft[this.recallSlot];
+    const currentIndex = XR_RECALL_CHARS.includes(current) ? XR_RECALL_CHARS.indexOf(current) : -1;
+    const nextIndex = (currentIndex + delta + XR_RECALL_CHARS.length) % XR_RECALL_CHARS.length;
+    draft[this.recallSlot] = XR_RECALL_CHARS[nextIndex];
+    this.setRecallDraft(draft.join(""));
+  }
+
+  async loadRecallDraft() {
+    const code = recallDraftToCode(this.recallDraft);
+    if (!RECALL_CODE_RE.test(code)) {
+      this.updateRecallDisplay("error");
+      this.demo.setRecallCodeState("VRコードは4桁英数字です。", "error");
+      this.demo.setRouteApi("CODE INPUT", "error");
+      return;
+    }
+    try {
+      await this.demo.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
+      this.setRecallDraft(code, { state: "ok" });
+    } catch (error) {
+      this.updateRecallDisplay("error");
+      this.demo.setRecallCodeState(String(error?.message || error), "error");
+      this.demo.setRouteApi("CODE ERROR", "error");
+    }
   }
 
   canUseRightTriggerShortcut() {
@@ -1810,6 +1912,9 @@ class SpatialControlPanel {
     if (action === "reset") this.demo.reset();
     if (action === "lock") this.toggleWorldLock();
     if (action === "close") this.setMenuMode(XR_MENU_MODE_COMPACT);
+    if (action === "codeNext") this.cycleRecallSlot();
+    if (action === "codeInc") this.cycleRecallChar(1);
+    if (action === "codeLoad") void this.loadRecallDraft();
   }
 
   activateController(controller) {
@@ -1928,6 +2033,9 @@ class QuestHenshinDemo {
     this.initScene();
     this.spatialPanel = new SpatialControlPanel(this);
     if (UI.recallCodeInput) UI.recallCodeInput.value = this.recallCode;
+    this.spatialPanel?.setRecallDraft(this.recallCode || UI.recallCodeInput?.value || XR_RECALL_CODE_EMPTY, {
+      syncInput: false,
+    });
     this.setRecallCodeState(this.recallCode ? `入力コード ${this.recallCode} を待機中` : "4桁コード未指定");
     this.setVoiceState("ready");
     this.updateArchiveViewModeLabel();
@@ -2124,6 +2232,7 @@ class QuestHenshinDemo {
       UI.recallCodeInput.oninput = () => {
         const code = normalizeRecallCodeInput(UI.recallCodeInput.value);
         UI.recallCodeInput.value = code;
+        this.spatialPanel?.setRecallDraft(code || XR_RECALL_CODE_EMPTY, { syncInput: false });
         this.setRecallCodeState(code ? `${code.length}/4` : "4桁コード未指定");
       };
     }
@@ -2157,6 +2266,28 @@ class QuestHenshinDemo {
     return this.suitspec;
   }
 
+  resetRuntimeForRecalledSuit() {
+    this.elapsed = 0;
+    this.playing = false;
+    this.completionAnnounced = false;
+    this.trialId = null;
+    this.trialReady = false;
+    this.trialReplayPath = null;
+    this.depositionStartPromise = null;
+    this.liveMotionFrames = [];
+    this.archiveMotionFrames = [];
+    this.lastLiveMotionSampleAt = -Infinity;
+    this.frames = [];
+    this.replay = null;
+    this.playbackSource = "voice";
+    this.setReplayMotionDiagnostic(makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC));
+    if (UI.meterFill) UI.meterFill.style.width = "0%";
+    if (UI.btnPause) UI.btnPause.textContent = "再開";
+    if (UI.equipState) UI.equipState.textContent = "変身: 待機";
+    this.setRouteTrial("WAIT", "pending");
+    this.setRouteReplay("WAIT", "pending");
+  }
+
   async loadSuitByRecallCode(code, { reloadMeshes = false, pushUrl = false } = {}) {
     const recallCode = normalizeRecallCodeInput(code);
     if (!RECALL_CODE_RE.test(recallCode)) {
@@ -2171,12 +2302,26 @@ class QuestHenshinDemo {
     if (!data.manifest_id || data.manifest_ready === false) {
       throw new Error(`Manifest未発行: ${recallCode}`);
     }
+    const nextSuitId = data.suit_id || data.suit?.suit_id || data.suitspec?.suit_id || this.activeSuitId;
+    const hasRuntimeState = Boolean(
+      this.trialId
+        || this.trialReady
+        || this.trialReplayPath
+        || this.liveMotionFrames.length
+        || this.archiveMotionFrames.length
+        || this.frames.length
+        || this.replay,
+    );
+    if ((this.recallCode && this.recallCode !== recallCode) || this.activeSuitId !== nextSuitId || hasRuntimeState) {
+      this.resetRuntimeForRecalledSuit();
+    }
     this.suitRecord = data.suit || null;
     this.suitspec = data.suitspec;
     this.recallCode = data.recall_code || recallCode;
-    this.activeSuitId = data.suit_id || data.suit?.suit_id || this.suitspec?.suit_id || this.activeSuitId;
+    this.activeSuitId = nextSuitId;
     this.activeManifestId = data.manifest_id || data.suit?.manifest_id || this.activeManifestId;
     if (UI.recallCodeInput) UI.recallCodeInput.value = this.recallCode;
+    this.spatialPanel?.setRecallDraft(this.recallCode, { syncInput: false, state: "ok" });
     if (pushUrl) {
       const next = new URL(window.location.href);
       next.searchParams.set("newRoute", "1");
@@ -2518,8 +2663,8 @@ class QuestHenshinDemo {
   async loadArmorMeshes() {
     const modules = this.suitspec?.modules || {};
     const loadedMeshes = await Promise.all(ARMOR_PARTS.map(async (part, index) => {
-      const module = modules[part] || {};
-      if (module.enabled === false) return null;
+      const module = modules[part];
+      if (!module || module.enabled !== true) return null;
       const mesh = await createArmorMesh(part, module, this.suitspec);
       return { index, mesh, part };
     }));

@@ -1,13 +1,17 @@
 import base64
 import json
+import threading
 import tempfile
 import unittest
+from socketserver import TCPServer, ThreadingMixIn
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 from henshin.dashboard_server import (
     DashboardHandler,
     GeneratePartsPayload,
     GenerationJob,
+    GenerationJobManager,
     IWHenshinVoicePayload,
     run_iw_henshin_voice,
 )
@@ -87,6 +91,57 @@ class TestDashboardServer(unittest.TestCase):
         self.assertTrue(response.body["suitspec_ready"])
         self.assertTrue(response.body["manifest_ready"])
 
+    def test_runtime_info_exposes_quest_dev_url_contract(self) -> None:
+        payload = DashboardHandler._runtime_info_for_test(Path(".").resolve(), host="localhost:8010", port=8010)
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["dashboard_port"], 8010)
+        self.assertEqual(payload["quest_dev_port"], 5173)
+        self.assertEqual(payload["quest_runtime_scheme"], "http")
+        self.assertIn("quest_runtime_origin", payload)
+        self.assertIn("/viewer/quest-iw-demo/?newRoute=1", payload["quest_viewer_localhost"])
+        self.assertIn("localhost", payload["note"])
+        self.assertNotIn("repo_root", payload)
+        self.assertNotIn("lan_hosts", payload)
+
+    def test_runtime_info_is_served_over_http(self) -> None:
+        root = Path(".").resolve()
+
+        class TestServer(ThreadingMixIn, TCPServer):
+            allow_reuse_address = True
+            daemon_threads = True
+
+        def factory(*args, **kwargs):
+            return DashboardHandler(
+                *args,
+                directory=str(root),
+                root=root,
+                jobs=GenerationJobManager(root),
+                **kwargs,
+            )
+
+        with TestServer(("127.0.0.1", 0), factory) as httpd:
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = httpd.server_address[1]
+                request = Request(
+                    f"http://127.0.0.1:{port}/api/runtime-info",
+                    headers={"Host": f"pc.local:{port}"},
+                )
+                with urlopen(request, timeout=5) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            finally:
+                httpd.shutdown()
+                thread.join(timeout=5)
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["dashboard_host"], f"pc.local:{port}")
+        self.assertEqual(payload["dashboard_port"], port)
+        self.assertEqual(payload["quest_dev_port"], 5173)
+        self.assertIn("/viewer/quest-iw-demo/?newRoute=1", payload["quest_viewer_path"])
+        self.assertNotIn("repo_root", payload)
+
     def test_armor_forge_page_exposes_public_workflow_contract(self) -> None:
         html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
@@ -99,13 +154,31 @@ class TestDashboardServer(unittest.TestCase):
             "heightCm",
             "heightRange",
             "questLink",
+            "questUrl",
+            "questUrlHint",
         }:
             self.assertIn(f'id="{dom_id}"', html)
             self.assertIn(f'getElementById("{dom_id}")', js)
         self.assertIn("/v1/suits/forge", js)
+        self.assertIn("/api/runtime-info", js)
         self.assertIn("Quest入力コード", html)
+        self.assertIn("Quest VR入力ページ", html)
         self.assertNotIn('id="suitId"', html)
         self.assertNotIn('id="manifestId"', html)
+
+    def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:
+        js = Path("viewer/quest-iw-demo/quest-demo.js").read_text(encoding="utf-8")
+
+        for token in {
+            "XR_RECALL_CHARS",
+            "recallDisplay",
+            "codeNext",
+            "codeInc",
+            "codeLoad",
+            "loadRecallDraft",
+            "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
+        }:
+            self.assertIn(token, js)
 
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))

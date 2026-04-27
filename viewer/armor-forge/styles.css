@@ -300,6 +300,19 @@ a:focus-visible {
   line-height: 1.35;
 }
 
+.quest-url-card {
+  grid-column: 1 / -1;
+}
+
+.quest-url-card input {
+  min-height: 38px;
+  border-color: rgba(90, 216, 255, 0.28);
+  background: #0d1211;
+  color: #d7f7ff;
+  font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
+  font-size: 12px;
+}
+
 #recallCode {
   color: var(--accent);
   font-size: clamp(30px, 5vw, 58px);

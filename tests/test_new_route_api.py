@@ -166,6 +166,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.status, 201)
             self.assertEqual(response.body["recall_code"], "F9A1")
             self.assertEqual(response.body["status"], "READY")
+            self.assertTrue(response.body["readiness"]["suitspec_ready"])
+            self.assertTrue(response.body["readiness"]["manifest_ready"])
             self.assertNotIn("suit_id", response.body)
             self.assertNotIn("manifest_id", response.body)
             self.assertNotIn("suitspec", response.body)

@@ -91,6 +91,21 @@ _FORGE_UV_REFINE = True
 _FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
 _FORGE_FIT_STATUS = "preview_vrm_bone_metrics"
 _FORGE_SURFACE_GENERATION_STATUS = "planned_not_generated"
+_FORGE_MODEL_REBUILD_WAVE = "Wave 1"
+_FORGE_MODEL_REBUILD_PARTS = [
+    "chest",
+    "back",
+    "waist",
+    "left_upperarm",
+    "right_upperarm",
+    "left_forearm",
+    "right_forearm",
+]
+_FORGE_MODEL_REBUILD_PASS_GATES = [
+    "surfaceViolations == 0",
+    "heroOverflow == 0",
+    "fit_regression.canSave == true",
+]
 _RECALL_AMBIGUOUS_TRANSLATION = str.maketrans({"0": "O", "O": "O", "1": "I", "I": "I", "L": "I"})
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
@@ -325,10 +340,19 @@ class NewRouteApi:
                 "readiness": {
                     "suitspec_ready": True,
                     "manifest_ready": manifest_response.body["manifest"]["status"] == "READY",
+                    "model_quality_ready": False,
+                    "final_texture_ready": False,
+                    "exhibition_ready": False,
                 },
                 "body_profile": body_profile,
-                "preview": self._forge_public_preview(create.body["suitspec"]),
-                "asset_pipeline": self._forge_public_asset_pipeline(create.body["suitspec"]),
+                "preview": self._forge_public_preview(
+                    create.body["suitspec"],
+                    suitspec_path=create.body["suitspec_path"],
+                ),
+                "asset_pipeline": self._forge_public_asset_pipeline(
+                    create.body["suitspec"],
+                    suitspec_path=create.body["suitspec_path"],
+                ),
                 "links": {
                     "quest_recall": f"/v1/quest/recall/{recall_code}",
                     "quest_viewer": f"/viewer/quest-iw-demo/?code={recall_code}&newRoute=1",
@@ -1020,11 +1044,19 @@ class NewRouteApi:
         }
         model_plan = {
             "asset_contract": _FORGE_ASSET_CONTRACT,
+            "status": "requires_rebuild",
+            "model_rebuild_required": True,
             "base_suit": "VRM baseline body-fit substrate",
             "overlay_parts": enabled_parts,
             "fit_solver": "web_forge_vrm_bone_metrics_preview",
             "runtime_target": "validated GLB/gltf derived artifact",
             "material_slots": ["base_surface", "accent", "emissive", "trim"],
+            "mesh_source_status": "seed_proxy_requires_vrm_first_rebuild",
+            "preview_mesh_role": "fit-check proxy, not final texture target",
+            "model_quality_gate": "mesh_fit_before_texture_final",
+            "model_rebuild_wave": _FORGE_MODEL_REBUILD_WAVE,
+            "model_rebuild_focus_parts": list(_FORGE_MODEL_REBUILD_PARTS),
+            "next_model_quality_gate": "VRM-first Wave 1 rebuild: chest/back/waist/upperarm/forearm before final texture lock",
         }
         return {
             "model_id": "local-web-forge-v0",
@@ -1037,7 +1069,9 @@ class NewRouteApi:
             "planned_quality_gates": ["mesh_bounds", "fit_clearance", "uv_contract", "quest_recall_ready"],
             "quality_policy": {
                 "texture_quality": "warning_only_until_generation_completes",
-                "blocking_gate": "quest_recall_ready",
+                "model_quality": "blocking_before_final_texture",
+                "blocking_gate": "mesh_fit_before_texture_final",
+                "speed_check_texture_generation": "allowed_on_seed_proxy",
             },
             "job_defaults": {
                 "provider_profile": texture_plan["provider_profile"],
@@ -1046,6 +1080,7 @@ class NewRouteApi:
                 "update_suitspec": texture_plan["update_suitspec"],
                 "use_cache": texture_plan["use_cache"],
                 "priority_mode": "exhibition",
+                "tracking_source": "web_forge",
                 "parts": enabled_parts,
                 "generation_brief": prompt[:1200],
                 "requires": ["server_resolved_suitspec_path"],
@@ -1067,7 +1102,7 @@ class NewRouteApi:
             ],
         }
 
-    def _forge_public_preview(self, suitspec: dict[str, Any]) -> dict[str, Any]:
+    def _forge_public_preview(self, suitspec: dict[str, Any], *, suitspec_path: str | None = None) -> dict[str, Any]:
         modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
         preview_modules = {}
         for part_name, module in modules.items():
@@ -1084,11 +1119,11 @@ class NewRouteApi:
         return {
             "palette": self._clone_json(suitspec.get("palette", {})),
             "body_profile": self._clone_json(suitspec.get("body_profile", {})),
-            "asset_pipeline": self._forge_public_asset_pipeline(suitspec),
+            "asset_pipeline": self._forge_public_asset_pipeline(suitspec, suitspec_path=suitspec_path),
             "modules": preview_modules,
         }
 
-    def _forge_public_asset_pipeline(self, suitspec: dict[str, Any]) -> dict[str, Any]:
+    def _forge_public_asset_pipeline(self, suitspec: dict[str, Any], *, suitspec_path: str | None = None) -> dict[str, Any]:
         generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
         model_plan = generation.get("model_plan") if isinstance(generation.get("model_plan"), dict) else {}
         texture_plan = generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {}
@@ -1097,12 +1132,95 @@ class NewRouteApi:
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
         )
         quality_policy = generation.get("quality_policy") if isinstance(generation.get("quality_policy"), dict) else {}
+        job_payload_template = self._clone_json(job_defaults)
+        job_payload_template.pop("requires", None)
+        if suitspec_path:
+            job_payload_template["suitspec"] = suitspec_path
+        job_payload_template.setdefault("suitspec", "__SERVER_RESOLVED_SUITSPEC_PATH__")
+        job_payload_template.setdefault("root", "sessions")
+        job_payload_template.setdefault("max_parallel", 3)
+        job_payload_template.setdefault("retry_count", 1)
+        job_payload_template.setdefault("timeout", 90)
+        job_payload_template.setdefault("dry_run", False)
+        job_payload_template.setdefault("hero_render", False)
+        job_links = {
+            "create_generation_job": "/api/generation-jobs",
+            "job_status_template": "/api/generation-jobs/{job_id}",
+            "job_events_template": "/api/generation-jobs/{job_id}/events",
+            "job_cancel_template": "/api/generation-jobs/{job_id}/cancel",
+            "suitspec": f"/api/suitspec?path={suitspec_path}" if suitspec_path else None,
+        }
+        expected_status_flow = [
+            {"status": "queued", "stage": "scan", "source": "POST /api/generation-jobs response"},
+            {"status": "running", "stage": "scan", "event_type": "job_started"},
+            {
+                "status": "running",
+                "stage": "core_materialization",
+                "event_type": "wave_started|provider_progress|part_completed",
+            },
+            {
+                "status": "running",
+                "stage": "full_assembly",
+                "event_type": "wave_started|provider_progress|part_completed",
+            },
+            {
+                "status": "completed",
+                "stage": "complete",
+                "event_type": "job_completed",
+                "result_fields": ["summary_path", "latest_preview_url", "hero_preview_url"],
+            },
+            {"status": "failed", "stage": "error", "event_type": "job_failed"},
+            {"status": "cancelled", "stage": "error", "event_type": "job_cancelled"},
+        ]
+        model_rebuild_job = {
+            "contract_version": "model-rebuild.v1",
+            "status": "required",
+            "source": "authoring_audit/current",
+            "blocking": True,
+            "wave": _FORGE_MODEL_REBUILD_WAVE,
+            "parts": list(_FORGE_MODEL_REBUILD_PARTS),
+            "selected_overlay_parts": self._clone_json(model_plan.get("overlay_parts", [])),
+            "entrypoint": "authoring-audit -> fit-regression -> mesh asset rebuild",
+            "execution_surface": "model authoring pipeline, not texture provider",
+            "pass_gates": list(_FORGE_MODEL_REBUILD_PASS_GATES),
+            "links": {
+                "authoring_plan": "docs/vrm-first-authoring-plan.md",
+                "surface_contract": "docs/surface-first-armor-system.md",
+                "base_suit_contract": "docs/base-suit-overlay-contract.md",
+            },
+        }
+        texture_probe_job = {
+            "contract_version": "texture-probe.v1",
+            "status": "allowed_on_seed_proxy",
+            "blocking": False,
+            "writes_final_texture": False,
+            "method": "POST",
+            "endpoint": job_links["create_generation_job"],
+            "payload": self._clone_json(job_payload_template),
+            "links": self._clone_json(job_links),
+            "expected_status_flow": self._clone_json(expected_status_flow),
+        }
         return {
             "model_plan": self._clone_json(model_plan),
             "texture_plan": self._clone_json(texture_plan),
             "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
             "surface_generation_status": str(generation.get("surface_generation_status") or _FORGE_SURFACE_GENERATION_STATUS),
             "job_defaults": self._clone_json(job_defaults),
+            "job_payload_template": job_payload_template,
+            "links": job_links,
+            "expected_status_flow": expected_status_flow,
+            "model_rebuild_job": model_rebuild_job,
+            "texture_probe_job": texture_probe_job,
+            "generation_job": {
+                "contract_version": "generation-job.v1",
+                "alias_of": "texture_probe_job",
+                "deprecated_for_public_ui": True,
+                "method": "POST",
+                "endpoint": job_links["create_generation_job"],
+                "payload": self._clone_json(job_payload_template),
+                "links": self._clone_json(job_links),
+                "expected_status_flow": self._clone_json(expected_status_flow),
+            },
             "planned_quality_gates": self._clone_json(planned_quality_gates),
             "quality_policy": self._clone_json(quality_policy),
         }

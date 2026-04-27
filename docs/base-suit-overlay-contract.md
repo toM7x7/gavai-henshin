@@ -113,6 +113,7 @@ The Web forge now emits an `asset_pipeline` contract alongside the public previe
 - Texture provider: `nano_banana` provider profile, using Gemini-backed image generation through the existing `part_generation.py` provider abstraction.
 - Texture mode: `mesh_uv` with UV guide references, `uv_refine=true`, 2K square atlases, and SuitSpec texture write-back as the intended job default.
 - Surface status: `planned_not_generated` means the Web forge has issued a suit and generated the job contract, but it has not yet produced final texture atlases or written `texture_path` fields.
+- Job split: `model_rebuild_job` is the blocking track for body fit and mesh rebuilding; `texture_probe_job` is allowed only as a Nano Banana speed check and temporary write-back path on seed/proxy meshes.
 - Planned quality gates: mesh bounds, fit clearance, UV contract, and Quest recall readiness must stay visible before the suit is treated as exhibition-ready. Texture quality remains warning-only until the asynchronous generation job completes.
 
 This deliberately separates "the suit is issued and recallable" from "final generated surface assets are complete." The public Web flow can issue a code immediately, then advance texture generation asynchronously without breaking Quest recall.
@@ -126,6 +127,16 @@ The fitting mechanism is the root contract. Three.js, PlayCanvas, and Unity shou
 - Future Unity/OpenXR surface: Quest runtime adapter for transformation, tracking, mirror/replay, and exhibition-grade input. It should consume prepared manifests and assets rather than generating or correcting them live.
 
 The next model-quality milestone is therefore `VRM measurement -> body surface/mounts -> overlay bounds -> UV/texture job`. Texture generation should not be treated as final until the fit and mount gates are good enough to keep parts on the human body.
+
+### Authoring Audit Snapshot
+
+Latest local audit: 2026-04-27, `authoring-audit --mode current`.
+
+- Result: `rebuild 11 / tune 3 / keep 4`.
+- Wave 1 P0 rebuild/tune focus: `chest`, `back`, `waist`, `left_upperarm`, `right_upperarm`, `left_forearm`, `right_forearm`.
+- Immediate interpretation: the current `mesh.v1` files are acceptable as seed/proxy preview parts, but they are not yet the final surface target for Nano Banana texture work.
+- Web Forge may still run texture generation as a speed check and temporary texture write-back path, but the final texture lock is blocked by the model-quality gate: `mesh_fit_before_texture_final`.
+- Public Web Forge readiness now keeps Quest recall available while exposing `model_quality_ready=false`, `final_texture_ready=false`, and `exhibition_ready=false` until the model rebuild gate passes.
 
 ## Quest Flow
 

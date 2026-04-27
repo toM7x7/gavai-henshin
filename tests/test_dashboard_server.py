@@ -145,6 +145,7 @@ class TestDashboardServer(unittest.TestCase):
     def test_armor_forge_page_exposes_public_workflow_contract(self) -> None:
         html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")
 
         for dom_id in {
             "forgeForm",
@@ -159,10 +160,16 @@ class TestDashboardServer(unittest.TestCase):
             "assetPipeline",
             "assetPipelineTitle",
             "assetPipelineDetail",
+            "textureJobPanel",
+            "textureJobButton",
+            "textureJobTitle",
+            "textureJobDetail",
+            "textureJobMeter",
         }:
             self.assertIn(f'id="{dom_id}"', html)
             self.assertIn(f'getElementById("{dom_id}")', js)
         self.assertIn("/v1/suits/forge", js)
+        self.assertIn("/api/generation-jobs", js)
         self.assertIn("/api/runtime-info", js)
         self.assertIn("armorStandPoseFor", js)
         self.assertIn("FIT_SHAPE_BASELINES", js)
@@ -179,11 +186,57 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("preview_vrm_bone_metrics", js)
         self.assertIn("nano_banana", js)
         self.assertIn("mesh_uv", js)
+        self.assertIn("textureJobPayload", js)
+        self.assertIn("startTextureGeneration", js)
+        self.assertIn("TextureLoader", js)
+        self.assertIn("loadTextureMap", js)
+        self.assertIn("texture_path", js)
+        self.assertIn("disposeMaterial", js)
+        self.assertIn("parts_per_min", js)
+        self.assertIn("last_timing_ms", js)
+        self.assertIn("generation_job", js)
+        self.assertIn("texture_probe_job", js)
+        self.assertIn("model_rebuild_job", js)
+        self.assertIn("job_payload_template", js)
+        self.assertIn("model ${modelStatus}", js)
+        self.assertIn("seed/proxy", js)
         self.assertIn("planned", js)
+        self.assertIn("color-scheme: light", css)
+        self.assertIn("--body-reference", css)
+        self.assertIn("--base-suit", css)
+        self.assertIn(".preview-legend", css)
+        self.assertIn(".texture-job", css)
         self.assertIn("Quest入力コード", html)
         self.assertIn("Quest VR入力ページ", html)
+        self.assertIn("表面生成を試す", html)
+        self.assertIn("モデル品質Gate前", html)
+        self.assertIn("VRM人体", html)
+        self.assertIn("基礎スーツ", html)
+        self.assertIn("装甲/表面", html)
         self.assertNotIn('id="suitId"', html)
         self.assertNotIn('id="manifestId"', html)
+
+    def test_forge_generation_job_payload_matches_existing_job_api_contract(self) -> None:
+        root = Path(".").resolve()
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            api = NewRouteApi(root, suit_store_root=Path(tmp) / "suits")
+            response = api.post(
+                "/v1/suits/forge",
+                {"display_name": "Visitor", "parts": ["helmet", "chest", "back"]},
+            )
+            assert response is not None
+            payload = response.body["asset_pipeline"]["texture_probe_job"]["payload"]
+            job_payload = GeneratePartsPayload(**payload)
+
+            GenerationJobManager(root)._validate_payload(job_payload)
+
+        self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
+        self.assertTrue(response.body["asset_pipeline"]["model_rebuild_job"]["blocking"])
+        self.assertEqual(job_payload.provider_profile, "nano_banana")
+        self.assertEqual(job_payload.texture_mode, "mesh_uv")
+        self.assertTrue(job_payload.uv_refine)
+        self.assertTrue(job_payload.update_suitspec)
+        self.assertTrue(job_payload.suitspec.endswith("/suitspec.json"))
 
     def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:
         html = Path("viewer/quest-iw-demo/index.html").read_text(encoding="utf-8")
@@ -229,14 +282,31 @@ class TestDashboardServer(unittest.TestCase):
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))
         job.emit({"type": "job_started", "stage": "scan", "status": "started", "requested_count": 2})
-        job.emit({"type": "part_completed", "stage": "core_materialization", "part": "helmet", "completed_count": 1})
-        job.emit({"type": "job_completed", "stage": "complete", "status": "completed", "summary_path": "/x.json"})
+        job.emit({
+            "type": "part_completed",
+            "stage": "core_materialization",
+            "part": "helmet",
+            "completed_count": 1,
+            "timing_ms": {"total_ms": 1234, "inference_ms": 1200},
+        })
+        job.emit({
+            "type": "job_completed",
+            "stage": "complete",
+            "status": "completed",
+            "summary_path": "/x.json",
+            "generated_count": 1,
+            "cache_hit_count": 0,
+        })
 
         snapshot = job.snapshot()
         self.assertEqual(snapshot["status"], "completed")
         self.assertEqual(snapshot["completed_count"], 1)
         self.assertEqual(snapshot["requested_count"], 2)
         self.assertEqual(snapshot["summary_path"], "/x.json")
+        self.assertGreaterEqual(snapshot["elapsed_sec"], 0)
+        self.assertIn("parts_per_min", snapshot)
+        self.assertEqual(snapshot["last_timing_ms"]["total_ms"], 1234)
+        self.assertEqual(snapshot["result"]["generated_count"], 1)
         self.assertEqual(snapshot["events"], 3)
 
     def test_payload_accepts_emotion_profile(self) -> None:

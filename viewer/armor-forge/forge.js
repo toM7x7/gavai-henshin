@@ -34,6 +34,11 @@ const MIN_HEIGHT_CM = 90;
 const MAX_HEIGHT_CM = 230;
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
 const DEFAULT_QUEST_DEV_PORT = 5173;
+const BODY_REFERENCE_COLOR = 0xe6c7a6;
+const BODY_REFERENCE_EMISSIVE = 0x2a1710;
+const BASE_SUIT_COLOR = 0x52777e;
+const BASE_SUIT_EMISSIVE = 0x10292c;
+const PREVIEW_FLOOR_Y = -0.43;
 const VRM_BONE_ALIAS_INDEX = new Map();
 for (const [canonical, aliases] of Object.entries(VRM_BONE_ALIASES)) {
   VRM_BONE_ALIAS_INDEX.set(normalizeBoneName(canonical), canonical);
@@ -83,6 +88,11 @@ const UI = {
   assetPipeline: document.getElementById("assetPipeline"),
   assetPipelineTitle: document.getElementById("assetPipelineTitle"),
   assetPipelineDetail: document.getElementById("assetPipelineDetail"),
+  textureJobPanel: document.getElementById("textureJobPanel"),
+  textureJobButton: document.getElementById("textureJobButton"),
+  textureJobTitle: document.getElementById("textureJobTitle"),
+  textureJobDetail: document.getElementById("textureJobDetail"),
+  textureJobMeter: document.getElementById("textureJobMeter"),
   displayName: document.getElementById("displayName"),
   archetype: document.getElementById("archetype"),
   temperament: document.getElementById("temperament"),
@@ -97,6 +107,10 @@ const UI = {
 
 let runtimeInfo = null;
 let runtimeInfoPromise = null;
+let latestForgeData = null;
+let textureJobPollTimer = null;
+let textureJobStartedAt = 0;
+const textureLoader = new THREE.TextureLoader();
 
 function normalizePath(path) {
   const raw = String(path || "").replace(/\\/g, "/");
@@ -250,6 +264,13 @@ function renderPartGrid() {
   }
 }
 
+function syncPreviewLegendPalette() {
+  const root = document.documentElement;
+  root.style.setProperty("--legend-primary", UI.primaryColor?.value || "#F4F1E8");
+  root.style.setProperty("--legend-secondary", UI.secondaryColor?.value || "#8C96A3");
+  root.style.setProperty("--legend-emissive", UI.emissiveColor?.value || "#43D8FF");
+}
+
 function formPayload() {
   const heightCm = declaredHeightCm();
   return {
@@ -325,15 +346,185 @@ function renderAssetPipeline(data = null) {
   }
   const modelPlan = pipeline.model_plan || {};
   const texturePlan = pipeline.texture_plan || {};
+  const modelJob = pipeline.model_rebuild_job || {};
+  const textureProbe = pipeline.texture_probe_job || {};
   const parts = Array.isArray(modelPlan.overlay_parts) ? modelPlan.overlay_parts : selectedParts();
   const provider = texturePlan.provider_profile || "nano_banana";
   const mode = texturePlan.texture_mode || "mesh_uv";
   const status = texturePlan.status || pipeline.surface_generation_status || "planned_not_generated";
   const fitStatus = pipeline.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
+  const meshStatus = modelPlan.mesh_source_status || "seed_proxy";
+  const modelStatus = modelJob.status || modelPlan.status || "requires_rebuild";
+  const nextGate = modelJob.entrypoint || modelPlan.next_model_quality_gate || "VRM-first model gate";
   const refine = texturePlan.uv_refine ? "UV再構成" : "UVガイド";
+  const wave = modelJob.wave ? `${modelJob.wave} ` : "";
+  const probeStatus = textureProbe.status || "probe_only";
   UI.assetPipeline.classList.add("planned");
-  UI.assetPipelineTitle.textContent = `${parts.length}部位 / ${provider} / planned`;
-  UI.assetPipelineDetail.textContent = `${fitStatus} / ${status}: ${mode} + ${refine} / ${modelPlan.asset_contract || "vrm-base-suit+mesh-v1-overlay"}`;
+  UI.assetPipelineTitle.textContent = `${parts.length}部位 / model ${modelStatus} / ${provider}`;
+  UI.assetPipelineDetail.textContent = `${fitStatus} / ${meshStatus}: ${wave}${nextGate} / texture probe ${probeStatus}: ${status} ${mode} + ${refine}`;
+}
+
+function formatSeconds(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds)) return "--";
+  return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+}
+
+function setTextureJobState(state, title, detail, progress = 0) {
+  if (!UI.textureJobPanel || !UI.textureJobTitle || !UI.textureJobDetail || !UI.textureJobMeter) return;
+  UI.textureJobPanel.classList.remove("pending", "running", "complete", "error");
+  UI.textureJobPanel.classList.add(state);
+  UI.textureJobTitle.textContent = title;
+  UI.textureJobDetail.textContent = detail;
+  UI.textureJobMeter.style.width = `${clamp(progress, 0, 1) * 100}%`;
+}
+
+function updateTextureJobAvailability(data = latestForgeData) {
+  if (!UI.textureJobButton) return;
+  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+  const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template;
+  const canRun = Boolean(template?.suitspec);
+  UI.textureJobButton.disabled = !canRun;
+  if (!canRun) {
+    setTextureJobState("pending", "未開始", "コード発行後に、モデル品質Gate前の速度確認/仮貼りとして実行できます。", 0);
+  } else if (!UI.textureJobPanel?.classList.contains("running") && !UI.textureJobPanel?.classList.contains("complete")) {
+    setTextureJobState("pending", "表面Probe待機", "現行メッシュはseed/proxyです。Nano Banana mesh-UVは速度確認と仮貼りのみで、最終表面ではありません。", 0);
+  }
+}
+
+function textureJobPayload(data) {
+  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+  const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template || null;
+  if (!template?.suitspec) {
+    throw new Error("texture job payload is not ready.");
+  }
+  return {
+    ...template,
+    root: template.root || "sessions",
+    session_id: template.session_id || `S-FORGE-${data.recall_code || Date.now()}`,
+    dry_run: false,
+  };
+}
+
+function textureJobLinks(data) {
+  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+  return pipeline?.texture_probe_job?.links || pipeline?.generation_job?.links || pipeline?.links || {};
+}
+
+function updateTextureJobFromSnapshot(snapshot) {
+  const total = Number(snapshot.requested_count || 0);
+  const done = Number(snapshot.completed_count || 0);
+  const localElapsed = textureJobStartedAt ? (performance.now() - textureJobStartedAt) / 1000 : 0;
+  const elapsed = Number.isFinite(Number(snapshot.elapsed_sec)) ? Number(snapshot.elapsed_sec) : localElapsed;
+  const speed = Number(snapshot.parts_per_min || 0);
+  const timingMs = snapshot.last_timing_ms && typeof snapshot.last_timing_ms === "object"
+    ? Number(snapshot.last_timing_ms.total_ms || snapshot.last_timing_ms.inference_ms || 0)
+    : 0;
+  const speedText = Number.isFinite(speed) && speed > 0 ? ` / ${speed.toFixed(1)} parts/min` : "";
+  const timingText = Number.isFinite(timingMs) && timingMs > 0 ? ` / last ${(timingMs / 1000).toFixed(1)}s` : "";
+  const progress = total > 0 ? done / total : snapshot.status === "completed" ? 1 : 0.08;
+  const result = snapshot.result || {};
+  if (snapshot.status === "completed") {
+    if (UI.textureJobButton) {
+      UI.textureJobButton.disabled = false;
+      UI.textureJobButton.textContent = "表面Probe再試行";
+    }
+    setTextureJobState(
+      "complete",
+      `表面Probe完了 ${result.generated_count ?? done}/${total || result.generated_count || done}`,
+      `elapsed ${formatSeconds(result.total_elapsed_sec || elapsed)}${speedText}${timingText} / cache ${result.cache_hit_count || 0} / summary ${result.summary_path || snapshot.summary_path || "ready"}`,
+      1,
+    );
+    return;
+  }
+  if (snapshot.status === "failed" || snapshot.status === "cancelled") {
+    if (UI.textureJobButton) UI.textureJobButton.disabled = false;
+    setTextureJobState("error", `表面Probe${snapshot.status}`, snapshot.error || "generation job did not complete.", progress);
+    return;
+  }
+  setTextureJobState(
+    "running",
+    `生成中 ${done}/${total || "?"}`,
+    `${snapshot.stage || "scan"} / elapsed ${formatSeconds(elapsed)}${speedText}${timingText} / ${snapshot.latest_preview_url || "waiting for first texture"}`,
+    Math.max(progress, 0.08),
+  );
+}
+
+async function refreshPreviewFromGeneratedSuit(payload) {
+  if (!payload?.suitspec) return;
+  const data = await fetchJson(`/api/suitspec?path=${encodeURIComponent(payload.suitspec)}`);
+  if (data?.suitspec) {
+    await armorStand.renderSuit(data.suitspec);
+  }
+}
+
+async function pollTextureJob(jobId, payload) {
+  if (textureJobPollTimer) window.clearTimeout(textureJobPollTimer);
+  const snapshot = await fetchJson(`/api/generation-jobs/${encodeURIComponent(jobId)}`);
+  updateTextureJobFromSnapshot(snapshot);
+  if (snapshot.status === "completed") {
+    await refreshPreviewFromGeneratedSuit(payload).catch((error) => {
+      console.warn(`texture preview refresh failed: ${error?.message || error}`);
+    });
+    return;
+  }
+  if (snapshot.status === "failed" || snapshot.status === "cancelled") return;
+  textureJobPollTimer = window.setTimeout(() => {
+    pollTextureJob(jobId, payload).catch((error) => {
+      setTextureJobState("error", "表面Probeエラー", String(error?.message || error), 0);
+    });
+  }, 1000);
+}
+
+async function startTextureGeneration() {
+  if (!latestForgeData) return;
+  const payload = textureJobPayload(latestForgeData);
+  const links = textureJobLinks(latestForgeData);
+  const createUrl = links.create_generation_job || "/api/generation-jobs";
+  UI.textureJobButton.disabled = true;
+  UI.textureJobButton.textContent = "生成中...";
+  textureJobStartedAt = performance.now();
+  setTextureJobState("running", "表面Probeを開始", "Nano Banana mesh-UV probe queued...", 0.05);
+  const job = await fetchJson(createUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  await pollTextureJob(job.job_id, payload);
+}
+
+async function loadTextureMap(path) {
+  if (!path) return null;
+  return new Promise((resolve) => {
+    textureLoader.load(
+      normalizePath(path),
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        resolve(texture);
+      },
+      undefined,
+      (error) => {
+        console.warn(`texture load failed: ${path}`, error);
+        resolve(null);
+      },
+    );
+  });
+}
+
+function disposeMaterial(material) {
+  const materials = Array.isArray(material) ? material : [material];
+  for (const item of materials) {
+    if (!item) continue;
+    item.map?.dispose?.();
+    item.emissiveMap?.dispose?.();
+    item.normalMap?.dispose?.();
+    item.roughnessMap?.dispose?.();
+    item.metalnessMap?.dispose?.();
+    item.dispose?.();
+  }
 }
 
 function materialForPart(part, palette) {
@@ -346,9 +537,10 @@ function materialForPart(part, palette) {
   return new THREE.MeshStandardMaterial({
     color,
     emissive,
-    emissiveIntensity: part === "chest" || part === "helmet" ? 0.22 : 0.12,
-    metalness: 0.45,
-    roughness: 0.38,
+    emissiveIntensity: part === "chest" || part === "helmet" ? 0.38 : 0.22,
+    metalness: 0.28,
+    roughness: 0.46,
+    side: THREE.DoubleSide,
   });
 }
 
@@ -356,10 +548,10 @@ function addArmorEdges(mesh, palette) {
   const color = new THREE.Color(palette?.emissive || "#43D8FF");
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(mesh.geometry, 28),
-    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.34 }),
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.86, depthTest: false }),
   );
   edges.name = `${mesh.name}-surface-lines`;
-  edges.renderOrder = 3;
+  edges.renderOrder = 10;
   mesh.add(edges);
 }
 
@@ -395,9 +587,19 @@ async function createArmorMesh(part, module, palette) {
   const sourceSize = new THREE.Vector3();
   geometry.computeBoundingBox();
   geometry.boundingBox.getSize(sourceSize);
-  const mesh = new THREE.Mesh(geometry, materialForPart(part, palette));
+  const material = materialForPart(part, palette);
+  const texture = await loadTextureMap(module?.texture_path);
+  if (texture) {
+    material.map = texture;
+    material.color.setHex(0xffffff);
+    material.emissiveIntensity *= 0.72;
+    material.needsUpdate = true;
+  }
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.name = part;
+  mesh.renderOrder = 4;
   mesh.userData.sourceSize = sourceSize;
+  mesh.userData.texturePath = module?.texture_path || null;
   addArmorEdges(mesh, palette);
   return mesh;
 }
@@ -405,11 +607,14 @@ async function createArmorMesh(part, module, palette) {
 class ArmorStand {
   constructor(canvas) {
     this.canvas = canvas;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.28;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor(0x000000, 0);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x080b0b);
+    this.scene.background = null;
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.05, 40);
     this.camera.position.set(0, 0.95, 4.1);
     this.group = new THREE.Group();
@@ -421,10 +626,17 @@ class ArmorStand {
     this.boneMap = new Map();
     this.metricsCache = null;
     this.scene.add(this.group);
-    this.scene.add(new THREE.HemisphereLight(0xeef9ff, 0x222018, 2.1));
-    const key = new THREE.DirectionalLight(0xfff2cc, 2.6);
-    key.position.set(2.4, 3.4, 3);
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
+    this.scene.add(new THREE.AmbientLight(0xd9f3ee, 0.42));
+    const key = new THREE.DirectionalLight(0xffffff, 3.1);
+    key.position.set(2.2, 3.6, 3.4);
     this.scene.add(key);
+    const fill = new THREE.DirectionalLight(0x9feaff, 1.45);
+    fill.position.set(-3.2, 1.8, 2.4);
+    this.scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xffd48a, 1.2);
+    rim.position.set(0.2, 2.4, -3.4);
+    this.scene.add(rim);
     this.buildBaseSuit();
     this.group.add(this.avatarGroup);
     this.vrmReady = this.loadBaselineVrm(DEFAULT_VRM_PATH);
@@ -434,12 +646,13 @@ class ArmorStand {
 
   buildBaseSuit() {
     const ghost = new THREE.MeshBasicMaterial({
-      color: 0x5ad8ff,
+      color: BASE_SUIT_COLOR,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.22,
       depthWrite: false,
     });
-    const standMat = new THREE.MeshBasicMaterial({ color: 0xf4c766, transparent: true, opacity: 0.45 });
+    this.ghostGroup.name = "base-suit-reference";
+    const standMat = new THREE.MeshBasicMaterial({ color: 0xb18328, transparent: true, opacity: 0.5 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
     torso.position.y = 0.98;
     this.ghostGroup.add(torso);
@@ -459,8 +672,16 @@ class ArmorStand {
     }
     const base = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.01, 8, 96), standMat);
     base.rotation.x = Math.PI / 2;
-    base.position.y = -0.43;
+    base.position.y = PREVIEW_FLOOR_Y;
     this.standGroup.add(base);
+    const floor = new THREE.GridHelper(2.5, 12, 0x6f9291, 0xb7c8c5);
+    floor.position.y = PREVIEW_FLOOR_Y;
+    const floorMaterials = Array.isArray(floor.material) ? floor.material : [floor.material];
+    for (const material of floorMaterials) {
+      material.transparent = true;
+      material.opacity = 0.34;
+    }
+    this.standGroup.add(floor);
     const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 2.1, 12), standMat);
     spine.position.set(0, 0.62, -0.28);
     this.standGroup.add(spine);
@@ -478,7 +699,7 @@ class ArmorStand {
       this.avatarGroup.add(model);
       this.vrmModel = model;
       this.indexVrmBones(model);
-      this.ghostGroup.visible = false;
+      this.ghostGroup.visible = true;
       this.fitVrmToStand(model);
       this.setHeightCm(this.heightCm);
     } catch (error) {
@@ -720,15 +941,22 @@ class ArmorStand {
   prepareVrmMannequin(model) {
     model.traverse((obj) => {
       if (!obj.isMesh) return;
-      obj.renderOrder = 1;
+      obj.renderOrder = 2;
       const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-      obj.material = materials.map((material) => {
-        const clone = material?.clone ? material.clone() : new THREE.MeshStandardMaterial({ color: 0x87dceb });
-        clone.transparent = true;
-        clone.opacity = 0.26;
-        clone.depthWrite = false;
-        return clone;
-      });
+      obj.material = materials.map(
+        () =>
+          new THREE.MeshStandardMaterial({
+            color: BODY_REFERENCE_COLOR,
+            emissive: BODY_REFERENCE_EMISSIVE,
+            emissiveIntensity: 0.08,
+            metalness: 0.02,
+            roughness: 0.82,
+            transparent: true,
+            opacity: 0.34,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+          }),
+      );
       if (obj.material.length === 1) obj.material = obj.material[0];
     });
   }
@@ -770,11 +998,11 @@ class ArmorStand {
       child.traverse((object) => {
         if (object === child) return;
         object.geometry?.dispose?.();
-        object.material?.dispose?.();
+        disposeMaterial(object.material);
       });
       child.removeFromParent();
       child.geometry?.dispose?.();
-      child.material?.dispose?.();
+      disposeMaterial(child.material);
     }
   }
 
@@ -825,6 +1053,7 @@ if (UI.heightRange) {
 syncHeightControls(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
 
 function applyResult(data) {
+  latestForgeData = data;
   const quest = questLinkOptions(data.recall_code || "");
   UI.recallCode.textContent = data.recall_code || "----";
   UI.questLink.href = quest.url;
@@ -833,11 +1062,15 @@ function applyResult(data) {
   if (UI.questUrl) UI.questUrl.value = quest.url;
   if (UI.questUrlHint) UI.questUrlHint.textContent = quest.hint;
   renderAssetPipeline(data);
+  updateTextureJobAvailability(data);
   UI.emptyStand.classList.add("hidden");
 }
 
 async function submitForge(event) {
   event.preventDefault();
+  latestForgeData = null;
+  if (UI.textureJobButton) UI.textureJobButton.textContent = "表面生成を試す";
+  updateTextureJobAvailability(null);
   UI.button.disabled = true;
   syncHeightControls(UI.heightCm?.value);
   setStatus("生成条件を送信中...", "pending");
@@ -863,5 +1096,16 @@ async function submitForge(event) {
 
 renderPartGrid();
 renderAssetPipeline();
+syncPreviewLegendPalette();
+updateTextureJobAvailability();
 runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);
+for (const colorInput of [UI.primaryColor, UI.secondaryColor, UI.emissiveColor]) {
+  colorInput?.addEventListener("input", syncPreviewLegendPalette);
+}
+UI.textureJobButton?.addEventListener("click", () => {
+  startTextureGeneration().catch((error) => {
+    setTextureJobState("error", "表面Probeエラー", String(error?.message || error), 0);
+    updateTextureJobAvailability(latestForgeData);
+  });
+});

@@ -188,6 +188,9 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["status"], "READY")
             self.assertTrue(response.body["readiness"]["suitspec_ready"])
             self.assertTrue(response.body["readiness"]["manifest_ready"])
+            self.assertFalse(response.body["readiness"]["model_quality_ready"])
+            self.assertFalse(response.body["readiness"]["final_texture_ready"])
+            self.assertFalse(response.body["readiness"]["exhibition_ready"])
             self.assertNotIn("suit_id", response.body)
             self.assertNotIn("manifest_id", response.body)
             self.assertNotIn("suitspec", response.body)
@@ -200,6 +203,20 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["texture_plan"]["texture_mode"], "mesh_uv")
             self.assertEqual(response.body["asset_pipeline"]["fit_status"], "preview_vrm_bone_metrics")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["fit_solver"], "web_forge_vrm_bone_metrics_preview")
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["status"], "requires_rebuild")
+            self.assertTrue(response.body["asset_pipeline"]["model_plan"]["model_rebuild_required"])
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["mesh_source_status"],
+                "seed_proxy_requires_vrm_first_rebuild",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["preview_mesh_role"],
+                "fit-check proxy, not final texture target",
+            )
+            self.assertIn("VRM-first Wave 1", response.body["asset_pipeline"]["model_plan"]["next_model_quality_gate"])
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["model_quality_gate"], "mesh_fit_before_texture_final")
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["model_rebuild_wave"], "Wave 1")
+            self.assertIn("waist", response.body["asset_pipeline"]["model_plan"]["model_rebuild_focus_parts"])
             self.assertEqual(response.body["asset_pipeline"]["texture_plan"]["status"], "planned_not_generated")
             self.assertEqual(response.body["asset_pipeline"]["surface_generation_status"], "planned_not_generated")
             self.assertTrue(response.body["asset_pipeline"]["texture_plan"]["uv_refine"])
@@ -207,7 +224,53 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertIn("left_forearm", response.body["asset_pipeline"]["model_plan"]["overlay_parts"])
             self.assertIn("left_forearm", response.body["asset_pipeline"]["job_defaults"]["parts"])
             self.assertIn("server_resolved_suitspec_path", response.body["asset_pipeline"]["job_defaults"]["requires"])
+            self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["suitspec"], response.body["preview"]["asset_pipeline"]["job_payload_template"]["suitspec"])
+            self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["suitspec"].endswith("/suitspec.json"))
+            self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["provider_profile"], "nano_banana")
+            self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["texture_mode"], "mesh_uv")
+            self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["update_suitspec"])
+            self.assertFalse(response.body["asset_pipeline"]["job_payload_template"]["dry_run"])
+            self.assertEqual(response.body["asset_pipeline"]["links"]["create_generation_job"], "/api/generation-jobs")
+            self.assertEqual(response.body["asset_pipeline"]["links"]["job_status_template"], "/api/generation-jobs/{job_id}")
+            self.assertEqual(response.body["asset_pipeline"]["links"]["job_events_template"], "/api/generation-jobs/{job_id}/events")
+            self.assertEqual(response.body["asset_pipeline"]["links"]["job_cancel_template"], "/api/generation-jobs/{job_id}/cancel")
+            self.assertEqual(response.body["asset_pipeline"]["expected_status_flow"][0]["status"], "queued")
+            self.assertEqual(response.body["asset_pipeline"]["expected_status_flow"][-1]["status"], "cancelled")
+            self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["contract_version"], "model-rebuild.v1")
+            self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["status"], "required")
+            self.assertTrue(response.body["asset_pipeline"]["model_rebuild_job"]["blocking"])
+            self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["wave"], "Wave 1")
+            self.assertIn("chest", response.body["asset_pipeline"]["model_rebuild_job"]["parts"])
+            self.assertIn("back", response.body["asset_pipeline"]["model_rebuild_job"]["parts"])
+            self.assertIn("waist", response.body["asset_pipeline"]["model_rebuild_job"]["parts"])
+            self.assertIn("fit-regression", response.body["asset_pipeline"]["model_rebuild_job"]["entrypoint"])
+            self.assertIn("fit_regression.canSave == true", response.body["asset_pipeline"]["model_rebuild_job"]["pass_gates"])
+            self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["contract_version"], "texture-probe.v1")
+            self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["status"], "allowed_on_seed_proxy")
+            self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["blocking"])
+            self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
+            self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["method"], "POST")
+            self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["endpoint"], "/api/generation-jobs")
+            self.assertEqual(
+                response.body["asset_pipeline"]["texture_probe_job"]["payload"],
+                response.body["asset_pipeline"]["job_payload_template"],
+            )
+            self.assertEqual(response.body["asset_pipeline"]["generation_job"]["method"], "POST")
+            self.assertEqual(response.body["asset_pipeline"]["generation_job"]["alias_of"], "texture_probe_job")
+            self.assertTrue(response.body["asset_pipeline"]["generation_job"]["deprecated_for_public_ui"])
+            self.assertEqual(response.body["asset_pipeline"]["generation_job"]["endpoint"], "/api/generation-jobs")
+            self.assertEqual(
+                response.body["asset_pipeline"]["generation_job"]["payload"],
+                response.body["asset_pipeline"]["job_payload_template"],
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["generation_job"]["expected_status_flow"],
+                response.body["asset_pipeline"]["expected_status_flow"],
+            )
             self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["texture_quality"], "warning_only_until_generation_completes")
+            self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["model_quality"], "blocking_before_final_texture")
+            self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["blocking_gate"], "mesh_fit_before_texture_final")
+            self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["speed_check_texture_generation"], "allowed_on_seed_proxy")
             self.assertIn("uv_contract", response.body["asset_pipeline"]["planned_quality_gates"])
             self.assertEqual(response.body["preview"]["asset_pipeline"]["texture_plan"]["provider_profile"], "nano_banana")
             self.assertEqual(response.body["preview"]["asset_pipeline"]["fit_status"], "preview_vrm_bone_metrics")

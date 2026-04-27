@@ -124,6 +124,7 @@ class GenerationJob:
         self.latest_preview_url: str | None = None
         self.summary_path: str | None = None
         self.hero_preview_url: str | None = None
+        self.last_timing_ms: dict[str, Any] | None = None
 
     @property
     def is_done(self) -> bool:
@@ -149,12 +150,15 @@ class GenerationJob:
                 self.requested_count = int(enriched["requested_count"])
             if enriched.get("completed_count") is not None:
                 self.completed_count = int(enriched["completed_count"])
+            if isinstance(enriched.get("timing_ms"), dict):
+                self.last_timing_ms = dict(enriched["timing_ms"])
 
             event_type = enriched.get("type")
             if event_type == "job_started":
                 self.status = "running"
             elif event_type == "job_completed":
                 self.status = "completed"
+                self.result = self._event_result_summary(enriched)
             elif event_type == "job_failed":
                 self.status = "failed"
             elif event_type == "job_cancelled":
@@ -163,8 +167,23 @@ class GenerationJob:
             self.events.append(enriched)
             self.lock.notify_all()
 
+    def _event_result_summary(self, event: dict[str, Any]) -> dict[str, Any]:
+        keys = {
+            "session_id",
+            "summary_path",
+            "generated_count",
+            "error_count",
+            "fallback_used_count",
+            "cache_hit_count",
+            "hero_preview_url",
+        }
+        return {key: event[key] for key in keys if event.get(key) is not None}
+
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
+            end_at = self.updated_at if self.is_done else time.time()
+            elapsed_sec = max(0.0, end_at - self.created_at)
+            parts_per_min = (self.completed_count / elapsed_sec * 60.0) if elapsed_sec and self.completed_count else 0.0
             return {
                 "ok": self.error is None,
                 "job_id": self.job_id,
@@ -172,11 +191,14 @@ class GenerationJob:
                 "stage": self.stage,
                 "created_at": self.created_at,
                 "updated_at": self.updated_at,
+                "elapsed_sec": round(elapsed_sec, 3),
+                "parts_per_min": round(parts_per_min, 3),
                 "completed_count": self.completed_count,
                 "requested_count": self.requested_count,
                 "latest_preview_url": self.latest_preview_url,
                 "summary_path": self.summary_path,
                 "hero_preview_url": self.hero_preview_url,
+                "last_timing_ms": self.last_timing_ms,
                 "result": self.result,
                 "error": self.error,
                 "events": len(self.events),
@@ -227,7 +249,8 @@ class GenerationJobManager:
                 progress=job.emit,
                 cancel_event=job.cancel_event,
             )
-            job.result = result
+            if result:
+                job.result = {**(job.result or {}), **result}
         except Exception as exc:  # noqa: BLE001
             job.error = str(exc)
             job.emit({"type": "job_failed", "stage": "error", "status": "failed", "log": job.error})

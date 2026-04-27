@@ -118,6 +118,47 @@ The Web forge now emits an `asset_pipeline` contract alongside the public previe
 
 This deliberately separates "the suit is issued and recallable" from "final generated surface assets are complete." The public Web flow can issue a code immediately, then advance texture generation asynchronously without breaking Quest recall.
 
+### Visual Layer Data Contract
+
+The API must make the visual split explicit in saved SuitSpec generation data and in public responses. This is the guard against a generated suit that recalls successfully but renders as only the baseline VRM.
+
+`POST /v1/suits/forge`, its nested `preview`, and `GET /v1/quest/recall/{recallCode}` expose:
+
+- `visual_layers.contract_version = base-suit-overlay.v1`.
+- `visual_layers.base_suit.layer_id = base_suit_surface`.
+- `visual_layers.base_suit.kind = vrm_body_surface`.
+- `visual_layers.base_suit.role = body_conforming_substrate`.
+- `visual_layers.base_suit.asset_ref` points to the VRM/body baseline.
+- `visual_layers.armor_overlay.layer_id = armor_overlay_parts`.
+- `visual_layers.armor_overlay.kind = multi_part_mesh_overlay`.
+- `visual_layers.armor_overlay.role = visible armor collection`.
+- `visual_layers.armor_overlay.selected_parts` is the enabled overlay module list.
+- `visual_layers.armor_overlay.part_count` is the selected overlay count.
+
+The matching `render_contract` is runtime-facing and deliberately blunt:
+
+- `required_layers = ["base_suit_surface", "armor_overlay_parts"]`.
+- `vrm_only_is_valid = false`.
+- `base_suit_surface_required = true`.
+- `armor_overlay_required = true`.
+- `minimum_visible_overlay_parts = 3`.
+- `required_overlay_parts = ["back", "chest", "helmet"]`.
+- `missing_required_overlay_parts` must be empty before the suit is considered generated correctly.
+
+Runtime adapters may still choose their own rendering stack, but they should treat this contract as the import checklist: load the body surface, then load visible overlay parts. A recall that has a manifest but zero visible overlay parts is an invalid generated-suit state, not a successful minimal render.
+
+Quest recall normalizes the runtime manifest from the latest SuitSpec before returning it. If asynchronous texture generation has written `modules[*].texture_path` after the original manifest projection, the recall response projects those surface fields back into `manifest.parts[*]` so the runtime package does not split mesh placement from surface data.
+
+### Forge Save Gate
+
+Before saving a Web Forge suit, the API checks that every enabled overlay part has:
+
+- `asset_ref`
+- `attachment_slot`
+- `vrm_anchor`
+
+The required overlay core is `helmet`, `chest`, and `back`; user-selected parts are added on top. This keeps the base VRM from becoming the only visible generated artifact even when the request supplies a very small `parts` list.
+
 ## Fit-First Platform Boundary
 
 The fitting mechanism is the root contract. Three.js, PlayCanvas, and Unity should consume the same `SuitSpec`/`SuitManifest`/PartCatalog facts instead of each inventing armor placement:

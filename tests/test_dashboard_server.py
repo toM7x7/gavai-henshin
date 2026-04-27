@@ -191,6 +191,10 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("TextureLoader", js)
         self.assertIn("loadTextureMap", js)
         self.assertIn("texture_path", js)
+        self.assertIn("createFallbackArmorGeometry", js)
+        self.assertIn("seed_proxy_fallback", js)
+        self.assertIn("previewFallbackParts", js)
+        self.assertIn("base-suit-surface", js)
         self.assertIn("disposeMaterial", js)
         self.assertIn("parts_per_min", js)
         self.assertIn("last_timing_ms", js)
@@ -226,6 +230,8 @@ class TestDashboardServer(unittest.TestCase):
             )
             assert response is not None
             payload = response.body["asset_pipeline"]["texture_probe_job"]["payload"]
+            self.assertNotIn("must_render_layers", payload)
+            self.assertNotIn("minimum_visible_overlay_parts", payload)
             job_payload = GeneratePartsPayload(**payload)
 
             GenerationJobManager(root)._validate_payload(job_payload)
@@ -272,6 +278,15 @@ class TestDashboardServer(unittest.TestCase):
             'this.addButton("codeMode", "コード入力", 0.48',
             "this.recallDisplay.position.set(this.codeInputMode ? 0 : -0.39",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
+            "BASE_SUIT_SURFACE_PARTS",
+            "createBaseSuitTexture",
+            "createBaseSuitMaterial",
+            "this.baseSuitGroup = new THREE.Group();",
+            "this.refreshBaseSuitSurface();",
+            "updateBaseSuitVisibility({ standbyPreview, selfView, reveal })",
+            "this.updateBaseSuitVisibility({ standbyPreview, selfView, reveal });",
+            "SELF_VIEW_STANDBY_HIDDEN_PARTS",
+            "mesh.material.opacity = standbyPreview ? 0.82",
         }:
             self.assertIn(token, js)
         self.assertNotIn('this.normalInputElements.push(this.addButton("codeSubmit"', js)

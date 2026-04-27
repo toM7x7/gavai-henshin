@@ -199,12 +199,32 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["preview"]["body_profile"]["height_cm"], 182.0)
             self.assertEqual(response.body["preview"]["body_profile"]["vrm_baseline_ref"], "viewer/assets/vrm/default.vrm")
             self.assertEqual(response.body["preview"]["palette"]["primary"], "#112233")
+            self.assertEqual(response.body["visual_layers"]["contract_version"], "base-suit-overlay.v1")
+            self.assertEqual(response.body["visual_layers"]["base_suit"]["kind"], "vrm_body_surface")
+            self.assertEqual(response.body["visual_layers"]["base_suit"]["asset_ref"], "viewer/assets/vrm/default.vrm")
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["kind"], "multi_part_mesh_overlay")
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["part_count"], 5)
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["minimum_visible_parts"], 3)
+            self.assertFalse(response.body["render_contract"]["vrm_only_is_valid"])
+            self.assertEqual(
+                response.body["render_contract"]["required_layers"],
+                ["base_suit_surface", "armor_overlay_parts"],
+            )
+            self.assertEqual(response.body["render_contract"]["minimum_visible_overlay_parts"], 3)
+            self.assertEqual(response.body["render_contract"]["overlay_part_count"], 5)
+            self.assertEqual(response.body["render_contract"]["missing_required_overlay_parts"], [])
+            self.assertIn("chest", response.body["render_contract"]["required_overlay_parts"])
             self.assertEqual(response.body["asset_pipeline"]["texture_plan"]["provider_profile"], "nano_banana")
             self.assertEqual(response.body["asset_pipeline"]["texture_plan"]["texture_mode"], "mesh_uv")
             self.assertEqual(response.body["asset_pipeline"]["fit_status"], "preview_vrm_bone_metrics")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["fit_solver"], "web_forge_vrm_bone_metrics_preview")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["status"], "requires_rebuild")
             self.assertTrue(response.body["asset_pipeline"]["model_plan"]["model_rebuild_required"])
+            self.assertFalse(response.body["asset_pipeline"]["model_plan"]["vrm_only_is_valid"])
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["visual_layer_contract"],
+                "base-suit-overlay.v1",
+            )
             self.assertEqual(
                 response.body["asset_pipeline"]["model_plan"]["mesh_source_status"],
                 "seed_proxy_requires_vrm_first_rebuild",
@@ -223,6 +243,11 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["asset_contract"], "vrm-base-suit+mesh-v1-overlay")
             self.assertIn("left_forearm", response.body["asset_pipeline"]["model_plan"]["overlay_parts"])
             self.assertIn("left_forearm", response.body["asset_pipeline"]["job_defaults"]["parts"])
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_defaults"]["must_render_layers"],
+                ["base_suit_surface", "armor_overlay_parts"],
+            )
+            self.assertEqual(response.body["asset_pipeline"]["job_defaults"]["minimum_visible_overlay_parts"], 3)
             self.assertIn("server_resolved_suitspec_path", response.body["asset_pipeline"]["job_defaults"]["requires"])
             self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["suitspec"], response.body["preview"]["asset_pipeline"]["job_payload_template"]["suitspec"])
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["suitspec"].endswith("/suitspec.json"))
@@ -230,6 +255,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["texture_mode"], "mesh_uv")
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["update_suitspec"])
             self.assertFalse(response.body["asset_pipeline"]["job_payload_template"]["dry_run"])
+            self.assertNotIn("must_render_layers", response.body["asset_pipeline"]["job_payload_template"])
+            self.assertNotIn("minimum_visible_overlay_parts", response.body["asset_pipeline"]["job_payload_template"])
             self.assertEqual(response.body["asset_pipeline"]["links"]["create_generation_job"], "/api/generation-jobs")
             self.assertEqual(response.body["asset_pipeline"]["links"]["job_status_template"], "/api/generation-jobs/{job_id}")
             self.assertEqual(response.body["asset_pipeline"]["links"]["job_events_template"], "/api/generation-jobs/{job_id}/events")
@@ -252,6 +279,10 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["method"], "POST")
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["endpoint"], "/api/generation-jobs")
             self.assertEqual(
+                response.body["asset_pipeline"]["texture_probe_job"]["render_contract"],
+                response.body["render_contract"],
+            )
+            self.assertEqual(
                 response.body["asset_pipeline"]["texture_probe_job"]["payload"],
                 response.body["asset_pipeline"]["job_payload_template"],
             )
@@ -271,7 +302,12 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["model_quality"], "blocking_before_final_texture")
             self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["blocking_gate"], "mesh_fit_before_texture_final")
             self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["speed_check_texture_generation"], "allowed_on_seed_proxy")
+            self.assertEqual(response.body["asset_pipeline"]["quality_policy"]["vrm_only_render"], "invalid_after_generation")
+            self.assertIn("base_suit_surface_present", response.body["asset_pipeline"]["planned_quality_gates"])
+            self.assertIn("visible_overlay_parts_minimum", response.body["asset_pipeline"]["planned_quality_gates"])
             self.assertIn("uv_contract", response.body["asset_pipeline"]["planned_quality_gates"])
+            self.assertEqual(response.body["preview"]["visual_layers"], response.body["visual_layers"])
+            self.assertEqual(response.body["preview"]["render_contract"], response.body["render_contract"])
             self.assertEqual(response.body["preview"]["asset_pipeline"]["texture_plan"]["provider_profile"], "nano_banana")
             self.assertEqual(response.body["preview"]["asset_pipeline"]["fit_status"], "preview_vrm_bone_metrics")
             self.assertEqual(response.body["preview"]["asset_pipeline"]["surface_generation_status"], "planned_not_generated")
@@ -286,6 +322,10 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertTrue(quest.body["manifest_ready"])
             self.assertRegex(quest.body["manifest_id"], r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
             self.assertEqual(quest.body["suitspec"]["body_profile"]["height_cm"], 182.0)
+            self.assertFalse(quest.body["render_contract"]["vrm_only_is_valid"])
+            self.assertEqual(quest.body["render_contract"]["overlay_part_count"], 5)
+            self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["part_count"], 5)
+            self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
 
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

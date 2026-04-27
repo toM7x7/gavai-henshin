@@ -73,12 +73,18 @@ _FORGE_DEFAULT_PARTS = {
     "waist",
     "left_shoulder",
     "right_shoulder",
+    "left_upperarm",
+    "right_upperarm",
     "left_forearm",
     "right_forearm",
+    "left_thigh",
+    "right_thigh",
     "left_shin",
     "right_shin",
     "left_boot",
     "right_boot",
+    "left_hand",
+    "right_hand",
 }
 _FORGE_REQUIRED_PARTS = {"helmet", "chest", "back"}
 _FORGE_DEFAULT_HEIGHT_CM = 170.0
@@ -89,6 +95,9 @@ _FORGE_TEXTURE_PROVIDER_PROFILE = "nano_banana"
 _FORGE_TEXTURE_MODE = "mesh_uv"
 _FORGE_UV_REFINE = True
 _FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
+_FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"
+_FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"
+_FORGE_ARMOR_OVERLAY_LAYER_ID = "armor_overlay_parts"
 _FORGE_FIT_STATUS = "preview_vrm_bone_metrics"
 _FORGE_SURFACE_GENERATION_STATUS = "planned_not_generated"
 _FORGE_MODEL_REBUILD_WAVE = "Wave 1"
@@ -330,6 +339,11 @@ class NewRouteApi:
             self._discard_suit(suit_id)
             return manifest_response
 
+        preview = self._forge_public_preview(
+            create.body["suitspec"],
+            suitspec_path=create.body["suitspec_path"],
+        )
+        asset_pipeline = preview["asset_pipeline"]
         return ApiResponse(
             status=HTTPStatus.CREATED,
             body={
@@ -345,14 +359,10 @@ class NewRouteApi:
                     "exhibition_ready": False,
                 },
                 "body_profile": body_profile,
-                "preview": self._forge_public_preview(
-                    create.body["suitspec"],
-                    suitspec_path=create.body["suitspec_path"],
-                ),
-                "asset_pipeline": self._forge_public_asset_pipeline(
-                    create.body["suitspec"],
-                    suitspec_path=create.body["suitspec_path"],
-                ),
+                "visual_layers": asset_pipeline["visual_layers"],
+                "render_contract": asset_pipeline["render_contract"],
+                "preview": preview,
+                "asset_pipeline": asset_pipeline,
                 "links": {
                     "quest_recall": f"/v1/quest/recall/{recall_code}",
                     "quest_viewer": f"/viewer/quest-iw-demo/?code={recall_code}&newRoute=1",
@@ -396,6 +406,18 @@ class NewRouteApi:
             manifest_response = self.get_manifest(manifest_id)
             if manifest_response.status == HTTPStatus.OK:
                 manifest = manifest_response.body["manifest"]
+        asset_pipeline = None
+        visual_layers = None
+        render_contract = None
+        if isinstance(suitspec, dict):
+            asset_pipeline = self._forge_public_asset_pipeline(
+                suitspec,
+                suitspec_path=self._relative_path(suitspec_path),
+            )
+            visual_layers = asset_pipeline["visual_layers"]
+            render_contract = asset_pipeline["render_contract"]
+            if isinstance(manifest, dict):
+                manifest = self._merge_suitspec_surface_into_manifest(manifest, suitspec)
         runtime_suit = {
             "suit_id": suit_id,
             "recall_code": canonical_code,
@@ -417,6 +439,9 @@ class NewRouteApi:
                 "suit": runtime_suit,
                 "suitspec": suitspec,
                 "manifest": manifest,
+                "visual_layers": visual_layers,
+                "render_contract": render_contract,
+                "asset_pipeline": asset_pipeline,
                 "links": {
                     "suit": f"/v1/suits/{suit_id}",
                     "manifest": f"/v1/suits/{suit_id}/manifest",
@@ -959,6 +984,7 @@ class NewRouteApi:
                 continue
             module["enabled"] = part_name in enabled_parts
             module.pop("texture_path", None)
+        self._assert_forge_visible_overlay_modules(modules, enabled_parts)
         return suitspec
 
     def _forge_palette(self, value: Any, fallback: dict[str, Any]) -> dict[str, str]:
@@ -1042,6 +1068,8 @@ class NewRouteApi:
             "target_resolution": "2K",
             "discipline": ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
         }
+        visual_layers = self._forge_visual_layers(enabled_parts, body_profile)
+        render_contract = self._forge_render_contract(enabled_parts)
         model_plan = {
             "asset_contract": _FORGE_ASSET_CONTRACT,
             "status": "requires_rebuild",
@@ -1057,21 +1085,33 @@ class NewRouteApi:
             "model_rebuild_wave": _FORGE_MODEL_REBUILD_WAVE,
             "model_rebuild_focus_parts": list(_FORGE_MODEL_REBUILD_PARTS),
             "next_model_quality_gate": "VRM-first Wave 1 rebuild: chest/back/waist/upperarm/forearm before final texture lock",
+            "visual_layer_contract": _FORGE_VISUAL_LAYER_CONTRACT,
+            "vrm_only_is_valid": False,
         }
         return {
             "model_id": "local-web-forge-v0",
             "prompt": prompt[:1200],
             "body_profile": body_profile,
+            "visual_layers": visual_layers,
+            "render_contract": render_contract,
             "model_plan": model_plan,
             "texture_plan": texture_plan,
             "fit_status": _FORGE_FIT_STATUS,
             "surface_generation_status": _FORGE_SURFACE_GENERATION_STATUS,
-            "planned_quality_gates": ["mesh_bounds", "fit_clearance", "uv_contract", "quest_recall_ready"],
+            "planned_quality_gates": [
+                "base_suit_surface_present",
+                "visible_overlay_parts_minimum",
+                "mesh_bounds",
+                "fit_clearance",
+                "uv_contract",
+                "quest_recall_ready",
+            ],
             "quality_policy": {
                 "texture_quality": "warning_only_until_generation_completes",
                 "model_quality": "blocking_before_final_texture",
                 "blocking_gate": "mesh_fit_before_texture_final",
                 "speed_check_texture_generation": "allowed_on_seed_proxy",
+                "vrm_only_render": "invalid_after_generation",
             },
             "job_defaults": {
                 "provider_profile": texture_plan["provider_profile"],
@@ -1082,6 +1122,8 @@ class NewRouteApi:
                 "priority_mode": "exhibition",
                 "tracking_source": "web_forge",
                 "parts": enabled_parts,
+                "must_render_layers": render_contract["required_layers"],
+                "minimum_visible_overlay_parts": render_contract["minimum_visible_overlay_parts"],
                 "generation_brief": prompt[:1200],
                 "requires": ["server_resolved_suitspec_path"],
             },
@@ -1090,6 +1132,96 @@ class NewRouteApi:
                 for part in enabled_parts
             },
         }
+
+    def _forge_visual_layers(
+        self,
+        enabled_parts: list[str],
+        body_profile: dict[str, Any],
+        *,
+        strict: bool = True,
+    ) -> dict[str, Any]:
+        overlay_parts = sorted(enabled_parts)
+        required_parts = sorted(_FORGE_REQUIRED_PARTS)
+        missing_required = [part for part in required_parts if part not in overlay_parts]
+        if strict and missing_required:
+            raise ValueError(f"forge overlay must include required parts: {missing_required}")
+        if strict and len(overlay_parts) < len(required_parts):
+            raise ValueError("forge overlay must include visible armor parts")
+        return {
+            "contract_version": _FORGE_VISUAL_LAYER_CONTRACT,
+            "base_suit": {
+                "layer_id": _FORGE_BASE_SURFACE_LAYER_ID,
+                "kind": "vrm_body_surface",
+                "role": "body_conforming_substrate",
+                "render_order": 0,
+                "visibility": "required",
+                "asset_ref": str(body_profile.get("vrm_baseline_ref") or _FORGE_VRM_BASELINE_REF),
+                "surface_target": "VRM humanoid mesh or future body surface shell",
+                "generation_target": "continuous low-frequency suit material on the human body",
+                "not_a_part_catalog_entry": True,
+            },
+            "armor_overlay": {
+                "layer_id": _FORGE_ARMOR_OVERLAY_LAYER_ID,
+                "kind": "multi_part_mesh_overlay",
+                "role": "visible armor collection",
+                "render_order": 10,
+                "visibility": "required",
+                "asset_role": "mesh.v1 seed/proxy until validated GLB/gltf rebuild",
+                "required_parts": required_parts,
+                "selected_parts": overlay_parts,
+                "part_count": len(overlay_parts),
+                "minimum_visible_parts": len(required_parts),
+                "empty_overlay_policy": "invalid",
+            },
+        }
+
+    def _forge_render_contract(self, enabled_parts: list[str]) -> dict[str, Any]:
+        overlay_parts = sorted(enabled_parts)
+        required_parts = sorted(_FORGE_REQUIRED_PARTS)
+        missing_required = [part for part in required_parts if part not in overlay_parts]
+        return {
+            "contract_version": _FORGE_VISUAL_LAYER_CONTRACT,
+            "required_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
+            "vrm_only_is_valid": False,
+            "failure_mode_prevented": "vrm_only_render_after_generation",
+            "base_suit_surface_required": True,
+            "armor_overlay_required": True,
+            "required_overlay_parts": required_parts,
+            "selected_overlay_parts": overlay_parts,
+            "overlay_part_count": len(overlay_parts),
+            "minimum_visible_overlay_parts": len(required_parts),
+            "missing_required_overlay_parts": missing_required,
+            "runtime_checks": [
+                "base_suit_surface.present == true",
+                "armor_overlay_parts.visible_count >= minimum_visible_overlay_parts",
+                "all required_overlay_parts enabled",
+                "each visible overlay part has asset_ref, attachment_slot, and vrm_anchor",
+            ],
+        }
+
+    def _assert_forge_visible_overlay_modules(
+        self,
+        modules: dict[str, Any],
+        enabled_parts: set[str],
+    ) -> None:
+        required_parts = sorted(_FORGE_REQUIRED_PARTS)
+        missing_required = [part for part in required_parts if part not in enabled_parts]
+        if missing_required:
+            raise ValueError(f"forge overlay must include required parts: {missing_required}")
+        if len(enabled_parts) < len(required_parts):
+            raise ValueError("forge overlay must include visible armor parts")
+        for part_name in sorted(enabled_parts):
+            module = modules.get(part_name)
+            if not isinstance(module, dict):
+                raise ValueError(f"forge overlay module is missing: {part_name}")
+            if not module.get("enabled"):
+                raise ValueError(f"forge overlay module must be enabled: {part_name}")
+            if not str(module.get("asset_ref") or "").strip():
+                raise ValueError(f"forge overlay module must have asset_ref: {part_name}")
+            if not str(module.get("attachment_slot") or "").strip():
+                raise ValueError(f"forge overlay module must have attachment_slot: {part_name}")
+            if not isinstance(module.get("vrm_anchor"), dict):
+                raise ValueError(f"forge overlay module must have vrm_anchor: {part_name}")
 
     def _forge_text(self, payload: dict[str, Any], display_name: str) -> dict[str, Any]:
         callout = str(payload.get("callout") or display_name or "Web forge suit").strip()[:120]
@@ -1116,17 +1248,34 @@ class NewRouteApi:
                 if key in module:
                     record[key] = self._clone_json(module[key])
             preview_modules[part_name] = record
+        asset_pipeline = self._forge_public_asset_pipeline(suitspec, suitspec_path=suitspec_path)
         return {
             "palette": self._clone_json(suitspec.get("palette", {})),
             "body_profile": self._clone_json(suitspec.get("body_profile", {})),
-            "asset_pipeline": self._forge_public_asset_pipeline(suitspec, suitspec_path=suitspec_path),
+            "visual_layers": self._clone_json(asset_pipeline["visual_layers"]),
+            "render_contract": self._clone_json(asset_pipeline["render_contract"]),
+            "asset_pipeline": asset_pipeline,
             "modules": preview_modules,
         }
 
     def _forge_public_asset_pipeline(self, suitspec: dict[str, Any], *, suitspec_path: str | None = None) -> dict[str, Any]:
         generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
         model_plan = generation.get("model_plan") if isinstance(generation.get("model_plan"), dict) else {}
         texture_plan = generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {}
+        visual_layers = generation.get("visual_layers") if isinstance(generation.get("visual_layers"), dict) else {}
+        render_contract = (
+            generation.get("render_contract") if isinstance(generation.get("render_contract"), dict) else {}
+        )
+        if not visual_layers or not render_contract:
+            enabled_parts = sorted(
+                part_name
+                for part_name, module in modules.items()
+                if isinstance(module, dict) and module.get("enabled")
+            )
+            body_profile = suitspec.get("body_profile") if isinstance(suitspec.get("body_profile"), dict) else {}
+            visual_layers = self._forge_visual_layers(enabled_parts, body_profile, strict=False)
+            render_contract = self._forge_render_contract(enabled_parts)
         job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
         planned_quality_gates = (
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
@@ -1134,6 +1283,8 @@ class NewRouteApi:
         quality_policy = generation.get("quality_policy") if isinstance(generation.get("quality_policy"), dict) else {}
         job_payload_template = self._clone_json(job_defaults)
         job_payload_template.pop("requires", None)
+        for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts"):
+            job_payload_template.pop(render_only_key, None)
         if suitspec_path:
             job_payload_template["suitspec"] = suitspec_path
         job_payload_template.setdefault("suitspec", "__SERVER_RESOLVED_SUITSPEC_PATH__")
@@ -1196,11 +1347,14 @@ class NewRouteApi:
             "writes_final_texture": False,
             "method": "POST",
             "endpoint": job_links["create_generation_job"],
+            "render_contract": self._clone_json(render_contract),
             "payload": self._clone_json(job_payload_template),
             "links": self._clone_json(job_links),
             "expected_status_flow": self._clone_json(expected_status_flow),
         }
         return {
+            "visual_layers": self._clone_json(visual_layers),
+            "render_contract": self._clone_json(render_contract),
             "model_plan": self._clone_json(model_plan),
             "texture_plan": self._clone_json(texture_plan),
             "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
@@ -1473,6 +1627,30 @@ class NewRouteApi:
 
     def _clone_json(self, payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(json.dumps(payload, ensure_ascii=False))
+
+    def _merge_suitspec_surface_into_manifest(
+        self,
+        manifest: dict[str, Any],
+        suitspec: dict[str, Any],
+    ) -> dict[str, Any]:
+        runtime_manifest = self._clone_json(manifest)
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        parts = runtime_manifest.setdefault("parts", {})
+        if not isinstance(parts, dict):
+            runtime_manifest["parts"] = {}
+            parts = runtime_manifest["parts"]
+        for part_name, module in modules.items():
+            if not isinstance(module, dict):
+                continue
+            part_record = parts.setdefault(part_name, {})
+            if not isinstance(part_record, dict):
+                part_record = {}
+                parts[part_name] = part_record
+            part_record["enabled"] = bool(module.get("enabled", False))
+            for key in ("asset_ref", "material_ref", "texture_path", "attachment_slot", "fit", "vrm_anchor"):
+                if key in module:
+                    part_record[key] = self._clone_json(module[key]) if isinstance(module[key], (dict, list)) else module[key]
+        return runtime_manifest
 
     def _strip_none(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {key: value for key, value in payload.items() if value is not None}

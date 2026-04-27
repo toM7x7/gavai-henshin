@@ -130,6 +130,7 @@ const REPLAY_MOTION_SOURCE_STATIC = "static_fallback";
 const REPLAY_MOTION_SOURCE_CAPTURE = "live_capture";
 const REPLAY_MOTION_SOURCE_SELF = "first_person";
 const SELF_VIEW_HIDDEN_PARTS = new Set(["helmet", "left_hand", "right_hand"]);
+const SELF_VIEW_STANDBY_HIDDEN_PARTS = new Set(["helmet"]);
 const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
 const VR_REPLAY_OBSERVER_HEIGHT_OFFSET = -0.06;
 const VR_REPLAY_OBSERVER_SCALE = 0.88;
@@ -257,6 +258,19 @@ const VOICE_STATES = {
     border: "rgba(255, 107, 107, 0.78)",
   },
 };
+const BASE_SUIT_SURFACE_PARTS = [
+  ["head", "sphere", [0, -0.08, -0.24], [0.16, 0.18, 0.14], [0, 0, 0]],
+  ["torso", "capsule", [0, -0.58, -0.28], [0.28, 0.54, 0.18], [0, 0, 0]],
+  ["pelvis", "capsule", [0, -0.98, -0.28], [0.24, 0.28, 0.16], [0, 0, Math.PI / 2]],
+  ["left_upperarm", "capsule", [-0.42, -0.62, -0.28], [0.075, 0.42, 0.075], [0, 0, -0.26]],
+  ["right_upperarm", "capsule", [0.42, -0.62, -0.28], [0.075, 0.42, 0.075], [0, 0, 0.26]],
+  ["left_forearm", "capsule", [-0.58, -0.98, -0.29], [0.065, 0.36, 0.065], [0, 0, -0.18]],
+  ["right_forearm", "capsule", [0.58, -0.98, -0.29], [0.065, 0.36, 0.065], [0, 0, 0.18]],
+  ["left_thigh", "capsule", [-0.15, -1.22, -0.29], [0.085, 0.42, 0.085], [0, 0, 0.04]],
+  ["right_thigh", "capsule", [0.15, -1.22, -0.29], [0.085, 0.42, 0.085], [0, 0, -0.04]],
+  ["left_shin", "capsule", [-0.17, -1.58, -0.31], [0.073, 0.4, 0.073], [0, 0, 0.03]],
+  ["right_shin", "capsule", [0.17, -1.58, -0.31], [0.073, 0.4, 0.073], [0, 0, -0.03]],
+];
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -689,6 +703,62 @@ function colorFromSuitHex(hex, fallbackHex) {
     }
   }
   return color.getHex();
+}
+
+function createBaseSuitTexture(suitspec) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  const primary = suitspec?.palette?.primary || "#f4f1e8";
+  const secondary = suitspec?.palette?.secondary || "#8c96a3";
+  const emissive = suitspec?.palette?.emissive || "#43d8ff";
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, secondary);
+  gradient.addColorStop(0.48, primary);
+  gradient.addColorStop(1, "#0c1f26");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = emissive;
+  ctx.lineWidth = 3;
+  for (let y = -canvas.height; y < canvas.height * 2; y += 52) {
+    ctx.beginPath();
+    ctx.moveTo(-20, y);
+    ctx.lineTo(canvas.width + 20, y + canvas.height * 0.34);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.28;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 64) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 28, canvas.height);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.6, 2.4);
+  return texture;
+}
+
+function createBaseSuitMaterial(suitspec) {
+  const primary = colorFromSuitHex(suitspec?.palette?.primary, 0xf4f1e8);
+  return new THREE.MeshStandardMaterial({
+    color: primary,
+    map: createBaseSuitTexture(suitspec),
+    metalness: 0.18,
+    roughness: 0.62,
+    emissive: new THREE.Color(colorFromSuitHex(suitspec?.palette?.emissive, 0x43d8ff)).multiplyScalar(0.18),
+    transparent: true,
+    opacity: 0.42,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
 }
 
 function fallbackArmorColor(part, suitspec) {
@@ -2352,6 +2422,11 @@ class QuestHenshinDemo {
     this.liveMirror.add(this.liveMirrorAvatar);
     this.scene.add(this.liveMirror);
 
+    this.baseSuitGroup = new THREE.Group();
+    this.baseSuitGroup.name = "XR-Base-Suit-Surface";
+    this.baseSuitGroup.visible = false;
+    this.rig.add(this.baseSuitGroup);
+
     const title = makeTextSprite(TRIGGER_PHRASE);
     title.position.set(0, 1.18, -0.3);
     this.rig.add(title);
@@ -2834,6 +2909,7 @@ class QuestHenshinDemo {
 
   async loadArmorMeshes() {
     const modules = this.suitspec?.modules || {};
+    this.refreshBaseSuitSurface();
     const loadedMeshes = await Promise.all(ARMOR_PARTS.map(async (part, index) => {
       const module = modules[part];
       if (!module || module.enabled !== true) return null;
@@ -2861,6 +2937,46 @@ class QuestHenshinDemo {
         : "No texture fallback contract.";
     setRouteContract(UI.routeContract, this.suitspec);
     UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets. FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
+  }
+
+  refreshBaseSuitSurface() {
+    if (!this.baseSuitGroup) return;
+    const disposedMaps = new Set();
+    for (const child of [...this.baseSuitGroup.children]) {
+      child.geometry?.dispose?.();
+      if (child.material?.map && !disposedMaps.has(child.material.map)) {
+        disposedMaps.add(child.material.map);
+        child.material.map.dispose?.();
+      }
+      child.material?.dispose?.();
+      child.removeFromParent();
+    }
+    const material = createBaseSuitMaterial(this.suitspec);
+    for (const [, shape, position, scale, rotation] of BASE_SUIT_SURFACE_PARTS) {
+      const geometry = shape === "sphere"
+        ? new THREE.SphereGeometry(1, 32, 18)
+        : new THREE.CapsuleGeometry(1, 1, 8, 24);
+      const mesh = new THREE.Mesh(geometry, material.clone());
+      mesh.position.fromArray(position);
+      mesh.scale.fromArray(scale);
+      mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+      mesh.renderOrder = 2;
+      this.baseSuitGroup.add(mesh);
+    }
+    material.dispose?.();
+    this.baseSuitGroup.visible = this.meshes.size > 0 || Object.values(this.suitspec?.modules || {}).some((module) => module?.enabled);
+  }
+
+  updateBaseSuitVisibility({ standbyPreview, selfView, reveal }) {
+    if (!this.baseSuitGroup) return;
+    const hasSuit = this.meshes.size > 0;
+    this.baseSuitGroup.visible = hasSuit && (standbyPreview || this.playing);
+    const opacity = standbyPreview ? 0.46 : lerp(0.16, 0.42, reveal);
+    for (const mesh of this.baseSuitGroup.children) {
+      mesh.visible = this.baseSuitGroup.visible && !(selfView && !standbyPreview && mesh.position.y > -0.22);
+      mesh.material.opacity = opacity;
+      mesh.material.emissiveIntensity = this.world.session ? 0.22 : 0.14;
+    }
   }
 
   async applyReplay(replay, { speak, autoplay = true, viewMode = XR_VIEW_MODE_SELF, source = "voice" }) {
@@ -3296,6 +3412,20 @@ class QuestHenshinDemo {
     mesh.scale.set(sx * emerge * vrScale, sy * emerge * vrScale, sz * emerge * vrScale);
   }
 
+  applyStandbySuitPose(mesh, part) {
+    const pose = VR_BODY_PART_POSES[part] || [0, -0.5, -0.28];
+    mesh.position.fromArray(pose);
+    mesh.rotation.set(Math.PI / 2, 0, 0);
+    const fit = mesh.userData.module?.fit || {};
+    const minScale = Array.isArray(fit.minScale) ? fit.minScale : [0.16, 0.16, 0.16];
+    const fitScale = Array.isArray(fit.scale) ? fit.scale : [0.2, 0.48, 0.2];
+    const sx = Math.max(Number(fitScale[0] || 0.18) * 4.8, Number(minScale[0] || 0.1));
+    const sy = Math.max(Number(fitScale[1] || 0.44) * 3.0, Number(minScale[1] || 0.1));
+    const sz = Math.max(Number(fitScale[2] || 0.18) * 4.8, Number(minScale[2] || 0.1));
+    const vrScale = VR_PART_SCALE[part] || 0.28;
+    mesh.scale.set(sx * vrScale, sy * vrScale, sz * vrScale);
+  }
+
   vectorSample(vector) {
     return [vector.x, vector.y, vector.z].map((value) => Number(value.toFixed(4)));
   }
@@ -3523,10 +3653,13 @@ class QuestHenshinDemo {
     const inXr = Boolean(this.world.session);
     const selfView = inXr && this.xrViewMode === XR_VIEW_MODE_SELF;
     const useLiveSuit = selfView && this.xrWorldAnchorReady;
+    const hasRuntimePose = useLiveSuit || Object.keys(segments).length > 0 || Boolean(replayMotionFrame);
+    const standbyPreview = this.meshes.size > 0 && (!this.playing || !hasRuntimePose);
     if (useLiveSuit) {
       this.updateLiveBodyAnchors();
       this.captureLiveMotionSample(progress);
     }
+    this.updateBaseSuitVisibility({ standbyPreview, selfView, reveal });
     if (this.mirrorFrame) {
       this.mirrorFrame.visible = inXr && this.xrViewMode === XR_VIEW_MODE_MIRROR;
     }
@@ -3534,12 +3667,21 @@ class QuestHenshinDemo {
       const segmentName = PART_TO_SEGMENT[part] || part;
       const pose = segments[segmentName];
       const useReplayMotion = !pose && replayMotionFrame;
-      if ((!useLiveSuit && !pose && !useReplayMotion) || (selfView && SELF_VIEW_HIDDEN_PARTS.has(part))) {
+      const hiddenForSelf =
+        selfView
+        && (standbyPreview ? SELF_VIEW_STANDBY_HIDDEN_PARTS : SELF_VIEW_HIDDEN_PARTS).has(part);
+      if (hiddenForSelf) {
         mesh.visible = false;
         order += 1;
         continue;
       }
-      if (useLiveSuit) {
+      if (standbyPreview) {
+        this.applyStandbySuitPose(mesh, part);
+      } else if (!useLiveSuit && !pose && !useReplayMotion) {
+        mesh.visible = false;
+        order += 1;
+        continue;
+      } else if (useLiveSuit) {
         this.applyLiveSuitPose(mesh, part, reveal);
       } else if (useReplayMotion) {
         this.applyMotionSuitPose(mesh, part, replayMotionFrame, reveal);
@@ -3551,10 +3693,10 @@ class QuestHenshinDemo {
           stagePosition: this.stagePosition,
         });
       }
-      const stagger = clamp((progress * ARMOR_PARTS.length - order) / 3.2, 0, 1);
-      mesh.material.opacity = 0.08 + easeOutCubic(stagger) * 0.86;
+      const stagger = standbyPreview ? 1 : clamp((progress * ARMOR_PARTS.length - order) / 3.2, 0, 1);
+      mesh.material.opacity = standbyPreview ? 0.82 : 0.08 + easeOutCubic(stagger) * 0.86;
       mesh.material.emissiveIntensity = this.world.session ? 0.35 + stagger * 0.75 : 0.18;
-      mesh.visible = mesh.material.opacity > 0.09;
+      mesh.visible = standbyPreview || mesh.material.opacity > 0.09;
       order += 1;
     }
     this.updateLiveMirrorAvatar(progress, reveal);

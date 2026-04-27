@@ -39,6 +39,8 @@ const BODY_REFERENCE_EMISSIVE = 0x2a1710;
 const BASE_SUIT_COLOR = 0x52777e;
 const BASE_SUIT_EMISSIVE = 0x10292c;
 const PREVIEW_FLOOR_Y = -0.43;
+const FALLBACK_MESH_SOURCE = "seed_proxy_fallback";
+const MIN_RENDERABLE_MESH_SIZE = 0.002;
 const VRM_BONE_ALIAS_INDEX = new Map();
 for (const [canonical, aliases] of Object.entries(VRM_BONE_ALIASES)) {
   VRM_BONE_ALIAS_INDEX.set(normalizeBoneName(canonical), canonical);
@@ -538,8 +540,8 @@ function materialForPart(part, palette) {
     color,
     emissive,
     emissiveIntensity: part === "chest" || part === "helmet" ? 0.38 : 0.22,
-    metalness: 0.28,
-    roughness: 0.46,
+    metalness: 0.2,
+    roughness: 0.42,
     side: THREE.DoubleSide,
   });
 }
@@ -560,6 +562,9 @@ function meshGeometryFromPayload(payload) {
     throw new Error("Unsupported mesh asset format.");
   }
   const positions = (payload.positions || []).flat();
+  if (positions.length < 9 || positions.length % 3 !== 0) {
+    throw new Error("Mesh asset has no renderable triangles.");
+  }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   const normals = Array.isArray(payload.normals) ? payload.normals.flat() : [];
@@ -572,18 +577,81 @@ function meshGeometryFromPayload(payload) {
   if (uvs.length === (positions.length / 3) * 2) {
     geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   }
-  if (Array.isArray(payload.indices)) {
-    geometry.setIndex(payload.indices.flat());
+  const indices = Array.isArray(payload.indices) ? payload.indices.flat() : [];
+  if (indices.length >= 3) {
+    geometry.setIndex(indices);
   }
   geometry.computeBoundingBox();
+  const size = new THREE.Vector3();
+  geometry.boundingBox.getSize(size);
+  if (Math.max(size.x, size.y, size.z) < MIN_RENDERABLE_MESH_SIZE) {
+    throw new Error("Mesh asset bounds are empty.");
+  }
   geometry.center();
+  return geometry;
+}
+
+function createFallbackArmorGeometry(part) {
+  let geometry;
+  switch (part) {
+    case "helmet":
+      geometry = new THREE.SphereGeometry(0.28, 32, 20);
+      break;
+    case "chest":
+      geometry = new THREE.BoxGeometry(0.72, 0.76, 0.2, 2, 3, 1);
+      break;
+    case "back":
+      geometry = new THREE.BoxGeometry(0.68, 0.72, 0.16, 2, 3, 1);
+      break;
+    case "waist":
+      geometry = new THREE.BoxGeometry(0.58, 0.22, 0.24, 2, 1, 1);
+      break;
+    case "left_shoulder":
+    case "right_shoulder":
+      geometry = new THREE.SphereGeometry(0.2, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.72);
+      break;
+    case "left_upperarm":
+    case "right_upperarm":
+    case "left_forearm":
+    case "right_forearm":
+    case "left_thigh":
+    case "right_thigh":
+    case "left_shin":
+    case "right_shin":
+      geometry = new THREE.CylinderGeometry(0.12, 0.1, 0.64, 20, 2);
+      break;
+    case "left_boot":
+    case "right_boot":
+      geometry = new THREE.BoxGeometry(0.24, 0.18, 0.42, 1, 1, 2);
+      break;
+    case "left_hand":
+    case "right_hand":
+      geometry = new THREE.BoxGeometry(0.2, 0.16, 0.2, 1, 1, 1);
+      break;
+    default:
+      geometry = new THREE.BoxGeometry(0.28, 0.28, 0.2, 1, 1, 1);
+      break;
+  }
+  geometry.computeVertexNormals();
+  geometry.center();
+  geometry.computeBoundingBox();
   return geometry;
 }
 
 async function createArmorMesh(part, module, palette) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
-  const payload = await fetchJson(asset);
-  const geometry = meshGeometryFromPayload(payload);
+  let geometry;
+  let meshSource = "mesh_asset";
+  let meshError = "";
+  try {
+    const payload = await fetchJson(asset);
+    geometry = meshGeometryFromPayload(payload);
+  } catch (error) {
+    meshSource = FALLBACK_MESH_SOURCE;
+    meshError = String(error?.message || error);
+    console.warn(`armor mesh fallback for ${part}: ${meshError}`);
+    geometry = createFallbackArmorGeometry(part);
+  }
   const sourceSize = new THREE.Vector3();
   geometry.computeBoundingBox();
   geometry.boundingBox.getSize(sourceSize);
@@ -600,6 +668,9 @@ async function createArmorMesh(part, module, palette) {
   mesh.renderOrder = 4;
   mesh.userData.sourceSize = sourceSize;
   mesh.userData.texturePath = module?.texture_path || null;
+  mesh.userData.meshSource = meshSource;
+  mesh.userData.assetRef = asset;
+  mesh.userData.meshError = meshError;
   addArmorEdges(mesh, palette);
   return mesh;
 }
@@ -625,6 +696,12 @@ class ArmorStand {
     this.vrmModel = null;
     this.boneMap = new Map();
     this.metricsCache = null;
+    this.previewStats = {
+      armorParts: 0,
+      fallbackParts: 0,
+      baseSuitVisible: true,
+      vrmVisible: false,
+    };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
     this.scene.add(new THREE.AmbientLight(0xd9f3ee, 0.42));
@@ -640,23 +717,42 @@ class ArmorStand {
     this.buildBaseSuit();
     this.group.add(this.avatarGroup);
     this.vrmReady = this.loadBaselineVrm(DEFAULT_VRM_PATH);
+    this.publishPreviewStats();
     this.animate();
     window.addEventListener("resize", () => this.resize());
   }
 
+  publishPreviewStats() {
+    if (!this.canvas) return;
+    this.previewStats.baseSuitVisible = Boolean(this.ghostGroup?.visible);
+    this.canvas.dataset.previewArmorParts = String(this.previewStats.armorParts);
+    this.canvas.dataset.previewFallbackParts = String(this.previewStats.fallbackParts);
+    this.canvas.dataset.previewBaseSuit = this.previewStats.baseSuitVisible ? "visible" : "hidden";
+    this.canvas.dataset.previewVrm = this.previewStats.vrmVisible ? "visible" : "fallback";
+  }
+
   buildBaseSuit() {
-    const ghost = new THREE.MeshBasicMaterial({
+    const ghost = new THREE.MeshStandardMaterial({
       color: BASE_SUIT_COLOR,
+      emissive: BASE_SUIT_EMISSIVE,
+      emissiveIntensity: 0.26,
+      metalness: 0.08,
+      roughness: 0.7,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.46,
       depthWrite: false,
+      side: THREE.DoubleSide,
     });
     this.ghostGroup.name = "base-suit-reference";
     const standMat = new THREE.MeshBasicMaterial({ color: 0xb18328, transparent: true, opacity: 0.5 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
+    torso.name = "base-suit-surface-torso";
+    torso.renderOrder = 3;
     torso.position.y = 0.98;
     this.ghostGroup.add(torso);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 32, 20), ghost);
+    head.name = "base-suit-surface-head";
+    head.renderOrder = 3;
     head.position.y = 1.58;
     this.ghostGroup.add(head);
     for (const [x, y, h, r] of [
@@ -666,10 +762,28 @@ class ArmorStand {
       [0.17, 0.18, 0.78, 0],
     ]) {
       const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, h, 20), ghost);
+      limb.name = "base-suit-surface-limb";
+      limb.renderOrder = 3;
       limb.position.set(x, y, -0.03);
       limb.rotation.z = r;
       this.ghostGroup.add(limb);
     }
+    this.ghostGroup.traverse((obj) => {
+      if (!obj.isMesh || obj.userData.baseSuitEdges) return;
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(obj.geometry, 32),
+        new THREE.LineBasicMaterial({
+          color: 0xb6eef2,
+          transparent: true,
+          opacity: 0.42,
+          depthTest: false,
+        }),
+      );
+      edges.name = `${obj.name || "base-suit"}-surface-lines`;
+      edges.renderOrder = 3.5;
+      edges.userData.baseSuitEdges = true;
+      obj.add(edges);
+    });
     const base = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.01, 8, 96), standMat);
     base.rotation.x = Math.PI / 2;
     base.position.y = PREVIEW_FLOOR_Y;
@@ -702,11 +816,15 @@ class ArmorStand {
       this.ghostGroup.visible = true;
       this.fitVrmToStand(model);
       this.setHeightCm(this.heightCm);
+      this.previewStats.vrmVisible = true;
+      this.publishPreviewStats();
     } catch (error) {
       this.vrmModel = null;
       this.boneMap = new Map();
       this.metricsCache = null;
       this.ghostGroup.visible = true;
+      this.previewStats.vrmVisible = false;
+      this.publishPreviewStats();
       console.warn(`VRM baseline fallback: ${error?.message || error}`);
     }
   }
@@ -1022,6 +1140,9 @@ class ArmorStand {
       mesh.userData.armorPart = true;
       this.group.add(mesh);
     }
+    this.previewStats.armorParts = meshes.length;
+    this.previewStats.fallbackParts = meshes.filter((mesh) => mesh.userData.meshSource === FALLBACK_MESH_SOURCE).length;
+    this.publishPreviewStats();
   }
 
   resize() {

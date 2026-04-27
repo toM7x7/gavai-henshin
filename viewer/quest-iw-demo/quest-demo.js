@@ -1450,10 +1450,10 @@ class SpatialControlPanel {
       background: "rgba(4, 13, 17, 0.76)",
       border: "rgba(255, 207, 90, 0.42)",
     });
-    this.recallDisplay.position.set(0, -0.18, 0.02);
+    this.recallDisplay.position.set(-0.39, -0.18, 0.02);
     this.group.add(this.recallDisplay);
 
-    this.normalInputElements.push(this.addButton("codeMode", "コード入力", 0, -0.18, 0xffcf5a, { width: 0.48, height: 0.098, fontSize: 50 }).group);
+    this.normalInputElements.push(this.addButton("codeMode", "コード入力", 0.48, -0.18, 0xffcf5a, { width: 0.42, height: 0.098, fontSize: 46 }).group);
     this.normalInputElements.push(this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a).group);
     this.normalInputElements.push(this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff).group);
     this.normalInputElements.push(this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff).group);
@@ -1480,7 +1480,7 @@ class SpatialControlPanel {
       border: "rgba(67, 216, 255, 0.34)",
       maxLines: 1,
     });
-    this.codeInputHint.position.set(0, 0.18, 0.022);
+    this.codeInputHint.position.set(0, 0.205, 0.022);
     this.group.add(this.codeInputHint);
     this.codeInputElements.push(this.codeInputHint);
 
@@ -1639,7 +1639,7 @@ class SpatialControlPanel {
       if (element) element.visible = panelOpen && !this.codeInputMode;
     }
     if (this.recallDisplay) {
-      this.recallDisplay.position.set(0, this.codeInputMode ? 0.055 : -0.18, 0.02);
+      this.recallDisplay.position.set(this.codeInputMode ? 0 : -0.39, this.codeInputMode ? 0.085 : -0.18, 0.02);
     }
   }
 

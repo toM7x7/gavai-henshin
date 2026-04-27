@@ -103,6 +103,18 @@ This page is allowed to generate a template-based suit before the full AI textur
 
 Internal `suit_id` and `manifest_id` remain required for storage, versioning, DB rows, and artifact paths. They should not be primary public UI. Cloud SQL should later hold suit/version rows, while public Quest lookup remains the short `recall_code`.
 
+## Web Forge Asset Generation Contract
+
+The Web forge now emits an `asset_pipeline` contract alongside the public preview. It keeps the lore route intact while preparing the next generation lane:
+
+- Model substrate: VRM baseline body-fit first, then the 18 canonical overlay part keys.
+- Shape contract: current `mesh.v1` overlay assets remain seed/proxy parts; validated GLB/glTF is a derived runtime artifact after fit and bounds checks.
+- Texture provider: `nano_banana` provider profile, using Gemini-backed image generation through the existing `part_generation.py` provider abstraction.
+- Texture mode: `mesh_uv` with UV guide references, `uv_refine=true`, 2K square atlases, and SuitSpec texture write-back as the intended job default.
+- Planned quality gates: mesh bounds, fit clearance, UV contract, and Quest recall readiness must stay visible before the suit is treated as exhibition-ready. Texture quality remains warning-only until the asynchronous generation job completes.
+
+This deliberately separates "the suit is issued and recallable" from "final generated surface assets are complete." The public Web flow can issue a code immediately, then advance texture generation asynchronously without breaking Quest recall.
+
 ## Quest Flow
 
 1. Visitor or operator opens the Quest runtime page and enters `recall_code`; in VR this is available from the left-hand spatial menu.

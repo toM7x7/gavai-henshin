@@ -304,6 +304,26 @@ a:focus-visible {
   grid-column: 1 / -1;
 }
 
+.asset-pipeline {
+  grid-column: 1 / -1;
+}
+
+.asset-pipeline strong {
+  color: #eaf9ee;
+}
+
+.asset-pipeline.pending strong {
+  color: #fff2c8;
+}
+
+.asset-pipeline.planned {
+  border-color: rgba(244, 199, 102, 0.38);
+}
+
+.asset-pipeline.complete {
+  border-color: rgba(90, 216, 255, 0.38);
+}
+
 .quest-url-card input {
   min-height: 38px;
   border-color: rgba(90, 216, 255, 0.28);

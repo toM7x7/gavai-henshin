@@ -85,6 +85,10 @@ _FORGE_DEFAULT_HEIGHT_CM = 170.0
 _FORGE_MIN_HEIGHT_CM = 90.0
 _FORGE_MAX_HEIGHT_CM = 230.0
 _FORGE_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
+_FORGE_TEXTURE_PROVIDER_PROFILE = "nano_banana"
+_FORGE_TEXTURE_MODE = "mesh_uv"
+_FORGE_UV_REFINE = True
+_FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
 _RECALL_AMBIGUOUS_TRANSLATION = str.maketrans({"0": "O", "O": "O", "1": "I", "I": "I", "L": "I"})
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
@@ -322,6 +326,7 @@ class NewRouteApi:
                 },
                 "body_profile": body_profile,
                 "preview": self._forge_public_preview(create.body["suitspec"]),
+                "asset_pipeline": self._forge_public_asset_pipeline(create.body["suitspec"]),
                 "links": {
                     "quest_recall": f"/v1/quest/recall/{recall_code}",
                     "quest_viewer": f"/viewer/quest-iw-demo/?code={recall_code}&newRoute=1",
@@ -994,19 +999,54 @@ class NewRouteApi:
         body_profile: dict[str, Any],
     ) -> dict[str, Any]:
         brief = str(payload.get("brief") or "Generate a fitted base suit with selected armor overlays.").strip()
+        enabled_parts = sorted(self._forge_enabled_parts(payload))
         prompt = (
             f"{brief} "
             f"Declared wearer height: {body_profile['height_cm']}cm. "
             f"Style tags: {', '.join(style_tags)}. "
             "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
         )
+        texture_plan = {
+            "provider_profile": _FORGE_TEXTURE_PROVIDER_PROFILE,
+            "texture_mode": _FORGE_TEXTURE_MODE,
+            "uv_refine": _FORGE_UV_REFINE,
+            "update_suitspec": True,
+            "use_cache": True,
+            "target_resolution": "2K",
+            "discipline": ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
+        }
+        model_plan = {
+            "asset_contract": _FORGE_ASSET_CONTRACT,
+            "base_suit": "VRM baseline body-fit substrate",
+            "overlay_parts": enabled_parts,
+            "runtime_target": "validated GLB/gltf derived artifact",
+            "material_slots": ["base_surface", "accent", "emissive", "trim"],
+        }
         return {
             "model_id": "local-web-forge-v0",
             "prompt": prompt[:1200],
             "body_profile": body_profile,
+            "model_plan": model_plan,
+            "texture_plan": texture_plan,
+            "planned_quality_gates": ["mesh_bounds", "fit_clearance", "uv_contract", "quest_recall_ready"],
+            "quality_policy": {
+                "texture_quality": "warning_only_until_generation_completes",
+                "blocking_gate": "quest_recall_ready",
+            },
+            "job_defaults": {
+                "provider_profile": texture_plan["provider_profile"],
+                "texture_mode": texture_plan["texture_mode"],
+                "uv_refine": texture_plan["uv_refine"],
+                "update_suitspec": texture_plan["update_suitspec"],
+                "use_cache": texture_plan["use_cache"],
+                "priority_mode": "exhibition",
+                "parts": enabled_parts,
+                "generation_brief": prompt[:1200],
+                "requires": ["server_resolved_suitspec_path"],
+            },
             "part_prompts": {
-                part: f"{part} armor overlay, compatible with a fitted base suit"
-                for part in sorted(self._forge_enabled_parts(payload))
+                part: f"{part} armor overlay, compatible with a fitted base suit and mesh-UV texture atlas"
+                for part in enabled_parts
             },
         }
 
@@ -1038,7 +1078,25 @@ class NewRouteApi:
         return {
             "palette": self._clone_json(suitspec.get("palette", {})),
             "body_profile": self._clone_json(suitspec.get("body_profile", {})),
+            "asset_pipeline": self._forge_public_asset_pipeline(suitspec),
             "modules": preview_modules,
+        }
+
+    def _forge_public_asset_pipeline(self, suitspec: dict[str, Any]) -> dict[str, Any]:
+        generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
+        model_plan = generation.get("model_plan") if isinstance(generation.get("model_plan"), dict) else {}
+        texture_plan = generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {}
+        job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
+        planned_quality_gates = (
+            generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
+        )
+        quality_policy = generation.get("quality_policy") if isinstance(generation.get("quality_policy"), dict) else {}
+        return {
+            "model_plan": self._clone_json(model_plan),
+            "texture_plan": self._clone_json(texture_plan),
+            "job_defaults": self._clone_json(job_defaults),
+            "planned_quality_gates": self._clone_json(planned_quality_gates),
+            "quality_policy": self._clone_json(quality_policy),
         }
 
     def _forge_enabled_parts(self, payload: dict[str, Any]) -> set[str]:

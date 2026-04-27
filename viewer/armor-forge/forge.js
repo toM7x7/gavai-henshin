@@ -66,6 +66,9 @@ const UI = {
   questLink: document.getElementById("questLink"),
   questUrl: document.getElementById("questUrl"),
   questUrlHint: document.getElementById("questUrlHint"),
+  assetPipeline: document.getElementById("assetPipeline"),
+  assetPipelineTitle: document.getElementById("assetPipelineTitle"),
+  assetPipelineDetail: document.getElementById("assetPipelineDetail"),
   displayName: document.getElementById("displayName"),
   archetype: document.getElementById("archetype"),
   temperament: document.getElementById("temperament"),
@@ -248,6 +251,27 @@ function assertForgeReadiness(data) {
   if (!data?.readiness?.manifest_ready) {
     throw new Error("Quest Manifestが未発行です。");
   }
+}
+
+function renderAssetPipeline(data = null) {
+  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+  if (!UI.assetPipeline || !UI.assetPipelineTitle || !UI.assetPipelineDetail) return;
+  UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
+  if (!pipeline) {
+    UI.assetPipeline.classList.add("pending");
+    UI.assetPipelineTitle.textContent = "待機中";
+    UI.assetPipelineDetail.textContent = "VRM基準 / Nano Banana mesh-UV";
+    return;
+  }
+  const modelPlan = pipeline.model_plan || {};
+  const texturePlan = pipeline.texture_plan || {};
+  const parts = Array.isArray(modelPlan.overlay_parts) ? modelPlan.overlay_parts : selectedParts();
+  const provider = texturePlan.provider_profile || "nano_banana";
+  const mode = texturePlan.texture_mode || "mesh_uv";
+  const refine = texturePlan.uv_refine ? "UV再構成" : "UVガイド";
+  UI.assetPipeline.classList.add("planned");
+  UI.assetPipelineTitle.textContent = `${parts.length}部位 / ${provider}`;
+  UI.assetPipelineDetail.textContent = `${mode} + ${refine} / ${modelPlan.asset_contract || "vrm-base-suit+mesh-v1-overlay"}`;
 }
 
 function materialForPart(part, palette) {
@@ -506,6 +530,7 @@ function applyResult(data) {
   UI.questLink.setAttribute("aria-disabled", "false");
   if (UI.questUrl) UI.questUrl.value = quest.url;
   if (UI.questUrlHint) UI.questUrlHint.textContent = quest.hint;
+  renderAssetPipeline(data);
   UI.emptyStand.classList.add("hidden");
 }
 
@@ -535,5 +560,6 @@ async function submitForge(event) {
 }
 
 renderPartGrid();
+renderAssetPipeline();
 runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);

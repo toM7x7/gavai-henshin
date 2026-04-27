@@ -156,6 +156,9 @@ class TestDashboardServer(unittest.TestCase):
             "questLink",
             "questUrl",
             "questUrlHint",
+            "assetPipeline",
+            "assetPipelineTitle",
+            "assetPipelineDetail",
         }:
             self.assertIn(f'id="{dom_id}"', html)
             self.assertIn(f'getElementById("{dom_id}")', js)
@@ -164,6 +167,11 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("armorStandPoseFor", js)
         self.assertIn("FIT_SHAPE_BASELINES", js)
         self.assertIn("addArmorEdges", js)
+        self.assertIn("renderAssetPipeline", js)
+        self.assertIn("Nano Banana mesh-UV", html)
+        self.assertIn("nano_banana", js)
+        self.assertIn("mesh_uv", js)
+        self.assertIn("planned", js)
         self.assertIn("Quest入力コード", html)
         self.assertIn("Quest VR入力ページ", html)
         self.assertNotIn('id="suitId"', html)
@@ -196,9 +204,12 @@ class TestDashboardServer(unittest.TestCase):
             "minFontSize",
             "fontSize: /^[0-9]$/.test(label) ? 76 : 52",
             "height: Math.max(0.086, height * 0.86)",
+            "this.codeInputHint.position.set(0, 0.205",
             "&& !this.codeInputMode",
             "右トリガーで再入力",
             "textColor",
+            'this.addButton("codeMode", "コード入力", 0.48',
+            "this.recallDisplay.position.set(this.codeInputMode ? 0 : -0.39",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)

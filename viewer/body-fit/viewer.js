@@ -44,6 +44,7 @@ import {
   reprojectSurfaceFirstSnapshot,
   summarizeSurfaceFirstSnapshot,
 } from "../shared/surface-first-system.js?v=20260412d";
+import { buildSurfaceAttachmentPreview } from "../shared/surface-attachment-preview.js?v=20260427a";
 
 const DEFAULT_SUITSPEC = "examples/suitspec.sample.json";
 const DEFAULT_SIM = "sessions/body-sim.json";
@@ -2203,6 +2204,13 @@ class BodyFitViewer {
       this.surfaceFirst.summary.tracking_frame_schema = tracking.trackingFrame?.schemaVersion || null;
       this.surfaceFirst.summary.tracking_timestamp_ms = round3(tracking.trackingFrame?.timestampMs || 0);
       this.surfaceFirst.summary.live_reprojected = tracking.source !== "vrm";
+      this.surfaceFirst.summary.surface_attachment_preview = buildSurfaceAttachmentPreview({
+        suitspec: this.suitspec,
+        snapshot,
+        trackingSource: tracking.source,
+        normalizeAttachmentSlot,
+        effectiveVrmAnchorFor,
+      });
       this.surfaceFirst.lastRefreshMs = performance.now();
       this.updateSurfaceFirstStatus(
         `Surface-first: ${snapshot.sampleCount} pts / ${snapshot.links.length} links / ${snapshot.mounts.length} mounts / fit ${fitOverlay.partCount} parts / source ${tracking.label}`

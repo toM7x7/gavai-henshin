@@ -7,6 +7,8 @@ from henshin.ids import (
     generate_morphotype_id,
     generate_session_id,
     generate_suit_id,
+    next_suit_id,
+    parse_suit_id,
 )
 
 
@@ -19,6 +21,19 @@ class TestIDs(unittest.TestCase):
     def test_suit_id_format(self) -> None:
         suit_id = generate_suit_id(series="axis", role="op", rev=1, seq=42)
         self.assertEqual(suit_id, "VDA-AXIS-OP-01-0042")
+
+    def test_parse_suit_id(self) -> None:
+        parsed = parse_suit_id("VDA-AXIS-OP-01-0042")
+        self.assertEqual(parsed, {"series": "AXIS", "role": "OP", "rev": 1, "seq": 42})
+
+    def test_next_suit_id_uses_existing_series_role_rev(self) -> None:
+        suit_id = next_suit_id(
+            ["VDA-AXIS-OP-00-0001", "VDA-AXIS-OP-00-0002", "VDA-AXIS-GUEST-00-0009"],
+            series="axis",
+            role="op",
+            rev=0,
+        )
+        self.assertEqual(suit_id, "VDA-AXIS-OP-00-0003")
 
     def test_approval_id_format(self) -> None:
         approval_id = generate_approval_id()

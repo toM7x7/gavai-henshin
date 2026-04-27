@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import random
+import re
 import string
 from datetime import datetime, timezone
+
+_SUIT_ID_PARTS_RE = re.compile(r"^VDA-([A-Z0-9]+)-([A-Z0-9]+)-([0-9]{2})-([0-9]{4})$")
 
 
 def _utcnow() -> datetime:
@@ -40,6 +43,38 @@ def generate_suit_id(series: str = "AXIS", role: str = "OP", rev: int = 0, seq: 
     if seq < 0 or seq > 9999:
         raise ValueError("seq must be in range 0..9999")
     return f"VDA-{_sanitize(series)}-{_sanitize(role)}-{rev:02d}-{seq:04d}"
+
+
+def parse_suit_id(suit_id: str) -> dict[str, int | str]:
+    match = _SUIT_ID_PARTS_RE.fullmatch(str(suit_id or ""))
+    if not match:
+        raise ValueError("suit_id format is invalid")
+    series, role, rev, seq = match.groups()
+    return {"series": series, "role": role, "rev": int(rev), "seq": int(seq)}
+
+
+def next_suit_id(
+    existing_ids: list[str] | tuple[str, ...],
+    *,
+    series: str = "AXIS",
+    role: str = "OP",
+    rev: int = 0,
+) -> str:
+    normalized_series = _sanitize(series)
+    normalized_role = _sanitize(role)
+    max_seq = 0
+    for suit_id in existing_ids:
+        try:
+            parsed = parse_suit_id(suit_id)
+        except ValueError:
+            continue
+        if (
+            parsed["series"] == normalized_series
+            and parsed["role"] == normalized_role
+            and parsed["rev"] == rev
+        ):
+            max_seq = max(max_seq, int(parsed["seq"]))
+    return generate_suit_id(series=normalized_series, role=normalized_role, rev=rev, seq=max_seq + 1)
 
 
 def generate_approval_id(rng: random.Random | None = None) -> str:

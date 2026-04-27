@@ -131,6 +131,35 @@
           </div>
         </div>
 
+        <div class="latest-trial-panel" aria-label="スーツ登録">
+          <div class="latest-trial-head">
+            <div>
+              <strong>スーツ登録 / 呼び出し番号</strong>
+              <small id="suitRegistryStorage">未保存</small>
+            </div>
+            <button id="btnIssueSuitId" type="button">番号発行</button>
+          </div>
+          <div class="field">
+            <label for="suitRegistryName">記名</label>
+            <input id="suitRegistryName" type="text" placeholder="例: 試作一号 / 来場者名 / 展示番号" />
+          </div>
+          <div id="suitRegistryStatus" class="latest-trial-status pending">登録待機中</div>
+          <div class="latest-trial-grid">
+            <div>
+              <span>呼び出し番号</span>
+              <strong id="suitRegistryIssueId">-</strong>
+            </div>
+            <div>
+              <span>状態</span>
+              <strong id="suitRegistryState">未登録</strong>
+            </div>
+          </div>
+          <div class="actions primary-actions">
+            <button id="btnSaveSuitRegistry" class="primary" type="button">成立済みとして保存</button>
+            <button id="btnFetchSuitRegistry" type="button">呼び出し確認</button>
+          </div>
+        </div>
+
         <div class="latest-trial-panel" aria-label="Latest Henshin Trial">
           <div class="latest-trial-head">
             <div>

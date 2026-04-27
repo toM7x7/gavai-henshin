@@ -60,6 +60,43 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertTrue((Path(tmp) / "suits" / "VDA-AXIS-OP-00-0001" / "suitspec.json").is_file())
             self.assertEqual(response.body["links"]["manifest"], "/v1/suits/VDA-AXIS-OP-00-0001/manifest")
 
+    def test_issue_suit_id_reserves_named_registry_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            first = api.post("/v1/suits/issue-id", {"series": "axis", "role": "guest", "display_name": "試作鎧A"})
+            second = api.post("/v1/suits/issue-id", {"series": "axis", "role": "guest"})
+            fetched = api.get("/v1/suits/VDA-AXIS-GUEST-00-0001")
+
+            self.assertIsNotNone(first)
+            self.assertIsNotNone(second)
+            self.assertIsNotNone(fetched)
+            assert first is not None and second is not None and fetched is not None
+            self.assertEqual(first.status, 201)
+            self.assertEqual(first.body["suit_id"], "VDA-AXIS-GUEST-00-0001")
+            self.assertEqual(first.body["display_name"], "試作鎧A")
+            self.assertEqual(first.body["issue"]["seq"], 1)
+            self.assertEqual(second.body["suit_id"], "VDA-AXIS-GUEST-00-0002")
+            self.assertEqual(fetched.status, 200)
+            self.assertIsNone(fetched.body["suitspec"])
+            self.assertEqual(fetched.body["suit"]["metadata"]["display_name"], "試作鎧A")
+
+    def test_create_suit_preserves_issue_metadata_and_display_name(self) -> None:
+        suitspec = self._sample_suitspec()
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            api.post("/v1/suits/issue-id", {"series": "axis", "role": "op", "display_name": "生成前"})
+            response = api.post("/v1/suits", {"suitspec": suitspec, "display_name": "完成鎧"})
+            fetched = api.get("/v1/suits/VDA-AXIS-OP-00-0001")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(fetched)
+            assert response is not None and fetched is not None
+            self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["suit"]["metadata"]["display_name"], "完成鎧")
+            self.assertEqual(response.body["suit"]["metadata"]["issue"]["seq"], 1)
+            self.assertEqual(fetched.body["suitspec"]["suit_id"], "VDA-AXIS-OP-00-0001")
+            self.assertEqual(fetched.body["suit"]["metadata"]["display_name"], "完成鎧")
+
     def test_create_suit_rejects_duplicate_without_overwrite(self) -> None:
         suitspec = self._sample_suitspec()
         with tempfile.TemporaryDirectory() as tmp:

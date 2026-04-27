@@ -16,6 +16,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
+from .ids import next_suit_id, parse_suit_id
 from .manifest import project_suitspec_to_manifest
 from .validators import validate_against_schema, validate_suitspec
 
@@ -122,6 +123,7 @@ class NewRouteApi:
             return ApiResponse(status=HTTPStatus.CONFLICT, body={"ok": False, "error": f"Suit already exists: {suit_id}"})
 
         now = self._utc_now()
+        display_name = self._display_name(payload.get("display_name"))
         saved_suitspec = self._clone_json(suitspec)
         metadata = saved_suitspec.setdefault("metadata", {})
         if not isinstance(metadata, dict):
@@ -134,6 +136,14 @@ class NewRouteApi:
             return self._bad_request(str(exc))
 
         previous_suit = self._read_json(suit_path) if suit_path.exists() else {}
+        previous_metadata = previous_suit.get("metadata") if isinstance(previous_suit.get("metadata"), dict) else {}
+        suit_metadata = {
+            **previous_metadata,
+            "created_at": previous_metadata.get("created_at", now),
+            "updated_at": now,
+        }
+        if display_name:
+            suit_metadata["display_name"] = display_name
         suit = {
             "schema_version": "0.1",
             "suit_id": suit_id,
@@ -144,7 +154,7 @@ class NewRouteApi:
                 **previous_suit.get("artifacts", {}),
                 "suitspec_path": self._relative_path(suitspec_path),
             },
-            "metadata": {"created_at": now, "updated_at": now},
+            "metadata": suit_metadata,
         }
         self._write_json(suitspec_path, saved_suitspec)
         self._write_json(suit_path, suit)
@@ -163,16 +173,66 @@ class NewRouteApi:
             },
         )
 
+    def issue_suit_id(self, payload: dict[str, Any]) -> ApiResponse:
+        if not isinstance(payload, dict):
+            return self._bad_request("request body must be a JSON object")
+        try:
+            rev = int(payload.get("rev", 0))
+            suit_id = next_suit_id(
+                self._all_suit_ids(),
+                series=str(payload.get("series", "AXIS")),
+                role=str(payload.get("role", "OP")),
+                rev=rev,
+            )
+        except (TypeError, ValueError) as exc:
+            return self._bad_request(str(exc))
+
+        now = self._utc_now()
+        display_name = self._display_name(payload.get("display_name"))
+        issue = {**parse_suit_id(suit_id), "issued_at": now, "source": "new-route-api"}
+        suit = {
+            "schema_version": "0.1",
+            "suit_id": suit_id,
+            "suitspec_schema_version": None,
+            "status": "DRAFT",
+            "manifest_id": None,
+            "artifacts": {},
+            "metadata": {
+                "created_at": now,
+                "updated_at": now,
+                "display_name": display_name,
+                "issue": issue,
+            },
+        }
+        suit_path = self._suit_path(suit_id)
+        self._write_json(suit_path, suit)
+        return ApiResponse(
+            status=HTTPStatus.CREATED,
+            body={
+                "ok": True,
+                "suit_id": suit_id,
+                "display_name": display_name,
+                "issue": issue,
+                "suit": suit,
+                "links": {"create_suit": "/v1/suits", "suit": f"/v1/suits/{suit_id}"},
+                "storage": self._storage_info(suit_path),
+            },
+        )
+
     def get_suit(self, suit_id: str) -> ApiResponse:
         if not _SUIT_ID_RE.fullmatch(suit_id):
             return self._bad_request("suit_id format is invalid")
         suit_path = self._suit_path(suit_id)
         suitspec_path = self._suitspec_path(suit_id)
-        if not suit_path.exists() or not suitspec_path.exists():
+        if not suit_path.exists():
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown suit: {suit_id}"})
         return ApiResponse(
             status=HTTPStatus.OK,
-            body={"ok": True, "suit": self._read_json(suit_path), "suitspec": self._read_json(suitspec_path)},
+            body={
+                "ok": True,
+                "suit": self._read_json(suit_path),
+                "suitspec": self._read_json(suitspec_path) if suitspec_path.exists() else None,
+            },
         )
 
     def get_latest_suit_manifest(self, suit_id: str) -> ApiResponse:
@@ -539,6 +599,8 @@ class NewRouteApi:
 
     def post(self, path: str, payload: dict[str, Any]) -> ApiResponse | None:
         normalized = "/" + path.strip("/")
+        if normalized == "/v1/suits/issue-id":
+            return self.issue_suit_id(payload)
         if normalized == "/v1/suits":
             return self.create_suit(payload)
         if normalized == "/v1/trials":
@@ -595,6 +657,15 @@ class NewRouteApi:
             return path
         return None
 
+    def _all_suit_ids(self) -> list[str]:
+        if not self.suit_store_root.exists():
+            return []
+        suit_ids = set()
+        for path in self.suit_store_root.iterdir():
+            if path.is_dir() and _SUIT_ID_RE.fullmatch(path.name):
+                suit_ids.add(path.name)
+        return sorted(suit_ids)
+
     def _all_trials(self) -> list[dict[str, Any]]:
         if not self.trial_store_root.exists():
             return []
@@ -637,6 +708,10 @@ class NewRouteApi:
 
     def _storage_info(self, path: Path) -> dict[str, str]:
         return {"backend": "local-json", "path": self._relative_path(path)}
+
+    def _display_name(self, value: Any) -> str:
+        text = str(value or "").strip()
+        return text[:80]
 
     def _bad_request(self, message: str) -> ApiResponse:
         return ApiResponse(status=HTTPStatus.BAD_REQUEST, body={"ok": False, "error": message})

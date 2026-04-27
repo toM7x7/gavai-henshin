@@ -106,6 +106,14 @@ const UI = {
   latestTrialEvents: document.getElementById("latestTrialEvents"),
   latestTrialReplayState: document.getElementById("latestTrialReplayState"),
   latestTrialReplay: document.getElementById("latestTrialReplay"),
+  suitRegistryName: document.getElementById("suitRegistryName"),
+  suitRegistryStorage: document.getElementById("suitRegistryStorage"),
+  suitRegistryStatus: document.getElementById("suitRegistryStatus"),
+  suitRegistryIssueId: document.getElementById("suitRegistryIssueId"),
+  suitRegistryState: document.getElementById("suitRegistryState"),
+  btnIssueSuitId: document.getElementById("btnIssueSuitId"),
+  btnSaveSuitRegistry: document.getElementById("btnSaveSuitRegistry"),
+  btnFetchSuitRegistry: document.getElementById("btnFetchSuitRegistry"),
   status: document.getElementById("status"),
   cards: document.getElementById("cards"),
   btnRefreshSuits: document.getElementById("btnRefreshSuits"),
@@ -155,6 +163,7 @@ let generationRun = null;
 let hasUnsavedSuitChanges = false;
 let latestTrialSnapshot = { state: "missing", replayPath: "", eventCount: 0, replayReady: false };
 let lastGenerationSnapshot = null;
+let suitRegistrySnapshot = { suitId: "", status: "missing", manifestId: "", storagePath: "" };
 
 const OPERATOR_PROFILE_DEFAULTS = {
   protect_archetype: "citizens",
@@ -320,6 +329,138 @@ async function refreshLatestTrial({ silent = false } = {}) {
   }
 }
 
+function setSuitRegistryStatus(text, state = "pending") {
+  if (!UI.suitRegistryStatus) return;
+  UI.suitRegistryStatus.classList.remove("complete", "pending", "error");
+  UI.suitRegistryStatus.classList.add(state);
+  UI.suitRegistryStatus.textContent = text;
+}
+
+function renderSuitRegistryPending(message = "登録待機中") {
+  suitRegistrySnapshot = {
+    suitId: currentSuit?.suit_id || "",
+    status: "missing",
+    manifestId: "",
+    storagePath: "",
+  };
+  if (UI.suitRegistryIssueId) UI.suitRegistryIssueId.textContent = currentSuit?.suit_id || "-";
+  if (UI.suitRegistryState) UI.suitRegistryState.textContent = "未登録";
+  if (UI.suitRegistryStorage) UI.suitRegistryStorage.textContent = "未保存";
+  setSuitRegistryStatus(message, "pending");
+}
+
+function renderSuitRegistry(data) {
+  const suit = data?.suit || {};
+  const metadata = suit.metadata || {};
+  const suitId = suit.suit_id || currentSuit?.suit_id || "";
+  const manifestId = suit.manifest_id || "";
+  const hasSuitspec = Boolean(data?.suitspec);
+  const status = manifestId ? "manifest_ready" : hasSuitspec ? "suitspec_saved" : "issued";
+  suitRegistrySnapshot = {
+    suitId,
+    status,
+    manifestId,
+    storagePath: data?.storage?.path || suit.artifacts?.suitspec_path || "",
+  };
+  if (UI.suitRegistryIssueId) {
+    UI.suitRegistryIssueId.textContent = compactLabel(suitId || "-", 28);
+    UI.suitRegistryIssueId.title = suitId || "";
+  }
+  if (UI.suitRegistryName && metadata.display_name && !UI.suitRegistryName.value.trim()) {
+    UI.suitRegistryName.value = metadata.display_name;
+  }
+  if (UI.suitRegistryStorage) {
+    UI.suitRegistryStorage.textContent = suitRegistrySnapshot.storagePath
+      ? compactLabel(suitRegistrySnapshot.storagePath, 44)
+      : "registry予約";
+    UI.suitRegistryStorage.title = suitRegistrySnapshot.storagePath || "";
+  }
+  if (UI.suitRegistryState) {
+    UI.suitRegistryState.textContent = manifestId
+      ? `Manifest ${compactLabel(manifestId, 18)}`
+      : hasSuitspec
+        ? "SuitSpec保存済み"
+        : "番号発行済み";
+  }
+  setSuitRegistryStatus(
+    manifestId ? "Quest呼び出し準備OK" : hasSuitspec ? "SuitSpec保存済み / Manifest未発行" : "番号発行済み / SuitSpec未保存",
+    manifestId ? "complete" : "pending"
+  );
+}
+
+async function refreshSuitRegistry({ silent = false } = {}) {
+  if (!UI.suitRegistryStatus) return null;
+  const suitId = currentSuit?.suit_id || "";
+  if (!suitId) {
+    renderSuitRegistryPending("SuitSpecに番号がありません");
+    return null;
+  }
+  if (!silent) setSuitRegistryStatus("呼び出し確認中...", "pending");
+  const { res, data } = await fetchJson(`/v1/suits/${encodeURIComponent(suitId)}`);
+  if (res.status === 404) {
+    renderSuitRegistryPending("未登録 / 成立済み保存待ち");
+    return null;
+  }
+  if (!data.ok) {
+    throw new Error(data.error || `Suit registry fetch failed: ${res.status}`);
+  }
+  renderSuitRegistry(data);
+  return data;
+}
+
+async function issueSuitRegistryId() {
+  const displayName = UI.suitRegistryName?.value?.trim() || "";
+  const { res, data } = await fetchJson("/v1/suits/issue-id", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ series: "AXIS", role: "OP", rev: 0, display_name: displayName }),
+  });
+  if (!data.ok) {
+    throw new Error(data.error || `番号発行に失敗しました: ${res.status}`);
+  }
+  if (currentSuit) {
+    currentSuit.suit_id = data.suit_id;
+    markSuitDirty("呼び出し番号を発行しました。SuitSpec保存で番号を固定します。");
+  }
+  renderSuitRegistry({ suit: data.suit, suitspec: null, storage: data.storage });
+  return data;
+}
+
+async function saveSuitRegistry() {
+  if (!currentSuit) {
+    throw new Error("登録する SuitSpec がありません。");
+  }
+  syncOperatorProfileToSuit();
+  if (hasUnsavedSuitChanges) {
+    await saveCurrentSuit();
+    markSuitSaved("SuitSpecを保存しました。");
+  }
+  const displayName = UI.suitRegistryName?.value?.trim() || "";
+  const { res, data } = await fetchJson("/v1/suits", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ suitspec: currentSuit, display_name: displayName, overwrite: true }),
+  });
+  if (!data.ok) {
+    throw new Error(data.error || `Suit registry save failed: ${res.status}`);
+  }
+  const manifestResponse = await fetchJson(`/v1/suits/${encodeURIComponent(data.suit_id)}/manifest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "READY" }),
+  });
+  if (!manifestResponse.data.ok) {
+    renderSuitRegistry({ suit: data.suit, suitspec: data.suitspec, storage: data.storage });
+    throw new Error(manifestResponse.data.error || `Manifest発行に失敗しました: ${manifestResponse.res.status}`);
+  }
+  renderSuitRegistry({
+    suit: manifestResponse.data.suit,
+    suitspec: data.suitspec,
+    storage: manifestResponse.data.storage,
+  });
+  return manifestResponse.data;
+}
+
 function bodyTunePartNames() {
   return Array.from(UI.bodyTunePart?.options || []).map((option) => option.value);
 }
@@ -358,6 +499,10 @@ function updateBodyTuneStatus(message = "") {
 function markSuitDirty(message = "") {
   hasUnsavedSuitChanges = true;
   updateBodyTuneStatus(message);
+  if (suitRegistrySnapshot.status !== "missing") {
+    setSuitRegistryStatus("SuitSpec未保存 / 再登録待ち", "pending");
+    if (UI.suitRegistryState) UI.suitRegistryState.textContent = "未保存変更あり";
+  }
   updateQuestPreflight();
 }
 
@@ -2138,7 +2283,7 @@ async function saveCurrentSuit() {
     throw new Error("保存対象の SuitSpec がありません。");
   }
   syncOperatorProfileToSuit();
-  const data = await fetchJson("/api/suitspec-save", {
+  const { data } = await fetchJson("/api/suitspec-save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2585,8 +2730,10 @@ async function loadSuit(path) {
     lastGenerationSnapshot = null;
   }
   currentSuit = data.suitspec;
+  if (UI.suitRegistryName) UI.suitRegistryName.value = "";
   renderRouteContractStatus(currentSuit);
   updateQuestPreflight();
+  await refreshSuitRegistry({ silent: true });
   applyOperatorProfileToUi(currentSuit?.operator_profile || null);
 
   const enabled = readEnabledModules(currentSuit);
@@ -2944,6 +3091,39 @@ function bindEvents() {
   if (UI.btnRefreshLatestTrial) {
     UI.btnRefreshLatestTrial.onclick = async () => {
       await refreshLatestTrial();
+    };
+  }
+
+  if (UI.btnIssueSuitId) {
+    UI.btnIssueSuitId.onclick = async () => {
+      try {
+        const data = await issueSuitRegistryId();
+        setStatus(`呼び出し番号を発行しました: ${data.suit_id}`);
+      } catch (err) {
+        setStatus(String(err?.message || err || "番号発行に失敗しました"), true);
+      }
+    };
+  }
+
+  if (UI.btnSaveSuitRegistry) {
+    UI.btnSaveSuitRegistry.onclick = async () => {
+      try {
+        const data = await saveSuitRegistry();
+        setStatus(`成立済みスーツを保存しました: ${data.suit_id} / ${data.manifest_id}`);
+      } catch (err) {
+        setStatus(String(err?.message || err || "スーツ登録に失敗しました"), true);
+      }
+    };
+  }
+
+  if (UI.btnFetchSuitRegistry) {
+    UI.btnFetchSuitRegistry.onclick = async () => {
+      try {
+        await refreshSuitRegistry();
+        setStatus(`呼び出し確認を更新しました: ${currentSuit?.suit_id || "-"}`);
+      } catch (err) {
+        setStatus(String(err?.message || err || "呼び出し確認に失敗しました"), true);
+      }
     };
   }
 

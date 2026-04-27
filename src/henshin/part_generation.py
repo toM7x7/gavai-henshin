@@ -21,6 +21,7 @@ from .image_providers import GeneratedImage, ImageReference, ImageProviderError,
 from .mesh_assets import resolve_mesh_asset_ref
 from .part_prompts import _base_style_text, build_uv_refine_prompt, list_enabled_parts, resolve_part_prompts
 from .suit_dna import resolve_suit_design_dna, serialize_suit_design_dna
+from .texture_quality import analyze_texture_quality
 from .user_profile_compiler import compile_operator_profile
 from .uv_guides import ensure_uv_guide_image, serialize_uv_guide
 from .uv_contracts import resolve_uv_contract, serialize_uv_contract
@@ -616,6 +617,13 @@ def run_generate_parts(
             "uv_guide_hash": guide_info["guide_hash"] if guide_info else None,
             "mesh_asset_ref": resolve_mesh_asset_ref(part, spec.get("modules", {}).get(part)),
         }
+
+        def attach_texture_quality(info: dict[str, Any]) -> None:
+            if request.texture_mode != "mesh_uv" or not info.get("image_path"):
+                return
+            quality = analyze_texture_quality(info["image_path"], texture_mode=request.texture_mode)
+            info["texture_quality"] = quality
+            metric["texture_quality"] = quality
         if request.texture_mode == "mesh_uv" and guide_reference is None:
             return part, None, f"UV guide image is unavailable for part={part}."
 
@@ -643,6 +651,8 @@ def run_generate_parts(
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
+                attach_texture_quality(info)
+                info["timing_ms"] = dict(metric)
                 part_metrics[part] = dict(metric)
                 return part, info, None
 
@@ -658,6 +668,8 @@ def run_generate_parts(
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
+                attach_texture_quality(info)
+                info["timing_ms"] = dict(metric)
                 part_metrics[part] = dict(metric)
                 return part, info, None
 
@@ -776,6 +788,8 @@ def run_generate_parts(
                     **info_common,
                     **info_extra,
                 }
+                attach_texture_quality(info)
+                info["timing_ms"] = dict(metric)
                 part_metrics[part] = dict(metric)
                 return part, info, None
             except ImageProviderError as exc:
@@ -816,6 +830,8 @@ def run_generate_parts(
                 "reference_stack": [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else [],
                 **info_common,
             }
+            attach_texture_quality(info)
+            info["timing_ms"] = dict(metric)
             part_metrics[part] = dict(metric)
             return part, info, None
         except ImageProviderError as exc:
@@ -833,6 +849,8 @@ def run_generate_parts(
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
+                attach_texture_quality(info)
+                info["timing_ms"] = dict(metric)
                 part_metrics[part] = dict(metric)
                 return part, info, None
 

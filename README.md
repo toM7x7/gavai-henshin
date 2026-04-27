@@ -193,6 +193,7 @@ python -m henshin serve-dashboard --port 8010
 ```text
 GET /health
 GET /v1/catalog/parts
+POST /v1/suits/issue-id
 POST /v1/suits
 GET /v1/suits/{suitId}
 POST /v1/suits/{suitId}/manifest
@@ -205,6 +206,8 @@ GET /v1/trials/{trialId}/replay
 ```
 
 Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the SuitSpec as the authoring source, and `POST /v1/suits/{suitId}/manifest` projects a validated SuitManifest with PartCatalog references. The local implementation writes JSON under `sessions/new-route/suits/...`; Cloud Run can keep the same contract while replacing that repository with Cloud SQL for source/version rows and GCS for artifacts.
+
+`POST /v1/suits/issue-id` reserves the next local armor number before final SuitSpec storage. Names and issue metadata live in `suit.json.metadata`, not in SuitSpec, so the authoring/runtime schemas remain stable. The intended operator flow is image/input -> issue number/name -> generate/update SuitSpec -> save suit -> view the T-pose armor-stand preview -> call the same number from Quest.
 
 Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creates a schema-valid `TransformSession`, and `POST /v1/trials/{trialId}/events` appends canonical transform events with server-side event ids and sequence numbers. Local storage writes under `sessions/new-route/trials/...`; later GCP should map sessions/events to Cloud SQL and live state to Firestore.
 

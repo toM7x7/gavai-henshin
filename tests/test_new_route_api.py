@@ -142,6 +142,26 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(second.status, 400)
             self.assertIn("recall_code", second.body["error"])
 
+    def test_recall_code_lookup_tolerates_common_visual_ambiguity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            issued = api.post("/v1/suits/forge", {"display_name": "Visitor", "recall_code": "535O"})
+            quest = api.get("/v1/quest/recall/5350")
+            by_code = api.get("/v1/suits/code/5350")
+            duplicate = api.post("/v1/suits/issue-id", {"recall_code": "5350"})
+
+            self.assertIsNotNone(issued)
+            self.assertIsNotNone(quest)
+            self.assertIsNotNone(by_code)
+            self.assertIsNotNone(duplicate)
+            assert issued is not None and quest is not None and by_code is not None and duplicate is not None
+            self.assertEqual(issued.status, 201)
+            self.assertEqual(quest.status, 200)
+            self.assertEqual(quest.body["recall_code"], "535O")
+            self.assertEqual(by_code.status, 200)
+            self.assertEqual(by_code.body["recall_code"], "535O")
+            self.assertEqual(duplicate.status, 400)
+
     def test_forge_suit_creates_ready_manifest_and_recall_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")

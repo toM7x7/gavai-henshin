@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 _SUIT_ID_PARTS_RE = re.compile(r"^VDA-([A-Z0-9]+)-([A-Z0-9]+)-([0-9]{2})-([0-9]{4})$")
 _RECALL_CODE_RE = re.compile(r"^[A-Z0-9]{4}$")
+_RECALL_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 
 
 def _utcnow() -> datetime:
@@ -86,7 +87,8 @@ def normalize_recall_code(value: str) -> str:
 
 
 def generate_recall_code(rng: random.Random | None = None) -> str:
-    return _token(4, rng=rng)
+    r = rng or random.Random()
+    return "".join(r.choice(_RECALL_CODE_ALPHABET) for _ in range(4))
 
 
 def next_recall_code(existing_codes: list[str] | tuple[str, ...], rng: random.Random | None = None) -> str:

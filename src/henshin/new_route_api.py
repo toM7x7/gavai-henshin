@@ -85,6 +85,7 @@ _FORGE_DEFAULT_HEIGHT_CM = 170.0
 _FORGE_MIN_HEIGHT_CM = 90.0
 _FORGE_MAX_HEIGHT_CM = 230.0
 _FORGE_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
+_RECALL_AMBIGUOUS_TRANSLATION = str.maketrans({"0": "O", "O": "O", "1": "I", "I": "I", "L": "I"})
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
     "TRIGGER_DETECTED",
@@ -338,7 +339,7 @@ class NewRouteApi:
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown recall_code: {code}"})
         response = self.get_suit(suit_id)
         if response.body.get("ok"):
-            response.body["recall_code"] = code
+            response.body["recall_code"] = self._recall_code_from_suit(response.body.get("suit", {})) or code
         return response
 
     def get_quest_recall(self, recall_code: str) -> ApiResponse:
@@ -355,6 +356,7 @@ class NewRouteApi:
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown recall_code: {code}"})
 
         suit = self._read_json(suit_path)
+        canonical_code = self._recall_code_from_suit(suit) or code
         suitspec = self._read_json(suitspec_path) if suitspec_path.exists() else None
         metadata = suit.get("metadata") if isinstance(suit.get("metadata"), dict) else {}
         manifest_id = suit.get("manifest_id")
@@ -365,7 +367,7 @@ class NewRouteApi:
                 manifest = manifest_response.body["manifest"]
         runtime_suit = {
             "suit_id": suit_id,
-            "recall_code": code,
+            "recall_code": canonical_code,
             "display_name": metadata.get("display_name") or "",
             "status": suit.get("status", "DRAFT"),
             "manifest_id": manifest_id if isinstance(manifest_id, str) else None,
@@ -374,7 +376,7 @@ class NewRouteApi:
             status=HTTPStatus.OK,
             body={
                 "ok": True,
-                "recall_code": code,
+                "recall_code": canonical_code,
                 "suit_id": suit_id,
                 "display_name": runtime_suit["display_name"],
                 "status": runtime_suit["status"],
@@ -845,11 +847,22 @@ class NewRouteApi:
         code = normalize_recall_code(recall_code)
         if not self.suit_store_root.exists():
             return None
+        fuzzy_matches: list[str] = []
+        lookup_key = self._recall_ambiguity_key(code)
         for path in self.suit_store_root.glob("*/suit.json"):
             suit = self._read_json(path)
-            if self._recall_code_from_suit(suit) == code:
+            suit_code = self._recall_code_from_suit(suit)
+            if suit_code == code:
                 return str(suit.get("suit_id") or path.parent.name)
+            if suit_code and self._recall_ambiguity_key(suit_code) == lookup_key:
+                fuzzy_matches.append(str(suit.get("suit_id") or path.parent.name))
+        unique_matches = sorted(set(fuzzy_matches))
+        if len(unique_matches) == 1:
+            return unique_matches[0]
         return None
+
+    def _recall_ambiguity_key(self, recall_code: str) -> str:
+        return normalize_recall_code(recall_code).translate(_RECALL_AMBIGUOUS_TRANSLATION)
 
     def _all_recall_codes(self, *, exclude_suit_id: str | None = None) -> list[str]:
         if not self.suit_store_root.exists():

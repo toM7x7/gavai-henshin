@@ -167,20 +167,25 @@ class TestDashboardServer(unittest.TestCase):
         self.assertNotIn('id="manifestId"', html)
 
     def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:
+        html = Path("viewer/quest-iw-demo/index.html").read_text(encoding="utf-8")
         js = Path("viewer/quest-iw-demo/quest-demo.js").read_text(encoding="utf-8")
 
+        self.assertIn('id="recallCodeInput"', html)
+        self.assertIn('inputmode="text"', html)
+        self.assertIn('enterkeyhint="go"', html)
+        self.assertIn("Quest呼び出し", html)
         for token in {
             "XR_RECALL_CHARS",
             "recallDisplay",
-            "codeNext",
-            "codeInc",
-            "codeLoad",
-            "loadRecallDraft",
             "submitRecallCodeFromInput",
             "onkeydown",
+            "recallDisplayCode",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)
+        self.assertNotIn('this.addButton("codeNext"', js)
+        self.assertNotIn('this.addButton("codeInc"', js)
+        self.assertNotIn('this.addButton("codeLoad"', js)
 
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))

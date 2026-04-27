@@ -13,7 +13,7 @@ const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
 const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
 const RECALL_CODE_RE = /^[A-Z0-9]{4}$/;
 const XR_RECALL_CODE_EMPTY = "----";
-const XR_RECALL_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const XR_RECALL_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -1405,7 +1405,7 @@ class SpatialControlPanel {
     this.listenRing.renderOrder = 15;
     this.group.add(this.listenRing);
 
-    this.recallDisplay = makeTextPlane(`CODE ${formatSpatialRecallDraft(this.recallDraft, this.recallSlot)}`, {
+    this.recallDisplay = makeTextPlane(`CODE ${this.recallDisplayCode()}`, {
       width: 0.64,
       height: 0.09,
       canvasWidth: 900,
@@ -1418,10 +1418,6 @@ class SpatialControlPanel {
     });
     this.recallDisplay.position.set(0, -0.18, 0.02);
     this.group.add(this.recallDisplay);
-
-    this.addButton("codeNext", "桁", -0.52, -0.18, 0x8edfff, { width: 0.2, height: 0.085, fontSize: 36 });
-    this.addButton("codeInc", "+", -0.34, -0.18, 0xffcf5a, { width: 0.14, height: 0.085, fontSize: 48 });
-    this.addButton("codeLoad", "呼出", 0.52, -0.18, 0x43d8ff, { width: 0.24, height: 0.085, fontSize: 34 });
 
     this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a);
     this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff);
@@ -1595,10 +1591,14 @@ class SpatialControlPanel {
         : state === "ok"
           ? "rgba(67, 216, 255, 0.58)"
           : "rgba(255, 207, 90, 0.42)";
-    updateTextPlane(this.recallDisplay, `CODE ${formatSpatialRecallDraft(this.recallDraft, this.recallSlot)}`, {
+    updateTextPlane(this.recallDisplay, `CODE ${this.recallDisplayCode()}`, {
       color,
       border,
     });
+  }
+
+  recallDisplayCode() {
+    return this.demo.recallCode || recallDraftToCode(this.recallDraft) || "未呼出";
   }
 
   setRecallDraft(code, options = {}) {
@@ -2222,14 +2222,16 @@ class QuestHenshinDemo {
   }
 
   async submitRecallCodeFromInput() {
+    const code = normalizeRecallCodeInput(UI.recallCodeInput?.value || "");
     try {
-      const code = normalizeRecallCodeInput(UI.recallCodeInput?.value || "");
       if (!RECALL_CODE_RE.test(code)) {
-        throw new Error("Quest recall code must be 4 alphanumeric characters.");
+        throw new Error("Quest入力コードは4桁英数字です。");
       }
       await this.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
     } catch (error) {
-      this.setRecallCodeState(String(error?.message || error), "error");
+      const rawMessage = String(error?.message || error);
+      const message = rawMessage.includes("Unknown recall_code") ? `未登録コード: ${code}` : rawMessage;
+      this.setRecallCodeState(message, "error");
       this.setRouteApi("CODE ERROR", "error");
     }
   }

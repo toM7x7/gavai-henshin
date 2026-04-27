@@ -204,41 +204,57 @@ const VOICE_STATES = {
     label: "音声 待機",
     hint: `ここに向けてトリガー後、${TRIGGER_PHRASE} と発声。`,
     color: 0x43d8ff,
+    textColor: "#d7f8ff",
+    border: "rgba(67, 216, 255, 0.62)",
   },
   arming: {
     label: "準備中",
     hint: "発声案内まで少し待ってください。",
     color: 0x8edfff,
+    textColor: "#d7f8ff",
+    border: "rgba(142, 223, 255, 0.74)",
   },
   recording: {
     label: "発声",
     hint: `${TRIGGER_PHRASE} と発声してください。`,
     color: 0xffcf5a,
+    textColor: "#fff4c8",
+    border: "rgba(255, 207, 90, 0.78)",
   },
   analyzing: {
     label: "解析中",
     hint: "音声合図を確認しています。",
     color: 0x8edfff,
+    textColor: "#d7f8ff",
+    border: "rgba(142, 223, 255, 0.7)",
   },
   detected: {
     label: `${TRIGGER_PHRASE} 確認`,
     hint: "変身を開始します。",
     color: 0xfff4c8,
+    textColor: "#fff4c8",
+    border: "rgba(255, 244, 200, 0.72)",
   },
   deposition: {
     label: "変身中",
     hint: "装甲を展開しています。",
     color: 0xffcf5a,
+    textColor: "#fff4c8",
+    border: "rgba(255, 207, 90, 0.78)",
   },
   complete: {
     label: "完了",
     hint: "記録再生できます。",
     color: 0xf6f1df,
+    textColor: "#f6f1df",
+    border: "rgba(246, 241, 223, 0.68)",
   },
   rejected: {
     label: "再試行",
-    hint: `${TRIGGER_PHRASE} を確認できませんでした。`,
+    hint: `${TRIGGER_PHRASE} を確認できませんでした。右トリガーで再入力。`,
     color: 0xff6b6b,
+    textColor: "#ffd2d2",
+    border: "rgba(255, 107, 107, 0.78)",
   },
 };
 
@@ -1437,8 +1453,7 @@ class SpatialControlPanel {
     this.recallDisplay.position.set(0, -0.18, 0.02);
     this.group.add(this.recallDisplay);
 
-    this.normalInputElements.push(this.addButton("codeMode", "コード", -0.58, -0.18, 0xffcf5a, { width: 0.3, height: 0.095, fontSize: 50 }).group);
-    this.normalInputElements.push(this.addButton("codeSubmit", "呼出", 0.58, -0.18, 0x43d8ff, { width: 0.3, height: 0.095, fontSize: 50 }).group);
+    this.normalInputElements.push(this.addButton("codeMode", "コード入力", 0, -0.18, 0xffcf5a, { width: 0.48, height: 0.098, fontSize: 50 }).group);
     this.normalInputElements.push(this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a).group);
     this.normalInputElements.push(this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff).group);
     this.normalInputElements.push(this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff).group);
@@ -1874,16 +1889,18 @@ class SpatialControlPanel {
 
   setVoiceState(state, detail = "") {
     const voiceState = VOICE_STATES[state] || VOICE_STATES.ready;
+    const textColor = voiceState.textColor || "#fff4c8";
+    const border = voiceState.border || "rgba(255, 207, 90, 0.72)";
     updateTextPlane(this.status, voiceState.label, {
-      color: state === "rejected" ? "#ffd2d2" : "#fff4c8",
-      border: state === "rejected" ? "rgba(255, 107, 107, 0.78)" : "rgba(255, 207, 90, 0.72)",
+      color: textColor,
+      border,
     });
     updateTextPlane(this.hint, detail || voiceState.hint, {
-      color: state === "rejected" ? "#ffd2d2" : "#d7f8ff",
+      color: textColor,
     });
     if (this.compactStatus) {
       updateTextPlane(this.compactStatus, voiceState.label, {
-        color: state === "rejected" ? "#ffd2d2" : "#d7f8ff",
+        color: textColor,
       });
     }
     this.listenRing.material.color.setHex(voiceState.color);
@@ -2066,6 +2083,12 @@ class SpatialControlPanel {
     }
     if (this.controllerHandedness(controller) === "right") {
       this.demo.audioBed.pulse(1040, 0.1);
+      if (this.demo.voiceState === "rejected" && this.demo.canRunVoiceCommand()) {
+        this.compactForTransformStart();
+        this.demo.setVoiceState("ready", `右トリガーで再入力します。${TRIGGER_PHRASE} の発声案内を待ってください。`);
+        void this.demo.runVoiceCommand();
+        return;
+      }
       if (!this.canUseRightTriggerShortcut() || !this.demo.canRunVoiceCommand()) return;
       this.compactForTransformStart();
       void this.demo.runVoiceCommand();

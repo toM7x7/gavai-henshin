@@ -49,6 +49,12 @@ const PART_POSES = {
   right_boot: { p: [0.18, -0.26, 0.06], s: [0.22, 0.22, 0.22] },
 };
 
+const FIT_SHAPE_BASELINES = {
+  sphere: [0.24, 0.24, 0.24],
+  box: [0.52, 0.5, 0.46],
+  cylinder: [0.9, 1.0, 0.9],
+};
+
 const UI = {
   form: document.getElementById("forgeForm"),
   button: document.getElementById("forgeButton"),
@@ -118,6 +124,35 @@ function setStatus(text, state = "pending") {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function numberOr(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function fitVector(value, fallback) {
+  return [0, 1, 2].map((index) => numberOr(Array.isArray(value) ? value[index] : undefined, fallback[index]));
+}
+
+function softFitFactor(value, baseline) {
+  return clamp(1 + (numberOr(value, baseline) - baseline) * 0.22, 0.82, 1.28);
+}
+
+function armorStandPoseFor(part, module) {
+  const pose = PART_POSES[part] || { p: [0, 0.8, 0], s: [0.24, 0.24, 0.24] };
+  const fit = module?.fit && typeof module.fit === "object" ? module.fit : null;
+  if (!fit) return { p: [...pose.p], s: [...pose.s] };
+
+  const shape = String(fit.shape || "box").toLowerCase();
+  const baseline = FIT_SHAPE_BASELINES[shape] || FIT_SHAPE_BASELINES.box;
+  const fitScale = fitVector(fit.scale, baseline);
+  const p = [...pose.p];
+  const s = pose.s.map((value, index) => value * softFitFactor(fitScale[index], baseline[index]));
+  p[1] += clamp(numberOr(fit.offsetY, 0), -0.42, 0.42) * 0.35;
+  p[2] += clamp(numberOr(fit.zOffset, 0), -0.25, 0.25) * 0.85;
+  if (fit.attach === "end") p[1] -= 0.035;
+  return { p, s };
 }
 
 function declaredHeightCm() {
@@ -231,6 +266,17 @@ function materialForPart(part, palette) {
   });
 }
 
+function addArmorEdges(mesh, palette) {
+  const color = new THREE.Color(palette?.emissive || "#43D8FF");
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(mesh.geometry, 28),
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.34 }),
+  );
+  edges.name = `${mesh.name}-surface-lines`;
+  edges.renderOrder = 3;
+  mesh.add(edges);
+}
+
 function meshGeometryFromPayload(payload) {
   if (!payload || payload.format !== "mesh.v1") {
     throw new Error("Unsupported mesh asset format.");
@@ -260,11 +306,12 @@ async function createArmorMesh(part, module, palette) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
   const payload = await fetchJson(asset);
   const mesh = new THREE.Mesh(meshGeometryFromPayload(payload), materialForPart(part, palette));
-  const pose = PART_POSES[part] || { p: [0, 0.8, 0], s: [0.24, 0.24, 0.24] };
+  const pose = armorStandPoseFor(part, module);
   mesh.name = part;
   mesh.position.set(...pose.p);
   mesh.rotation.set(Math.PI / 2, 0, 0);
   mesh.scale.set(...pose.s);
+  addArmorEdges(mesh, palette);
   return mesh;
 }
 
@@ -399,6 +446,11 @@ class ArmorStand {
   clearArmor() {
     const removable = this.group.children.filter((child) => child.userData?.armorPart);
     for (const child of removable) {
+      child.traverse((object) => {
+        if (object === child) return;
+        object.geometry?.dispose?.();
+        object.material?.dispose?.();
+      });
       child.removeFromParent();
       child.geometry?.dispose?.();
       child.material?.dispose?.();

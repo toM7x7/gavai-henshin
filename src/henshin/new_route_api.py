@@ -1027,10 +1027,14 @@ class NewRouteApi:
         for part_name, module in modules.items():
             if not isinstance(module, dict):
                 continue
-            preview_modules[part_name] = {
+            record = {
                 "enabled": bool(module.get("enabled")),
                 "asset_ref": module.get("asset_ref"),
             }
+            for key in ("fit", "vrm_anchor", "attachment_slot"):
+                if key in module:
+                    record[key] = self._clone_json(module[key])
+            preview_modules[part_name] = record
         return {
             "palette": self._clone_json(suitspec.get("palette", {})),
             "body_profile": self._clone_json(suitspec.get("body_profile", {})),

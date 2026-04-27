@@ -161,6 +161,9 @@ class TestDashboardServer(unittest.TestCase):
             self.assertIn(f'getElementById("{dom_id}")', js)
         self.assertIn("/v1/suits/forge", js)
         self.assertIn("/api/runtime-info", js)
+        self.assertIn("armorStandPoseFor", js)
+        self.assertIn("FIT_SHAPE_BASELINES", js)
+        self.assertIn("addArmorEdges", js)
         self.assertIn("Quest入力コード", html)
         self.assertIn("Quest VR入力ページ", html)
         self.assertNotIn('id="suitId"', html)
@@ -182,6 +185,7 @@ class TestDashboardServer(unittest.TestCase):
             "recallDisplayCode",
             "setCodeInputMode",
             "codeMode",
+            "コード入力",
             "codeDigit",
             "codeBackspace",
             "codeClear",
@@ -193,9 +197,12 @@ class TestDashboardServer(unittest.TestCase):
             "fontSize: /^[0-9]$/.test(label) ? 76 : 52",
             "height: Math.max(0.086, height * 0.86)",
             "&& !this.codeInputMode",
+            "右トリガーで再入力",
+            "textColor",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)
+        self.assertNotIn('this.normalInputElements.push(this.addButton("codeSubmit"', js)
         self.assertNotIn('this.addButton("codeNext"', js)
         self.assertNotIn('this.addButton("codeInc"', js)
         self.assertNotIn('this.addButton("codeLoad"', js)

@@ -195,6 +195,8 @@ GET /health
 GET /v1/catalog/parts
 POST /v1/suits/issue-id
 POST /v1/suits
+GET /v1/suits/code/{recallCode}
+GET /v1/quest/recall/{recallCode}
 GET /v1/suits/{suitId}
 POST /v1/suits/{suitId}/manifest
 GET /v1/suits/{suitId}/manifest
@@ -207,7 +209,9 @@ GET /v1/trials/{trialId}/replay
 
 Phase 1 write path is now `SuitSpec -> SuitManifest`: `POST /v1/suits` saves the SuitSpec as the authoring source, and `POST /v1/suits/{suitId}/manifest` projects a validated SuitManifest with PartCatalog references. The local implementation writes JSON under `sessions/new-route/suits/...`; Cloud Run can keep the same contract while replacing that repository with Cloud SQL for source/version rows and GCS for artifacts.
 
-`POST /v1/suits/issue-id` reserves the next local armor number before final SuitSpec storage. Names and issue metadata live in `suit.json.metadata`, not in SuitSpec, so the authoring/runtime schemas remain stable. The intended operator flow is image/input -> issue number/name -> generate/update SuitSpec -> save suit -> view the T-pose armor-stand preview -> call the same number from Quest.
+`POST /v1/suits/issue-id` reserves the next local armor number before final SuitSpec storage and also issues a four-character uppercase alphanumeric `recall_code` for Quest input. Names and issue metadata live in `suit.json.metadata`, not in SuitSpec, so the authoring/runtime schemas remain stable. `suit_id` remains the internal durable ID; `recall_code` is only the short exhibition lookup key. The intended operator flow is image/input -> issue number/name/code -> generate/update SuitSpec -> save suit -> view the T-pose armor-stand preview -> enter the four-character code from Quest.
+
+`GET /v1/suits/code/{recallCode}` returns the full local registry record for dashboard/operator use. `GET /v1/quest/recall/{recallCode}` is the Quest-facing recall path: it resolves the code to the prepared suit and manifest without requiring the Quest user to type the internal `VDA-...` ID. Four-character codes are not authentication; they are local exhibition lookup labels.
 
 Phase 2 local trial path starts the Quest/replay bridge: `POST /v1/trials` creates a schema-valid `TransformSession`, and `POST /v1/trials/{trialId}/events` appends canonical transform events with server-side event ids and sequence numbers. Local storage writes under `sessions/new-route/trials/...`; later GCP should map sessions/events to Cloud SQL and live state to Firestore.
 

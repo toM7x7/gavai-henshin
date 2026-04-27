@@ -11,6 +11,7 @@ const DEFAULT_SUITSPEC = "/examples/suitspec.sample.json";
 const DEFAULT_MOCOPI = "examples/mocopi_sequence.sample.json";
 const DEFAULT_SUIT_ID = "VDA-AXIS-OP-00-0001";
 const DEFAULT_MANIFEST_ID = "MNF-20260424-SAMP";
+const RECALL_CODE_RE = /^[A-Z0-9]{4}$/;
 const TRIGGER_PHRASE = "\u751f\u6210";
 const TRIGGER_ALIASES = [
   "\u5148\u751f",
@@ -105,6 +106,9 @@ const UI = {
   routeTrial: document.getElementById("routeTrial"),
   routeReplay: document.getElementById("routeReplay"),
   routeContract: document.getElementById("routeContract"),
+  recallCodeInput: document.getElementById("recallCodeInput"),
+  btnLoadRecallCode: document.getElementById("btnLoadRecallCode"),
+  recallCodeState: document.getElementById("recallCodeState"),
   sessionId: document.getElementById("sessionId"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
@@ -252,6 +256,14 @@ function params() {
   return new URLSearchParams(window.location.search);
 }
 
+function normalizeRecallCodeInput(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+}
+
+function getRecallCode() {
+  return normalizeRecallCodeInput(params().get("code") || params().get("recall") || "");
+}
+
 function normalizePath(path) {
   if (!path) return "";
   const raw = String(path).replace(/\\/g, "/");
@@ -320,7 +332,7 @@ function makeMockAudioCapture() {
 }
 
 function useNewRouteApi() {
-  return params().get("newRoute") === "1";
+  return params().get("newRoute") === "1" || Boolean(getRecallCode());
 }
 
 function getApiBase() {
@@ -1834,6 +1846,10 @@ class QuestHenshinDemo {
     this.replay = null;
     this.frames = [];
     this.suitspec = null;
+    this.suitRecord = null;
+    this.recallCode = getRecallCode();
+    this.activeSuitId = getSuitId();
+    this.activeManifestId = getManifestId();
     this.meshes = new Map();
     this.liveMirrorMeshes = new Map();
     this.voiceState = "ready";
@@ -1911,6 +1927,8 @@ class QuestHenshinDemo {
 
     this.initScene();
     this.spatialPanel = new SpatialControlPanel(this);
+    if (UI.recallCodeInput) UI.recallCodeInput.value = this.recallCode;
+    this.setRecallCodeState(this.recallCode ? `入力コード ${this.recallCode} を待機中` : "4桁コード未指定");
     this.setVoiceState("ready");
     this.updateArchiveViewModeLabel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
@@ -2102,6 +2120,88 @@ class QuestHenshinDemo {
     if (UI.btnReplayView) UI.btnReplayView.onclick = () => this.cycleArchiveViewMode();
     UI.btnPause.onclick = () => this.togglePause();
     UI.btnReset.onclick = () => this.reset();
+    if (UI.recallCodeInput) {
+      UI.recallCodeInput.oninput = () => {
+        const code = normalizeRecallCodeInput(UI.recallCodeInput.value);
+        UI.recallCodeInput.value = code;
+        this.setRecallCodeState(code ? `${code.length}/4` : "4桁コード未指定");
+      };
+    }
+    if (UI.btnLoadRecallCode) {
+      UI.btnLoadRecallCode.onclick = async () => {
+        try {
+          const code = normalizeRecallCodeInput(UI.recallCodeInput?.value || "");
+          if (!RECALL_CODE_RE.test(code)) throw new Error("Quest入力コードは4桁英数字です。");
+          await this.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });
+        } catch (error) {
+          this.setRecallCodeState(String(error?.message || error), "error");
+          this.setRouteApi("CODE ERROR", "error");
+        }
+      };
+    }
+  }
+
+  setRecallCodeState(text, state = "pending") {
+    if (!UI.recallCodeState) return;
+    UI.recallCodeState.textContent = text;
+    UI.recallCodeState.dataset.state = state;
+  }
+
+  async loadInitialSuitSpec() {
+    if (useNewRouteApi() && this.recallCode) {
+      return this.loadSuitByRecallCode(this.recallCode, { reloadMeshes: false, pushUrl: false });
+    }
+    this.suitspec = await loadSuitSpec();
+    this.activeSuitId = this.suitspec?.suit_id || this.activeSuitId;
+    this.setRecallCodeState("サンプルSuitSpecを使用中");
+    return this.suitspec;
+  }
+
+  async loadSuitByRecallCode(code, { reloadMeshes = false, pushUrl = false } = {}) {
+    const recallCode = normalizeRecallCodeInput(code);
+    if (!RECALL_CODE_RE.test(recallCode)) {
+      throw new Error("Quest入力コードは4桁英数字です。");
+    }
+    this.setRecallCodeState(`呼び出し中: ${recallCode}`);
+    this.setRouteApi(`CODE ${recallCode}`, "pending");
+    const data = await getJson(`/v1/quest/recall/${encodeURIComponent(recallCode)}`);
+    if (!data.suitspec) {
+      throw new Error(`SuitSpec未保存: ${recallCode}`);
+    }
+    if (!data.manifest_id || data.manifest_ready === false) {
+      throw new Error(`Manifest未発行: ${recallCode}`);
+    }
+    this.suitRecord = data.suit || null;
+    this.suitspec = data.suitspec;
+    this.recallCode = data.recall_code || recallCode;
+    this.activeSuitId = data.suit_id || data.suit?.suit_id || this.suitspec?.suit_id || this.activeSuitId;
+    this.activeManifestId = data.manifest_id || data.suit?.manifest_id || this.activeManifestId;
+    if (UI.recallCodeInput) UI.recallCodeInput.value = this.recallCode;
+    if (pushUrl) {
+      const next = new URL(window.location.href);
+      next.searchParams.set("newRoute", "1");
+      next.searchParams.set("code", this.recallCode);
+      window.history.replaceState(null, "", next);
+    }
+    if (reloadMeshes) {
+      this.clearArmorMeshes();
+      await this.loadArmorMeshes();
+    }
+    this.setRecallCodeState(`呼び出しOK: ${this.recallCode} / ${this.activeSuitId}`, "ok");
+    this.setRouteApi(`CODE ${this.recallCode}`, "ok");
+    this.appendVoiceDebug(`recall_code: ${this.recallCode} suit: ${this.activeSuitId}`);
+    return this.suitspec;
+  }
+
+  clearArmorMeshes() {
+    for (const mesh of this.meshes.values()) {
+      mesh.removeFromParent();
+    }
+    this.meshes.clear();
+    for (const mesh of this.liveMirrorMeshes.values()) {
+      mesh.removeFromParent();
+    }
+    this.liveMirrorMeshes.clear();
   }
 
   updateArchiveViewModeLabel() {
@@ -2255,19 +2355,23 @@ class QuestHenshinDemo {
       return this.trialId;
     }
     this.trialId = this.trialId || makeTrialId();
-    const suitId = getSuitId();
-    const manifestId = getManifestId();
-    this.setRouteApi("SUIT POST", "pending");
+    const suitId = this.activeSuitId || getSuitId();
+    const manifestId = this.activeManifestId || getManifestId();
     this.setRouteTrial(this.trialId, "pending");
-    await postJson("/v1/suits", {
-      suitspec: this.suitspec,
-      overwrite: true,
-    });
-    this.setRouteApi("MANIFEST", "pending");
-    await postJson(`/v1/suits/${suitId}/manifest`, {
-      manifest_id: manifestId,
-      status: "READY",
-    });
+    if (this.recallCode && this.suitRecord?.manifest_id) {
+      this.setRouteApi(`RECALL ${this.recallCode}`, "ok");
+    } else {
+      this.setRouteApi("SUIT POST", "pending");
+      await postJson("/v1/suits", {
+        suitspec: this.suitspec,
+        overwrite: true,
+      });
+      this.setRouteApi("MANIFEST", "pending");
+      await postJson(`/v1/suits/${suitId}/manifest`, {
+        manifest_id: manifestId,
+        status: "READY",
+      });
+    }
     this.setRouteApi("TRIAL CREATE", "pending");
     const trial = await postJson("/v1/trials", {
       manifest_id: manifestId,
@@ -2355,7 +2459,7 @@ class QuestHenshinDemo {
 
   async start() {
     await this.updateVRAvailability();
-    this.suitspec = await loadSuitSpec();
+    this.suitspec = await this.loadInitialSuitSpec();
     await this.loadArmorMeshes();
     const replay = await loadReplay();
     await this.applyReplay(replay, { speak: false, autoplay: false });

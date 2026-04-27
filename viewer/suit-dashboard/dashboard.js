@@ -109,6 +109,7 @@ const UI = {
   suitRegistryName: document.getElementById("suitRegistryName"),
   suitRegistryStorage: document.getElementById("suitRegistryStorage"),
   suitRegistryStatus: document.getElementById("suitRegistryStatus"),
+  suitRegistryRecallCode: document.getElementById("suitRegistryRecallCode"),
   suitRegistryIssueId: document.getElementById("suitRegistryIssueId"),
   suitRegistryState: document.getElementById("suitRegistryState"),
   btnIssueSuitId: document.getElementById("btnIssueSuitId"),
@@ -163,7 +164,7 @@ let generationRun = null;
 let hasUnsavedSuitChanges = false;
 let latestTrialSnapshot = { state: "missing", replayPath: "", eventCount: 0, replayReady: false };
 let lastGenerationSnapshot = null;
-let suitRegistrySnapshot = { suitId: "", status: "missing", manifestId: "", storagePath: "" };
+let suitRegistrySnapshot = { suitId: "", recallCode: "", status: "missing", manifestId: "", storagePath: "" };
 
 const OPERATOR_PROFILE_DEFAULTS = {
   protect_archetype: "citizens",
@@ -339,10 +340,12 @@ function setSuitRegistryStatus(text, state = "pending") {
 function renderSuitRegistryPending(message = "登録待機中") {
   suitRegistrySnapshot = {
     suitId: currentSuit?.suit_id || "",
+    recallCode: "",
     status: "missing",
     manifestId: "",
     storagePath: "",
   };
+  if (UI.suitRegistryRecallCode) UI.suitRegistryRecallCode.textContent = "----";
   if (UI.suitRegistryIssueId) UI.suitRegistryIssueId.textContent = currentSuit?.suit_id || "-";
   if (UI.suitRegistryState) UI.suitRegistryState.textContent = "未登録";
   if (UI.suitRegistryStorage) UI.suitRegistryStorage.textContent = "未保存";
@@ -353,17 +356,23 @@ function renderSuitRegistry(data) {
   const suit = data?.suit || {};
   const metadata = suit.metadata || {};
   const suitId = suit.suit_id || currentSuit?.suit_id || "";
+  const recallCode = data?.recall_code || suit.recall_code || metadata.issue?.recall_code || "";
   const manifestId = suit.manifest_id || "";
   const hasSuitspec = Boolean(data?.suitspec);
   const status = manifestId ? "manifest_ready" : hasSuitspec ? "suitspec_saved" : "issued";
   suitRegistrySnapshot = {
     suitId,
+    recallCode,
     status,
     manifestId,
     storagePath: data?.storage?.path || suit.artifacts?.suitspec_path || "",
   };
+  if (UI.suitRegistryRecallCode) {
+    UI.suitRegistryRecallCode.textContent = recallCode || "----";
+    UI.suitRegistryRecallCode.title = recallCode ? "Questで入力する4桁コード" : "";
+  }
   if (UI.suitRegistryIssueId) {
-    UI.suitRegistryIssueId.textContent = compactLabel(suitId || "-", 28);
+    UI.suitRegistryIssueId.textContent = compactLabel(suitId || "-", 22);
     UI.suitRegistryIssueId.title = suitId || "";
   }
   if (UI.suitRegistryName && metadata.display_name && !UI.suitRegistryName.value.trim()) {
@@ -420,7 +429,7 @@ async function issueSuitRegistryId() {
   }
   if (currentSuit) {
     currentSuit.suit_id = data.suit_id;
-    markSuitDirty("呼び出し番号を発行しました。SuitSpec保存で番号を固定します。");
+    markSuitDirty("Quest入力コードを発行しました。SuitSpec保存で内部IDを固定します。");
   }
   renderSuitRegistry({ suit: data.suit, suitspec: null, storage: data.storage });
   return data;
@@ -3098,7 +3107,7 @@ function bindEvents() {
     UI.btnIssueSuitId.onclick = async () => {
       try {
         const data = await issueSuitRegistryId();
-        setStatus(`呼び出し番号を発行しました: ${data.suit_id}`);
+        setStatus(`Quest入力コードを発行しました: ${data.recall_code} / ${data.suit_id}`);
       } catch (err) {
         setStatus(String(err?.message || err || "番号発行に失敗しました"), true);
       }
@@ -3109,7 +3118,7 @@ function bindEvents() {
     UI.btnSaveSuitRegistry.onclick = async () => {
       try {
         const data = await saveSuitRegistry();
-        setStatus(`成立済みスーツを保存しました: ${data.suit_id} / ${data.manifest_id}`);
+        setStatus(`成立済みスーツを保存しました: ${suitRegistrySnapshot.recallCode || data.recall_code || "----"} / ${data.suit_id} / ${data.manifest_id}`);
       } catch (err) {
         setStatus(String(err?.message || err || "スーツ登録に失敗しました"), true);
       }
@@ -3120,7 +3129,7 @@ function bindEvents() {
     UI.btnFetchSuitRegistry.onclick = async () => {
       try {
         await refreshSuitRegistry();
-        setStatus(`呼び出し確認を更新しました: ${currentSuit?.suit_id || "-"}`);
+        setStatus(`呼び出し確認を更新しました: ${suitRegistrySnapshot.recallCode || "----"} / ${currentSuit?.suit_id || "-"}`);
       } catch (err) {
         setStatus(String(err?.message || err || "呼び出し確認に失敗しました"), true);
       }

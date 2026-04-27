@@ -16,7 +16,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
-from .ids import next_suit_id, parse_suit_id
+from .ids import next_recall_code, next_suit_id, normalize_recall_code, parse_suit_id
 from .manifest import project_suitspec_to_manifest
 from .validators import validate_against_schema, validate_suitspec
 
@@ -124,6 +124,14 @@ class NewRouteApi:
 
         now = self._utc_now()
         display_name = self._display_name(payload.get("display_name"))
+        try:
+            recall_code = self._resolve_recall_code(
+                payload.get("recall_code"),
+                suit_id=suit_id,
+                previous_suit=self._read_json(suit_path) if suit_path.exists() else None,
+            )
+        except ValueError as exc:
+            return self._bad_request(str(exc))
         saved_suitspec = self._clone_json(suitspec)
         metadata = saved_suitspec.setdefault("metadata", {})
         if not isinstance(metadata, dict):
@@ -137,16 +145,22 @@ class NewRouteApi:
 
         previous_suit = self._read_json(suit_path) if suit_path.exists() else {}
         previous_metadata = previous_suit.get("metadata") if isinstance(previous_suit.get("metadata"), dict) else {}
+        issue = previous_metadata.get("issue") if isinstance(previous_metadata.get("issue"), dict) else {}
+        issue = {**issue, **parse_suit_id(suit_id), "recall_code": recall_code}
+        issue.setdefault("issued_at", now)
+        issue.setdefault("source", "new-route-api")
         suit_metadata = {
             **previous_metadata,
             "created_at": previous_metadata.get("created_at", now),
             "updated_at": now,
+            "issue": issue,
         }
         if display_name:
             suit_metadata["display_name"] = display_name
         suit = {
             "schema_version": "0.1",
             "suit_id": suit_id,
+            "recall_code": recall_code,
             "suitspec_schema_version": saved_suitspec["schema_version"],
             "status": previous_suit.get("status", "DRAFT"),
             "manifest_id": previous_suit.get("manifest_id"),
@@ -163,6 +177,7 @@ class NewRouteApi:
             body={
                 "ok": True,
                 "suit_id": suit_id,
+                "recall_code": recall_code,
                 "schema_version": saved_suitspec["schema_version"],
                 "status": suit["status"],
                 "suitspec_path": self._relative_path(suitspec_path),
@@ -189,10 +204,15 @@ class NewRouteApi:
 
         now = self._utc_now()
         display_name = self._display_name(payload.get("display_name"))
-        issue = {**parse_suit_id(suit_id), "issued_at": now, "source": "new-route-api"}
+        try:
+            recall_code = self._resolve_recall_code(payload.get("recall_code"), suit_id=suit_id)
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        issue = {**parse_suit_id(suit_id), "recall_code": recall_code, "issued_at": now, "source": "new-route-api"}
         suit = {
             "schema_version": "0.1",
             "suit_id": suit_id,
+            "recall_code": recall_code,
             "suitspec_schema_version": None,
             "status": "DRAFT",
             "manifest_id": None,
@@ -211,11 +231,75 @@ class NewRouteApi:
             body={
                 "ok": True,
                 "suit_id": suit_id,
+                "recall_code": recall_code,
                 "display_name": display_name,
                 "issue": issue,
                 "suit": suit,
                 "links": {"create_suit": "/v1/suits", "suit": f"/v1/suits/{suit_id}"},
                 "storage": self._storage_info(suit_path),
+            },
+        )
+
+    def get_suit_by_recall_code(self, recall_code: str) -> ApiResponse:
+        try:
+            code = normalize_recall_code(recall_code)
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        suit_id = self._find_suit_id_by_recall_code(code)
+        if suit_id is None:
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown recall_code: {code}"})
+        response = self.get_suit(suit_id)
+        if response.body.get("ok"):
+            response.body["recall_code"] = code
+        return response
+
+    def get_quest_recall(self, recall_code: str) -> ApiResponse:
+        try:
+            code = normalize_recall_code(recall_code)
+        except ValueError as exc:
+            return self._bad_request(str(exc))
+        suit_id = self._find_suit_id_by_recall_code(code)
+        if suit_id is None:
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown recall_code: {code}"})
+        suit_path = self._suit_path(suit_id)
+        suitspec_path = self._suitspec_path(suit_id)
+        if not suit_path.exists():
+            return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown recall_code: {code}"})
+
+        suit = self._read_json(suit_path)
+        suitspec = self._read_json(suitspec_path) if suitspec_path.exists() else None
+        metadata = suit.get("metadata") if isinstance(suit.get("metadata"), dict) else {}
+        manifest_id = suit.get("manifest_id")
+        manifest = None
+        if isinstance(manifest_id, str):
+            manifest_response = self.get_manifest(manifest_id)
+            if manifest_response.status == HTTPStatus.OK:
+                manifest = manifest_response.body["manifest"]
+        runtime_suit = {
+            "suit_id": suit_id,
+            "recall_code": code,
+            "display_name": metadata.get("display_name") or "",
+            "status": suit.get("status", "DRAFT"),
+            "manifest_id": manifest_id if isinstance(manifest_id, str) else None,
+        }
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                "recall_code": code,
+                "suit_id": suit_id,
+                "display_name": runtime_suit["display_name"],
+                "status": runtime_suit["status"],
+                "manifest_id": runtime_suit["manifest_id"],
+                "suitspec_ready": suitspec is not None,
+                "manifest_ready": manifest is not None,
+                "suit": runtime_suit,
+                "suitspec": suitspec,
+                "manifest": manifest,
+                "links": {
+                    "suit": f"/v1/suits/{suit_id}",
+                    "manifest": f"/v1/suits/{suit_id}/manifest",
+                },
             },
         )
 
@@ -226,12 +310,14 @@ class NewRouteApi:
         suitspec_path = self._suitspec_path(suit_id)
         if not suit_path.exists():
             return ApiResponse(status=HTTPStatus.NOT_FOUND, body={"ok": False, "error": f"Unknown suit: {suit_id}"})
+        suit = self._read_json(suit_path)
         return ApiResponse(
             status=HTTPStatus.OK,
             body={
                 "ok": True,
-                "suit": self._read_json(suit_path),
+                "suit": suit,
                 "suitspec": self._read_json(suitspec_path) if suitspec_path.exists() else None,
+                "recall_code": self._recall_code_from_suit(suit),
             },
         )
 
@@ -274,6 +360,8 @@ class NewRouteApi:
 
         suit = self._read_json(suit_path)
         suit["manifest_id"] = manifest_id
+        if "recall_code" not in suit:
+            suit["recall_code"] = self._resolve_recall_code(None, suit_id=suit_id, previous_suit=suit)
         suit["status"] = manifest.get("status", suit.get("status", "DRAFT"))
         suit.setdefault("artifacts", {})["manifest_path"] = self._relative_path(manifest_path)
         suit.setdefault("metadata", {})["updated_at"] = self._utc_now()
@@ -580,12 +668,18 @@ class NewRouteApi:
             return self.list_trials()
         if normalized == "/v1/trials/latest":
             return self.get_latest_trial()
+        quest_recall_prefix = "/v1/quest/recall/"
+        if normalized.startswith(quest_recall_prefix):
+            return self.get_quest_recall(normalized[len(quest_recall_prefix) :])
         prefix = "/v1/manifests/"
         if normalized.startswith(prefix):
             return self.get_manifest(normalized[len(prefix) :])
         suit_prefix = "/v1/suits/"
         if normalized.startswith(suit_prefix):
             suffix = normalized[len(suit_prefix) :]
+            code_prefix = "code/"
+            if suffix.startswith(code_prefix):
+                return self.get_suit_by_recall_code(suffix[len(code_prefix) :])
             if suffix.endswith("/manifest"):
                 return self.get_latest_suit_manifest(suffix[: -len("/manifest")])
             return self.get_suit(suffix)
@@ -656,6 +750,51 @@ class NewRouteApi:
         for path in self.suit_store_root.glob(f"*/manifests/{manifest_id}.json"):
             return path
         return None
+
+    def _find_suit_id_by_recall_code(self, recall_code: str) -> str | None:
+        code = normalize_recall_code(recall_code)
+        if not self.suit_store_root.exists():
+            return None
+        for path in self.suit_store_root.glob("*/suit.json"):
+            suit = self._read_json(path)
+            if self._recall_code_from_suit(suit) == code:
+                return str(suit.get("suit_id") or path.parent.name)
+        return None
+
+    def _all_recall_codes(self, *, exclude_suit_id: str | None = None) -> list[str]:
+        if not self.suit_store_root.exists():
+            return []
+        codes = []
+        for path in self.suit_store_root.glob("*/suit.json"):
+            suit = self._read_json(path)
+            if exclude_suit_id and str(suit.get("suit_id") or path.parent.name) == exclude_suit_id:
+                continue
+            code = self._recall_code_from_suit(suit)
+            if code:
+                codes.append(code)
+        return codes
+
+    def _recall_code_from_suit(self, suit: dict[str, Any]) -> str | None:
+        metadata = suit.get("metadata") if isinstance(suit.get("metadata"), dict) else {}
+        issue = metadata.get("issue") if isinstance(metadata.get("issue"), dict) else {}
+        for value in (suit.get("recall_code"), metadata.get("recall_code"), issue.get("recall_code")):
+            if not value:
+                continue
+            try:
+                return normalize_recall_code(str(value))
+            except ValueError:
+                continue
+        return None
+
+    def _resolve_recall_code(self, value: Any, *, suit_id: str, previous_suit: dict[str, Any] | None = None) -> str:
+        previous_code = self._recall_code_from_suit(previous_suit or {})
+        if value is None or str(value).strip() == "":
+            return previous_code or next_recall_code(self._all_recall_codes(exclude_suit_id=suit_id))
+        code = normalize_recall_code(str(value))
+        owner = self._find_suit_id_by_recall_code(code)
+        if owner is not None and owner != suit_id:
+            raise ValueError(f"recall_code already exists: {code}")
+        return code
 
     def _all_suit_ids(self) -> list[str]:
         if not self.suit_store_root.exists():

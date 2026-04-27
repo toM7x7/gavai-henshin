@@ -8,6 +8,7 @@ import string
 from datetime import datetime, timezone
 
 _SUIT_ID_PARTS_RE = re.compile(r"^VDA-([A-Z0-9]+)-([A-Z0-9]+)-([0-9]{2})-([0-9]{4})$")
+_RECALL_CODE_RE = re.compile(r"^[A-Z0-9]{4}$")
 
 
 def _utcnow() -> datetime:
@@ -75,6 +76,31 @@ def next_suit_id(
         ):
             max_seq = max(max_seq, int(parsed["seq"]))
     return generate_suit_id(series=normalized_series, role=normalized_role, rev=rev, seq=max_seq + 1)
+
+
+def normalize_recall_code(value: str) -> str:
+    code = "".join(ch for ch in str(value or "").upper() if ch.isalnum())
+    if not _RECALL_CODE_RE.fullmatch(code):
+        raise ValueError("recall_code must be exactly 4 alphanumeric characters")
+    return code
+
+
+def generate_recall_code(rng: random.Random | None = None) -> str:
+    return _token(4, rng=rng)
+
+
+def next_recall_code(existing_codes: list[str] | tuple[str, ...], rng: random.Random | None = None) -> str:
+    used = set()
+    for code in existing_codes:
+        try:
+            used.add(normalize_recall_code(code))
+        except ValueError:
+            continue
+    for _ in range(128):
+        code = generate_recall_code(rng=rng)
+        if code not in used:
+            return code
+    raise ValueError("Unable to allocate a unique recall_code")
 
 
 def generate_approval_id(rng: random.Random | None = None) -> str:

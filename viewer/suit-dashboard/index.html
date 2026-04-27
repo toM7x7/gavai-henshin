@@ -134,7 +134,7 @@
         <div class="latest-trial-panel" aria-label="スーツ登録">
           <div class="latest-trial-head">
             <div>
-              <strong>スーツ登録 / 呼び出し番号</strong>
+              <strong>スーツ登録 / Quest入力コード</strong>
               <small id="suitRegistryStorage">未保存</small>
             </div>
             <button id="btnIssueSuitId" type="button">番号発行</button>
@@ -146,7 +146,11 @@
           <div id="suitRegistryStatus" class="latest-trial-status pending">登録待機中</div>
           <div class="latest-trial-grid">
             <div>
-              <span>呼び出し番号</span>
+              <span>Quest入力コード</span>
+              <strong id="suitRegistryRecallCode">----</strong>
+            </div>
+            <div>
+              <span>内部ID</span>
               <strong id="suitRegistryIssueId">-</strong>
             </div>
             <div>

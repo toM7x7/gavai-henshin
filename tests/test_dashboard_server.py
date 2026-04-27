@@ -61,6 +61,32 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(response.body["trial_id"], "S-TRIAL-DASH-0001")
 
+    def test_new_route_quest_recall_is_served_by_dashboard_handler(self) -> None:
+        root = Path(".").resolve()
+        suitspec = json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store_root = Path(tmp) / "suits"
+            api = NewRouteApi(root, suit_store_root=suit_store_root)
+            created = api.post("/v1/suits", {"suitspec": suitspec, "recall_code": "A1B2"})
+            api.post(
+                "/v1/suits/VDA-AXIS-OP-00-0001/manifest",
+                {"manifest_id": "MNF-20260424-ABCD", "status": "READY"},
+            )
+            assert created is not None
+
+            response = DashboardHandler._new_route_response_for_test(
+                root,
+                f"/v1/quest/recall/{created.body['recall_code']}",
+                suit_store_root=suit_store_root,
+            )
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.body["recall_code"], "A1B2")
+        self.assertTrue(response.body["suitspec_ready"])
+        self.assertTrue(response.body["manifest_ready"])
+
     def test_generation_job_snapshot_tracks_progress(self) -> None:
         job = GenerationJob("job-1", GeneratePartsPayload(suitspec="examples/suitspec.sample.json"))
         job.emit({"type": "job_started", "stage": "scan", "status": "started", "requested_count": 2})

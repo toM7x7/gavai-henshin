@@ -22,6 +22,14 @@
           <span id="routeReplay">記録保管: WAIT</span>
         </div>
         <p id="routeContract" class="route-contract">FIT CONTRACT: WAIT / TEXTURE FALLBACK: WAIT</p>
+        <div class="recall-dock" aria-label="Quest suit recall">
+          <label for="recallCodeInput">Quest入力コード</label>
+          <div>
+            <input id="recallCodeInput" type="text" inputmode="latin" maxlength="4" placeholder="A1B2" autocomplete="off" />
+            <button id="btnLoadRecallCode" type="button">呼び出し</button>
+          </div>
+          <span id="recallCodeState">4桁コード未指定</span>
+        </div>
         <div class="actions">
           <button id="btnEnterVR" type="button">VR開始</button>
           <button id="btnVoice" type="button">音声</button>

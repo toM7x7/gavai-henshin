@@ -65,37 +65,94 @@ class TestNewRouteApi(unittest.TestCase):
             api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
             first = api.post("/v1/suits/issue-id", {"series": "axis", "role": "guest", "display_name": "試作鎧A"})
             second = api.post("/v1/suits/issue-id", {"series": "axis", "role": "guest"})
-            fetched = api.get("/v1/suits/VDA-AXIS-GUEST-00-0001")
+            assert first is not None
+            fetched = api.get(f"/v1/suits/code/{first.body['recall_code']}")
+            quest = api.get(f"/v1/quest/recall/{first.body['recall_code']}")
 
-            self.assertIsNotNone(first)
             self.assertIsNotNone(second)
             self.assertIsNotNone(fetched)
-            assert first is not None and second is not None and fetched is not None
+            self.assertIsNotNone(quest)
+            assert second is not None and fetched is not None and quest is not None
             self.assertEqual(first.status, 201)
             self.assertEqual(first.body["suit_id"], "VDA-AXIS-GUEST-00-0001")
+            self.assertRegex(first.body["recall_code"], r"^[A-Z0-9]{4}$")
             self.assertEqual(first.body["display_name"], "試作鎧A")
             self.assertEqual(first.body["issue"]["seq"], 1)
+            self.assertEqual(first.body["issue"]["recall_code"], first.body["recall_code"])
             self.assertEqual(second.body["suit_id"], "VDA-AXIS-GUEST-00-0002")
+            self.assertRegex(second.body["recall_code"], r"^[A-Z0-9]{4}$")
             self.assertEqual(fetched.status, 200)
             self.assertIsNone(fetched.body["suitspec"])
             self.assertEqual(fetched.body["suit"]["metadata"]["display_name"], "試作鎧A")
+            self.assertEqual(fetched.body["recall_code"], first.body["recall_code"])
+            self.assertEqual(quest.status, 200)
+            self.assertFalse(quest.body["suitspec_ready"])
+            self.assertFalse(quest.body["manifest_ready"])
+            self.assertEqual(quest.body["display_name"], "試作鎧A")
+            self.assertNotIn("metadata", quest.body["suit"])
 
     def test_create_suit_preserves_issue_metadata_and_display_name(self) -> None:
         suitspec = self._sample_suitspec()
         with tempfile.TemporaryDirectory() as tmp:
             api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
-            api.post("/v1/suits/issue-id", {"series": "axis", "role": "op", "display_name": "生成前"})
+            issued = api.post("/v1/suits/issue-id", {"series": "axis", "role": "op", "display_name": "生成前"})
+            assert issued is not None
             response = api.post("/v1/suits", {"suitspec": suitspec, "display_name": "完成鎧"})
             fetched = api.get("/v1/suits/VDA-AXIS-OP-00-0001")
+            by_code = api.get(f"/v1/suits/code/{issued.body['recall_code']}")
 
             self.assertIsNotNone(response)
             self.assertIsNotNone(fetched)
-            assert response is not None and fetched is not None
+            self.assertIsNotNone(by_code)
+            assert response is not None and fetched is not None and by_code is not None
             self.assertEqual(response.status, 201)
+            self.assertEqual(response.body["recall_code"], issued.body["recall_code"])
             self.assertEqual(response.body["suit"]["metadata"]["display_name"], "完成鎧")
             self.assertEqual(response.body["suit"]["metadata"]["issue"]["seq"], 1)
+            self.assertEqual(response.body["suit"]["metadata"]["issue"]["recall_code"], issued.body["recall_code"])
             self.assertEqual(fetched.body["suitspec"]["suit_id"], "VDA-AXIS-OP-00-0001")
             self.assertEqual(fetched.body["suit"]["metadata"]["display_name"], "完成鎧")
+            self.assertEqual(by_code.body["suit"]["suit_id"], "VDA-AXIS-OP-00-0001")
+
+    def test_create_suit_rejects_duplicate_recall_code_for_other_suit(self) -> None:
+        suitspec = self._sample_suitspec()
+        other = json.loads(json.dumps(suitspec))
+        other["suit_id"] = "VDA-AXIS-OP-00-0002"
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            first = api.post("/v1/suits", {"suitspec": suitspec, "recall_code": "A1B2"})
+            second = api.post("/v1/suits", {"suitspec": other, "recall_code": "A1B2"})
+
+            self.assertIsNotNone(first)
+            self.assertIsNotNone(second)
+            assert first is not None and second is not None
+            self.assertEqual(first.status, 201)
+            self.assertEqual(second.status, 400)
+
+    def test_issue_suit_id_rejects_duplicate_recall_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            first = api.post("/v1/suits/issue-id", {"recall_code": "A1B2"})
+            second = api.post("/v1/suits/issue-id", {"recall_code": "A1B2"})
+
+            self.assertIsNotNone(first)
+            self.assertIsNotNone(second)
+            assert first is not None and second is not None
+            self.assertEqual(first.status, 201)
+            self.assertEqual(second.status, 400)
+            self.assertIn("recall_code", second.body["error"])
+
+    def test_recall_code_lookup_rejects_invalid_or_unknown_codes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            invalid = api.get("/v1/suits/code/ABC")
+            unknown = api.get("/v1/quest/recall/ZZZZ")
+
+            self.assertIsNotNone(invalid)
+            self.assertIsNotNone(unknown)
+            assert invalid is not None and unknown is not None
+            self.assertEqual(invalid.status, 400)
+            self.assertEqual(unknown.status, 404)
 
     def test_create_suit_rejects_duplicate_without_overwrite(self) -> None:
         suitspec = self._sample_suitspec()
@@ -121,16 +178,24 @@ class TestNewRouteApi(unittest.TestCase):
                 {"manifest_id": "MNF-20260424-ABCD", "status": "READY"},
             )
             fetched = api.get("/v1/manifests/MNF-20260424-ABCD")
+            assert response is not None
+            quest = api.get(f"/v1/quest/recall/{response.body['suit']['recall_code']}")
 
             self.assertIsNotNone(response)
             self.assertIsNotNone(fetched)
-            assert response is not None and fetched is not None
+            self.assertIsNotNone(quest)
+            assert fetched is not None and quest is not None
             self.assertEqual(response.status, 201)
             self.assertEqual(response.body["manifest_id"], "MNF-20260424-ABCD")
             self.assertEqual(response.body["manifest"]["status"], "READY")
             self.assertEqual(response.body["manifest"]["parts"]["helmet"]["catalog_part_id"], "viewer.mesh.helmet.v1")
             self.assertEqual(fetched.status, 200)
             self.assertEqual(fetched.body["manifest"]["manifest_id"], "MNF-20260424-ABCD")
+            self.assertEqual(quest.status, 200)
+            self.assertTrue(quest.body["suitspec_ready"])
+            self.assertTrue(quest.body["manifest_ready"])
+            self.assertEqual(quest.body["suit_id"], "VDA-AXIS-OP-00-0001")
+            self.assertEqual(quest.body["manifest"]["manifest_id"], "MNF-20260424-ABCD")
 
     def test_manifest_post_returns_404_for_unknown_suit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

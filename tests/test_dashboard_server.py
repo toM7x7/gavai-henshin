@@ -187,6 +187,12 @@ class TestDashboardServer(unittest.TestCase):
             "codeClear",
             "codeSubmit",
             "appendRecallDigit",
+            "VRコード入力 数字4桁",
+            "fitText",
+            "minFontSize",
+            "fontSize: /^[0-9]$/.test(label) ? 76 : 52",
+            "height: Math.max(0.086, height * 0.86)",
+            "&& !this.codeInputMode",
             "loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true })",
         }:
             self.assertIn(token, js)

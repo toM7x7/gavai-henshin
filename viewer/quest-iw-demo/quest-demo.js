@@ -897,6 +897,8 @@ function drawTextPlaneCanvas(canvas, text, options) {
     paddingY = 20,
     lineHeight = fontSize * 1.22,
     maxLines = 1,
+    fitText = true,
+    minFontSize = Math.max(24, Math.floor(fontSize * 0.62)),
   } = options;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (background) {
@@ -908,19 +910,28 @@ function drawTextPlaneCanvas(canvas, text, options) {
     ctx.lineWidth = 5;
     ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
   }
-  ctx.font = `${fontWeight} ${fontSize}px system-ui, sans-serif`;
+  const applyFont = (size) => {
+    ctx.font = `${fontWeight} ${size}px system-ui, sans-serif`;
+  };
+  let activeFontSize = fontSize;
+  applyFont(activeFontSize);
   ctx.fillStyle = color;
   ctx.textAlign = align;
   ctx.textBaseline = baseline;
   ctx.shadowColor = "rgba(255, 207, 90, 0.65)";
   ctx.shadowBlur = 10;
   const x = align === "left" ? paddingX : canvas.width / 2;
+  const maxWidth = canvas.width - paddingX * 2;
   if (maxLines <= 1) {
+    const textValue = String(text || "");
+    while (fitText && activeFontSize > minFontSize && ctx.measureText(textValue).width > maxWidth) {
+      activeFontSize -= 2;
+      applyFont(activeFontSize);
+    }
     ctx.fillText(text, x, canvas.height / 2);
     return;
   }
 
-  const maxWidth = canvas.width - paddingX * 2;
   const lines = [];
   for (const rawLine of String(text || "").split("\n")) {
     let line = "";
@@ -1413,11 +1424,11 @@ class SpatialControlPanel {
     this.group.add(this.listenRing);
 
     this.recallDisplay = makeTextPlane(`CODE ${this.recallDisplayCode()}`, {
-      width: 0.64,
-      height: 0.09,
+      width: 0.82,
+      height: 0.115,
       canvasWidth: 900,
-      canvasHeight: 150,
-      fontSize: 42,
+      canvasHeight: 220,
+      fontSize: 64,
       fontWeight: 850,
       color: "#fff4c8",
       background: "rgba(4, 13, 17, 0.76)",
@@ -1426,8 +1437,8 @@ class SpatialControlPanel {
     this.recallDisplay.position.set(0, -0.18, 0.02);
     this.group.add(this.recallDisplay);
 
-    this.normalInputElements.push(this.addButton("codeMode", "コード", -0.58, -0.18, 0xffcf5a, { width: 0.28, height: 0.085, fontSize: 34 }).group);
-    this.normalInputElements.push(this.addButton("codeSubmit", "呼出", 0.58, -0.18, 0x43d8ff, { width: 0.28, height: 0.085, fontSize: 34 }).group);
+    this.normalInputElements.push(this.addButton("codeMode", "コード", -0.58, -0.18, 0xffcf5a, { width: 0.3, height: 0.095, fontSize: 50 }).group);
+    this.normalInputElements.push(this.addButton("codeSubmit", "呼出", 0.58, -0.18, 0x43d8ff, { width: 0.3, height: 0.095, fontSize: 50 }).group);
     this.normalInputElements.push(this.addButton("voice", "音声", -0.6, -0.31, 0xffcf5a).group);
     this.normalInputElements.push(this.addButton("replay", "記録再生", -0.2, -0.31, 0x43d8ff).group);
     this.normalInputElements.push(this.addButton("view", "鏡", 0.2, -0.31, 0x8edfff).group);
@@ -1442,12 +1453,12 @@ class SpatialControlPanel {
   }
 
   buildCodeInputPanel() {
-    this.codeInputHint = makeTextPlane("VRコード入力: 数字を押して4桁にします", {
+    this.codeInputHint = makeTextPlane("VRコード入力 数字4桁", {
       width: 1.24,
-      height: 0.09,
+      height: 0.105,
       canvasWidth: 1200,
-      canvasHeight: 150,
-      fontSize: 34,
+      canvasHeight: 190,
+      fontSize: 48,
       fontWeight: 780,
       color: "#d7f8ff",
       background: "rgba(4, 13, 17, 0.68)",
@@ -1465,8 +1476,8 @@ class SpatialControlPanel {
       ["消", "0", "呼出"],
       ["戻る", "全消", ""],
     ];
-    const xs = [-0.34, 0, 0.34];
-    const ys = [-0.08, -0.185, -0.29, -0.395, -0.5];
+    const xs = [-0.36, 0, 0.36];
+    const ys = [-0.055, -0.16, -0.265, -0.37, -0.475];
     rows.forEach((row, rowIndex) => {
       row.forEach((label, colIndex) => {
         if (!label) return;
@@ -1479,12 +1490,13 @@ class SpatialControlPanel {
               : label === "呼出"
                 ? "codeSubmit"
                 : "codeBack";
-        const width = label === "呼出" ? 0.32 : 0.26;
+        const width = label === "呼出" || label === "戻る" || label === "全消" ? 0.34 : 0.3;
         const color = label === "呼出" ? 0x43d8ff : label === "戻る" ? 0x8edfff : label === "全消" || label === "消" ? 0xff6b6b : 0xffcf5a;
         const button = this.addButton(action, label, xs[colIndex], ys[rowIndex], color, {
           width,
-          height: 0.085,
-          fontSize: /^[0-9]$/.test(label) ? 46 : 34,
+          height: 0.1,
+          fontSize: /^[0-9]$/.test(label) ? 76 : 52,
+          minFontSize: 42,
         });
         this.codeInputElements.push(button.group);
       });
@@ -1547,8 +1559,8 @@ class SpatialControlPanel {
   }
 
   addButton(action, label, x, y, color, options = {}) {
-    const width = options.width || 0.36;
-    const height = options.height || 0.105;
+    const width = options.width || 0.38;
+    const height = options.height || 0.112;
     const button = new THREE.Group();
     button.name = `XR-Button-${action}`;
     button.position.set(x, y, 0.025);
@@ -1570,9 +1582,14 @@ class SpatialControlPanel {
     button.add(hit);
 
     const text = makeTextPlane(label, {
-      width: Math.max(0.1, width - 0.045),
-      height: 0.074,
-      fontSize: options.fontSize || 42,
+      width: Math.max(0.1, width - 0.026),
+      height: Math.max(0.086, height * 0.86),
+      canvasWidth: options.canvasWidth || 900,
+      canvasHeight: options.canvasHeight || 240,
+      fontSize: options.fontSize || 58,
+      fontWeight: options.fontWeight || 850,
+      minFontSize: options.minFontSize || 38,
+      paddingX: options.paddingX || 20,
       color: "#eef9ff",
       background: null,
     });
@@ -1895,6 +1912,7 @@ class SpatialControlPanel {
     this.group.visible = inVR;
     if (
       this.menuMode === XR_MENU_MODE_OPEN
+      && !this.codeInputMode
       && performance.now() - this.lastMenuInteractionAt > XR_MENU_OPEN_AUTO_COMPACT_MS
     ) {
       this.setMenuMode(XR_MENU_MODE_COMPACT);

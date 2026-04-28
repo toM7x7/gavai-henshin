@@ -282,6 +282,25 @@ class TestDashboardServer(unittest.TestCase):
     def test_armor_forge_limb_pose_uses_3d_segment_frame_static_contract(self) -> None:
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
 
+        for token in {
+            "const FORGE_DISPLAY_ARM_POSE_CHAINS = Object.freeze([",
+            '{ bone: "leftUpperArm", childBone: "leftLowerArm", target: [-0.48, -0.88, 0.02], strength: 0.86 }',
+            '{ bone: "rightUpperArm", childBone: "rightLowerArm", target: [0.48, -0.88, 0.02], strength: 0.86 }',
+            "this.applyForgeDisplayPose();",
+            "this.canvas.dataset.previewDisplayPoseChains = String(this.previewStats.displayPoseChains || 0);",
+        }:
+            self.assertIn(token, js)
+
+        display_pose_block = js[js.index("  rotateBoneChainTowardWorldDir(") : js.index("\n\n  boneLocalPosition")]
+        for token in {
+            "const deltaWorld = new THREE.Quaternion().setFromUnitVectors(currentDir, targetDir);",
+            "const desiredLocalQuat = parentWorldQuat.clone().invert().multiply(desiredWorldQuat).normalize();",
+            "bone.quaternion.slerp(desiredLocalQuat, clamp(strength, 0, 1));",
+            "for (const chain of FORGE_DISPLAY_ARM_POSE_CHAINS)",
+            "this.previewStats.displayPoseChains = applied;",
+        }:
+            self.assertIn(token, display_pose_block)
+
         frame_block = js[
             js.index("function segmentFrameQuaternion") : js.index("\n\nfunction rotationZFromSegment")
         ]
@@ -321,6 +340,7 @@ class TestDashboardServer(unittest.TestCase):
             'const sideKey = (name) => (side ? `${side}${name}` : name);',
             'if (part.endsWith("upperarm")) return [metrics[sideKey("UpperArm")], metrics[sideKey("LowerArm")]];',
             'if (part.endsWith("forearm")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];',
+            'if (part.endsWith("hand")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];',
         }:
             self.assertIn(token, segment_block)
 

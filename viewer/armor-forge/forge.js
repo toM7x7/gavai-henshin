@@ -41,6 +41,12 @@ const BASE_SUIT_EMISSIVE = 0x10292c;
 const PREVIEW_FLOOR_Y = -0.43;
 const FALLBACK_MESH_SOURCE = "seed_proxy_fallback";
 const MIN_RENDERABLE_MESH_SIZE = 0.002;
+const FORGE_DISPLAY_ARM_POSE_CHAINS = Object.freeze([
+  { bone: "leftUpperArm", childBone: "leftLowerArm", target: [-0.48, -0.88, 0.02], strength: 0.86 },
+  { bone: "leftLowerArm", childBone: "leftHand", target: [-0.18, -0.98, 0.04], strength: 0.78 },
+  { bone: "rightUpperArm", childBone: "rightLowerArm", target: [0.48, -0.88, 0.02], strength: 0.86 },
+  { bone: "rightLowerArm", childBone: "rightHand", target: [0.18, -0.98, 0.04], strength: 0.78 },
+]);
 const VRM_BONE_ALIAS_INDEX = new Map();
 for (const [canonical, aliases] of Object.entries(VRM_BONE_ALIASES)) {
   VRM_BONE_ALIAS_INDEX.set(normalizeBoneName(canonical), canonical);
@@ -1109,6 +1115,7 @@ class ArmorStand {
       baseSuitVisible: true,
       vrmVisible: false,
       heightCm: DEFAULT_HEIGHT_CM,
+      displayPoseChains: 0,
     };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
@@ -1141,6 +1148,7 @@ class ArmorStand {
     this.canvas.dataset.previewVrm = this.previewStats.vrmVisible ? "visible" : "fallback";
     this.canvas.dataset.previewHeightCm = String(Math.round(this.heightCm));
     this.canvas.dataset.previewHeightScale = (this.heightCm / DEFAULT_HEIGHT_CM).toFixed(3);
+    this.canvas.dataset.previewDisplayPoseChains = String(this.previewStats.displayPoseChains || 0);
     updatePreviewLayerPanel(latestForgeData, this);
   }
 
@@ -1315,6 +1323,7 @@ class ArmorStand {
       this.avatarGroup.add(model);
       this.vrmModel = model;
       this.indexVrmBones(model);
+      this.applyForgeDisplayPose();
       this.ghostGroup.visible = false;
       this.refreshBaseSuitSurface(this.currentPalette);
       this.fitVrmToStand(model);
@@ -1353,6 +1362,45 @@ class ArmorStand {
       if (bone) return bone;
     }
     return null;
+  }
+
+  rotateBoneChainTowardWorldDir(boneName, childBoneName, target, strength = 1) {
+    const bone = this.resolveBone(boneName);
+    const childBone = this.resolveBone(childBoneName);
+    if (!bone || !childBone) return false;
+    bone.updateMatrixWorld(true);
+    childBone.updateMatrixWorld(true);
+    const bonePos = bone.getWorldPosition(new THREE.Vector3());
+    const childPos = childBone.getWorldPosition(new THREE.Vector3());
+    const currentDir = childPos.sub(bonePos);
+    if (!Number.isFinite(currentDir.lengthSq()) || currentDir.lengthSq() < 1e-8) return false;
+    currentDir.normalize();
+    const targetDir = new THREE.Vector3(
+      numberOr(target?.[0], 0),
+      numberOr(target?.[1], 0),
+      numberOr(target?.[2], 0),
+    );
+    if (!Number.isFinite(targetDir.lengthSq()) || targetDir.lengthSq() < 1e-8) return false;
+    targetDir.normalize();
+    const deltaWorld = new THREE.Quaternion().setFromUnitVectors(currentDir, targetDir);
+    const parentWorldQuat = bone.parent ? bone.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+    const boneWorldQuat = bone.getWorldQuaternion(new THREE.Quaternion());
+    const desiredWorldQuat = deltaWorld.multiply(boneWorldQuat);
+    const desiredLocalQuat = parentWorldQuat.clone().invert().multiply(desiredWorldQuat).normalize();
+    bone.quaternion.slerp(desiredLocalQuat, clamp(strength, 0, 1));
+    bone.updateMatrixWorld(true);
+    return true;
+  }
+
+  applyForgeDisplayPose() {
+    let applied = 0;
+    for (const chain of FORGE_DISPLAY_ARM_POSE_CHAINS) {
+      if (this.rotateBoneChainTowardWorldDir(chain.bone, chain.childBone, chain.target, chain.strength)) applied += 1;
+    }
+    this.metricsCache = null;
+    this.previewStats.displayPoseChains = applied;
+    this.vrmModel?.updateMatrixWorld(true);
+    return applied;
   }
 
   boneLocalPosition(boneName) {
@@ -1407,6 +1455,7 @@ class ArmorStand {
     const sideKey = (name) => (side ? `${side}${name}` : name);
     if (part.endsWith("upperarm")) return [metrics[sideKey("UpperArm")], metrics[sideKey("LowerArm")]];
     if (part.endsWith("forearm")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];
+    if (part.endsWith("hand")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];
     if (part.endsWith("thigh")) return [metrics[sideKey("UpperLeg")], metrics[sideKey("LowerLeg")]];
     if (part.endsWith("shin")) return [metrics[sideKey("LowerLeg")], metrics[sideKey("Foot")]];
     return [null, null];

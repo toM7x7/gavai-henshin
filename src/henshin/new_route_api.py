@@ -26,6 +26,7 @@ from .ids import (
     parse_suit_id,
 )
 from .manifest import project_suitspec_to_manifest
+from .runtime_package import build_runtime_suit_package
 from .validators import validate_against_schema, validate_suitspec
 
 _SUIT_ID_RE = re.compile(r"^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$")
@@ -409,6 +410,7 @@ class NewRouteApi:
         asset_pipeline = None
         visual_layers = None
         render_contract = None
+        runtime_package = None
         if isinstance(suitspec, dict):
             asset_pipeline = self._forge_public_asset_pipeline(
                 suitspec,
@@ -416,8 +418,15 @@ class NewRouteApi:
             )
             visual_layers = asset_pipeline["visual_layers"]
             render_contract = asset_pipeline["render_contract"]
-            if isinstance(manifest, dict):
-                manifest = self._merge_suitspec_surface_into_manifest(manifest, suitspec)
+            runtime_package = build_runtime_suit_package(
+                suitspec=suitspec,
+                manifest=manifest if isinstance(manifest, dict) else {},
+                visual_layers=visual_layers,
+                render_contract=render_contract,
+            )
+            manifest = runtime_package["manifest"] if isinstance(manifest, dict) else manifest
+            visual_layers = runtime_package["visual_layers"]
+            render_contract = runtime_package["render_contract"]
         runtime_suit = {
             "suit_id": suit_id,
             "recall_code": canonical_code,
@@ -441,6 +450,7 @@ class NewRouteApi:
                 "manifest": manifest,
                 "visual_layers": visual_layers,
                 "render_contract": render_contract,
+                "runtime_package": runtime_package,
                 "asset_pipeline": asset_pipeline,
                 "links": {
                     "suit": f"/v1/suits/{suit_id}",
@@ -1627,30 +1637,6 @@ class NewRouteApi:
 
     def _clone_json(self, payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(json.dumps(payload, ensure_ascii=False))
-
-    def _merge_suitspec_surface_into_manifest(
-        self,
-        manifest: dict[str, Any],
-        suitspec: dict[str, Any],
-    ) -> dict[str, Any]:
-        runtime_manifest = self._clone_json(manifest)
-        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
-        parts = runtime_manifest.setdefault("parts", {})
-        if not isinstance(parts, dict):
-            runtime_manifest["parts"] = {}
-            parts = runtime_manifest["parts"]
-        for part_name, module in modules.items():
-            if not isinstance(module, dict):
-                continue
-            part_record = parts.setdefault(part_name, {})
-            if not isinstance(part_record, dict):
-                part_record = {}
-                parts[part_name] = part_record
-            part_record["enabled"] = bool(module.get("enabled", False))
-            for key in ("asset_ref", "material_ref", "texture_path", "attachment_slot", "fit", "vrm_anchor"):
-                if key in module:
-                    part_record[key] = self._clone_json(module[key]) if isinstance(module[key], (dict, list)) else module[key]
-        return runtime_manifest
 
     def _strip_none(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {key: value for key, value in payload.items() if value is not None}

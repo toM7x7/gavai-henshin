@@ -326,6 +326,14 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["render_contract"]["overlay_part_count"], 5)
             self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["part_count"], 5)
             self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
+            self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
+            self.assertEqual(quest.body["runtime_package"]["visual_layers"], quest.body["visual_layers"])
+            self.assertEqual(quest.body["runtime_package"]["render_contract"], quest.body["render_contract"])
+            self.assertTrue(quest.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
+            self.assertEqual(
+                quest.body["runtime_package"]["runtime_checks"]["required_layers"],
+                ["base_suit_surface", "armor_overlay_parts"],
+            )
 
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -8,6 +8,29 @@
 
 ---
 
+## 2026-04-28
+
+### 実施
+
+- 参考資料 `examples/henshin_docs_bundle_v0_1/`、`examples/henshin_docs_gcp_bundle_v0_2/henshin_docs_gcp_v0_2/`、`examples/message (1).txt` を確認し、ロア/新規路線/GCP/PlayCanvas合成の軸を整理
+- `docs/checkpoints/2026-04-28-system-progress.md` を追加し、PC電源OFF後の再開手順、現状進捗、残課題、ユーザー操作メモを固定
+- `src/henshin/runtime_package.py` を追加し、`SuitSpec` / `SuitManifest` / `visual_layers` / `render_contract` を runtime 向け `RuntimeSuitPackage` に正規化
+- `GET /v1/quest/recall/{recallCode}` が `runtime_package` を返すようにし、Quest/Web/将来Unity adapterの import checklist を一本化
+
+### 結果
+
+- VRM-only recall を無効状態として扱う契約が `render_contract` だけでなく runtime package にも入った
+- SuitSpecに後から入った `texture_path` を runtime manifest に投影するルールが純粋関数として分離された
+- GCP移行前でも、Cloud Run / Unity / PlayCanvas へ移植しやすい境界ができた
+
+### 次アクション
+
+- `examples/suitspec.sample.json` の変更を canonical sample更新として採用するか判断する
+- `tests/.tmp` と参考資料bundleをコミット対象から分離し、必要なら `.gitignore` / docs取り込み方針を決める
+- 次の実装は `RuntimeSuitPackage` を PlayCanvas/Unity向けのGLB export/import contractへ拡張する
+
+---
+
 ## 2026-03-28
 
 ### 実施

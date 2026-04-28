@@ -134,6 +134,11 @@ class TestQuestRecallRenderContract(unittest.TestCase):
             self.assertEqual(recalled.body["suitspec"]["modules"]["helmet"]["texture_path"], texture_path)
             self.assertEqual(recalled.body["manifest"]["parts"]["helmet"]["texture_path"], texture_path)
             self.assertEqual(
+                recalled.body["runtime_package"]["manifest"]["parts"]["helmet"]["texture_path"],
+                texture_path,
+            )
+            self.assertTrue(recalled.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
+            self.assertEqual(
                 recalled.body["manifest"]["parts"]["helmet"]["asset_ref"],
                 recalled.body["suitspec"]["modules"]["helmet"]["asset_ref"],
             )

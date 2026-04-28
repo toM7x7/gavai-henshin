@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import threading
 import tempfile
 import unittest
@@ -208,6 +209,9 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("model ${modelStatus}", js)
         self.assertIn("seed/proxy", js)
         self.assertIn("planned", js)
+        self.assertIn('title: "部分生成"', js)
+        self.assertIn("本番スーツ化には ${missing} が必要です。現在は部分プレビューです。", js)
+        self.assertIn("本番スーツ化に必要な外装パーツ数が足りません。現在は部分プレビューです。", js)
         self.assertIn("color-scheme: light", css)
         self.assertIn("--body-reference", css)
         self.assertIn("--base-suit", css)
@@ -224,6 +228,46 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("装甲/表面", html)
         self.assertNotIn('id="suitId"', html)
         self.assertNotIn('id="manifestId"', html)
+
+    def test_armor_forge_layout_css_keeps_stand_panel_bounded(self) -> None:
+        css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")
+
+        app_shell = self._css_block(css, ".app-shell")
+        self.assertIn("display: grid;", app_shell)
+        self.assertIn("align-items: start;", app_shell)
+
+        stand_panel = self._css_block_containing(css, ".stand-panel", "position: sticky;")
+        for token in {
+            "position: sticky;",
+            "top: 0;",
+            "height: 100vh;",
+            "grid-template-rows: minmax(360px, 1fr) auto;",
+            "overflow: hidden;",
+        }:
+            self.assertIn(token, stand_panel)
+
+        stand_stage = self._css_block(css, ".stand-stage")
+        self.assertIn("min-height: 0;", stand_stage)
+        self.assertIn("overflow: hidden;", stand_stage)
+
+        mobile_css = css[css.index("@media (max-width: 1080px)") :]
+        mobile_stand_panel = self._css_block(mobile_css, ".stand-panel")
+        for token in {
+            "position: relative;",
+            "height: auto;",
+            "overflow: visible;",
+        }:
+            self.assertIn(token, mobile_stand_panel)
+        mobile_stand_stage = self._css_block(mobile_css, ".stand-stage")
+        self.assertIn("height: clamp(420px, 62vh, 620px);", mobile_stand_stage)
+        mobile_layer_panel = self._css_block(mobile_css, ".preview-layer-panel")
+        self.assertIn("position: absolute;", mobile_layer_panel)
+        self.assertIn("margin: 0;", mobile_layer_panel)
+        self.assertNotIn("position: static;", mobile_layer_panel)
+
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        self.assertIn("lastCanvasSize", js)
+        self.assertIn("this.lastCanvasSize.width === width", js)
 
     def test_forge_generation_job_payload_matches_existing_job_api_contract(self) -> None:
         root = Path(".").resolve()
@@ -438,6 +482,19 @@ class TestDashboardServer(unittest.TestCase):
                 for part in required
             },
         }
+
+    def _css_block(self, css: str, selector: str) -> str:
+        block = self._css_block_containing(css, selector, "")
+        self.assertTrue(block, f"{selector} block should exist")
+        return block
+
+    def _css_block_containing(self, css: str, selector: str, token: str) -> str:
+        pattern = rf"(^|\n)\s*{re.escape(selector)}\s*\{{(?P<body>.*?)\n\s*\}}"
+        for match in re.finditer(pattern, css, re.DOTALL):
+            body = match.group("body")
+            if token in body:
+                return body
+        self.fail(f"{selector} block containing {token!r} should exist")
 
 
 if __name__ == "__main__":

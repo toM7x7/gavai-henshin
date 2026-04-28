@@ -312,6 +312,7 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
   const pipeline = previewPipelineFromData(data);
   const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template;
   const canRun = Boolean(template?.suitspec);
+  const writesFinal = textureJobWritesFinal(data);
   if (texturedCount > 0) {
     return {
       state: "ready",
@@ -336,8 +337,10 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
   if (canRun) {
     return {
       state: "queued",
-      title: "生成準備OK",
-      detail: "表面/テクスチャ層を追加生成できます。",
+      title: writesFinal ? "生成準備OK" : "Probe待機",
+      detail: writesFinal
+        ? "表面/テクスチャ層を追加生成できます。"
+        : "部分生成またはモデルGate前のため、本番反映せず速度確認だけ行います。",
     };
   }
   return {
@@ -953,6 +956,7 @@ class ArmorStand {
     this.vrmModel = null;
     this.boneMap = new Map();
     this.metricsCache = null;
+    this.lastCanvasSize = { width: 0, height: 0 };
     this.previewStats = {
       armorParts: 0,
       fallbackParts: 0,
@@ -1455,6 +1459,8 @@ class ArmorStand {
   resize() {
     const width = this.canvas.clientWidth || 640;
     const height = this.canvas.clientHeight || 640;
+    if (this.lastCanvasSize.width === width && this.lastCanvasSize.height === height) return;
+    this.lastCanvasSize = { width, height };
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.updateCameraDistance();

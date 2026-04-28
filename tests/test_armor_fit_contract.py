@@ -22,6 +22,8 @@ class TestArmorFitContract(unittest.TestCase):
                 "back",
                 "shoulder_l",
                 "shoulder_r",
+                "upperarm_l",
+                "upperarm_r",
                 "forearm_l",
                 "forearm_r",
                 "hand_l",
@@ -44,6 +46,7 @@ class TestArmorFitContract(unittest.TestCase):
             self.assertIsInstance(payload["display_label"], str)
 
         self.assertEqual(ARMOR_SLOT_SPECS["shoulder_l"].mirror_pair, "shoulder_r")
+        self.assertEqual(ARMOR_SLOT_SPECS["upperarm_l"].runtime_part_id, "left_upperarm")
         self.assertEqual(ARMOR_SLOT_SPECS["belt"].body_anchor, "hips")
 
     def test_height_recommendation_is_slot_clamped(self) -> None:
@@ -68,11 +71,13 @@ class TestArmorFitContract(unittest.TestCase):
 
     def test_existing_suitspec_part_aliases_normalize_to_contract_slots(self) -> None:
         self.assertEqual(normalize_slot_id("left_shoulder"), "shoulder_l")
+        self.assertEqual(normalize_slot_id("left_upperarm"), "upperarm_l")
+        self.assertEqual(normalize_slot_id("right_upperarm"), "upperarm_r")
         self.assertEqual(normalize_slot_id("waist"), "belt")
 
-        audit = audit_armor_fit_slots(["left_shoulder", "right_shoulder", "waist"])
+        audit = audit_armor_fit_slots(["left_shoulder", "right_shoulder", "left_upperarm", "right_upperarm", "waist"])
 
-        self.assertEqual(audit["selected_slots"], ["shoulder_l", "shoulder_r", "belt"])
+        self.assertEqual(audit["selected_slots"], ["shoulder_l", "shoulder_r", "upperarm_l", "upperarm_r", "belt"])
         self.assertEqual(audit["missing_mirror_pairs"], [])
 
     def test_runtime_visual_layers_match_runtime_package_shape(self) -> None:

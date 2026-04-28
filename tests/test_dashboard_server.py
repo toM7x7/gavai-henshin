@@ -279,6 +279,164 @@ class TestDashboardServer(unittest.TestCase):
         }:
             self.assertIn(token, api)
 
+    def test_armor_forge_limb_pose_uses_3d_segment_frame_static_contract(self) -> None:
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+
+        frame_block = js[
+            js.index("function segmentFrameQuaternion") : js.index("\n\nfunction rotationZFromSegment")
+        ]
+        for token in {
+            "const yAxis = end.clone().sub(start);",
+            "const zAxis = new THREE.Vector3(0, 0, 1);",
+            "zAxis.sub(yAxis.clone().multiplyScalar(zAxis.dot(yAxis)));",
+            "const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();",
+            "zAxis.crossVectors(xAxis, yAxis).normalize();",
+            "matrix.makeBasis(xAxis, yAxis, zAxis);",
+            "return new THREE.Quaternion().setFromRotationMatrix(matrix).normalize();",
+        }:
+            self.assertIn(token, frame_block)
+
+        offset_block = js[js.index("function addOrientedOffset") : js.index("\n\nfunction rotationZFromSegment")]
+        for token in {
+            "if (!quaternion) return addOffset(vector, offset);",
+            ").applyQuaternion(quaternion);",
+            "return vector.clone().add(localOffset);",
+        }:
+            self.assertIn(token, offset_block)
+
+        metrics_block = js[js.index("  measureVrmMetrics() {") : js.index("\n\n  segmentForPart")]
+        for token in {
+            'leftUpperArm: p("leftUpperArm"),',
+            'rightUpperArm: p("rightUpperArm"),',
+            'leftLowerArm: p("leftLowerArm"),',
+            'rightLowerArm: p("rightLowerArm"),',
+            'leftHand: p("leftHand"),',
+            'rightHand: p("rightHand"),',
+        }:
+            self.assertIn(token, metrics_block)
+
+        segment_block = js[js.index("  segmentForPart(part, metrics) {") : js.index("\n\n  targetSizeForPart")]
+        for token in {
+            'const side = part.startsWith("left_") ? "left" : part.startsWith("right_") ? "right" : "";',
+            'const sideKey = (name) => (side ? `${side}${name}` : name);',
+            'if (part.endsWith("upperarm")) return [metrics[sideKey("UpperArm")], metrics[sideKey("LowerArm")]];',
+            'if (part.endsWith("forearm")) return [metrics[sideKey("LowerArm")], metrics[sideKey("Hand")]];',
+        }:
+            self.assertIn(token, segment_block)
+
+        center_block = js[js.index("  targetCenterForPart(part, module, metrics) {") : js.index("\n\n  vrmPoseFor")]
+        for token in {
+            "const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);",
+            "const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);",
+            "center = addOrientedOffset(center, anchor.offset, segmentQuat);",
+        }:
+            self.assertIn(token, center_block)
+
+        pose_block = js[js.index("  vrmPoseFor(part, module, mesh) {") : js.index("\n\n  applyPreviewPose")]
+        for token in {
+            "const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);",
+            "const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);",
+            'const anchorQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "XYZ"));',
+            "const quaternion = segmentQuat ? segmentQuat.clone().multiply(anchorQuat).normalize() : null;",
+            "q: quaternion ? quaternion.toArray() : null,",
+            'source: "vrm_bone_metrics",',
+        }:
+            self.assertIn(token, pose_block)
+
+        apply_block = js[js.index("  applyPreviewPose(mesh, part, module) {") : js.index("\n\n  refreshBaseSuitSurface")]
+        for token in {
+            "if (pose.q) mesh.quaternion.set(...pose.q);",
+            "else mesh.rotation.set(...pose.r);",
+        }:
+            self.assertIn(token, apply_block)
+
+        self.assertNotIn("applyForgeArmPreviewPose();", js)
+
+    def test_armor_forge_arm_parts_keep_minimum_size_floor_static_contract(self) -> None:
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+
+        metrics_block = js[js.index("  measureVrmMetrics() {") : js.index("\n\n  segmentForPart")]
+        for token in {
+            "metrics.shoulderWidth = Math.max(distanceOr(metrics.leftShoulder, metrics.rightShoulder, 0.68), 0.58);",
+            "metrics.upperArmLength = Math.max(distanceOr(metrics.leftUpperArm, metrics.leftLowerArm, 0.34), 0.3);",
+            "metrics.forearmLength = Math.max(distanceOr(metrics.leftLowerArm, metrics.leftHand, 0.34), 0.3);",
+        }:
+            self.assertIn(token, metrics_block)
+
+        target_block = js[js.index("  targetSizeForPart(part, module, metrics) {") : js.index("\n\n  targetCenterForPart")]
+        for token in {
+            "const arm = Math.max(metrics.upperArmLength, 0.24);",
+            "const forearm = Math.max(metrics.forearmLength, 0.24);",
+            'case "left_upperarm":',
+            'case "right_upperarm":',
+            "size = new THREE.Vector3(shoulder * 0.16, arm * 0.86, shoulder * 0.16);",
+            'case "left_forearm":',
+            'case "right_forearm":',
+            "size = new THREE.Vector3(shoulder * 0.15, forearm * 0.82, shoulder * 0.15);",
+            "return softFitSize(part, module, size);",
+        }:
+            self.assertIn(token, target_block)
+
+        scale_block = js[js.index("function scaleForTarget") : js.index("\n\nfunction armorStandPoseFor")]
+        for axis in ("x", "y", "z"):
+            self.assertRegex(
+                scale_block,
+                rf"clamp\(targetSize\.{axis} / Math\.max\(sourceSize\.{axis}, 0\.001\), 0\.04, 2\.4\)",
+            )
+
+    def test_armor_forge_base_suit_surface_and_preview_shells_coexist_static_contract(self) -> None:
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        api = Path("src/henshin/new_route_api.py").read_text(encoding="utf-8")
+
+        shell_block = js[
+            js.index("function createArmorAttachmentShellMesh") : js.index("\n\nasync function createArmorMesh")
+        ]
+        for token in {
+            "const geometry = createFallbackArmorGeometry(part);",
+            "mesh.renderOrder = 5;",
+            "mesh.userData.armorPart = true;",
+            "mesh.userData.attachmentPreviewShell = true;",
+            'mesh.userData.meshSource = "attachment_preview_shell";',
+            "addArmorEdges(mesh, palette);",
+        }:
+            self.assertIn(token, shell_block)
+
+        base_surface_block = js[js.index("  refreshBaseSuitSurface(") : js.index("\n\n  prepareVrmMannequin")]
+        for token in {
+            "obj.renderOrder = 2;",
+            'obj.userData.baseSuitSurface = "vrm_surface_texture";',
+        }:
+            self.assertIn(token, base_surface_block)
+
+        clear_block = js[js.index("  clearArmor() {") : js.index("\n\n  async renderSuit")]
+        self.assertIn("const removable = this.group.children.filter((child) => child.userData?.armorPart);", clear_block)
+        self.assertNotIn("baseSuitSurface", clear_block)
+
+        render_block = js[js.index("  async renderSuit(suitspec) {") : js.index("\n\n  resize()")]
+        ordered_tokens = [
+            "this.refreshBaseSuitSurface(palette);",
+            "const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));",
+            "this.group.add(shell);",
+            "const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette)));",
+            "this.group.add(mesh);",
+            "this.previewStats.armorParts = meshes.length;",
+            "this.publishPreviewStats();",
+        ]
+        previous = -1
+        for token in ordered_tokens:
+            current = render_block.index(token)
+            self.assertGreater(current, previous)
+            previous = current
+
+        for token in {
+            '"required_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID]',
+            '"base_suit_surface_required": True',
+            '"armor_overlay_required": True',
+            '"base_suit_surface.present == true"',
+            '"armor_overlay_parts.visible_count >= minimum_visible_overlay_parts"',
+        }:
+            self.assertIn(token, api)
+
     def test_armor_forge_canvas_exposes_direct_manipulation_static_contract(self) -> None:
         html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
@@ -316,6 +474,34 @@ class TestDashboardServer(unittest.TestCase):
             "cursor: grab;" in canvas_css or "cursor: move;" in canvas_css or "canvas.style.cursor" in js,
             "Interactive armor preview should advertise draggable affordance on the canvas.",
         )
+        self.assertIn("touch-action: none;", canvas_css)
+
+        dragging_css = self._css_block(css, "#armorCanvas.dragging")
+        self.assertIn("cursor: grabbing;", dragging_css)
+
+        controls_block = js[js.index("  installPreviewControls() {") : js.index("\n\n  updateSpinToggle")]
+        for token in {
+            'canvas.classList.add("dragging");',
+            "this.autoSpin = false;",
+            "this.updateSpinToggle();",
+            "this.viewYaw += dx * 0.008;",
+            "this.viewPitch = clamp(this.viewPitch + dy * 0.004, -0.34, 0.22);",
+            'canvas.classList.remove("dragging");',
+            'canvas.addEventListener("pointercancel", stopDrag);',
+            "event.preventDefault();",
+            "this.zoomBy(event.deltaY > 0 ? 1.08 : 0.92);",
+            "{ passive: false }",
+        }:
+            self.assertIn(token, controls_block)
+
+        for token in {
+            'UI.resetViewButton?.addEventListener("click", () => armorStand?.resetView());',
+            'UI.zoomOutButton?.addEventListener("click", () => armorStand?.zoomBy(1.1));',
+            'UI.zoomInButton?.addEventListener("click", () => armorStand?.zoomBy(0.9));',
+            'UI.spinToggle?.addEventListener("click", () => armorStand?.toggleSpin());',
+            'UI.spinToggle) UI.spinToggle.setAttribute("aria-pressed", this.autoSpin ? "true" : "false");',
+        }:
+            self.assertIn(token, js)
 
     def test_forge_partial_selection_cannot_be_final_complete_static_contract(self) -> None:
         api = Path("src/henshin/new_route_api.py").read_text(encoding="utf-8")

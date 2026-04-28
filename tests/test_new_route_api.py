@@ -423,6 +423,52 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["texture_lock_allowed"])
             self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
 
+    def test_forge_suit_all_parts_keeps_upperarm_model_gate_pass(self) -> None:
+        parts = [
+            "helmet",
+            "chest",
+            "back",
+            "waist",
+            "left_shoulder",
+            "right_shoulder",
+            "left_upperarm",
+            "right_upperarm",
+            "left_forearm",
+            "right_forearm",
+            "left_hand",
+            "right_hand",
+            "left_thigh",
+            "right_thigh",
+            "left_shin",
+            "right_shin",
+            "left_boot",
+            "right_boot",
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            response = api.post(
+                "/v1/suits/forge",
+                {
+                    "display_name": "All parts",
+                    "recall_code": "A18B",
+                    "parts": parts,
+                },
+            )
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 201, response.body)
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 18)
+            self.assertEqual(response.body["model_quality_gate"]["status"], "pass")
+            self.assertTrue(response.body["model_quality_gate"]["texture_lock_allowed"])
+            self.assertEqual(response.body["model_quality_gate"]["parts"]["left_upperarm"]["body_fit_slot_id"], "upperarm_l")
+            self.assertEqual(response.body["model_quality_gate"]["parts"]["right_upperarm"]["body_fit_slot_id"], "upperarm_r")
+            self.assertEqual(response.body["model_quality_gate"]["parts"]["left_upperarm"]["runtime_part_id"], "left_upperarm")
+            self.assertEqual(response.body["model_quality_gate"]["parts"]["right_upperarm"]["runtime_part_id"], "right_upperarm")
+            self.assertIn("left_upperarm", response.body["model_quality_gate"]["required_parts"])
+            self.assertIn("right_upperarm", response.body["model_quality_gate"]["required_parts"])
+            self.assertEqual(response.body["render_contract"]["overlay_part_count"], 18)
+
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")

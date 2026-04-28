@@ -69,6 +69,22 @@ class TestArmorModelQuality(unittest.TestCase):
         self.assertTrue(audit["parts"]["chest"]["checks"]["non_degenerate_triangles"])
         self.assertEqual(audit["parts"]["chest"]["metrics"]["triangle_count"], 1)
 
+    def test_selected_upperarm_mesh_assets_resolve_body_fit_slots(self) -> None:
+        for part in ["helmet", "chest", "back", "left_upperarm", "right_upperarm"]:
+            self._write_mesh(part)
+
+        audit = audit_viewer_mesh_assets(
+            repo_root=self.root,
+            required_parts=["helmet", "chest", "back", "left_upperarm", "right_upperarm"],
+        )
+
+        self.assertEqual(audit["status"], "pass")
+        self.assertEqual(audit["missing_required_parts"], [])
+        self.assertEqual(audit["parts"]["left_upperarm"]["body_fit_slot_id"], "upperarm_l")
+        self.assertEqual(audit["parts"]["right_upperarm"]["body_fit_slot_id"], "upperarm_r")
+        self.assertTrue(audit["parts"]["left_upperarm"]["checks"]["body_fit_slot_resolved"])
+        self.assertTrue(audit["parts"]["right_upperarm"]["checks"]["body_fit_slot_resolved"])
+
     def test_missing_required_p0_part_fails_the_gate(self) -> None:
         for part in P0_MODEL_PARTS:
             if part != "back":

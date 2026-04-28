@@ -211,6 +211,36 @@ function addOffset(vector, offset = [0, 0, 0]) {
   return next;
 }
 
+function segmentFrameQuaternion(start, end) {
+  if (!start || !end) return null;
+  const yAxis = end.clone().sub(start);
+  if (!Number.isFinite(yAxis.lengthSq()) || yAxis.lengthSq() < 1e-8) return null;
+  yAxis.normalize();
+  const zAxis = new THREE.Vector3(0, 0, 1);
+  zAxis.sub(yAxis.clone().multiplyScalar(zAxis.dot(yAxis)));
+  if (zAxis.lengthSq() < 1e-8) {
+    zAxis.set(0, 1, 0);
+    zAxis.sub(yAxis.clone().multiplyScalar(zAxis.dot(yAxis)));
+  }
+  if (!Number.isFinite(zAxis.lengthSq()) || zAxis.lengthSq() < 1e-8) return null;
+  zAxis.normalize();
+  const xAxis = new THREE.Vector3().crossVectors(yAxis, zAxis).normalize();
+  zAxis.crossVectors(xAxis, yAxis).normalize();
+  const matrix = new THREE.Matrix4();
+  matrix.makeBasis(xAxis, yAxis, zAxis);
+  return new THREE.Quaternion().setFromRotationMatrix(matrix).normalize();
+}
+
+function addOrientedOffset(vector, offset = [0, 0, 0], quaternion = null) {
+  if (!quaternion) return addOffset(vector, offset);
+  const localOffset = new THREE.Vector3(
+    numberOr(offset[0], 0),
+    numberOr(offset[1], 0),
+    numberOr(offset[2], 0),
+  ).applyQuaternion(quaternion);
+  return vector.clone().add(localOffset);
+}
+
 function rotationZFromSegment(start, end, fallback = 0) {
   if (!start || !end) return fallback;
   const dx = end.x - start.x;
@@ -1117,7 +1147,7 @@ class ArmorStand {
   buildBaseSuit() {
     const ghost = createBaseSuitMaterial({}, { opacity: 0.5, emissiveIntensity: 0.24 });
     this.ghostGroup.name = "base-suit-vrm-surface-fallback";
-    const standMat = new THREE.MeshBasicMaterial({ color: 0x9a7b2c, transparent: true, opacity: 0.68 });
+    const standMat = new THREE.MeshBasicMaterial({ color: 0x9a7b2c, transparent: true, opacity: 0.28, depthTest: true });
     const seamMat = new THREE.MeshBasicMaterial({ color: 0x154e55, transparent: true, opacity: 0.58 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
     torso.name = "base-suit-surface-torso";
@@ -1181,8 +1211,8 @@ class ArmorStand {
     spine.position.set(0, 0.62, -0.28);
     this.standGroup.add(spine);
     for (const [width, y, z] of [
-      [1.18, 1.25, -0.28],
-      [0.78, 0.76, -0.28],
+      [0.56, 1.18, -0.48],
+      [0.48, 0.74, -0.48],
     ]) {
       const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, width, 12), standMat);
       bar.rotation.z = Math.PI / 2;
@@ -1441,6 +1471,8 @@ class ArmorStand {
     const fit = effectiveFitFor(part, module);
     const anchor = effectiveVrmAnchorFor(part, module);
     const front = part === "back" ? -1 : 1;
+    const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);
+    const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);
     let center = null;
     switch (part) {
       case "helmet":
@@ -1483,7 +1515,7 @@ class ArmorStand {
       if (anchorBone) center = anchorBone;
     }
     if (!center) return null;
-    center = addOffset(center, anchor.offset);
+    center = addOrientedOffset(center, anchor.offset, segmentQuat);
     center.y += clamp(numberOr(fit.offsetY, 0), -0.42, 0.42) * 0.12;
     center.z += clamp(numberOr(fit.zOffset, 0), -0.25, 0.25) * 0.55 * front;
     return center;
@@ -1497,8 +1529,11 @@ class ArmorStand {
     const targetSize = this.targetSizeForPart(part, module, metrics);
     const sourceSize = mesh.userData?.sourceSize || new THREE.Vector3(1, 1, 1);
     const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);
+    const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);
     const anchor = effectiveVrmAnchorFor(part, module);
     const rotation = fitVector(anchor.rotation, [0, 0, 0]).map((degrees) => THREE.MathUtils.degToRad(degrees));
+    const anchorQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "XYZ"));
+    const quaternion = segmentQuat ? segmentQuat.clone().multiply(anchorQuat).normalize() : null;
     const anchorScale = fitVector(anchor.scale, [1, 1, 1]);
     const scale = scaleForTarget(sourceSize, targetSize);
     scale.set(
@@ -1506,11 +1541,11 @@ class ArmorStand {
       clamp(scale.y * Math.max(anchorScale[1], 0.01), 0.04, 2.4),
       clamp(scale.z * Math.max(anchorScale[2], 0.01), 0.04, 2.4),
     );
-    rotation[2] += rotationZFromSegment(segmentStart, segmentEnd, 0);
     return {
       p: center.toArray(),
       s: scale.toArray(),
       r: rotation,
+      q: quaternion ? quaternion.toArray() : null,
       source: "vrm_bone_metrics",
     };
   }
@@ -1524,7 +1559,8 @@ class ArmorStand {
       source: "fallback_pose",
     };
     mesh.position.set(...pose.p);
-    mesh.rotation.set(...pose.r);
+    if (pose.q) mesh.quaternion.set(...pose.q);
+    else mesh.rotation.set(...pose.r);
     mesh.scale.set(...pose.s);
     mesh.userData.fitPreview = pose.source;
   }

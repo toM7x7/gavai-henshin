@@ -205,7 +205,15 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["kind"], "multi_part_mesh_overlay")
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["part_count"], 5)
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["minimum_visible_parts"], 3)
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["body_fit_contract_version"], "armor-body-fit.v1")
+            self.assertEqual(
+                [slot["slot_id"] for slot in response.body["visual_layers"]["armor_overlay"]["body_fit_slots"]],
+                ["helmet", "chest", "back", "left_forearm", "right_forearm"],
+            )
             self.assertFalse(response.body["render_contract"]["vrm_only_is_valid"])
+            self.assertEqual(response.body["render_contract"]["body_fit_contract_version"], "armor-body-fit.v1")
+            self.assertTrue(response.body["render_contract"]["body_fit_core_ready"])
+            self.assertTrue(response.body["render_contract"]["body_fit_pairs_balanced"])
             self.assertEqual(
                 response.body["render_contract"]["required_layers"],
                 ["base_suit_surface", "armor_overlay_parts"],
@@ -241,6 +249,9 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["surface_generation_status"], "planned_not_generated")
             self.assertTrue(response.body["asset_pipeline"]["texture_plan"]["uv_refine"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["asset_contract"], "vrm-base-suit+mesh-v1-overlay")
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 5)
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract"]["height_cm"], 182.0)
             self.assertIn("left_forearm", response.body["asset_pipeline"]["model_plan"]["overlay_parts"])
             self.assertIn("left_forearm", response.body["asset_pipeline"]["job_defaults"]["parts"])
             self.assertEqual(
@@ -329,6 +340,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
             self.assertEqual(quest.body["runtime_package"]["visual_layers"], quest.body["visual_layers"])
             self.assertEqual(quest.body["runtime_package"]["render_contract"], quest.body["render_contract"])
+            self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["contract_version"], "armor-body-fit.v1")
+            self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["height_cm"], 182.0)
             self.assertTrue(quest.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
             self.assertEqual(
                 quest.body["runtime_package"]["runtime_checks"]["required_layers"],

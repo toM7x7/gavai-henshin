@@ -16,18 +16,24 @@
 - `docs/checkpoints/2026-04-28-system-progress.md` を追加し、PC電源OFF後の再開手順、現状進捗、残課題、ユーザー操作メモを固定
 - `src/henshin/runtime_package.py` を追加し、`SuitSpec` / `SuitManifest` / `visual_layers` / `render_contract` を runtime 向け `RuntimeSuitPackage` に正規化
 - `GET /v1/quest/recall/{recallCode}` が `runtime_package` を返すようにし、Quest/Web/将来Unity adapterの import checklist を一本化
+- `src/henshin/armor_fit_contract.py` を追加し、VRM人体を基準にした `armor-body-fit.v1` の canonical slot map、左右ペア、身長スケール、必須slot監査を実装
+- Web Forgeの鎧立てに基礎スーツ層・装甲パーツ層・表面/テクスチャ層の状態表示を追加
+- Quest呼び出しUIに装備状態診断を追加し、`runtime_package.runtime_checks.can_render_runtime_suit=false` を装備不足として扱う導線へ更新
 
 ### 結果
 
 - VRM-only recall を無効状態として扱う契約が `render_contract` だけでなく runtime package にも入った
 - SuitSpecに後から入った `texture_path` を runtime manifest に投影するルールが純粋関数として分離された
 - GCP移行前でも、Cloud Run / Unity / PlayCanvas へ移植しやすい境界ができた
+- slot名の揺れは `shoulder_l` / `left_shoulder` などを `armor-body-fit.v1` で吸収し、runtime側では既存パーツ名を維持できる
+- `python -m pytest -q -p no:cacheprovider` は `140 passed, 50 subtests passed`
+- `node --check viewer/armor-forge/forge.js` と `node --check viewer/quest-iw-demo/quest-demo.js` は成功
 
 ### 次アクション
 
 - `examples/suitspec.sample.json` の変更を canonical sample更新として採用するか判断する
 - `tests/.tmp` と参考資料bundleをコミット対象から分離し、必要なら `.gitignore` / docs取り込み方針を決める
-- 次の実装は `RuntimeSuitPackage` を PlayCanvas/Unity向けのGLB export/import contractへ拡張する
+- 次の実装は `helmet/chest/back/shoulder` のモデル品質Gate、実テクスチャ生成の再接続、GLB/PlayCanvas/Unity向けの派生成果物contractへ進める
 
 ---
 

@@ -111,6 +111,7 @@ const UI = {
   recallCodeInput: document.getElementById("recallCodeInput"),
   btnLoadRecallCode: document.getElementById("btnLoadRecallCode"),
   recallCodeState: document.getElementById("recallCodeState"),
+  equipmentStatus: document.getElementById("equipmentStatus"),
   sessionId: document.getElementById("sessionId"),
   triggerState: document.getElementById("triggerState"),
   equipState: document.getElementById("equipState"),
@@ -457,9 +458,211 @@ function setBadge(element, text, state = "idle") {
   element.dataset.state = state;
 }
 
-function setRouteContract(element, suitspec) {
+function setRouteContract(element, suitspec, runtimePackage = null) {
   if (!element) return;
+  const checks = runtimeChecksFromPackage(runtimePackage);
+  const bodyFit = bodyFitContractFromPackage(runtimePackage);
+  if (checks || bodyFit) {
+    const bodyFitLabel = bodyFit?.contract_version
+      ? `${bodyFit.contract_version} ${bodyFit.height_cm || "--"}cm`
+      : "body-fit --";
+    const renderState = checks?.can_render_runtime_suit === false ? "装備不足" : "装備OK";
+    const visible = Number(checks?.visible_overlay_count ?? 0);
+    const minimum = Number(checks?.minimum_visible_overlay_parts ?? 0);
+    element.textContent = `RUNTIME: ${renderState} / ${bodyFitLabel} / visible ${visible}/${minimum} / TEX ${formatTextureFallback(suitspec)}`;
+    return;
+  }
   element.textContent = `FIT CONTRACT: ${formatFitContract(suitspec)} / TEXTURE FALLBACK: ${formatTextureFallback(suitspec)}`;
+}
+
+function enabledArmorParts(suitspec) {
+  const modules = suitspec?.modules || {};
+  return ARMOR_PARTS.filter((part) => modules[part]?.enabled === true);
+}
+
+function hasBaseSuitData(suitspec, suitRecord = null) {
+  return Boolean(
+    suitspec
+      && (
+        suitspec.base_suit
+        || suitspec.baseSuit
+        || suitspec.palette
+        || suitspec.fit_contract
+        || suitspec.suit_id
+        || suitRecord?.suit_id
+      ),
+  );
+}
+
+function hasVrmReference(suitspec, suitRecord = null) {
+  return Boolean(
+    suitspec?.vrm
+      || suitspec?.vrm_url
+      || suitspec?.vrmUrl
+      || suitspec?.base_vrm
+      || suitspec?.avatar?.vrm
+      || suitspec?.avatar?.vrm_url
+      || suitspec?.artifacts?.vrm_path
+      || suitspec?.artifacts?.vrm_url
+      || suitRecord?.vrm
+      || suitRecord?.vrm_url
+      || suitRecord?.vrmUrl
+      || suitRecord?.artifacts?.vrm_path
+      || suitRecord?.artifacts?.vrm_url,
+  );
+}
+
+function runtimeChecksFromPackage(runtimePackage) {
+  return runtimePackage?.runtime_checks && typeof runtimePackage.runtime_checks === "object"
+    ? runtimePackage.runtime_checks
+    : null;
+}
+
+function bodyFitContractFromPackage(runtimePackage) {
+  return runtimePackage?.body_fit_contract && typeof runtimePackage.body_fit_contract === "object"
+    ? runtimePackage.body_fit_contract
+    : null;
+}
+
+function makeEquipmentDiagnostic(suitspec, loadedPartCount = 0, suitRecord = null, runtimePackage = null) {
+  const totalParts = ARMOR_PARTS.length;
+  const checks = runtimeChecksFromPackage(runtimePackage);
+  const bodyFit = bodyFitContractFromPackage(runtimePackage);
+  const runtimeEnabledParts = Array.isArray(checks?.enabled_overlay_parts) ? checks.enabled_overlay_parts : [];
+  const visibleRuntimeParts = Array.isArray(checks?.visible_overlay_parts) ? checks.visible_overlay_parts : [];
+  const enabledParts = runtimeEnabledParts.length ? runtimeEnabledParts : enabledArmorParts(suitspec);
+  const enabledCount = enabledParts.length;
+  const loadedCount = clamp(Number(loadedPartCount) || visibleRuntimeParts.length || 0, 0, totalParts);
+  const baseOk = Boolean(runtimePackage?.visual_layers?.base_suit?.asset_ref) || hasBaseSuitData(suitspec, suitRecord);
+  const baseLabel = baseOk ? "基礎OK" : "基礎未確認";
+  const missingCore = [
+    ...(Array.isArray(checks?.missing_required_overlay_parts) ? checks.missing_required_overlay_parts : []),
+    ...(Array.isArray(checks?.missing_required_body_fit_slots) ? checks.missing_required_body_fit_slots : []),
+  ].filter((value, index, array) => value && array.indexOf(value) === index);
+  const selectedSlotCount = Array.isArray(bodyFit?.selected_slots) ? bodyFit.selected_slots.length : enabledCount;
+
+  if (!suitspec) {
+    return {
+      state: "pending",
+      label: "装備待機",
+      summary: "4桁コードで呼び出し",
+      detail: "基礎 -- / 分割鎧 --",
+    };
+  }
+
+  if (checks && checks.can_render_runtime_suit === false) {
+    return {
+      state: "error",
+      label: "装備データ不足",
+      summary: missingCore.length ? `不足 ${missingCore.join("/")}` : "VRMのみ / 分割鎧不足",
+      detail: `${baseLabel} / 表示鎧 ${visibleRuntimeParts.length}/${Math.max(selectedSlotCount, enabledCount, 1)}`,
+    };
+  }
+
+  if (!enabledCount) {
+    return {
+      state: "error",
+      label: "装備データ不足",
+      summary: hasVrmReference(suitspec, suitRecord) ? "VRMのみ / 分割鎧なし" : "分割鎧なし",
+      detail: `${baseLabel} / 分割鎧 0/${totalParts}`,
+    };
+  }
+
+  if (!baseOk) {
+    return {
+      state: "warning",
+      label: "基礎スーツ未確認",
+      summary: `分割鎧 ${loadedCount}/${totalParts}`,
+      detail: `基礎未確認 / 予定 ${enabledCount}/${totalParts}`,
+    };
+  }
+
+  if (loadedCount < enabledCount) {
+    return {
+      state: "pending",
+      label: "装備読込中",
+      summary: `基礎OK / 分割鎧 ${loadedCount}/${enabledCount}`,
+      detail: `body-fit ${selectedSlotCount}スロット`,
+    };
+  }
+
+  if (enabledCount < totalParts) {
+    return {
+      state: "warning",
+      label: "装備一部不足",
+      summary: `基礎OK / 分割鎧 ${enabledCount}/${totalParts}`,
+      detail: `不足 ${totalParts - enabledCount}パーツ`,
+    };
+  }
+
+  return {
+    state: "ok",
+    label: "装備OK",
+    summary: `基礎OK / 分割鎧 ${loadedCount}/${enabledCount}`,
+    detail: runtimePackage
+      ? `RuntimePackage確認済み / body-fit ${selectedSlotCount}スロット`
+      : "SuitSpec + Manifest確認済み",
+  };
+}
+
+function equipmentStateStyle(state) {
+  if (state === "error") {
+    return { color: "#ffd2d2", border: "rgba(255, 107, 107, 0.72)" };
+  }
+  if (state === "warning") {
+    return { color: "#fff4c8", border: "rgba(255, 207, 90, 0.72)" };
+  }
+  if (state === "ok") {
+    return { color: "#d7f8ff", border: "rgba(67, 216, 255, 0.58)" };
+  }
+  return { color: "#fff4c8", border: "rgba(255, 207, 90, 0.42)" };
+}
+
+function formatEquipmentSpatialText(diagnostic) {
+  const status = diagnostic || makeEquipmentDiagnostic(null);
+  return `${status.label} | ${status.summary}`;
+}
+
+function ensureEquipmentStatusElement() {
+  if (UI.equipmentStatus) return UI.equipmentStatus;
+  const recallDock = document.querySelector(".recall-dock");
+  if (!recallDock) return null;
+
+  const root = document.createElement("div");
+  root.id = "equipmentStatus";
+  root.className = "equipment-status";
+  root.dataset.state = "pending";
+  root.setAttribute("role", "status");
+  root.setAttribute("aria-live", "polite");
+
+  const title = document.createElement("strong");
+  title.className = "equipment-status__title";
+  title.dataset.equipmentTitle = "";
+  const body = document.createElement("span");
+  body.className = "equipment-status__body";
+  body.dataset.equipmentBody = "";
+  const meta = document.createElement("span");
+  meta.className = "equipment-status__meta";
+  meta.dataset.equipmentMeta = "";
+
+  root.append(title, body, meta);
+  if (UI.recallCodeState?.parentElement) {
+    UI.recallCodeState.insertAdjacentElement("afterend", root);
+  } else {
+    recallDock.appendChild(root);
+  }
+  UI.equipmentStatus = root;
+  return root;
+}
+
+function updateEquipmentStatusElement(diagnostic) {
+  const root = ensureEquipmentStatusElement();
+  if (!root) return;
+  const status = diagnostic || makeEquipmentDiagnostic(null);
+  root.dataset.state = status.state;
+  root.querySelector("[data-equipment-title]").textContent = status.label;
+  root.querySelector("[data-equipment-body]").textContent = status.summary;
+  root.querySelector("[data-equipment-meta]").textContent = status.detail;
 }
 
 function normalizeTriggerText(text) {
@@ -1484,21 +1687,36 @@ class SpatialControlPanel {
     this.routeStatus.position.set(0, 0.15, 0.017);
     this.group.add(this.routeStatus);
 
+    this.equipmentStatus = makeTextPlane(formatEquipmentSpatialText(this.demo.equipmentDiagnostic), {
+      width: 1.42,
+      height: 0.085,
+      canvasWidth: 1400,
+      canvasHeight: 150,
+      fontSize: 34,
+      fontWeight: 820,
+      color: "#fff4c8",
+      background: "rgba(4, 13, 17, 0.72)",
+      border: "rgba(255, 207, 90, 0.42)",
+      maxLines: 1,
+    });
+    this.equipmentStatus.position.set(0, 0.055, 0.018);
+    this.group.add(this.equipmentStatus);
+
     this.debug = makeTextPlane("音声デバッグ: 待機", {
       width: 1.42,
-      height: 0.2,
+      height: 0.13,
       canvasWidth: 1400,
-      canvasHeight: 280,
-      fontSize: 28,
+      canvasHeight: 240,
+      fontSize: 25,
       fontWeight: 680,
       align: "left",
       baseline: "top",
       color: "#eef9ff",
       background: "rgba(2, 9, 13, 0.74)",
       border: "rgba(67, 216, 255, 0.34)",
-      maxLines: 4,
+      maxLines: 3,
     });
-    this.debug.position.set(0, -0.005, 0.018);
+    this.debug.position.set(0, -0.05, 0.019);
     this.group.add(this.debug);
 
     this.listenRing = new THREE.Mesh(
@@ -1705,7 +1923,7 @@ class SpatialControlPanel {
     for (const element of this.codeInputElements) {
       element.visible = panelOpen && this.codeInputMode;
     }
-    for (const element of [this.progressBack, this.progressFill, this.routeStatus, this.debug, this.listenRing]) {
+    for (const element of [this.progressBack, this.progressFill, this.routeStatus, this.equipmentStatus, this.debug, this.listenRing]) {
       if (element) element.visible = panelOpen && !this.codeInputMode;
     }
     if (this.recallDisplay) {
@@ -1937,7 +2155,16 @@ class SpatialControlPanel {
     if (!this.debug) return;
     updateTextPlane(this.debug, text || "音声デバッグ: 待機", {
       color: "#eef9ff",
-      maxLines: 4,
+      maxLines: 3,
+    });
+  }
+
+  setEquipmentStatus(diagnostic) {
+    if (!this.equipmentStatus) return;
+    const status = diagnostic || makeEquipmentDiagnostic(null);
+    updateTextPlane(this.equipmentStatus, formatEquipmentSpatialText(status), {
+      ...equipmentStateStyle(status.state),
+      maxLines: 1,
     });
   }
 
@@ -2184,6 +2411,7 @@ class QuestHenshinDemo {
     this.recallCode = getRecallCode();
     this.activeSuitId = getSuitId();
     this.activeManifestId = getManifestId();
+    this.runtimePackage = null;
     this.meshes = new Map();
     this.liveMirrorMeshes = new Map();
     this.voiceState = "ready";
@@ -2202,6 +2430,7 @@ class QuestHenshinDemo {
       replayLabel: "WAIT",
       replayState: "pending",
     };
+    this.equipmentDiagnostic = makeEquipmentDiagnostic(null);
     this.audioBed = new AudioBed();
     this.cameraPosition = new THREE.Vector3();
     this.cameraQuaternion = new THREE.Quaternion();
@@ -2270,6 +2499,7 @@ class QuestHenshinDemo {
     this.updateArchiveViewModeLabel();
     this.updateVoiceDebug("VOICE DEBUG\nresult: waiting\ntrigger: 生成");
     this.syncRoutePanel();
+    this.refreshEquipmentStatus();
     this.bind();
   }
 
@@ -2491,6 +2721,8 @@ class QuestHenshinDemo {
       };
     }
     if (UI.btnLoadRecallCode) {
+      UI.btnLoadRecallCode.textContent = "呼出";
+      UI.btnLoadRecallCode.setAttribute("aria-label", "4桁コードを呼び出す");
       UI.btnLoadRecallCode.onclick = () => {
         void this.submitRecallCodeFromInput();
       };
@@ -2503,13 +2735,25 @@ class QuestHenshinDemo {
     UI.recallCodeState.dataset.state = state;
   }
 
+  setEquipmentStatus(diagnostic) {
+    this.equipmentDiagnostic = diagnostic || makeEquipmentDiagnostic(null);
+    updateEquipmentStatusElement(this.equipmentDiagnostic);
+    this.spatialPanel?.setEquipmentStatus(this.equipmentDiagnostic);
+  }
+
+  refreshEquipmentStatus() {
+    this.setEquipmentStatus(makeEquipmentDiagnostic(this.suitspec, this.meshes.size, this.suitRecord, this.runtimePackage));
+  }
+
   async loadInitialSuitSpec() {
     if (useNewRouteApi() && this.recallCode) {
       return this.loadSuitByRecallCode(this.recallCode, { reloadMeshes: false, pushUrl: false });
     }
     this.suitspec = await loadSuitSpec();
+    this.runtimePackage = this.suitspec?.runtime_package || this.suitspec?.runtimePackage || null;
     this.activeSuitId = this.suitspec?.suit_id || this.activeSuitId;
     this.setRecallCodeState("サンプルSuitSpecを使用中");
+    this.refreshEquipmentStatus();
     return this.suitspec;
   }
 
@@ -2527,6 +2771,7 @@ class QuestHenshinDemo {
     this.frames = [];
     this.replay = null;
     this.playbackSource = "voice";
+    this.runtimePackage = null;
     this.setReplayMotionDiagnostic(makeReplayMotionDiagnostic(REPLAY_MOTION_SOURCE_STATIC));
     if (UI.meterFill) UI.meterFill.style.width = "0%";
     if (UI.btnPause) UI.btnPause.textContent = "再開";
@@ -2549,6 +2794,7 @@ class QuestHenshinDemo {
     if (!data.manifest_id || data.manifest_ready === false) {
       throw new Error(`Manifest未発行: ${recallCode}`);
     }
+    const runtimePackage = data.runtime_package || data.runtimePackage || data.runtime || data.suitspec?.runtime_package || null;
     const nextSuitId = data.suit_id || data.suit?.suit_id || data.suitspec?.suit_id || this.activeSuitId;
     const hasRuntimeState = Boolean(
       this.trialId
@@ -2564,9 +2810,11 @@ class QuestHenshinDemo {
     }
     this.suitRecord = data.suit || null;
     this.suitspec = data.suitspec;
+    this.runtimePackage = runtimePackage;
     this.recallCode = data.recall_code || recallCode;
     this.activeSuitId = nextSuitId;
     this.activeManifestId = data.manifest_id || data.suit?.manifest_id || this.activeManifestId;
+    this.refreshEquipmentStatus();
     if (UI.recallCodeInput) UI.recallCodeInput.value = this.recallCode;
     this.spatialPanel?.setRecallDraft(this.recallCode, { syncInput: false, state: "ok" });
     if (pushUrl) {
@@ -2579,8 +2827,13 @@ class QuestHenshinDemo {
       this.clearArmorMeshes();
       await this.loadArmorMeshes();
     }
-    this.setRecallCodeState(`呼び出しOK: ${this.recallCode} / ${this.activeSuitId}`, "ok");
-    this.setRouteApi(`CODE ${this.recallCode}`, "ok");
+    if (this.equipmentDiagnostic?.state === "error") {
+      this.setRecallCodeState(`${this.equipmentDiagnostic.label}: ${this.equipmentDiagnostic.summary}`, "error");
+      this.setRouteApi(`CODE ${this.recallCode} 装備不足`, "error");
+    } else {
+      this.setRecallCodeState(`呼び出しOK: ${this.recallCode} / ${this.activeSuitId}`, "ok");
+      this.setRouteApi(`CODE ${this.recallCode}`, "ok");
+    }
     this.appendVoiceDebug(`recall_code: ${this.recallCode} suit: ${this.activeSuitId}`);
     return this.suitspec;
   }
@@ -2594,6 +2847,7 @@ class QuestHenshinDemo {
       mesh.removeFromParent();
     }
     this.liveMirrorMeshes.clear();
+    this.refreshEquipmentStatus();
   }
 
   updateArchiveViewModeLabel() {
@@ -2651,7 +2905,7 @@ class QuestHenshinDemo {
         : `記録保管: WAIT | 動き ${this.replayMotionDiagnostic.token}`,
       this.trialReplayPath ? "ok" : "pending",
     );
-    setRouteContract(UI.routeContract, this.suitspec);
+    setRouteContract(UI.routeContract, this.suitspec, this.runtimePackage);
     this.routeState.apiLabel = newRoute ? "/v1 ARMED" : "OFF";
     this.routeState.apiState = newRoute ? "pending" : "idle";
     this.routeState.trialLabel = this.trialId || "WAIT";
@@ -2935,8 +3189,9 @@ class QuestHenshinDemo {
       this.suitspec?.texture_fallback?.mode === "palette_material"
         ? "Palette fallback armed for missing runtime textures."
         : "No texture fallback contract.";
-    setRouteContract(UI.routeContract, this.suitspec);
+    setRouteContract(UI.routeContract, this.suitspec, this.runtimePackage);
     UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets. FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
+    this.refreshEquipmentStatus();
   }
 
   refreshBaseSuitSurface() {

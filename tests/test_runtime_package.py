@@ -74,6 +74,13 @@ class TestRuntimePackage(unittest.TestCase):
             checks["visible_overlay_parts"],
             ["back", "chest", "helmet"],
         )
+        self.assertEqual(checks["body_fit_contract_version"], "armor-body-fit.v1")
+        self.assertTrue(checks["body_fit_core_ready"])
+        self.assertEqual(package["body_fit_contract"]["height_cm"], 176.0)
+        self.assertEqual(
+            [item["slot_id"] for item in package["visual_layers"]["armor_overlay"]["body_fit_slots"]],
+            ["helmet", "chest", "back"],
+        )
         self.assertEqual(package["visual_layers"]["base_suit"]["asset_ref"], "viewer/assets/vrm/default.vrm")
 
     def test_missing_required_overlay_part_blocks_runtime_render(self) -> None:
@@ -85,6 +92,7 @@ class TestRuntimePackage(unittest.TestCase):
         checks = package["runtime_checks"]
         self.assertFalse(checks["can_render_runtime_suit"])
         self.assertEqual(checks["missing_required_overlay_parts"], ["back"])
+        self.assertEqual(checks["missing_required_body_fit_slots"], ["back"])
         self.assertEqual(checks["visible_overlay_count"], 2)
 
 

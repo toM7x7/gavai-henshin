@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from .armor_fit_contract import build_body_fit_contract, visual_layer_slot_summary
+
 
 DEFAULT_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"
 DEFAULT_REQUIRED_LAYERS = ["base_suit_surface", "armor_overlay_parts"]
@@ -31,8 +33,10 @@ def build_runtime_suit_package(
         normalized_suitspec,
     )
     overlay_parts = _enabled_overlay_parts(normalized_suitspec)
+    body_fit_contract = build_body_fit_contract(normalized_suitspec, selected_slots=overlay_parts)
     contract = _normalize_render_contract(render_contract, overlay_parts)
     layers = _normalize_visual_layers(visual_layers, normalized_suitspec, overlay_parts)
+    layers.setdefault("armor_overlay", {})["body_fit_slots"] = visual_layer_slot_summary(body_fit_contract)
     visible_overlay_parts = [
         part
         for part in overlay_parts
@@ -41,12 +45,14 @@ def build_runtime_suit_package(
     missing_required = [
         part for part in contract["required_overlay_parts"] if part not in visible_overlay_parts
     ]
+    fit_validation = body_fit_contract["validation"]
     return {
         "contract_version": contract["contract_version"],
         "suitspec": normalized_suitspec,
         "manifest": normalized_manifest,
         "visual_layers": layers,
         "render_contract": contract,
+        "body_fit_contract": body_fit_contract,
         "runtime_checks": {
             "vrm_only_is_valid": False,
             "required_layers": contract["required_layers"],
@@ -55,7 +61,13 @@ def build_runtime_suit_package(
             "visible_overlay_count": len(visible_overlay_parts),
             "minimum_visible_overlay_parts": contract["minimum_visible_overlay_parts"],
             "missing_required_overlay_parts": missing_required,
-            "can_render_runtime_suit": not missing_required
+            "body_fit_contract_version": body_fit_contract["contract_version"],
+            "missing_required_body_fit_slots": fit_validation["missing_required_slots"],
+            "missing_mirror_pairs": fit_validation["missing_mirror_pairs"],
+            "body_fit_core_ready": fit_validation["can_render_core"],
+            "body_fit_pairs_balanced": fit_validation["balanced_pairs"],
+            "can_render_runtime_suit": fit_validation["can_render_core"]
+            and not missing_required
             and len(visible_overlay_parts) >= contract["minimum_visible_overlay_parts"],
         },
     }

@@ -81,6 +81,8 @@ const UI = {
   button: document.getElementById("forgeButton"),
   partGrid: document.getElementById("partGrid"),
   canvas: document.getElementById("armorCanvas"),
+  standStage: document.querySelector(".stand-stage"),
+  previewLegend: document.querySelector(".preview-legend"),
   emptyStand: document.getElementById("emptyStand"),
   recallCode: document.getElementById("recallCode"),
   status: document.getElementById("forgeStatus"),
@@ -112,6 +114,8 @@ let runtimeInfoPromise = null;
 let latestForgeData = null;
 let textureJobPollTimer = null;
 let textureJobStartedAt = 0;
+let armorStand = null;
+let previewLayerPanel = null;
 const textureLoader = new THREE.TextureLoader();
 
 function normalizePath(path) {
@@ -246,6 +250,7 @@ function syncHeightControls(sourceValue) {
   if (UI.heightRange) UI.heightRange.value = String(height);
   if (UI.heightValue) UI.heightValue.textContent = `${height}cm`;
   armorStand?.setHeightCm(height);
+  updatePreviewLayerPanel(latestForgeData);
   return height;
 }
 
@@ -271,6 +276,145 @@ function syncPreviewLegendPalette() {
   root.style.setProperty("--legend-primary", UI.primaryColor?.value || "#F4F1E8");
   root.style.setProperty("--legend-secondary", UI.secondaryColor?.value || "#8C96A3");
   root.style.setProperty("--legend-emissive", UI.emissiveColor?.value || "#43D8FF");
+}
+
+function renderPreviewLegend() {
+  if (!UI.previewLegend) return;
+  const items = [
+    ["legend-skin", "人体リファレンス"],
+    ["legend-suit", "基礎スーツ層"],
+    ["legend-armor", "分割装甲パーツ"],
+    ["legend-glow", "表面/発光ライン"],
+  ];
+  UI.previewLegend.replaceChildren(
+    ...items.map(([className, label]) => {
+      const item = document.createElement("span");
+      const swatch = document.createElement("i");
+      swatch.className = className;
+      item.append(swatch, document.createTextNode(label));
+      return item;
+    }),
+  );
+}
+
+function previewRecordsFromData(data = latestForgeData) {
+  const suitspec = data?.preview || data?.suitspec || data || {};
+  const modules = suitspec?.modules || {};
+  return Object.entries(modules).filter(([, module]) => module?.enabled);
+}
+
+function previewPipelineFromData(data = latestForgeData) {
+  return data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+}
+
+function layerStateForSurface(data = latestForgeData, records = previewRecordsFromData(data)) {
+  const texturedCount = records.filter(([, module]) => module?.texture_path).length;
+  const pipeline = previewPipelineFromData(data);
+  const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template;
+  const canRun = Boolean(template?.suitspec);
+  if (texturedCount > 0) {
+    return {
+      state: "ready",
+      title: `${texturedCount}パーツ反映`,
+      detail: "生成済みテクスチャをプレビューに重ねています。",
+    };
+  }
+  if (UI.textureJobPanel?.classList.contains("running")) {
+    return {
+      state: "running",
+      title: "生成中",
+      detail: "表面テクスチャを作成しています。",
+    };
+  }
+  if (UI.textureJobPanel?.classList.contains("complete")) {
+    return {
+      state: "ready",
+      title: "生成完了",
+      detail: "表面を再読み込みしてプレビューへ反映します。",
+    };
+  }
+  if (canRun) {
+    return {
+      state: "queued",
+      title: "生成準備OK",
+      detail: "表面/テクスチャ層を追加生成できます。",
+    };
+  }
+  return {
+    state: "planned",
+    title: "カラー設計",
+    detail: "まだテクスチャ未生成。配色と発光ラインを表示中です。",
+  };
+}
+
+function ensurePreviewLayerPanel() {
+  if (previewLayerPanel?.isConnected) return previewLayerPanel;
+  if (!UI.standStage) return null;
+
+  previewLayerPanel = document.createElement("div");
+  previewLayerPanel.className = "preview-layer-panel";
+  previewLayerPanel.setAttribute("aria-live", "polite");
+  UI.standStage.classList.add("has-layer-panel");
+  UI.standStage.append(previewLayerPanel);
+  return previewLayerPanel;
+}
+
+function setPreviewLayerRow(panel, key, label, title, detail, state) {
+  let row = panel.querySelector(`[data-layer="${key}"]`);
+  if (!row) {
+    row = document.createElement("div");
+    row.className = "preview-layer-row";
+    row.dataset.layer = key;
+
+    const dot = document.createElement("i");
+    dot.className = "preview-layer-dot";
+    dot.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("div");
+    const labelNode = document.createElement("span");
+    labelNode.className = "preview-layer-label";
+    const titleNode = document.createElement("strong");
+    titleNode.className = "preview-layer-title";
+    const detailNode = document.createElement("small");
+    detailNode.className = "preview-layer-detail";
+    copy.append(labelNode, titleNode, detailNode);
+    row.append(dot, copy);
+    panel.append(row);
+  }
+  row.dataset.state = state;
+  row.querySelector(".preview-layer-label").textContent = label;
+  row.querySelector(".preview-layer-title").textContent = title;
+  row.querySelector(".preview-layer-detail").textContent = detail;
+}
+
+function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
+  const panel = ensurePreviewLayerPanel();
+  if (!panel) return;
+
+  const records = previewRecordsFromData(data);
+  const selectedCount = selectedParts().length;
+  const armorParts = stand?.previewStats?.armorParts || records.length || selectedCount;
+  const fallbackParts = stand?.previewStats?.fallbackParts || 0;
+  const height = Math.round(stand?.heightCm || declaredHeightCm());
+  const heightScale = height / DEFAULT_HEIGHT_CM;
+  const surface = layerStateForSurface(data, records);
+  const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
+  const armorState = armorParts > 0 ? "ready" : "planned";
+  const armorDetail = fallbackParts > 0
+    ? `${fallbackParts}パーツは仮形状。分割位置を先に確認できます。`
+    : "人体基準に合わせて、パーツを分けて重ねています。";
+
+  setPreviewLayerRow(
+    panel,
+    "height",
+    "身長反映",
+    `${height}cm`,
+    `鎧立て全体を ${heightScale.toFixed(2)}x で表示しています。`,
+    "ready",
+  );
+  setPreviewLayerRow(panel, "base", "基礎スーツ層", baseState === "ready" ? "表示中" : "待機中", "人体との差が読める半透明スーツです。", baseState);
+  setPreviewLayerRow(panel, "armor", "装甲パーツ層", armorParts > 0 ? `${armorParts}パーツ配置` : `${selectedCount}パーツ選択中`, armorDetail, armorState);
+  setPreviewLayerRow(panel, "surface", "表面/テクスチャ層", surface.title, surface.detail, surface.state);
 }
 
 function formPayload() {
@@ -332,44 +476,64 @@ function assertForgeReadiness(data) {
     throw new Error("Quest呼び出し準備が未完了です。");
   }
   if (!data?.readiness?.manifest_ready) {
-    throw new Error("Quest Manifestが未発行です。");
+    throw new Error("Quest向けの呼び出し準備がまだ完了していません。");
   }
 }
 
 function renderAssetPipeline(data = null) {
-  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
   if (!UI.assetPipeline || !UI.assetPipelineTitle || !UI.assetPipelineDetail) return;
-  UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
-  if (!pipeline) {
-    UI.assetPipeline.classList.add("pending");
-    UI.assetPipelineTitle.textContent = "待機中";
-    UI.assetPipelineDetail.textContent = "planned only / surface not generated";
-    return;
-  }
-  const modelPlan = pipeline.model_plan || {};
-  const texturePlan = pipeline.texture_plan || {};
-  const modelJob = pipeline.model_rebuild_job || {};
-  const textureProbe = pipeline.texture_probe_job || {};
-  const parts = Array.isArray(modelPlan.overlay_parts) ? modelPlan.overlay_parts : selectedParts();
+  const records = previewRecordsFromData(data);
+  const selectedCount = selectedParts().length;
+  const armorParts = armorStand?.previewStats?.armorParts || records.length || selectedCount;
+  const fallbackParts = armorStand?.previewStats?.fallbackParts || 0;
+  const surface = layerStateForSurface(data, records);
+  const baseReady = armorStand?.previewStats?.baseSuitVisible !== false;
+  const hasGeneratedPreview = Boolean(data);
+  const pipeline = previewPipelineFromData(data);
+  const modelPlan = pipeline?.model_plan || {};
+  const texturePlan = pipeline?.texture_plan || {};
+  const modelJob = pipeline?.model_rebuild_job || {};
+  const textureProbe = pipeline?.texture_probe_job || {};
   const provider = texturePlan.provider_profile || "nano_banana";
   const mode = texturePlan.texture_mode || "mesh_uv";
-  const status = texturePlan.status || pipeline.surface_generation_status || "planned_not_generated";
-  const fitStatus = pipeline.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
-  const meshStatus = modelPlan.mesh_source_status || "seed_proxy";
+  const status = texturePlan.status || pipeline?.surface_generation_status || "planned_not_generated";
+  const fitStatus = pipeline?.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
+  const meshStatus = modelPlan.mesh_source_status || "seed/proxy";
   const modelStatus = modelJob.status || modelPlan.status || "requires_rebuild";
-  const nextGate = modelJob.entrypoint || modelPlan.next_model_quality_gate || "VRM-first model gate";
-  const refine = texturePlan.uv_refine ? "UV再構成" : "UVガイド";
-  const wave = modelJob.wave ? `${modelJob.wave} ` : "";
   const probeStatus = textureProbe.status || "probe_only";
-  UI.assetPipeline.classList.add("planned");
-  UI.assetPipelineTitle.textContent = `${parts.length}部位 / model ${modelStatus} / ${provider}`;
-  UI.assetPipelineDetail.textContent = `${fitStatus} / ${meshStatus}: ${wave}${nextGate} / texture probe ${probeStatus}: ${status} ${mode} + ${refine}`;
+  UI.assetPipeline.dataset.pipelineContract = `model ${modelStatus} / ${fitStatus} / ${provider} / ${mode} / ${status} / ${meshStatus} / ${probeStatus}`;
+
+  UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
+  if (!hasGeneratedPreview) {
+    UI.assetPipeline.classList.add("pending");
+    UI.assetPipelineTitle.textContent = "レイヤー待機中";
+    UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 表面: カラー設計`;
+    updatePreviewLayerPanel(data);
+    return;
+  }
+  UI.assetPipeline.classList.add(surface.state === "ready" ? "complete" : "planned");
+  UI.assetPipelineTitle.textContent = `基礎スーツ + 装甲${armorParts}パーツ`;
+  UI.assetPipelineDetail.textContent = [
+    `基礎スーツ層: ${baseReady ? "表示中" : "待機中"}`,
+    `装甲パーツ層: ${fallbackParts > 0 ? `仮形状${fallbackParts}パーツ含む` : "分割配置済み"}`,
+    `表面: ${surface.title}`,
+  ].join(" / ");
+  updatePreviewLayerPanel(data);
 }
 
 function formatSeconds(value) {
   const seconds = Number(value);
   if (!Number.isFinite(seconds)) return "--";
   return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+}
+
+function friendlyTextureStage(stage) {
+  const value = String(stage || "").toLowerCase();
+  if (value.includes("queue") || value.includes("wait")) return "待機中";
+  if (value.includes("load") || value.includes("scan")) return "装甲確認中";
+  if (value.includes("texture") || value.includes("generate") || value.includes("inference")) return "表面生成中";
+  if (value.includes("write") || value.includes("save")) return "反映準備中";
+  return "生成中";
 }
 
 function setTextureJobState(state, title, detail, progress = 0) {
@@ -379,6 +543,7 @@ function setTextureJobState(state, title, detail, progress = 0) {
   UI.textureJobTitle.textContent = title;
   UI.textureJobDetail.textContent = detail;
   UI.textureJobMeter.style.width = `${clamp(progress, 0, 1) * 100}%`;
+  updatePreviewLayerPanel(latestForgeData);
 }
 
 function updateTextureJobAvailability(data = latestForgeData) {
@@ -388,9 +553,9 @@ function updateTextureJobAvailability(data = latestForgeData) {
   const canRun = Boolean(template?.suitspec);
   UI.textureJobButton.disabled = !canRun;
   if (!canRun) {
-    setTextureJobState("pending", "未開始", "コード発行後に、モデル品質Gate前の速度確認/仮貼りとして実行できます。", 0);
+    setTextureJobState("pending", "未開始", "鎧を生成すると、表面/テクスチャ層を追加できます。", 0);
   } else if (!UI.textureJobPanel?.classList.contains("running") && !UI.textureJobPanel?.classList.contains("complete")) {
-    setTextureJobState("pending", "表面Probe待機", "現行メッシュはseed/proxyです。Nano Banana mesh-UVは速度確認と仮貼りのみで、最終表面ではありません。", 0);
+    setTextureJobState("pending", "表面生成待機", "現在の装甲パーツに、仮の表面テクスチャを重ねられます。", 0);
   }
 }
 
@@ -422,8 +587,8 @@ function updateTextureJobFromSnapshot(snapshot) {
   const timingMs = snapshot.last_timing_ms && typeof snapshot.last_timing_ms === "object"
     ? Number(snapshot.last_timing_ms.total_ms || snapshot.last_timing_ms.inference_ms || 0)
     : 0;
-  const speedText = Number.isFinite(speed) && speed > 0 ? ` / ${speed.toFixed(1)} parts/min` : "";
-  const timingText = Number.isFinite(timingMs) && timingMs > 0 ? ` / last ${(timingMs / 1000).toFixed(1)}s` : "";
+  const speedText = Number.isFinite(speed) && speed > 0 ? ` / ${speed.toFixed(1)}パーツ/分` : "";
+  const timingText = Number.isFinite(timingMs) && timingMs > 0 ? ` / 直近 ${(timingMs / 1000).toFixed(1)}s` : "";
   const progress = total > 0 ? done / total : snapshot.status === "completed" ? 1 : 0.08;
   const result = snapshot.result || {};
   if (snapshot.status === "completed") {
@@ -433,21 +598,21 @@ function updateTextureJobFromSnapshot(snapshot) {
     }
     setTextureJobState(
       "complete",
-      `表面Probe完了 ${result.generated_count ?? done}/${total || result.generated_count || done}`,
-      `elapsed ${formatSeconds(result.total_elapsed_sec || elapsed)}${speedText}${timingText} / cache ${result.cache_hit_count || 0} / summary ${result.summary_path || snapshot.summary_path || "ready"}`,
+      `表面生成完了 ${result.generated_count ?? done}/${total || result.generated_count || done}`,
+      `所要 ${formatSeconds(result.total_elapsed_sec || elapsed)}${speedText}${timingText}。プレビューへ反映します。`,
       1,
     );
     return;
   }
   if (snapshot.status === "failed" || snapshot.status === "cancelled") {
     if (UI.textureJobButton) UI.textureJobButton.disabled = false;
-    setTextureJobState("error", `表面Probe${snapshot.status}`, snapshot.error || "generation job did not complete.", progress);
+    setTextureJobState("error", "表面生成に失敗", snapshot.error || "表面テクスチャを生成できませんでした。", progress);
     return;
   }
   setTextureJobState(
     "running",
     `生成中 ${done}/${total || "?"}`,
-    `${snapshot.stage || "scan"} / elapsed ${formatSeconds(elapsed)}${speedText}${timingText} / ${snapshot.latest_preview_url || "waiting for first texture"}`,
+    `${friendlyTextureStage(snapshot.stage)} / 経過 ${formatSeconds(elapsed)}${speedText}${timingText}`,
     Math.max(progress, 0.08),
   );
 }
@@ -457,6 +622,9 @@ async function refreshPreviewFromGeneratedSuit(payload) {
   const data = await fetchJson(`/api/suitspec?path=${encodeURIComponent(payload.suitspec)}`);
   if (data?.suitspec) {
     await armorStand.renderSuit(data.suitspec);
+    latestForgeData = { ...(latestForgeData || {}), preview: data.suitspec };
+    renderAssetPipeline(latestForgeData);
+    updatePreviewLayerPanel(latestForgeData);
   }
 }
 
@@ -473,7 +641,7 @@ async function pollTextureJob(jobId, payload) {
   if (snapshot.status === "failed" || snapshot.status === "cancelled") return;
   textureJobPollTimer = window.setTimeout(() => {
     pollTextureJob(jobId, payload).catch((error) => {
-      setTextureJobState("error", "表面Probeエラー", String(error?.message || error), 0);
+      setTextureJobState("error", "表面生成エラー", String(error?.message || error), 0);
     });
   }, 1000);
 }
@@ -486,7 +654,7 @@ async function startTextureGeneration() {
   UI.textureJobButton.disabled = true;
   UI.textureJobButton.textContent = "生成中...";
   textureJobStartedAt = performance.now();
-  setTextureJobState("running", "表面Probeを開始", "Nano Banana mesh-UV probe queued...", 0.05);
+  setTextureJobState("running", "表面生成を開始", "装甲パーツの表面テクスチャを準備しています。", 0.05);
   const job = await fetchJson(createUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -548,13 +716,19 @@ function materialForPart(part, palette) {
 
 function addArmorEdges(mesh, palette) {
   const color = new THREE.Color(palette?.emissive || "#43D8FF");
-  const edges = new THREE.LineSegments(
+  const seam = new THREE.LineSegments(
+    new THREE.EdgesGeometry(mesh.geometry, 28),
+    new THREE.LineBasicMaterial({ color: 0x1d2a28, transparent: true, opacity: 0.44 }),
+  );
+  seam.name = `${mesh.name}-part-seams`;
+  seam.renderOrder = 6;
+  const glow = new THREE.LineSegments(
     new THREE.EdgesGeometry(mesh.geometry, 28),
     new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.86, depthTest: false }),
   );
-  edges.name = `${mesh.name}-surface-lines`;
-  edges.renderOrder = 10;
-  mesh.add(edges);
+  glow.name = `${mesh.name}-surface-lines`;
+  glow.renderOrder = 10;
+  mesh.add(seam, glow);
 }
 
 function meshGeometryFromPayload(payload) {
@@ -683,9 +857,9 @@ class ArmorStand {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.28;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.setClearColor(0xf7fbf4, 1);
     this.scene = new THREE.Scene();
-    this.scene.background = null;
+    this.scene.background = new THREE.Color(0xf7fbf4);
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.05, 40);
     this.camera.position.set(0, 0.95, 4.1);
     this.group = new THREE.Group();
@@ -699,8 +873,10 @@ class ArmorStand {
     this.previewStats = {
       armorParts: 0,
       fallbackParts: 0,
+      texturedParts: 0,
       baseSuitVisible: true,
       vrmVisible: false,
+      heightCm: DEFAULT_HEIGHT_CM,
     };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
@@ -727,8 +903,12 @@ class ArmorStand {
     this.previewStats.baseSuitVisible = Boolean(this.ghostGroup?.visible);
     this.canvas.dataset.previewArmorParts = String(this.previewStats.armorParts);
     this.canvas.dataset.previewFallbackParts = String(this.previewStats.fallbackParts);
+    this.canvas.dataset.previewTexturedParts = String(this.previewStats.texturedParts);
     this.canvas.dataset.previewBaseSuit = this.previewStats.baseSuitVisible ? "visible" : "hidden";
     this.canvas.dataset.previewVrm = this.previewStats.vrmVisible ? "visible" : "fallback";
+    this.canvas.dataset.previewHeightCm = String(Math.round(this.heightCm));
+    this.canvas.dataset.previewHeightScale = (this.heightCm / DEFAULT_HEIGHT_CM).toFixed(3);
+    updatePreviewLayerPanel(latestForgeData, this);
   }
 
   buildBaseSuit() {
@@ -737,14 +917,15 @@ class ArmorStand {
       emissive: BASE_SUIT_EMISSIVE,
       emissiveIntensity: 0.26,
       metalness: 0.08,
-      roughness: 0.7,
+      roughness: 0.58,
       transparent: true,
-      opacity: 0.46,
+      opacity: 0.62,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
     this.ghostGroup.name = "base-suit-reference";
-    const standMat = new THREE.MeshBasicMaterial({ color: 0xb18328, transparent: true, opacity: 0.5 });
+    const standMat = new THREE.MeshBasicMaterial({ color: 0x9a7b2c, transparent: true, opacity: 0.68 });
+    const seamMat = new THREE.MeshBasicMaterial({ color: 0x154e55, transparent: true, opacity: 0.58 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
     torso.name = "base-suit-surface-torso";
     torso.renderOrder = 3;
@@ -773,9 +954,9 @@ class ArmorStand {
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(obj.geometry, 32),
         new THREE.LineBasicMaterial({
-          color: 0xb6eef2,
+          color: 0x0f5f68,
           transparent: true,
-          opacity: 0.42,
+          opacity: 0.68,
           depthTest: false,
         }),
       );
@@ -788,6 +969,13 @@ class ArmorStand {
     base.rotation.x = Math.PI / 2;
     base.position.y = PREVIEW_FLOOR_Y;
     this.standGroup.add(base);
+    for (const y of [0.78, 1.16]) {
+      const seam = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.004, 8, 80), seamMat);
+      seam.rotation.x = Math.PI / 2;
+      seam.position.set(0, y, 0);
+      seam.renderOrder = 3.4;
+      this.ghostGroup.add(seam);
+    }
     const floor = new THREE.GridHelper(2.5, 12, 0x6f9291, 0xb7c8c5);
     floor.position.y = PREVIEW_FLOOR_Y;
     const floorMaterials = Array.isArray(floor.material) ? floor.material : [floor.material];
@@ -799,6 +987,39 @@ class ArmorStand {
     const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 2.1, 12), standMat);
     spine.position.set(0, 0.62, -0.28);
     this.standGroup.add(spine);
+    for (const [width, y, z] of [
+      [1.18, 1.25, -0.28],
+      [0.78, 0.76, -0.28],
+    ]) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, width, 12), standMat);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(0, y, z);
+      this.standGroup.add(bar);
+    }
+    const guideMat = new THREE.LineBasicMaterial({
+      color: 0x1c6f78,
+      transparent: true,
+      opacity: 0.78,
+      depthTest: false,
+    });
+    const guideX = -1.02;
+    const guideZ = 0.08;
+    const guideTop = PREVIEW_FLOOR_Y + 1.96;
+    const tick = 0.08;
+    const guidePoints = [
+      new THREE.Vector3(guideX, PREVIEW_FLOOR_Y, guideZ),
+      new THREE.Vector3(guideX, guideTop, guideZ),
+      new THREE.Vector3(guideX - tick, PREVIEW_FLOOR_Y, guideZ),
+      new THREE.Vector3(guideX + tick, PREVIEW_FLOOR_Y, guideZ),
+      new THREE.Vector3(guideX - tick, guideTop, guideZ),
+      new THREE.Vector3(guideX + tick, guideTop, guideZ),
+      new THREE.Vector3(guideX - tick * 0.6, (PREVIEW_FLOOR_Y + guideTop) / 2, guideZ),
+      new THREE.Vector3(guideX + tick * 0.6, (PREVIEW_FLOOR_Y + guideTop) / 2, guideZ),
+    ];
+    const heightGuide = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(guidePoints), guideMat);
+    heightGuide.name = "declared-height-guide";
+    heightGuide.renderOrder = 8;
+    this.standGroup.add(heightGuide);
     this.group.add(this.ghostGroup);
     this.group.add(this.standGroup);
   }
@@ -1070,7 +1291,7 @@ class ArmorStand {
             metalness: 0.02,
             roughness: 0.82,
             transparent: true,
-            opacity: 0.34,
+            opacity: 0.22,
             depthWrite: false,
             side: THREE.DoubleSide,
           }),
@@ -1100,7 +1321,9 @@ class ArmorStand {
     this.heightCm = clamp(Number(heightCm) || DEFAULT_HEIGHT_CM, MIN_HEIGHT_CM, MAX_HEIGHT_CM);
     const scale = this.heightCm / DEFAULT_HEIGHT_CM;
     this.group.scale.setScalar(scale);
+    this.previewStats.heightCm = this.heightCm;
     this.updateCameraDistance();
+    this.publishPreviewStats();
   }
 
   updateCameraDistance() {
@@ -1142,6 +1365,7 @@ class ArmorStand {
     }
     this.previewStats.armorParts = meshes.length;
     this.previewStats.fallbackParts = meshes.filter((mesh) => mesh.userData.meshSource === FALLBACK_MESH_SOURCE).length;
+    this.previewStats.texturedParts = meshes.filter((mesh) => mesh.userData.texturePath).length;
     this.publishPreviewStats();
   }
 
@@ -1162,7 +1386,7 @@ class ArmorStand {
   }
 }
 
-const armorStand = new ArmorStand(UI.canvas);
+armorStand = new ArmorStand(UI.canvas);
 
 if (UI.heightCm) {
   UI.heightCm.addEventListener("input", () => syncHeightControls(UI.heightCm.value));
@@ -1201,7 +1425,7 @@ async function submitForge(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formPayload()),
     });
-    setStatus("VRM基準の鎧立てを構築中...", "pending");
+    setStatus("人体基準の鎧立てを構築中...", "pending");
     await armorStand.renderSuit(data.preview);
     setStatus("Quest接続情報を確認中...", "pending");
     await ensureRuntimeInfo();
@@ -1216,9 +1440,11 @@ async function submitForge(event) {
 }
 
 renderPartGrid();
+renderPreviewLegend();
 renderAssetPipeline();
 syncPreviewLegendPalette();
 updateTextureJobAvailability();
+updatePreviewLayerPanel(latestForgeData);
 runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);
 for (const colorInput of [UI.primaryColor, UI.secondaryColor, UI.emissiveColor]) {
@@ -1226,7 +1452,7 @@ for (const colorInput of [UI.primaryColor, UI.secondaryColor, UI.emissiveColor])
 }
 UI.textureJobButton?.addEventListener("click", () => {
   startTextureGeneration().catch((error) => {
-    setTextureJobState("error", "表面Probeエラー", String(error?.message || error), 0);
+    setTextureJobState("error", "表面生成エラー", String(error?.message || error), 0);
     updateTextureJobAvailability(latestForgeData);
   });
 });

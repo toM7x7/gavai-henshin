@@ -17,6 +17,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
+from .armor_fit_contract import build_body_fit_contract, visual_layer_slot_summary
 from .ids import (
     generate_approval_id,
     generate_morphotype_id,
@@ -1078,14 +1079,26 @@ class NewRouteApi:
             "target_resolution": "2K",
             "discipline": ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
         }
-        visual_layers = self._forge_visual_layers(enabled_parts, body_profile)
-        render_contract = self._forge_render_contract(enabled_parts)
+        body_fit_contract = build_body_fit_contract(
+            {"body_profile": body_profile, "modules": {}},
+            selected_slots=enabled_parts,
+        )
+        visual_layers = self._forge_visual_layers(
+            enabled_parts,
+            body_profile,
+            body_fit_contract=body_fit_contract,
+        )
+        render_contract = self._forge_render_contract(enabled_parts, body_fit_contract=body_fit_contract)
         model_plan = {
             "asset_contract": _FORGE_ASSET_CONTRACT,
             "status": "requires_rebuild",
             "model_rebuild_required": True,
             "base_suit": "VRM baseline body-fit substrate",
             "overlay_parts": enabled_parts,
+            "body_fit_contract": body_fit_contract,
+            "body_fit_contract_version": body_fit_contract["contract_version"],
+            "body_fit_height_scale": body_fit_contract["height_scale"],
+            "body_fit_slot_count": len(body_fit_contract["selected_slots"]),
             "fit_solver": "web_forge_vrm_bone_metrics_preview",
             "runtime_target": "validated GLB/gltf derived artifact",
             "material_slots": ["base_surface", "accent", "emissive", "trim"],
@@ -1149,6 +1162,7 @@ class NewRouteApi:
         body_profile: dict[str, Any],
         *,
         strict: bool = True,
+        body_fit_contract: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         overlay_parts = sorted(enabled_parts)
         required_parts = sorted(_FORGE_REQUIRED_PARTS)
@@ -1157,6 +1171,10 @@ class NewRouteApi:
             raise ValueError(f"forge overlay must include required parts: {missing_required}")
         if strict and len(overlay_parts) < len(required_parts):
             raise ValueError("forge overlay must include visible armor parts")
+        fit_contract = body_fit_contract or build_body_fit_contract(
+            {"body_profile": body_profile, "modules": {}},
+            selected_slots=overlay_parts,
+        )
         return {
             "contract_version": _FORGE_VISUAL_LAYER_CONTRACT,
             "base_suit": {
@@ -1181,16 +1199,27 @@ class NewRouteApi:
                 "selected_parts": overlay_parts,
                 "part_count": len(overlay_parts),
                 "minimum_visible_parts": len(required_parts),
+                "body_fit_contract_version": fit_contract["contract_version"],
+                "body_fit_slots": visual_layer_slot_summary(fit_contract),
+                "body_fit_validation": self._clone_json(fit_contract["validation"]),
                 "empty_overlay_policy": "invalid",
             },
         }
 
-    def _forge_render_contract(self, enabled_parts: list[str]) -> dict[str, Any]:
+    def _forge_render_contract(
+        self,
+        enabled_parts: list[str],
+        *,
+        body_fit_contract: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         overlay_parts = sorted(enabled_parts)
         required_parts = sorted(_FORGE_REQUIRED_PARTS)
         missing_required = [part for part in required_parts if part not in overlay_parts]
+        fit_contract = body_fit_contract or build_body_fit_contract({}, selected_slots=overlay_parts)
+        fit_validation = fit_contract["validation"]
         return {
             "contract_version": _FORGE_VISUAL_LAYER_CONTRACT,
+            "body_fit_contract_version": fit_contract["contract_version"],
             "required_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
             "vrm_only_is_valid": False,
             "failure_mode_prevented": "vrm_only_render_after_generation",
@@ -1201,6 +1230,11 @@ class NewRouteApi:
             "overlay_part_count": len(overlay_parts),
             "minimum_visible_overlay_parts": len(required_parts),
             "missing_required_overlay_parts": missing_required,
+            "required_body_fit_slots": fit_validation["required_slots"],
+            "missing_required_body_fit_slots": fit_validation["missing_required_slots"],
+            "missing_mirror_pairs": fit_validation["missing_mirror_pairs"],
+            "body_fit_core_ready": fit_validation["can_render_core"],
+            "body_fit_pairs_balanced": fit_validation["balanced_pairs"],
             "runtime_checks": [
                 "base_suit_surface.present == true",
                 "armor_overlay_parts.visible_count >= minimum_visible_overlay_parts",

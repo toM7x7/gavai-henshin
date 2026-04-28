@@ -182,7 +182,8 @@ h1 {
 
 .recall-entry {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(108px, auto);
+  grid-template-columns: minmax(0, 1fr) 92px;
+  align-items: stretch;
   gap: 10px;
 }
 
@@ -213,6 +214,17 @@ h1 {
   outline-offset: 2px;
 }
 
+.recall-entry button {
+  min-width: 0;
+  min-height: 64px;
+  padding: 0 12px;
+  border-color: rgba(67, 216, 255, 0.5);
+  background: rgba(5, 16, 22, 0.68);
+  color: #d7f8ff;
+  font-size: 15px;
+  font-weight: 860;
+}
+
 .recall-dock span {
   display: block;
   min-height: 22px;
@@ -228,6 +240,53 @@ h1 {
 }
 
 .recall-dock span[data-state="error"] {
+  color: #ffd2d2;
+}
+
+.equipment-status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  margin-top: 12px;
+  border-left: 3px solid rgba(255, 207, 90, 0.58);
+  padding: 9px 0 9px 12px;
+  color: #fff4c8;
+}
+
+.equipment-status__title {
+  font-size: 14px;
+  font-weight: 880;
+  line-height: 1.25;
+}
+
+.equipment-status__body {
+  font-size: 14px;
+  font-weight: 780;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.equipment-status__meta {
+  grid-column: 1 / -1;
+  color: #b8cbd4;
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.equipment-status[data-state="ok"] {
+  border-left-color: rgba(67, 216, 255, 0.74);
+  color: #d7f8ff;
+}
+
+.equipment-status[data-state="warning"] {
+  border-left-color: rgba(255, 207, 90, 0.84);
+  color: #fff4c8;
+}
+
+.equipment-status[data-state="error"] {
+  border-left-color: rgba(255, 107, 107, 0.78);
   color: #ffd2d2;
 }
 
@@ -253,7 +312,7 @@ button {
   backdrop-filter: blur(12px);
 }
 
-button:first-child {
+.actions button:first-child {
   border-color: rgba(255, 207, 90, 0.78);
   background: rgba(77, 55, 10, 0.74);
   color: #fff4c8;
@@ -366,6 +425,10 @@ button:focus-visible {
 
   .recall-entry {
     grid-template-columns: 1fr;
+  }
+
+  .recall-entry button {
+    min-height: 52px;
   }
 
   .actions {

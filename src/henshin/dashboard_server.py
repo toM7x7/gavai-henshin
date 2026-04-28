@@ -76,6 +76,7 @@ class GeneratePartsPayload:
     fallback_dir: str | None = None
     prefer_fallback: bool = False
     update_suitspec: bool = False
+    writes_final_texture: bool = False
     dry_run: bool = False
     provider_profile: str = DEFAULT_PROVIDER_PROFILE
     priority_mode: str = "exhibition"

@@ -1394,13 +1394,15 @@ class NewRouteApi:
                 "base_suit_contract": "docs/base-suit-overlay-contract.md",
             },
         }
+        texture_lock_allowed = model_quality_gate.get("status") == "pass"
+        job_payload_template["writes_final_texture"] = texture_lock_allowed
         texture_probe_job = {
             "contract_version": "texture-probe.v1",
-            "status": "allowed_on_seed_proxy",
+            "status": "ready_for_final_texture_lock" if texture_lock_allowed else "allowed_on_seed_proxy",
             "blocking": False,
-            "final_texture_lock_allowed": bool(model_quality_gate.get("texture_lock_allowed")),
-            "blocked_by_model_quality": not bool(model_quality_gate.get("texture_lock_allowed")),
-            "writes_final_texture": False,
+            "final_texture_lock_allowed": texture_lock_allowed,
+            "blocked_by_model_quality": not texture_lock_allowed,
+            "writes_final_texture": texture_lock_allowed,
             "method": "POST",
             "endpoint": job_links["create_generation_job"],
             "render_contract": self._clone_json(render_contract),

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .archive import ensure_session_dir, write_json
+from .armor_model_quality import audit_viewer_mesh_assets
 from .emotion_compiler import compile_emotion_request
 from .gemini_image import extension_for_mime, save_image, write_generation_meta
 from .ids import generate_session_id
@@ -68,6 +69,7 @@ class GenerationRequest:
     fallback_dir: str | None = None
     prefer_fallback: bool = False
     update_suitspec: bool = False
+    writes_final_texture: bool = False
     dry_run: bool = False
     provider_profile: str = DEFAULT_PROVIDER_PROFILE
     priority_mode: str = "exhibition"
@@ -979,9 +981,13 @@ def run_generate_parts(
         generation["last_style_variation"] = style_variation or {}
         generation["last_resolved_defaults"] = emotion_context["resolved_defaults"] or {}
         generation["part_prompts"] = prompts
-        for part, info in generated.items():
-            module = modules.setdefault(part, {"enabled": True, "asset_ref": f"modules/{part}/base.prefab"})
-            module["texture_path"] = info["image_path"]
+        if (
+            request.writes_final_texture
+            and audit_viewer_mesh_assets(repo_root=repo_root or Path(".")).get("status") == "pass"
+        ):
+            for part, info in generated.items():
+                module = modules.setdefault(part, {"enabled": True, "asset_ref": f"modules/{part}/base.prefab"})
+                module["texture_path"] = info["image_path"]
         write_json(suitspec_path, spec)
 
     summary_path = parts_dir / "parts.generation.summary.json"

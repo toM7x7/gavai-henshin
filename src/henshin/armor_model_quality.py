@@ -17,6 +17,7 @@ from .validators import load_json
 ARMOR_MODEL_QUALITY_SCHEMA_VERSION = "model-quality-gate.v1"
 MODEL_QUALITY_BLOCKING_GATE = "mesh_fit_before_texture_final"
 DEFAULT_MESH_ASSET_DIR = Path("viewer/assets/meshes")
+DEFAULT_MESH_BOUNDS_FILE = "mesh-bounds.v1.json"
 P0_MODEL_PARTS: tuple[str, ...] = (
     "helmet",
     "chest",
@@ -33,6 +34,7 @@ def audit_mesh_payload(
     *,
     path: str | Path | None = None,
     required: bool = True,
+    bounds_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Audit one in-memory mesh.v1 payload."""
 
@@ -77,7 +79,7 @@ def audit_mesh_payload(
     if _is_number_list(positions) and len(positions) >= 9 and len(positions) % 3 == 0:
         checks["positions"] = True
         vertex_count = len(positions) // 3
-        computed_bounds = _position_bounds(positions)
+        computed_bounds = compute_position_bounds(positions)
     else:
         reasons.append(f"{part}: positions missing or invalid")
 
@@ -126,6 +128,10 @@ def audit_mesh_payload(
         reasons.append(f"{part}: indices missing or invalid")
 
     bounds = payload.get("bounds")
+    bounds_source = "payload"
+    if bounds is None and isinstance(bounds_override, dict):
+        bounds = bounds_override
+        bounds_source = "sidecar"
     bounds_dimensions = _bounds_dimensions(bounds)
     if bounds_dimensions is not None:
         checks["explicit_bounds"] = True
@@ -157,6 +163,7 @@ def audit_mesh_payload(
             "triangle_count": triangle_count,
             "bounds_dimensions": bounds_dimensions,
             "computed_bounds": computed_bounds,
+            "bounds_source": bounds_source if bounds_dimensions is not None else None,
             "uv_key": uv_key if checks["uv"] else None,
         },
     }
@@ -167,6 +174,7 @@ def audit_mesh_file(
     path: str | Path,
     *,
     required: bool = True,
+    bounds_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Audit one mesh.v1 JSON file without raising for quality failures."""
 
@@ -189,13 +197,14 @@ def audit_mesh_file(
             "checks": {},
             "metrics": {},
         }
-    return audit_mesh_payload(part, payload, path=mesh_path, required=required)
+    return audit_mesh_payload(part, payload, path=mesh_path, required=required, bounds_override=bounds_override)
 
 
 def audit_viewer_mesh_assets(
     repo_root: str | Path = ".",
     *,
     mesh_dir: str | Path = DEFAULT_MESH_ASSET_DIR,
+    bounds_file: str | Path | None = DEFAULT_MESH_BOUNDS_FILE,
     required_parts: Iterable[str] = P0_MODEL_PARTS,
     include_extra: bool = False,
 ) -> dict[str, Any]:
@@ -208,6 +217,8 @@ def audit_viewer_mesh_assets(
     mesh_root = mesh_root.resolve()
 
     required = _unique_parts(required_parts)
+    bounds_path = _resolve_bounds_sidecar_path(mesh_root, bounds_file)
+    bounds_sidecar = _load_bounds_sidecar(bounds_path)
     parts_to_check = list(required)
     if include_extra and mesh_root.exists():
         for mesh_path in sorted(mesh_root.glob("*.mesh.json")):
@@ -218,7 +229,12 @@ def audit_viewer_mesh_assets(
     part_results: dict[str, dict[str, Any]] = {}
     for part in parts_to_check:
         path = mesh_root / f"{part}.mesh.json"
-        part_results[part] = audit_mesh_file(part, path, required=part in required)
+        part_results[part] = audit_mesh_file(
+            part,
+            path,
+            required=part in required,
+            bounds_override=bounds_sidecar.get(part),
+        )
 
     missing_required = [
         part for part in required if part_results[part]["status"] == "fail" and not Path(part_results[part]["path"]).exists()
@@ -239,6 +255,8 @@ def audit_viewer_mesh_assets(
         "texture_lock_allowed": status == "pass",
         "repo_root": str(root.resolve()),
         "mesh_dir": str(mesh_root),
+        "bounds_file": str(bounds_path) if bounds_path and bounds_path.exists() else None,
+        "bounds_contract_version": bounds_sidecar.contract_version if isinstance(bounds_sidecar, _BoundsSidecar) else None,
         "p0_parts": required,
         "required_parts": required,
         "present_parts": [
@@ -249,6 +267,38 @@ def audit_viewer_mesh_assets(
         "summary": _summary(part_results.values(), required),
         "parts": part_results,
     }
+
+
+class _BoundsSidecar(dict[str, dict[str, Any]]):
+    def __init__(self, *args: Any, contract_version: str | None = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.contract_version = contract_version
+
+
+def _resolve_bounds_sidecar_path(mesh_root: Path, bounds_file: str | Path | None) -> Path | None:
+    if bounds_file is None:
+        return None
+    path = Path(bounds_file)
+    if not path.is_absolute():
+        path = mesh_root / path
+    return path.resolve()
+
+
+def _load_bounds_sidecar(path: Path | None) -> _BoundsSidecar:
+    if path is None:
+        return _BoundsSidecar()
+    if not path.exists():
+        return _BoundsSidecar()
+    try:
+        payload = load_json(path)
+    except Exception:
+        return _BoundsSidecar()
+    parts = payload.get("parts") if isinstance(payload.get("parts"), dict) else {}
+    normalized: dict[str, dict[str, Any]] = {}
+    for part, bounds in parts.items():
+        if isinstance(bounds, dict):
+            normalized[str(part)] = bounds
+    return _BoundsSidecar(normalized, contract_version=str(payload.get("contract_version") or ""))
 
 
 def _missing_part_result(part: str, path: Path, *, required: bool) -> dict[str, Any]:
@@ -316,15 +366,34 @@ def _summary(results: Iterable[dict[str, Any]], required_parts: Sequence[str]) -
     }
 
 
-def _position_bounds(positions: list[int | float]) -> dict[str, list[float]]:
+def compute_position_bounds(positions: Sequence[int | float], *, digits: int | None = None) -> dict[str, list[float]]:
+    """Return mesh.v1 bounds from flat xyz positions."""
+
+    if not _is_number_sequence(positions) or len(positions) < 9 or len(positions) % 3 != 0:
+        raise ValueError("positions must be a flat numeric xyz list")
     xs = [float(positions[index]) for index in range(0, len(positions), 3)]
     ys = [float(positions[index]) for index in range(1, len(positions), 3)]
     zs = [float(positions[index]) for index in range(2, len(positions), 3)]
-    return {
+    bounds = {
         "min": [min(xs), min(ys), min(zs)],
         "max": [max(xs), max(ys), max(zs)],
         "size": [max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs)],
     }
+    if digits is not None:
+        return {key: [round(value, digits) for value in values] for key, values in bounds.items()}
+    return bounds
+
+
+def ensure_mesh_payload_bounds(payload: dict[str, Any], *, overwrite: bool = False) -> dict[str, Any]:
+    """Attach explicit mesh.v1 bounds computed from positions.
+
+    Existing authored bounds are preserved unless overwrite is true.
+    """
+
+    if "bounds" in payload and not overwrite:
+        return payload
+    payload["bounds"] = compute_position_bounds(payload.get("positions"))
+    return payload
 
 
 def _invalid_normal_count(normals: list[int | float]) -> int:
@@ -388,6 +457,12 @@ def _is_number_list(value: Any) -> bool:
     return isinstance(value, list) and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value)
 
 
+def _is_number_sequence(value: Any) -> bool:
+    return isinstance(value, Sequence) and not isinstance(value, (str, bytes)) and all(
+        isinstance(item, (int, float)) and not isinstance(item, bool) for item in value
+    )
+
+
 def _is_index_list(value: Any) -> bool:
     return isinstance(value, list) and all(isinstance(item, int) and not isinstance(item, bool) and item >= 0 for item in value)
 
@@ -419,4 +494,6 @@ __all__ = [
     "audit_mesh_file",
     "audit_mesh_payload",
     "audit_viewer_mesh_assets",
+    "compute_position_bounds",
+    "ensure_mesh_payload_bounds",
 ]

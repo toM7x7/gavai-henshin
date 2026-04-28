@@ -223,7 +223,45 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(second["cache_hit_count"], 1)
         saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
         self.assertIn("part_prompts", saved_spec["generation"])
-        expected_texture_path = second["summary_path"].rsplit("/", 1)[0] + "/helmet.generated.png"
+        self.assertNotIn("texture_path", saved_spec["modules"]["helmet"])
+
+    def test_writes_final_texture_with_passing_gate_updates_suitspec_texture_path(self) -> None:
+        def fake_provider(*args, **kwargs):
+            return GeneratedImage(
+                provider="fal",
+                model_id="fal-ai/flux/schnell",
+                mime_type="image/png",
+                image_bytes=b"fakepng",
+                prompt=kwargs["prompt"],
+                response_id="resp-final-texture",
+                timestamp="2026-04-09T00:00:00+00:00",
+                queue_wait_ms=12,
+                inference_ms=34,
+                total_ms=46,
+            )
+
+        with (
+            patch("henshin.part_generation._provider_attempt", side_effect=fake_provider),
+            patch("henshin.part_generation.audit_viewer_mesh_assets", return_value={"status": "pass"}),
+        ):
+            result = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-FINAL-TEXTURE-1",
+                    parts=["helmet"],
+                    use_cache=False,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    update_suitspec=True,
+                    writes_final_texture=True,
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(result["ok"])
+        saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        expected_texture_path = result["summary_path"].rsplit("/", 1)[0] + "/helmet.generated.png"
         self.assertEqual(saved_spec["modules"]["helmet"]["texture_path"], expected_texture_path)
 
     def test_run_generate_parts_clamps_zero_parallelism(self) -> None:

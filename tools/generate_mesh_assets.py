@@ -7,8 +7,16 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = REPO_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from henshin.armor_model_quality import compute_position_bounds
 
 
 @dataclass(slots=True)
@@ -423,13 +431,15 @@ def build_hand() -> MeshData:
 
 
 def write_mesh(path: Path, mesh: MeshData, name: str) -> None:
+    positions = [round(v, 6) for v in mesh.positions]
     payload = {
         "format": "mesh.v1",
         "name": name,
-        "positions": [round(v, 6) for v in mesh.positions],
+        "positions": positions,
         "normals": [round(v, 6) for v in mesh.normals],
         "uv": [round(v, 6) for v in mesh.uvs],
         "indices": mesh.indices,
+        "bounds": compute_position_bounds(positions, digits=6),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

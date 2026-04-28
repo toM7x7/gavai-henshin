@@ -588,22 +588,43 @@ function setTextureJobState(state, title, detail, progress = 0) {
   updatePreviewLayerPanel(latestForgeData);
 }
 
+function textureJobContract(data = latestForgeData) {
+  const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
+  return pipeline?.texture_probe_job || pipeline?.generation_job || null;
+}
+
+function textureJobWritesFinal(data = latestForgeData) {
+  const job = textureJobContract(data);
+  return Boolean(job?.writes_final_texture || job?.final_texture_lock_allowed || job?.payload?.writes_final_texture);
+}
+
 function updateTextureJobAvailability(data = latestForgeData) {
   if (!UI.textureJobButton) return;
   const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
-  const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template;
+  const job = textureJobContract(data);
+  const template = job?.payload || pipeline?.job_payload_template;
   const canRun = Boolean(template?.suitspec);
+  const writesFinal = textureJobWritesFinal(data);
   UI.textureJobButton.disabled = !canRun;
   if (!canRun) {
     setTextureJobState("pending", "未開始", "鎧を生成すると、表面/テクスチャ層を追加できます。", 0);
   } else if (!UI.textureJobPanel?.classList.contains("running") && !UI.textureJobPanel?.classList.contains("complete")) {
-    setTextureJobState("pending", "表面生成待機", "現在の装甲パーツに、仮の表面テクスチャを重ねられます。", 0);
+    UI.textureJobButton.textContent = writesFinal ? "本番表面生成" : "表面Probeを試す";
+    setTextureJobState(
+      "pending",
+      writesFinal ? "本番表面生成待機" : "表面Probe待機",
+      writesFinal
+        ? "モデル品質Gate通過。生成結果をSuitSpecへ反映します。"
+        : "モデル品質Gate前は速度確認と仮貼り用途です。",
+      0,
+    );
   }
 }
 
 function textureJobPayload(data) {
   const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
-  const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template || null;
+  const job = textureJobContract(data);
+  const template = job?.payload || pipeline?.job_payload_template || null;
   if (!template?.suitspec) {
     throw new Error("texture job payload is not ready.");
   }
@@ -611,6 +632,7 @@ function textureJobPayload(data) {
     ...template,
     root: template.root || "sessions",
     session_id: template.session_id || `S-FORGE-${data.recall_code || Date.now()}`,
+    writes_final_texture: textureJobWritesFinal(data),
     dry_run: false,
   };
 }
@@ -636,7 +658,7 @@ function updateTextureJobFromSnapshot(snapshot) {
   if (snapshot.status === "completed") {
     if (UI.textureJobButton) {
       UI.textureJobButton.disabled = false;
-      UI.textureJobButton.textContent = "表面Probe再試行";
+      UI.textureJobButton.textContent = textureJobWritesFinal() ? "本番表面再生成" : "表面Probe再試行";
     }
     setTextureJobState(
       "complete",
@@ -696,7 +718,14 @@ async function startTextureGeneration() {
   UI.textureJobButton.disabled = true;
   UI.textureJobButton.textContent = "生成中...";
   textureJobStartedAt = performance.now();
-  setTextureJobState("running", "表面生成を開始", "装甲パーツの表面テクスチャを準備しています。", 0.05);
+  setTextureJobState(
+    "running",
+    textureJobWritesFinal() ? "本番表面生成を開始" : "表面Probeを開始",
+    textureJobWritesFinal()
+      ? "装甲パーツの表面テクスチャを生成し、SuitSpecへ反映します。"
+      : "装甲パーツの表面テクスチャを速度確認用に準備しています。",
+    0.05,
+  );
   const job = await fetchJson(createUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

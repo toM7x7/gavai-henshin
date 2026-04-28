@@ -7,6 +7,8 @@ from henshin.armor_model_quality import (
     P0_MODEL_PARTS,
     audit_mesh_payload,
     audit_viewer_mesh_assets,
+    compute_position_bounds,
+    ensure_mesh_payload_bounds,
 )
 
 
@@ -116,6 +118,54 @@ class TestArmorModelQuality(unittest.TestCase):
         self.assertFalse(audit["checks"]["explicit_bounds"])
         self.assertEqual(audit["metrics"]["computed_bounds"]["size"], [1.0, 1.0, 1.0])
         self.assertIn("helmet: bounds missing or invalid", audit["reasons"])
+
+    def test_sidecar_bounds_allow_p0_assets_to_pass_without_rewriting_mesh_json(self) -> None:
+        for part in P0_MODEL_PARTS:
+            payload = _valid_mesh_payload()
+            del payload["bounds"]
+            self._write_mesh(part, payload)
+        (self.mesh_dir / "mesh-bounds.v1.json").write_text(
+            json.dumps(
+                {
+                    "contract_version": "mesh-bounds.v1",
+                    "parts": {
+                        part: {"min": [0, 0, 0], "max": [1, 1, 1], "size": [1, 1, 1]}
+                        for part in P0_MODEL_PARTS
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        audit = audit_viewer_mesh_assets(repo_root=self.root)
+
+        self.assertEqual(audit["status"], "pass")
+        self.assertEqual(audit["bounds_contract_version"], "mesh-bounds.v1")
+        self.assertTrue(audit["bounds_file"].endswith("mesh-bounds.v1.json"))
+        self.assertEqual(audit["parts"]["helmet"]["metrics"]["bounds_source"], "sidecar")
+
+    def test_ensure_mesh_payload_bounds_attaches_explicit_bounds_from_positions(self) -> None:
+        payload = _valid_mesh_payload()
+        del payload["bounds"]
+
+        result = ensure_mesh_payload_bounds(payload)
+
+        self.assertIs(result, payload)
+        self.assertEqual(
+            payload["bounds"],
+            {"min": [0.0, 0.0, 0.0], "max": [1.0, 1.0, 1.0], "size": [1.0, 1.0, 1.0]},
+        )
+        audit = audit_mesh_payload("helmet", payload)
+        self.assertEqual(audit["status"], "pass")
+        self.assertTrue(audit["checks"]["explicit_bounds"])
+
+    def test_compute_position_bounds_can_round_generated_asset_values(self) -> None:
+        bounds = compute_position_bounds([0, 0, 0, 0.333333333, 0.5, 0.75, 1, 1, 1], digits=4)
+
+        self.assertEqual(bounds, {"min": [0, 0, 0], "max": [1, 1, 1], "size": [1, 1, 1]})
 
     def test_non_required_extra_mesh_with_unknown_body_fit_slot_warns(self) -> None:
         self._write_all_p0()

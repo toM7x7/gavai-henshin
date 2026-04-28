@@ -21,6 +21,10 @@
 - Quest呼び出しUIに装備状態診断を追加し、`runtime_package.runtime_checks.can_render_runtime_suit=false` を装備不足として扱う導線へ更新
 - `src/henshin/armor_model_quality.py` を追加し、`helmet/chest/back/left_shoulder/right_shoulder` の `model-quality-gate.v1` を実装
 - Web Forge / Quest recall / RuntimePackage に `model_quality_gate` を接続し、生成コード発行と展示品質Gateを分離
+- `viewer/assets/meshes/mesh-bounds.v1.json` を追加し、現行 `mesh.v1` 18部位の明示bounds sidecarを固定
+- `tools/generate_mesh_assets.py` と `tools/update_mesh_bounds.py` を整備し、以後のmesh生成/sidecar生成でboundsが欠落しないようにした
+- Nano Banana表面生成の `writes_final_texture` を `model_quality_gate.status == "pass"` に接続し、`texture_path` 書き込みもバックエンド側で再監査するようにした
+- Web Forgeの表面生成UIを、Gate前のProbe用途とGate通過後のSuitSpec反映用途で出し分けるようにした
 
 ### 結果
 
@@ -28,18 +32,22 @@
 - SuitSpecに後から入った `texture_path` を runtime manifest に投影するルールが純粋関数として分離された
 - GCP移行前でも、Cloud Run / Unity / PlayCanvas へ移植しやすい境界ができた
 - slot名の揺れは `shoulder_l` / `left_shoulder` などを `armor-body-fit.v1` で吸収し、runtime側では既存パーツ名を維持できる
-- 現行 `viewer/assets/meshes` のP0部位は `positions/uv/indices/normals` は読めるが、明示 `bounds` がないため `model_quality_gate.status=fail`
-- Web Forgeでは「モデル品質Gate」行、Questでは「モデルGate未通過」診断として、試験表示可能と最終テクスチャ不可を分けて見られる
-- `python -m pytest -q -p no:cacheprovider` は `140 passed, 50 subtests passed`
+- 現行 `viewer/assets/meshes` のP0部位は sidecar bounds により `model_quality_gate.status=pass` になった
+- `update_suitspec=True` は生成履歴更新用、`writes_final_texture=True` は本番テクスチャ貼り込み用として分離できた
+- Gate未通過時はUIが許可しても `part_generation.py` が `texture_path` を書かないため、表示と副作用の抜け道を閉じた
+- `python -m pytest -q -p no:cacheprovider` は `150 passed, 50 subtests passed`
+- Target確認 `python -m pytest -q -p no:cacheprovider tests/test_part_generation.py tests/test_armor_model_quality.py tests/test_new_route_api.py tests/test_dashboard_server.py tests/test_runtime_package.py` は `66 passed`
 - `node --check viewer/armor-forge/forge.js` と `node --check viewer/quest-iw-demo/quest-demo.js` は成功
+- `python -m py_compile src/henshin/armor_model_quality.py src/henshin/dashboard_server.py src/henshin/new_route_api.py src/henshin/part_generation.py tools/generate_mesh_assets.py tools/update_mesh_bounds.py` は成功
 
 ### 次アクション
 
-- 既存 `mesh.v1` に明示 `bounds` を追記するか、GLB/glTF派生時にsidecarで固定するかを決める
-- `model_quality_gate.status=pass` になった時だけ Nano Banana の final texture lock を許可するよう、生成ジョブ側に接続する
+- `model-artifact.v1` sidecarを起こし、GLB/VRM由来の候補アセットを `mesh.v1` fallbackと並走させる
+- `mesh.v1` Gateは「描画可能」の確認に留め、次はpivot / mount axis / VRM surface clearance / material slots / UV contractを品質Gateに足す
+- Quest recallはすぐ `.glb` に切り替えず、fallback-aware loaderを入れてから段階的にGLB優先へ進める
 - `examples/suitspec.sample.json` の変更を canonical sample更新として採用するか判断する
 - `tests/.tmp` と参考資料bundleをコミット対象から分離し、必要なら `.gitignore` / docs取り込み方針を決める
-- 次の実装は実テクスチャ生成の再接続、GLB/PlayCanvas/Unity向けの派生成果物contract、P0 mesh bounds/material sidecar整備へ進める
+- 次の実装は実テクスチャ生成の速度確認、GLB/PlayCanvas/Unity向けの派生成果物contract、P0 fit/mount quality gate整備へ進める
 
 ---
 

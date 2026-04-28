@@ -214,8 +214,10 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn(".texture-job", css)
         self.assertIn("Quest入力コード", html)
         self.assertIn("Quest VR入力ページ", html)
-        self.assertIn("表面生成を試す", html)
-        self.assertIn("モデル品質Gate前", html)
+        self.assertIn("表面生成", html)
+        self.assertIn("本番表面生成", js)
+        self.assertIn("モデル品質Gate通過後", html)
+        self.assertIn("モデル品質Gate前", js)
         self.assertIn("VRM人体", html)
         self.assertIn("基礎スーツ", html)
         self.assertIn("装甲/表面", html)
@@ -238,12 +240,15 @@ class TestDashboardServer(unittest.TestCase):
 
             GenerationJobManager(root)._validate_payload(job_payload)
 
-        self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
+        self.assertTrue(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
+        self.assertTrue(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
+        self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["blocked_by_model_quality"])
         self.assertTrue(response.body["asset_pipeline"]["model_rebuild_job"]["blocking"])
         self.assertEqual(job_payload.provider_profile, "nano_banana")
         self.assertEqual(job_payload.texture_mode, "mesh_uv")
         self.assertTrue(job_payload.uv_refine)
         self.assertTrue(job_payload.update_suitspec)
+        self.assertTrue(job_payload.writes_final_texture)
         self.assertTrue(job_payload.suitspec.endswith("/suitspec.json"))
 
     def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:

@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from socketserver import TCPServer, ThreadingMixIn
 from pathlib import Path
+from unittest.mock import patch
 from urllib.request import Request, urlopen
 
 from henshin.dashboard_server import (
@@ -251,6 +252,42 @@ class TestDashboardServer(unittest.TestCase):
         self.assertTrue(job_payload.writes_final_texture)
         self.assertTrue(job_payload.suitspec.endswith("/suitspec.json"))
 
+    def test_forge_generation_job_payload_keeps_helmet_only_selection(self) -> None:
+        root = Path(".").resolve()
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            with patch(
+                "henshin.new_route_api.audit_viewer_mesh_assets",
+                side_effect=self._selected_p0_gate,
+            ) as mesh_audit:
+                response = DashboardHandler._new_route_post_response_for_test(
+                    root,
+                    "/v1/suits/forge",
+                    {"display_name": "Visitor", "parts": ["helmet"]},
+                    suit_store_root=Path(tmp) / "suits",
+                )
+            assert response is not None
+            self.assertEqual(response.status, 201, response.body)
+            payload = response.body["asset_pipeline"]["texture_probe_job"]["payload"]
+            job_payload = GeneratePartsPayload(**payload)
+
+            GenerationJobManager(root)._validate_payload(job_payload)
+
+        self.assertEqual(mesh_audit.call_args.kwargs.get("required_parts"), ["helmet"])
+        self.assertEqual(response.body["visual_layers"]["armor_overlay"]["selected_parts"], ["helmet"])
+        self.assertEqual(response.body["visual_layers"]["armor_overlay"]["part_count"], 1)
+        self.assertEqual(response.body["render_contract"]["required_overlay_parts"], ["back", "chest", "helmet"])
+        self.assertEqual(response.body["render_contract"]["minimum_visible_overlay_parts"], 3)
+        self.assertEqual(response.body["render_contract"]["missing_required_overlay_parts"], ["back", "chest"])
+        self.assertEqual(response.body["model_quality_gate"]["required_parts"], ["helmet"])
+        self.assertEqual(response.body["model_quality_gate"]["mesh_quality_status"], "pass")
+        self.assertEqual(response.body["model_quality_gate"]["status"], "fail")
+        self.assertFalse(response.body["model_quality_gate"]["selection_complete_for_final_texture"])
+        self.assertFalse(response.body["readiness"]["final_texture_ready"])
+        self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
+        self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
+        self.assertEqual(payload["parts"], ["helmet"])
+        self.assertFalse(job_payload.writes_final_texture)
+
     def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:
         html = Path("viewer/quest-iw-demo/index.html").read_text(encoding="utf-8")
         js = Path("viewer/quest-iw-demo/quest-demo.js").read_text(encoding="utf-8")
@@ -367,6 +404,40 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(result["voice_audio"]["stats"]["mode"], "wav")
         self.assertEqual(result["voice_audio"]["stats"]["bytes"], len(b"dry-run"))
         self.assertEqual(result["result"]["voice_audio"]["mime_type"], "audio/wav")
+
+    def _selected_p0_gate(self, *, required_parts: list[str] | None = None, **_: object) -> dict:
+        required = list(required_parts or ["helmet", "chest", "back", "left_shoulder", "right_shoulder"])
+        status = "pass" if required == ["helmet"] else "fail"
+        return {
+            "contract_version": "model-quality-gate.v1",
+            "schema_version": "model-quality-gate.v1",
+            "blocking_gate": "mesh_fit_before_texture_final",
+            "gate": "mesh.v1.p0",
+            "status": status,
+            "ok": status == "pass",
+            "mesh_assets_ready": status == "pass",
+            "texture_lock_allowed": status == "pass",
+            "mesh_dir": "viewer/assets/meshes",
+            "bounds_contract_version": "mesh-bounds.v1",
+            "p0_parts": required,
+            "required_parts": required,
+            "present_parts": ["helmet"] if "helmet" in required else [],
+            "missing_required_parts": [] if status == "pass" else [part for part in required if part != "helmet"],
+            "reasons": ["selected P0 quality gate passed"] if status == "pass" else ["unselected global P0 was requested"],
+            "summary": {"required_count": len(required)},
+            "parts": {
+                part: {
+                    "part": part,
+                    "path": f"viewer/assets/meshes/{part}.mesh.json",
+                    "status": "pass" if part == "helmet" else "fail",
+                    "ok": part == "helmet",
+                    "required": True,
+                    "reasons": [f"{part}: selected P0 test gate"],
+                    "metrics": {},
+                }
+                for part in required
+            },
+        }
 
 
 if __name__ == "__main__":

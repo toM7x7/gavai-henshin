@@ -8,6 +8,30 @@
 
 ---
 
+## 2026-04-29
+
+### 実施
+
+- Web Forgeでヘルメットのみ選択した場合に、API側が `helmet/chest/back` を自動補完していた問題を修正
+- 部分生成は `selected_overlay_parts` のまま保存し、完成ヒーロースーツ判定は `missing_required_overlay_parts` と `selection_complete_for_final_texture` で分離
+- `model_quality_gate` は選択部位のmesh品質を確認しつつ、完成必須部位不足時は final texture lock を許可しないようにした
+- Forge UIのモデルGate表示に「部分生成」状態を追加し、部分プレビューと本番スーツ化を区別
+
+### 結果
+
+- ヘルメットのみ生成は `装甲1パーツ` として扱われ、`back/chest` 不足が明示される
+- 画像で見えていた状態は、完成ヒーロースーツではなく `VRM人体 + 基礎スーツ + mesh.v1仮外装プロキシ` の部分プレビューと位置づけた
+- 現行meshは描画可能性のGateを通るが、シルエット、pivot、mount axis、VRM surface clearance、素材スロットの品質は未達
+- 本番テクスチャ貼り込みは、必須部位が揃うまで `writes_final_texture=false` のまま止まる
+
+### 次アクション
+
+- `model-artifact.v1` を追加し、GLB/VRM候補アセットを `mesh.v1` fallback と並走させる
+- ヒーロースーツ品質Gateを、mesh描画可能性から fit/mount/silhouette/material/UV の実品質へ拡張する
+- Quest recallは壊さず、GLB優先・mesh.v1 fallbackのローダーへ段階的に移行する
+
+---
+
 ## 2026-04-28
 
 ### 実施

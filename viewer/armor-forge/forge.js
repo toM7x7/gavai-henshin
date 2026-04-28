@@ -403,6 +403,18 @@ function modelGateStateForPipeline(pipeline) {
   const firstReason = Array.isArray(gate.reasons) && gate.reasons.length
     ? String(gate.reasons[0])
     : "";
+  if (gate.selection_complete_for_final_texture === false) {
+    const missing = Array.isArray(gate.missing_required_overlay_parts)
+      ? gate.missing_required_overlay_parts.join(", ")
+      : "";
+    return {
+      state: "planned",
+      title: "部分生成",
+      detail: missing
+        ? `本番スーツ化には ${missing} が必要です。現在は部分プレビューです。`
+        : "本番スーツ化に必要な外装パーツ数が足りません。現在は部分プレビューです。",
+    };
+  }
   if (status === "pass") {
     return {
       state: "ready",

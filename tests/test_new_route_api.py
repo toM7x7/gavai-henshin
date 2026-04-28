@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from henshin.new_route_api import NewRouteApi
 
@@ -261,7 +262,7 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["model_quality_gate"]["bounds_contract_version"], "mesh-bounds.v1")
             self.assertEqual(
                 response.body["model_quality_gate"]["required_parts"],
-                ["helmet", "chest", "back", "left_shoulder", "right_shoulder"],
+                ["back", "chest", "helmet", "left_forearm", "right_forearm"],
             )
             self.assertEqual(response.body["model_quality_gate"]["reasons"], ["mesh.v1 P0 quality gate passed"])
             self.assertIn("computed_bounds", response.body["model_quality_gate"]["parts"]["helmet"]["metrics"])
@@ -372,6 +373,55 @@ class TestNewRouteApi(unittest.TestCase):
                 quest.body["runtime_package"]["runtime_checks"]["required_layers"],
                 ["base_suit_surface", "armor_overlay_parts"],
             )
+
+    def test_forge_suit_helmet_only_keeps_selected_overlay_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            with patch(
+                "henshin.new_route_api.audit_viewer_mesh_assets",
+                side_effect=self._selected_p0_gate,
+            ) as mesh_audit:
+                response = api.post(
+                    "/v1/suits/forge",
+                    {"display_name": "Helmet only", "recall_code": "H1A1", "parts": ["helmet"]},
+                )
+            quest = api.get("/v1/quest/recall/H1A1")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(quest)
+            assert response is not None and quest is not None
+            self.assertEqual(response.status, 201, response.body)
+            self.assertEqual(mesh_audit.call_args.kwargs.get("required_parts"), ["helmet"])
+            self.assertFalse(response.body["readiness"]["model_quality_ready"])
+            self.assertFalse(response.body["readiness"]["final_texture_ready"])
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["selected_parts"], ["helmet"])
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["required_parts"], ["back", "chest", "helmet"])
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["part_count"], 1)
+            self.assertEqual(response.body["visual_layers"]["armor_overlay"]["minimum_visible_parts"], 3)
+            self.assertEqual(response.body["render_contract"]["selected_overlay_parts"], ["helmet"])
+            self.assertEqual(response.body["render_contract"]["required_overlay_parts"], ["back", "chest", "helmet"])
+            self.assertEqual(response.body["render_contract"]["overlay_part_count"], 1)
+            self.assertEqual(response.body["render_contract"]["minimum_visible_overlay_parts"], 3)
+            self.assertEqual(response.body["render_contract"]["missing_required_overlay_parts"], ["back", "chest"])
+            self.assertEqual(response.body["model_quality_gate"]["required_parts"], ["helmet"])
+            self.assertEqual(response.body["model_quality_gate"]["mesh_quality_status"], "pass")
+            self.assertEqual(response.body["model_quality_gate"]["status"], "fail")
+            self.assertFalse(response.body["model_quality_gate"]["selection_complete_for_final_texture"])
+            self.assertEqual(response.body["model_quality_gate"]["missing_required_overlay_parts"], ["back", "chest"])
+            self.assertFalse(response.body["model_quality_gate"]["texture_lock_allowed"])
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["overlay_parts"], ["helmet"])
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 1)
+            self.assertEqual(response.body["asset_pipeline"]["job_defaults"]["parts"], ["helmet"])
+            self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["parts"], ["helmet"])
+            self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
+            self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["payload"]["writes_final_texture"])
+            self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["part_count"], 1)
+            self.assertEqual(quest.body["render_contract"]["minimum_visible_overlay_parts"], 3)
+            self.assertEqual(quest.body["runtime_package"]["runtime_checks"]["enabled_overlay_parts"], ["helmet"])
+            self.assertEqual(quest.body["runtime_package"]["runtime_checks"]["minimum_visible_overlay_parts"], 3)
+            self.assertEqual(quest.body["runtime_package"]["runtime_checks"]["missing_required_overlay_parts"], ["back", "chest"])
+            self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["texture_lock_allowed"])
+            self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
 
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -677,6 +727,40 @@ class TestNewRouteApi(unittest.TestCase):
             {"manifest_id": "MNF-20260424-ABCD", "status": "READY"},
         )
         return api
+
+    def _selected_p0_gate(self, *, required_parts: list[str] | None = None, **_: object) -> dict:
+        required = list(required_parts or ["helmet", "chest", "back", "left_shoulder", "right_shoulder"])
+        status = "pass" if required == ["helmet"] else "fail"
+        return {
+            "contract_version": "model-quality-gate.v1",
+            "schema_version": "model-quality-gate.v1",
+            "blocking_gate": "mesh_fit_before_texture_final",
+            "gate": "mesh.v1.p0",
+            "status": status,
+            "ok": status == "pass",
+            "mesh_assets_ready": status == "pass",
+            "texture_lock_allowed": status == "pass",
+            "mesh_dir": "viewer/assets/meshes",
+            "bounds_contract_version": "mesh-bounds.v1",
+            "p0_parts": required,
+            "required_parts": required,
+            "present_parts": ["helmet"] if "helmet" in required else [],
+            "missing_required_parts": [] if status == "pass" else [part for part in required if part != "helmet"],
+            "reasons": ["selected P0 quality gate passed"] if status == "pass" else ["unselected global P0 was requested"],
+            "summary": {"required_count": len(required)},
+            "parts": {
+                part: {
+                    "part": part,
+                    "path": f"viewer/assets/meshes/{part}.mesh.json",
+                    "status": "pass" if part == "helmet" else "fail",
+                    "ok": part == "helmet",
+                    "required": True,
+                    "reasons": [f"{part}: selected P0 test gate"],
+                    "metrics": {},
+                }
+                for part in required
+            },
+        }
 
 
 if __name__ == "__main__":

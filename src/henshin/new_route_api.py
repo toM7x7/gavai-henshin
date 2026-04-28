@@ -1091,6 +1091,7 @@ class NewRouteApi:
         visual_layers = self._forge_visual_layers(
             enabled_parts,
             body_profile,
+            strict=False,
             body_fit_contract=body_fit_contract,
         )
         render_contract = self._forge_render_contract(enabled_parts, body_fit_contract=body_fit_contract)
@@ -1253,12 +1254,8 @@ class NewRouteApi:
         modules: dict[str, Any],
         enabled_parts: set[str],
     ) -> None:
-        required_parts = sorted(_FORGE_REQUIRED_PARTS)
-        missing_required = [part for part in required_parts if part not in enabled_parts]
-        if missing_required:
-            raise ValueError(f"forge overlay must include required parts: {missing_required}")
-        if len(enabled_parts) < len(required_parts):
-            raise ValueError("forge overlay must include visible armor parts")
+        if not enabled_parts:
+            raise ValueError("forge overlay must include at least one visible armor part")
         for part_name in sorted(enabled_parts):
             module = modules.get(part_name)
             if not isinstance(module, dict):
@@ -1372,7 +1369,7 @@ class NewRouteApi:
             {"status": "failed", "stage": "error", "event_type": "job_failed"},
             {"status": "cancelled", "stage": "error", "event_type": "job_cancelled"},
         ]
-        model_quality_gate = self._forge_model_quality_gate()
+        model_quality_gate = self._forge_model_quality_gate(render_contract=render_contract)
         model_rebuild_job = {
             "contract_version": "model-rebuild.v1",
             "status": "required",
@@ -1438,8 +1435,20 @@ class NewRouteApi:
             "quality_policy": self._clone_json(quality_policy),
         }
 
-    def _forge_model_quality_gate(self) -> dict[str, Any]:
-        gate = self._clone_json(audit_viewer_mesh_assets(repo_root=self.repo_root))
+    def _forge_model_quality_gate(self, *, render_contract: dict[str, Any] | None = None) -> dict[str, Any]:
+        selected_quality_parts = None
+        if isinstance(render_contract, dict):
+            selected_quality_parts = [
+                str(part)
+                for part in render_contract.get("selected_overlay_parts", [])
+                if str(part).strip()
+            ]
+        audit_kwargs: dict[str, Any] = {"repo_root": self.repo_root}
+        if selected_quality_parts:
+            audit_kwargs["required_parts"] = selected_quality_parts
+        gate = self._clone_json(audit_viewer_mesh_assets(**audit_kwargs))
+        mesh_quality_status = str(gate.get("status") or "unknown")
+        mesh_texture_lock_allowed = bool(gate.get("texture_lock_allowed"))
         gate.pop("repo_root", None)
         if gate.get("mesh_dir"):
             gate["mesh_dir"] = self._relative_path(Path(str(gate["mesh_dir"])))
@@ -1448,6 +1457,34 @@ class NewRouteApi:
             if not isinstance(part_result, dict) or not part_result.get("path"):
                 continue
             part_result["path"] = self._relative_path(Path(str(part_result["path"])))
+        if isinstance(render_contract, dict):
+            selected_parts = [
+                str(part)
+                for part in render_contract.get("selected_overlay_parts", [])
+                if str(part).strip()
+            ]
+            missing_required = [
+                str(part)
+                for part in render_contract.get("missing_required_overlay_parts", [])
+                if str(part).strip()
+            ]
+            overlay_count = int(render_contract.get("overlay_part_count") or len(selected_parts))
+            minimum_count = int(render_contract.get("minimum_visible_overlay_parts") or len(_FORGE_REQUIRED_PARTS))
+            selection_complete = not missing_required and overlay_count >= minimum_count
+            gate["mesh_quality_status"] = mesh_quality_status
+            gate["selected_overlay_parts"] = selected_parts
+            gate["minimum_visible_overlay_parts"] = minimum_count
+            gate["missing_required_overlay_parts"] = missing_required
+            gate["selection_complete_for_final_texture"] = selection_complete
+            gate["texture_lock_allowed"] = mesh_texture_lock_allowed and selection_complete
+            if not selection_complete:
+                if missing_required:
+                    reason = "selected overlay missing required final parts: " + ", ".join(missing_required)
+                else:
+                    reason = f"selected overlay part count {overlay_count} below minimum {minimum_count}"
+                existing_reasons = gate.get("reasons") if isinstance(gate.get("reasons"), list) else []
+                gate["status"] = "fail"
+                gate["reasons"] = [reason] + [str(item) for item in existing_reasons if str(item) != reason]
         return gate
 
     def _forge_enabled_parts(self, payload: dict[str, Any]) -> set[str]:
@@ -1461,7 +1498,7 @@ class NewRouteApi:
         unknown = sorted(part for part in selected if part not in allowed)
         if unknown:
             raise ValueError(f"unknown forge parts: {unknown}")
-        return (selected | _FORGE_REQUIRED_PARTS) & allowed
+        return selected & allowed
 
     def _discard_suit(self, suit_id: str) -> None:
         target = (self.suit_store_root / suit_id).resolve()

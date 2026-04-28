@@ -42,10 +42,10 @@ const PREVIEW_FLOOR_Y = -0.43;
 const FALLBACK_MESH_SOURCE = "seed_proxy_fallback";
 const MIN_RENDERABLE_MESH_SIZE = 0.002;
 const FORGE_DISPLAY_ARM_POSE_CHAINS = Object.freeze([
-  { bone: "leftUpperArm", childBone: "leftLowerArm", target: [-0.48, -0.88, 0.02], strength: 0.86 },
-  { bone: "leftLowerArm", childBone: "leftHand", target: [-0.18, -0.98, 0.04], strength: 0.78 },
-  { bone: "rightUpperArm", childBone: "rightLowerArm", target: [0.48, -0.88, 0.02], strength: 0.86 },
-  { bone: "rightLowerArm", childBone: "rightHand", target: [0.18, -0.98, 0.04], strength: 0.78 },
+  { bone: "leftUpperArm", childBone: "leftLowerArm", outward: 0.62, down: -0.78, forward: 0.06, strength: 0.96 },
+  { bone: "leftLowerArm", childBone: "leftHand", outward: 0.34, down: -0.93, forward: 0.08, strength: 0.9 },
+  { bone: "rightUpperArm", childBone: "rightLowerArm", outward: 0.62, down: -0.78, forward: 0.06, strength: 0.96 },
+  { bone: "rightLowerArm", childBone: "rightHand", outward: 0.34, down: -0.93, forward: 0.08, strength: 0.9 },
 ]);
 const VRM_BONE_ALIAS_INDEX = new Map();
 for (const [canonical, aliases] of Object.entries(VRM_BONE_ALIASES)) {
@@ -1116,6 +1116,7 @@ class ArmorStand {
       vrmVisible: false,
       heightCm: DEFAULT_HEIGHT_CM,
       displayPoseChains: 0,
+      displayPoseMode: "pending",
     };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
@@ -1149,6 +1150,7 @@ class ArmorStand {
     this.canvas.dataset.previewHeightCm = String(Math.round(this.heightCm));
     this.canvas.dataset.previewHeightScale = (this.heightCm / DEFAULT_HEIGHT_CM).toFixed(3);
     this.canvas.dataset.previewDisplayPoseChains = String(this.previewStats.displayPoseChains || 0);
+    this.canvas.dataset.previewDisplayPoseMode = this.previewStats.displayPoseMode || "pending";
     updatePreviewLayerPanel(latestForgeData, this);
   }
 
@@ -1364,6 +1366,48 @@ class ArmorStand {
     return null;
   }
 
+  worldPositionForBone(boneName) {
+    const bone = this.resolveBone(boneName);
+    if (!bone) return null;
+    bone.updateMatrixWorld(true);
+    return bone.getWorldPosition(new THREE.Vector3());
+  }
+
+  displayPoseCenterWorldX() {
+    const pairedCandidates = [
+      ["leftShoulder", "rightShoulder"],
+      ["leftUpperArm", "rightUpperArm"],
+      ["leftLowerArm", "rightLowerArm"],
+      ["leftHand", "rightHand"],
+    ];
+    for (const [left, right] of pairedCandidates) {
+      const leftPos = this.worldPositionForBone(left);
+      const rightPos = this.worldPositionForBone(right);
+      if (leftPos && rightPos && Number.isFinite(leftPos.x) && Number.isFinite(rightPos.x)) {
+        return (leftPos.x + rightPos.x) * 0.5;
+      }
+    }
+    const centerCandidates = ["upperChest", "chest", "spine", "hips"]
+      .map((boneName) => this.worldPositionForBone(boneName))
+      .filter((pos) => pos && Number.isFinite(pos.x));
+    if (centerCandidates.length) {
+      return centerCandidates.reduce((sum, pos) => sum + pos.x, 0) / centerCandidates.length;
+    }
+    return 0;
+  }
+
+  displayArmTargetForChain(chain, bonePos) {
+    const outwardMagnitude = Math.max(0, numberOr(chain.outward, 0));
+    const fallbackSign = chain.bone?.startsWith("right") ? 1 : -1;
+    const sideDelta = Number.isFinite(bonePos?.x) ? bonePos.x - this.displayPoseCenterWorldX() : fallbackSign;
+    const outwardSign = Math.sign(sideDelta) || fallbackSign;
+    return new THREE.Vector3(
+      outwardSign * outwardMagnitude,
+      numberOr(chain.down, -1),
+      numberOr(chain.forward, 0),
+    );
+  }
+
   rotateBoneChainTowardWorldDir(boneName, childBoneName, target, strength = 1) {
     const bone = this.resolveBone(boneName);
     const childBone = this.resolveBone(childBoneName);
@@ -1375,11 +1419,13 @@ class ArmorStand {
     const currentDir = childPos.sub(bonePos);
     if (!Number.isFinite(currentDir.lengthSq()) || currentDir.lengthSq() < 1e-8) return false;
     currentDir.normalize();
-    const targetDir = new THREE.Vector3(
-      numberOr(target?.[0], 0),
-      numberOr(target?.[1], 0),
-      numberOr(target?.[2], 0),
-    );
+    const targetDir = target?.isVector3
+      ? target.clone()
+      : new THREE.Vector3(
+        numberOr(target?.[0], 0),
+        numberOr(target?.[1], 0),
+        numberOr(target?.[2], 0),
+      );
     if (!Number.isFinite(targetDir.lengthSq()) || targetDir.lengthSq() < 1e-8) return false;
     targetDir.normalize();
     const deltaWorld = new THREE.Quaternion().setFromUnitVectors(currentDir, targetDir);
@@ -1395,10 +1441,13 @@ class ArmorStand {
   applyForgeDisplayPose() {
     let applied = 0;
     for (const chain of FORGE_DISPLAY_ARM_POSE_CHAINS) {
-      if (this.rotateBoneChainTowardWorldDir(chain.bone, chain.childBone, chain.target, chain.strength)) applied += 1;
+      const bonePos = this.worldPositionForBone(chain.bone);
+      const target = this.displayArmTargetForChain(chain, bonePos);
+      if (this.rotateBoneChainTowardWorldDir(chain.bone, chain.childBone, target, chain.strength)) applied += 1;
     }
     this.metricsCache = null;
     this.previewStats.displayPoseChains = applied;
+    this.previewStats.displayPoseMode = "center_outward_a_pose";
     this.vrmModel?.updateMatrixWorld(true);
     return applied;
   }

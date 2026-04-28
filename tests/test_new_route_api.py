@@ -207,6 +207,13 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["part_count"], 5)
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["minimum_visible_parts"], 3)
             self.assertEqual(response.body["visual_layers"]["armor_overlay"]["body_fit_contract_version"], "armor-body-fit.v1")
+            self.assertEqual(response.body["visual_layers"]["surface_layer"]["layer_id"], "surface_materials")
+            self.assertEqual(response.body["visual_layers"]["surface_layer"]["kind"], "texture_and_emissive_maps")
+            self.assertEqual(
+                response.body["visual_layers"]["surface_layer"]["source_layers"],
+                ["base_suit_surface", "armor_overlay_parts"],
+            )
+            self.assertEqual(response.body["visual_layers"]["surface_layer"]["status"], "planned_not_generated")
             self.assertEqual(
                 [slot["slot_id"] for slot in response.body["visual_layers"]["armor_overlay"]["body_fit_slots"]],
                 ["helmet", "chest", "back", "left_forearm", "right_forearm"],
@@ -248,6 +255,21 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertIn("waist", response.body["asset_pipeline"]["model_plan"]["model_rebuild_focus_parts"])
             self.assertEqual(response.body["asset_pipeline"]["texture_plan"]["status"], "planned_not_generated")
             self.assertEqual(response.body["asset_pipeline"]["surface_generation_status"], "planned_not_generated")
+            self.assertEqual(response.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
+            self.assertEqual(response.body["asset_pipeline"]["surface_plan"]["layer_id"], "surface_materials")
+            self.assertEqual(response.body["asset_pipeline"]["surface_plan"]["style_intent"], "bright_tokusatsu_hero")
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["source_layers"],
+                ["base_suit_surface", "armor_overlay_parts"],
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["base_suit"]["texture_role"],
+                "hero_body_suit_surface",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["emissive"]["texture_role"],
+                "emissive_line_mask",
+            )
             self.assertTrue(response.body["asset_pipeline"]["texture_plan"]["uv_refine"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["asset_contract"], "vrm-base-suit+mesh-v1-overlay")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
@@ -282,6 +304,7 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["update_suitspec"])
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["writes_final_texture"])
             self.assertFalse(response.body["asset_pipeline"]["job_payload_template"]["dry_run"])
+            self.assertNotIn("surface_plan", response.body["asset_pipeline"]["job_payload_template"])
             self.assertNotIn("must_render_layers", response.body["asset_pipeline"]["job_payload_template"])
             self.assertNotIn("minimum_visible_overlay_parts", response.body["asset_pipeline"]["job_payload_template"])
             self.assertEqual(response.body["asset_pipeline"]["links"]["create_generation_job"], "/api/generation-jobs")
@@ -357,6 +380,10 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertFalse(quest.body["render_contract"]["vrm_only_is_valid"])
             self.assertEqual(quest.body["render_contract"]["overlay_part_count"], 5)
             self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["part_count"], 5)
+            self.assertEqual(quest.body["visual_layers"]["surface_layer"]["layer_id"], "surface_materials")
+            self.assertEqual(quest.body["visual_layers"]["surface_layer"]["kind"], "texture_and_emissive_maps")
+            self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
+            self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["style_intent"], "bright_tokusatsu_hero")
             self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
             self.assertEqual(quest.body["model_quality_gate"], quest.body["asset_pipeline"]["model_quality_gate"])
             self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
@@ -372,6 +399,40 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(
                 quest.body["runtime_package"]["runtime_checks"]["required_layers"],
                 ["base_suit_surface", "armor_overlay_parts"],
+            )
+
+    def test_quest_recall_backfills_surface_layer_for_legacy_forge_suitspec(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store = Path(tmp) / "suits"
+            api = NewRouteApi(Path("."), suit_store_root=suit_store)
+            response = api.post(
+                "/v1/suits/forge",
+                {"display_name": "Legacy surface", "recall_code": "L9G4", "parts": ["helmet", "chest", "back"]},
+            )
+            assert response is not None
+            self.assertEqual(response.status, 201, response.body)
+
+            suit_dir = next(path for path in suit_store.iterdir() if path.is_dir())
+            suitspec_path = suit_dir / "suitspec.json"
+            suitspec = json.loads(suitspec_path.read_text(encoding="utf-8"))
+            generation = suitspec.get("generation")
+            assert isinstance(generation, dict)
+            visual_layers = generation.get("visual_layers")
+            assert isinstance(visual_layers, dict)
+            visual_layers.pop("surface_layer", None)
+            generation.pop("surface_plan", None)
+            suitspec_path.write_text(json.dumps(suitspec, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            quest = api.get("/v1/quest/recall/L9G4")
+
+            self.assertIsNotNone(quest)
+            assert quest is not None
+            self.assertEqual(quest.status, 200)
+            self.assertEqual(quest.body["visual_layers"]["surface_layer"]["layer_id"], "surface_materials")
+            self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
+            self.assertEqual(
+                quest.body["runtime_package"]["visual_layers"]["surface_layer"],
+                quest.body["visual_layers"]["surface_layer"],
             )
 
     def test_forge_suit_helmet_only_keeps_selected_overlay_contract(self) -> None:

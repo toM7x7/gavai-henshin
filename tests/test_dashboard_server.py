@@ -270,11 +270,21 @@ class TestDashboardServer(unittest.TestCase):
             '_FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"',
             '_FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"',
             '_FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"',
+            '_FORGE_SURFACE_LAYER_ID = "surface_materials"',
+            '_FORGE_SURFACE_PLAN_CONTRACT = "surface-plan.v1"',
             '"kind": "vrm_body_surface"',
             '"role": "body_conforming_substrate"',
             '"surface_target": "VRM humanoid mesh or future body surface shell"',
             '"generation_target": "continuous low-frequency suit material on the human body"',
             '"not_a_part_catalog_entry": True',
+            "def _forge_surface_layer(",
+            '"surface_layer": self._forge_surface_layer(),',
+            'visual_layers.setdefault("surface_layer", self._forge_surface_layer())',
+            '"kind": "texture_and_emissive_maps"',
+            '"source_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID]',
+            '"contract_version": _FORGE_SURFACE_PLAN_CONTRACT',
+            '"style_intent": "bright_tokusatsu_hero"',
+            '"texture_role": "hero_body_suit_surface"',
             '"base_suit_surface.present == true"',
         }:
             self.assertIn(token, api)
@@ -284,10 +294,13 @@ class TestDashboardServer(unittest.TestCase):
 
         for token in {
             "const FORGE_DISPLAY_ARM_POSE_CHAINS = Object.freeze([",
-            '{ bone: "leftUpperArm", childBone: "leftLowerArm", target: [-0.48, -0.88, 0.02], strength: 0.86 }',
-            '{ bone: "rightUpperArm", childBone: "rightLowerArm", target: [0.48, -0.88, 0.02], strength: 0.86 }',
+            '{ bone: "leftUpperArm", childBone: "leftLowerArm", outward: 0.62, down: -0.78, forward: 0.06, strength: 0.96 }',
+            '{ bone: "rightUpperArm", childBone: "rightLowerArm", outward: 0.62, down: -0.78, forward: 0.06, strength: 0.96 }',
+            "displayPoseCenterWorldX()",
+            "displayArmTargetForChain(chain, bonePos)",
             "this.applyForgeDisplayPose();",
             "this.canvas.dataset.previewDisplayPoseChains = String(this.previewStats.displayPoseChains || 0);",
+            'this.canvas.dataset.previewDisplayPoseMode = this.previewStats.displayPoseMode || "pending";',
         }:
             self.assertIn(token, js)
 
@@ -297,7 +310,9 @@ class TestDashboardServer(unittest.TestCase):
             "const desiredLocalQuat = parentWorldQuat.clone().invert().multiply(desiredWorldQuat).normalize();",
             "bone.quaternion.slerp(desiredLocalQuat, clamp(strength, 0, 1));",
             "for (const chain of FORGE_DISPLAY_ARM_POSE_CHAINS)",
+            "const target = this.displayArmTargetForChain(chain, bonePos);",
             "this.previewStats.displayPoseChains = applied;",
+            'this.previewStats.displayPoseMode = "center_outward_a_pose";',
         }:
             self.assertIn(token, display_pose_block)
 

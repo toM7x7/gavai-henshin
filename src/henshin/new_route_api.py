@@ -101,6 +101,8 @@ _FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
 _FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"
 _FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"
 _FORGE_ARMOR_OVERLAY_LAYER_ID = "armor_overlay_parts"
+_FORGE_SURFACE_LAYER_ID = "surface_materials"
+_FORGE_SURFACE_PLAN_CONTRACT = "surface-plan.v1"
 _FORGE_FIT_STATUS = "preview_vrm_bone_metrics"
 _FORGE_SURFACE_GENERATION_STATUS = "planned_not_generated"
 _FORGE_MODEL_REBUILD_WAVE = "Wave 1"
@@ -1060,6 +1062,60 @@ class NewRouteApi:
                 cleaned.append(normalized[:32])
         return cleaned[:12] or ["base_suit", "armor_overlay"]
 
+    def _forge_surface_layer(self) -> dict[str, Any]:
+        return {
+            "layer_id": _FORGE_SURFACE_LAYER_ID,
+            "kind": "texture_and_emissive_maps",
+            "role": "generated surface materials for base suit and armor overlay",
+            "render_order": 20,
+            "visibility": "planned",
+            "source_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
+            "generation_target": "bright tokusatsu suit texture, armor materials, and emissive line masks",
+            "status": _FORGE_SURFACE_GENERATION_STATUS,
+            "required_for_runtime": False,
+        }
+
+    def _forge_surface_plan(
+        self,
+        enabled_parts: list[str],
+        texture_plan: dict[str, Any],
+        style_tags: list[str],
+    ) -> dict[str, Any]:
+        return {
+            "contract_version": _FORGE_SURFACE_PLAN_CONTRACT,
+            "layer_id": _FORGE_SURFACE_LAYER_ID,
+            "status": _FORGE_SURFACE_GENERATION_STATUS,
+            "style_intent": "bright_tokusatsu_hero",
+            "provider_profile": str(texture_plan.get("provider_profile") or _FORGE_TEXTURE_PROVIDER_PROFILE),
+            "texture_mode": str(texture_plan.get("texture_mode") or _FORGE_TEXTURE_MODE),
+            "target_resolution": str(texture_plan.get("target_resolution") or "2K"),
+            "source_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
+            "style_tags": list(style_tags),
+            "base_suit": {
+                "target_layer": _FORGE_BASE_SURFACE_LAYER_ID,
+                "texture_role": "hero_body_suit_surface",
+                "surface_target": "VRM humanoid body material",
+                "uv_scope": "body_uv_or_generated_body_surface_shell",
+                "generation_target": "continuous bright tokusatsu body suit texture on the VRM surface",
+                "must_remain_body_conforming": True,
+            },
+            "armor_overlay": {
+                "target_layer": _FORGE_ARMOR_OVERLAY_LAYER_ID,
+                "texture_role": "armor_part_materials",
+                "parts": list(enabled_parts),
+                "part_count": len(enabled_parts),
+                "generation_target": "separate hard-surface armor materials that sit above the base suit",
+                "requires_model_quality_gate": MODEL_QUALITY_BLOCKING_GATE,
+            },
+            "emissive": {
+                "texture_role": "emissive_line_mask",
+                "palette_slot": "emissive",
+                "runtime_channel": "emissive",
+                "generation_target": "clear transformation-energy lines readable in Quest and Web preview",
+            },
+            "preview_status": "web_preview_uses_parametric_materials_until_texture_job",
+        }
+
     def _forge_generation(
         self,
         payload: dict[str, Any],
@@ -1084,6 +1140,7 @@ class NewRouteApi:
             "target_resolution": "2K",
             "discipline": ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
         }
+        surface_plan = self._forge_surface_plan(enabled_parts, texture_plan, style_tags)
         body_fit_contract = build_body_fit_contract(
             {"body_profile": body_profile, "modules": {}},
             selected_slots=enabled_parts,
@@ -1127,6 +1184,7 @@ class NewRouteApi:
             "texture_plan": texture_plan,
             "fit_status": _FORGE_FIT_STATUS,
             "surface_generation_status": _FORGE_SURFACE_GENERATION_STATUS,
+            "surface_plan": surface_plan,
             "planned_quality_gates": [
                 "base_suit_surface_present",
                 "visible_overlay_parts_minimum",
@@ -1210,6 +1268,7 @@ class NewRouteApi:
                 "body_fit_validation": self._clone_json(fit_contract["validation"]),
                 "empty_overlay_policy": "invalid",
             },
+            "surface_layer": self._forge_surface_layer(),
         }
 
     def _forge_render_contract(
@@ -1313,15 +1372,24 @@ class NewRouteApi:
         render_contract = (
             generation.get("render_contract") if isinstance(generation.get("render_contract"), dict) else {}
         )
+        enabled_parts = sorted(
+            part_name
+            for part_name, module in modules.items()
+            if isinstance(module, dict) and module.get("enabled")
+        )
         if not visual_layers or not render_contract:
-            enabled_parts = sorted(
-                part_name
-                for part_name, module in modules.items()
-                if isinstance(module, dict) and module.get("enabled")
-            )
             body_profile = suitspec.get("body_profile") if isinstance(suitspec.get("body_profile"), dict) else {}
             visual_layers = self._forge_visual_layers(enabled_parts, body_profile, strict=False)
             render_contract = self._forge_render_contract(enabled_parts)
+        visual_layers = self._clone_json(visual_layers)
+        visual_layers.setdefault("surface_layer", self._forge_surface_layer())
+        surface_plan = generation.get("surface_plan") if isinstance(generation.get("surface_plan"), dict) else {}
+        if not surface_plan:
+            surface_plan = self._forge_surface_plan(
+                enabled_parts,
+                texture_plan,
+                self._forge_style_tags(suitspec),
+            )
         job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
         planned_quality_gates = (
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
@@ -1331,6 +1399,7 @@ class NewRouteApi:
         job_payload_template.pop("requires", None)
         for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts"):
             job_payload_template.pop(render_only_key, None)
+        job_payload_template.pop("surface_plan", None)
         if suitspec_path:
             job_payload_template["suitspec"] = suitspec_path
         job_payload_template.setdefault("suitspec", "__SERVER_RESOLVED_SUITSPEC_PATH__")
@@ -1414,6 +1483,7 @@ class NewRouteApi:
             "texture_plan": self._clone_json(texture_plan),
             "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
             "surface_generation_status": str(generation.get("surface_generation_status") or _FORGE_SURFACE_GENERATION_STATUS),
+            "surface_plan": self._clone_json(surface_plan),
             "job_defaults": self._clone_json(job_defaults),
             "job_payload_template": job_payload_template,
             "links": job_links,

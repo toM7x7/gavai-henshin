@@ -97,6 +97,11 @@ const UI = {
   textureJobTitle: document.getElementById("textureJobTitle"),
   textureJobDetail: document.getElementById("textureJobDetail"),
   textureJobMeter: document.getElementById("textureJobMeter"),
+  standControls: document.getElementById("standControls"),
+  resetViewButton: document.getElementById("resetViewButton"),
+  zoomOutButton: document.getElementById("zoomOutButton"),
+  zoomInButton: document.getElementById("zoomInButton"),
+  spinToggle: document.getElementById("spinToggle"),
   displayName: document.getElementById("displayName"),
   archetype: document.getElementById("archetype"),
   temperament: document.getElementById("temperament"),
@@ -281,9 +286,9 @@ function syncPreviewLegendPalette() {
 function renderPreviewLegend() {
   if (!UI.previewLegend) return;
   const items = [
-    ["legend-skin", "人体リファレンス"],
-    ["legend-suit", "基礎スーツ層"],
-    ["legend-armor", "分割装甲パーツ"],
+    ["legend-skin", "VRM骨格"],
+    ["legend-suit", "VRM表面ボディスーツ"],
+    ["legend-armor", "外装パーツ"],
     ["legend-glow", "表面/発光ライン"],
   ];
   UI.previewLegend.replaceChildren(
@@ -466,7 +471,14 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
     `鎧立て全体を ${heightScale.toFixed(2)}x で表示しています。`,
     "ready",
   );
-  setPreviewLayerRow(panel, "base", "基礎スーツ層", baseState === "ready" ? "表示中" : "待機中", "人体との差が読める半透明スーツです。", baseState);
+  setPreviewLayerRow(
+    panel,
+    "base",
+    "基礎スーツ層",
+    baseState === "ready" ? "VRM表面に反映" : "待機中",
+    "VRMの体表テクスチャを特撮ボディスーツとして扱います。",
+    baseState,
+  );
   setPreviewLayerRow(panel, "armor", "装甲パーツ層", armorParts > 0 ? `${armorParts}パーツ配置` : `${selectedCount}パーツ選択中`, armorDetail, armorState);
   setPreviewLayerRow(panel, "modelGate", "モデル品質Gate", modelGate.title, modelGate.detail, modelGate.state);
   setPreviewLayerRow(panel, "surface", "表面/テクスチャ層", surface.title, surface.detail, surface.state);
@@ -783,19 +795,81 @@ function disposeMaterial(material) {
   }
 }
 
+function createBaseSuitTexture(palette = {}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  const primary = palette.primary || "#F4F1E8";
+  const secondary = palette.secondary || "#52777E";
+  const emissive = palette.emissive || "#43D8FF";
+  ctx.fillStyle = primary;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 0.36;
+  ctx.fillStyle = secondary;
+  for (let x = -512; x < 1024; x += 72) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 34, 0);
+    ctx.lineTo(x + 546, 512);
+    ctx.lineTo(x + 512, 512);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = emissive;
+  ctx.lineWidth = 5;
+  for (const x of [128, 256, 384]) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 512);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 3;
+  for (const y of [92, 256, 420]) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(512, y);
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.6, 2.4);
+  texture.anisotropy = 4;
+  texture.name = "vrm-body-suit-surface-texture";
+  return texture;
+}
+
+function createBaseSuitMaterial(palette = {}, options = {}) {
+  const opacity = numberOr(options.opacity, 0.94);
+  return new THREE.MeshStandardMaterial({
+    name: "vrm-body-suit-surface-material",
+    color: new THREE.Color(palette.primary || BASE_SUIT_COLOR),
+    map: createBaseSuitTexture(palette),
+    emissive: new THREE.Color(palette.emissive || BASE_SUIT_EMISSIVE),
+    emissiveIntensity: numberOr(options.emissiveIntensity, 0.18),
+    metalness: 0.08,
+    roughness: 0.54,
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
 function materialForPart(part, palette) {
   const primary = new THREE.Color(palette?.primary || "#F4F1E8");
   const secondary = new THREE.Color(palette?.secondary || "#8C96A3");
   const emissive = new THREE.Color(palette?.emissive || "#43D8FF");
-  const color = part.includes("shin") || part.includes("boot") || part.includes("forearm") || part.includes("shoulder")
-    ? secondary
-    : primary;
+  const color = secondary.clone().lerp(primary, part === "helmet" ? 0.16 : 0.06);
   return new THREE.MeshStandardMaterial({
     color,
     emissive,
-    emissiveIntensity: part === "chest" || part === "helmet" ? 0.38 : 0.22,
-    metalness: 0.2,
-    roughness: 0.42,
+    emissiveIntensity: part === "chest" || part === "helmet" ? 0.48 : 0.3,
+    metalness: 0.34,
+    roughness: 0.34,
     side: THREE.DoubleSide,
   });
 }
@@ -898,6 +972,41 @@ function createFallbackArmorGeometry(part) {
   return geometry;
 }
 
+function createArmorShellMaterial(part, palette) {
+  const secondary = new THREE.Color(palette?.secondary || "#8C96A3");
+  const emissive = new THREE.Color(palette?.emissive || "#43D8FF");
+  return new THREE.MeshStandardMaterial({
+    name: "armor-attachment-preview-shell-material",
+    color: secondary,
+    emissive,
+    emissiveIntensity: part === "helmet" || part === "chest" ? 0.52 : 0.34,
+    metalness: 0.18,
+    roughness: 0.38,
+    transparent: true,
+    opacity: 0.76,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+  });
+}
+
+function createArmorAttachmentShellMesh(part, module, palette) {
+  const geometry = createFallbackArmorGeometry(part);
+  const sourceSize = new THREE.Vector3();
+  geometry.computeBoundingBox();
+  geometry.boundingBox.getSize(sourceSize);
+  const mesh = new THREE.Mesh(geometry, createArmorShellMaterial(part, palette));
+  mesh.name = `${part}-attachment-preview-shell`;
+  mesh.renderOrder = 5;
+  mesh.userData.sourceSize = sourceSize;
+  mesh.userData.armorPart = true;
+  mesh.userData.attachmentPreviewShell = true;
+  mesh.userData.texturePath = null;
+  mesh.userData.meshSource = "attachment_preview_shell";
+  addArmorEdges(mesh, palette);
+  return mesh;
+}
+
 async function createArmorMesh(part, module, palette) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
   let geometry;
@@ -957,6 +1066,12 @@ class ArmorStand {
     this.boneMap = new Map();
     this.metricsCache = null;
     this.lastCanvasSize = { width: 0, height: 0 };
+    this.currentPalette = {};
+    this.viewYaw = 0;
+    this.viewPitch = 0;
+    this.viewZoom = 1;
+    this.autoSpin = true;
+    this.dragState = null;
     this.previewStats = {
       armorParts: 0,
       fallbackParts: 0,
@@ -980,6 +1095,7 @@ class ArmorStand {
     this.buildBaseSuit();
     this.group.add(this.avatarGroup);
     this.vrmReady = this.loadBaselineVrm(DEFAULT_VRM_PATH);
+    this.installPreviewControls();
     this.publishPreviewStats();
     this.animate();
     window.addEventListener("resize", () => this.resize());
@@ -987,7 +1103,7 @@ class ArmorStand {
 
   publishPreviewStats() {
     if (!this.canvas) return;
-    this.previewStats.baseSuitVisible = Boolean(this.ghostGroup?.visible);
+    this.previewStats.baseSuitVisible = Boolean(this.vrmModel || this.ghostGroup?.visible);
     this.canvas.dataset.previewArmorParts = String(this.previewStats.armorParts);
     this.canvas.dataset.previewFallbackParts = String(this.previewStats.fallbackParts);
     this.canvas.dataset.previewTexturedParts = String(this.previewStats.texturedParts);
@@ -999,18 +1115,8 @@ class ArmorStand {
   }
 
   buildBaseSuit() {
-    const ghost = new THREE.MeshStandardMaterial({
-      color: BASE_SUIT_COLOR,
-      emissive: BASE_SUIT_EMISSIVE,
-      emissiveIntensity: 0.26,
-      metalness: 0.08,
-      roughness: 0.58,
-      transparent: true,
-      opacity: 0.62,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.ghostGroup.name = "base-suit-reference";
+    const ghost = createBaseSuitMaterial({}, { opacity: 0.5, emissiveIntensity: 0.24 });
+    this.ghostGroup.name = "base-suit-vrm-surface-fallback";
     const standMat = new THREE.MeshBasicMaterial({ color: 0x9a7b2c, transparent: true, opacity: 0.68 });
     const seamMat = new THREE.MeshBasicMaterial({ color: 0x154e55, transparent: true, opacity: 0.58 });
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.82, 32), ghost);
@@ -1111,6 +1217,64 @@ class ArmorStand {
     this.group.add(this.standGroup);
   }
 
+  installPreviewControls() {
+    const canvas = this.canvas;
+    if (!canvas) return;
+    canvas.addEventListener("pointerdown", (event) => {
+      canvas.setPointerCapture?.(event.pointerId);
+      canvas.classList.add("dragging");
+      this.autoSpin = false;
+      this.updateSpinToggle();
+      this.dragState = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+      };
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (!this.dragState || this.dragState.pointerId !== event.pointerId) return;
+      const dx = event.clientX - this.dragState.x;
+      const dy = event.clientY - this.dragState.y;
+      this.dragState.x = event.clientX;
+      this.dragState.y = event.clientY;
+      this.viewYaw += dx * 0.008;
+      this.viewPitch = clamp(this.viewPitch + dy * 0.004, -0.34, 0.22);
+    });
+    const stopDrag = (event) => {
+      if (this.dragState?.pointerId === event.pointerId) this.dragState = null;
+      canvas.classList.remove("dragging");
+    };
+    canvas.addEventListener("pointerup", stopDrag);
+    canvas.addEventListener("pointercancel", stopDrag);
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      this.zoomBy(event.deltaY > 0 ? 1.08 : 0.92);
+    }, { passive: false });
+  }
+
+  updateSpinToggle() {
+    if (UI.spinToggle) UI.spinToggle.setAttribute("aria-pressed", this.autoSpin ? "true" : "false");
+  }
+
+  resetView() {
+    this.viewYaw = 0;
+    this.viewPitch = 0;
+    this.viewZoom = 1;
+    this.autoSpin = false;
+    this.updateSpinToggle();
+    this.updateCameraDistance();
+  }
+
+  zoomBy(factor) {
+    this.viewZoom = clamp(this.viewZoom * factor, 0.72, 1.45);
+    this.updateCameraDistance();
+  }
+
+  toggleSpin() {
+    this.autoSpin = !this.autoSpin;
+    this.updateSpinToggle();
+  }
+
   async loadBaselineVrm(path) {
     try {
       const { model } = await loadVrmScene(normalizePath(path));
@@ -1121,7 +1285,8 @@ class ArmorStand {
       this.avatarGroup.add(model);
       this.vrmModel = model;
       this.indexVrmBones(model);
-      this.ghostGroup.visible = true;
+      this.ghostGroup.visible = false;
+      this.refreshBaseSuitSurface(this.currentPalette);
       this.fitVrmToStand(model);
       this.setHeightCm(this.heightCm);
       this.previewStats.vrmVisible = true;
@@ -1194,13 +1359,13 @@ class ArmorStand {
       leftFoot: p("leftFoot"),
       rightFoot: p("rightFoot"),
     };
-    metrics.shoulderWidth = distanceOr(metrics.leftShoulder, metrics.rightShoulder, 0.68);
-    metrics.torsoHeight = distanceOr(metrics.upperChest, metrics.hips, 0.78);
-    metrics.headHeight = distanceOr(metrics.head, metrics.neck, 0.2);
-    metrics.upperArmLength = distanceOr(metrics.leftUpperArm, metrics.leftLowerArm, 0.34);
-    metrics.forearmLength = distanceOr(metrics.leftLowerArm, metrics.leftHand, 0.34);
-    metrics.thighLength = distanceOr(metrics.leftUpperLeg, metrics.leftLowerLeg, 0.46);
-    metrics.shinLength = distanceOr(metrics.leftLowerLeg, metrics.leftFoot, 0.46);
+    metrics.shoulderWidth = Math.max(distanceOr(metrics.leftShoulder, metrics.rightShoulder, 0.68), 0.58);
+    metrics.torsoHeight = Math.max(distanceOr(metrics.upperChest, metrics.hips, 0.78), 0.68);
+    metrics.headHeight = Math.max(distanceOr(metrics.head, metrics.neck, 0.2), 0.18);
+    metrics.upperArmLength = Math.max(distanceOr(metrics.leftUpperArm, metrics.leftLowerArm, 0.34), 0.3);
+    metrics.forearmLength = Math.max(distanceOr(metrics.leftLowerArm, metrics.leftHand, 0.34), 0.3);
+    metrics.thighLength = Math.max(distanceOr(metrics.leftUpperLeg, metrics.leftLowerLeg, 0.46), 0.4);
+    metrics.shinLength = Math.max(distanceOr(metrics.leftLowerLeg, metrics.leftFoot, 0.46), 0.4);
     metrics.torsoCenter = midpoint(metrics.upperChest, metrics.hips) || new THREE.Vector3(0, 0.96, 0);
     metrics.shouldersCenter = midpoint(metrics.leftShoulder, metrics.rightShoulder) || metrics.upperChest || new THREE.Vector3(0, 1.3, 0);
     this.metricsCache = metrics;
@@ -1364,26 +1529,24 @@ class ArmorStand {
     mesh.userData.fitPreview = pose.source;
   }
 
+  refreshBaseSuitSurface(palette = this.currentPalette) {
+    this.currentPalette = palette || {};
+    if (!this.vrmModel) return;
+    this.vrmModel.traverse((obj) => {
+      if (!obj.isMesh) return;
+      disposeMaterial(obj.material);
+      obj.material = createBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+      obj.renderOrder = 2;
+      obj.userData.baseSuitSurface = "vrm_surface_texture";
+    });
+  }
+
   prepareVrmMannequin(model) {
     model.traverse((obj) => {
       if (!obj.isMesh) return;
       obj.renderOrder = 2;
-      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-      obj.material = materials.map(
-        () =>
-          new THREE.MeshStandardMaterial({
-            color: BODY_REFERENCE_COLOR,
-            emissive: BODY_REFERENCE_EMISSIVE,
-            emissiveIntensity: 0.08,
-            metalness: 0.02,
-            roughness: 0.82,
-            transparent: true,
-            opacity: 0.22,
-            depthWrite: false,
-            side: THREE.DoubleSide,
-          }),
-      );
-      if (obj.material.length === 1) obj.material = obj.material[0];
+      obj.material = createBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+      obj.userData.baseSuitSurface = "vrm_surface_texture";
     });
   }
 
@@ -1417,7 +1580,7 @@ class ArmorStand {
     const aspect = this.camera.aspect || 1;
     const heightScale = Math.max(this.heightCm / DEFAULT_HEIGHT_CM, 1);
     const narrowCompensation = aspect < 1.05 ? 1.05 / Math.max(aspect, 0.2) : 1;
-    this.camera.position.set(0, 0.96 * Math.min(heightScale, 1.18), 4.15 * heightScale * narrowCompensation);
+    this.camera.position.set(0, 0.96 * Math.min(heightScale, 1.18), 4.15 * heightScale * narrowCompensation * this.viewZoom);
   }
 
   clearArmor() {
@@ -1441,13 +1604,22 @@ class ArmorStand {
     this.metricsCache = null;
     const modules = suitspec?.modules || {};
     const palette = suitspec?.palette || {};
+    this.refreshBaseSuitSurface(palette);
     const records = Object.entries(modules).filter(([, module]) => module?.enabled);
+    const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));
+    for (let index = 0; index < shells.length; index += 1) {
+      const [part, module] = records[index];
+      const shell = shells[index];
+      this.applyPreviewPose(shell, part, module);
+      this.group.add(shell);
+    }
     const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette)));
     for (let index = 0; index < meshes.length; index += 1) {
       const [part, module] = records[index];
       const mesh = meshes[index];
       this.applyPreviewPose(mesh, part, module);
       mesh.userData.armorPart = true;
+      mesh.renderOrder = 6;
       this.group.add(mesh);
     }
     this.previewStats.armorParts = meshes.length;
@@ -1469,7 +1641,8 @@ class ArmorStand {
 
   animate() {
     this.resize();
-    this.group.rotation.y = Math.sin(performance.now() * 0.00028) * 0.08;
+    const autoYaw = this.autoSpin ? Math.sin(performance.now() * 0.00028) * 0.08 : 0;
+    this.group.rotation.set(this.viewPitch, this.viewYaw + autoYaw, 0);
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(() => this.animate());
   }
@@ -1484,6 +1657,10 @@ if (UI.heightCm) {
 if (UI.heightRange) {
   UI.heightRange.addEventListener("input", () => syncHeightControls(UI.heightRange.value));
 }
+UI.resetViewButton?.addEventListener("click", () => armorStand?.resetView());
+UI.zoomOutButton?.addEventListener("click", () => armorStand?.zoomBy(1.1));
+UI.zoomInButton?.addEventListener("click", () => armorStand?.zoomBy(0.9));
+UI.spinToggle?.addEventListener("click", () => armorStand?.toggleSpin());
 syncHeightControls(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
 
 function applyResult(data) {

@@ -194,6 +194,8 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("loadTextureMap", js)
         self.assertIn("texture_path", js)
         self.assertIn("createFallbackArmorGeometry", js)
+        self.assertIn("createArmorAttachmentShellMesh", js)
+        self.assertIn("attachment_preview_shell", js)
         self.assertIn("seed_proxy_fallback", js)
         self.assertIn("previewFallbackParts", js)
         self.assertIn("base-suit-surface", js)
@@ -223,11 +225,129 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("本番表面生成", js)
         self.assertIn("モデル品質Gate通過後", html)
         self.assertIn("モデル品質Gate前", js)
-        self.assertIn("VRM人体", html)
-        self.assertIn("基礎スーツ", html)
-        self.assertIn("装甲/表面", html)
+        self.assertIn("VRM骨格", html)
+        self.assertIn("VRM表面ボディスーツ", html)
+        self.assertIn("外装パーツ", html)
         self.assertNotIn('id="suitId"', html)
         self.assertNotIn('id="manifestId"', html)
+
+    def test_armor_forge_base_suit_is_vrm_surface_layer_static_contract(self) -> None:
+        html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        api = Path("src/henshin/new_route_api.py").read_text(encoding="utf-8")
+
+        for token in {
+            "VRM骨格",
+            "VRM表面ボディスーツ",
+            "基礎スーツ",
+            "外装パーツ",
+            "VRM基礎スーツと外装パーツの3Dプレビュー",
+            "VRM表面の基礎スーツに外装パーツを重ねて表示",
+        }:
+            self.assertIn(token, html)
+
+        for token in {
+            "const BASE_SUIT_COLOR",
+            "const BASE_SUIT_EMISSIVE",
+            "createBaseSuitTexture",
+            "createBaseSuitMaterial",
+            "vrm-body-suit-surface-texture",
+            "vrm-body-suit-surface-material",
+            "base-suit-surface-torso",
+            "base-suit-surface-head",
+            "base-suit-surface-limb",
+            'userData.baseSuitSurface = "vrm_surface_texture"',
+            "refreshBaseSuitSurface",
+            "baseSuitVisible",
+            "dataset.previewBaseSuit",
+            '"base",',
+            "VRMの体表テクスチャを特撮ボディスーツとして扱います。",
+        }:
+            self.assertIn(token, js)
+        self.assertRegex(js, r'this\.ghostGroup\.name = "base-suit-[^"]*surface[^"]*"')
+
+        for token in {
+            '_FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"',
+            '_FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"',
+            '_FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"',
+            '"kind": "vrm_body_surface"',
+            '"role": "body_conforming_substrate"',
+            '"surface_target": "VRM humanoid mesh or future body surface shell"',
+            '"generation_target": "continuous low-frequency suit material on the human body"',
+            '"not_a_part_catalog_entry": True',
+            '"base_suit_surface.present == true"',
+        }:
+            self.assertIn(token, api)
+
+    def test_armor_forge_canvas_exposes_direct_manipulation_static_contract(self) -> None:
+        html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")
+
+        canvas_match = re.search(r'<canvas[^>]+id="armorCanvas"[^>]+aria-label="(?P<label>[^"]+)"', html)
+        self.assertIsNotNone(canvas_match)
+        assert canvas_match is not None
+        self.assertIn("3Dプレビュー", canvas_match.group("label"))
+
+        for dom_id in {"standControls", "resetViewButton", "zoomOutButton", "zoomInButton", "spinToggle"}:
+            self.assertIn(f'id="{dom_id}"', html)
+            self.assertIn(f'getElementById("{dom_id}")', js)
+        for token in {
+            'aria-label="鎧プレビュー操作"',
+            'aria-label="正面へ戻す"',
+            'aria-label="縮小"',
+            'aria-label="拡大"',
+            'aria-label="自動回転を切り替え"',
+        }:
+            self.assertIn(token, html)
+
+        interaction_contracts = [
+            ("OrbitControls", ("OrbitControls", "new OrbitControls(", ".controls.update(")),
+            ("pointer drag rotation", ("pointerdown", "pointermove", "pointerup", "setPointerCapture")),
+            ("mouse drag rotation", ("mousedown", "mousemove", "mouseup")),
+        ]
+        self.assertTrue(
+            any(all(token in js for token in tokens) for _, tokens in interaction_contracts),
+            "Armor Forge canvas must expose an orbit/drag interaction contract for rotating the armor preview.",
+        )
+
+        canvas_css = self._css_block(css, "#armorCanvas")
+        self.assertTrue(
+            "cursor: grab;" in canvas_css or "cursor: move;" in canvas_css or "canvas.style.cursor" in js,
+            "Interactive armor preview should advertise draggable affordance on the canvas.",
+        )
+
+    def test_forge_partial_selection_cannot_be_final_complete_static_contract(self) -> None:
+        api = Path("src/henshin/new_route_api.py").read_text(encoding="utf-8")
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+
+        required_match = re.search(r"_FORGE_REQUIRED_PARTS\s*=\s*\{(?P<body>[^}]+)\}", api)
+        self.assertIsNotNone(required_match)
+        assert required_match is not None
+        required_body = required_match.group("body")
+        for part in {"helmet", "chest", "back"}:
+            self.assertIn(f'"{part}"', required_body)
+
+        for token in {
+            '"vrm_only_is_valid": False',
+            '"failure_mode_prevented": "vrm_only_render_after_generation"',
+            '"minimum_visible_overlay_parts": len(required_parts)',
+            '"missing_required_overlay_parts": missing_required',
+            "selection_complete = not missing_required and overlay_count >= minimum_count",
+            'gate["selection_complete_for_final_texture"] = selection_complete',
+            'gate["texture_lock_allowed"] = mesh_texture_lock_allowed and selection_complete',
+            'gate["status"] = "fail"',
+            'job_payload_template["writes_final_texture"] = texture_lock_allowed',
+            '"final_texture_ready": False',
+        }:
+            self.assertIn(token, api)
+
+        partial_branch = js[
+            js.index("if (gate.selection_complete_for_final_texture === false)") : js.index('if (status === "pass")')
+        ]
+        self.assertIn('state: "planned"', partial_branch)
+        self.assertIn("gate.missing_required_overlay_parts", partial_branch)
+        self.assertNotIn('state: "ready"', partial_branch)
 
     def test_armor_forge_layout_css_keeps_stand_panel_bounded(self) -> None:
         css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")

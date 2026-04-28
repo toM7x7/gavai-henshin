@@ -87,15 +87,21 @@
       <section class="stand-panel" aria-label="鎧立てプレビュー">
         <div class="stand-stage">
           <div class="preview-legend" aria-label="プレビュー凡例">
-            <span><i class="legend-skin"></i>VRM人体</span>
-            <span><i class="legend-suit"></i>基礎スーツ</span>
-            <span><i class="legend-armor"></i>装甲/表面</span>
+            <span><i class="legend-skin"></i>VRM骨格</span>
+            <span><i class="legend-suit"></i>VRM表面ボディスーツ</span>
+            <span><i class="legend-armor"></i>外装パーツ</span>
             <span><i class="legend-glow"></i>発光線</span>
           </div>
           <canvas id="armorCanvas" aria-label="VRM基礎スーツと外装パーツの3Dプレビュー"></canvas>
+          <div id="standControls" class="stand-controls" aria-label="鎧プレビュー操作">
+            <button id="resetViewButton" type="button" title="正面へ戻す" aria-label="正面へ戻す">正面</button>
+            <button id="zoomOutButton" type="button" title="縮小" aria-label="縮小">−</button>
+            <button id="zoomInButton" type="button" title="拡大" aria-label="拡大">＋</button>
+            <button id="spinToggle" type="button" title="自動回転を切り替え" aria-label="自動回転を切り替え" aria-pressed="true">回転</button>
+          </div>
           <div id="emptyStand" class="empty-stand">
             <strong>鎧立て待機中</strong>
-            <span>入力を終えると、VRM人体/基礎スーツの上に外装パーツを重ねて表示します。</span>
+            <span>入力を終えると、VRM表面の基礎スーツに外装パーツを重ねて表示します。</span>
           </div>
         </div>
 

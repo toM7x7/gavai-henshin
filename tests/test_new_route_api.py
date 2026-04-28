@@ -252,6 +252,18 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 5)
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract"]["height_cm"], 182.0)
+            self.assertEqual(response.body["asset_pipeline"]["model_quality_gate"], response.body["model_quality_gate"])
+            self.assertEqual(response.body["model_quality_gate"]["contract_version"], "model-quality-gate.v1")
+            self.assertEqual(response.body["model_quality_gate"]["blocking_gate"], "mesh_fit_before_texture_final")
+            self.assertEqual(response.body["model_quality_gate"]["status"], "fail")
+            self.assertFalse(response.body["model_quality_gate"]["mesh_assets_ready"])
+            self.assertFalse(response.body["model_quality_gate"]["texture_lock_allowed"])
+            self.assertEqual(
+                response.body["model_quality_gate"]["required_parts"],
+                ["helmet", "chest", "back", "left_shoulder", "right_shoulder"],
+            )
+            self.assertIn("bounds missing or invalid", response.body["model_quality_gate"]["reasons"][0])
+            self.assertIn("computed_bounds", response.body["model_quality_gate"]["parts"]["helmet"]["metrics"])
             self.assertIn("left_forearm", response.body["asset_pipeline"]["model_plan"]["overlay_parts"])
             self.assertIn("left_forearm", response.body["asset_pipeline"]["job_defaults"]["parts"])
             self.assertEqual(
@@ -277,6 +289,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["contract_version"], "model-rebuild.v1")
             self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["status"], "required")
             self.assertTrue(response.body["asset_pipeline"]["model_rebuild_job"]["blocking"])
+            self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["blocking_gate"], "mesh_fit_before_texture_final")
+            self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["quality_gate_status"], "fail")
             self.assertEqual(response.body["asset_pipeline"]["model_rebuild_job"]["wave"], "Wave 1")
             self.assertIn("chest", response.body["asset_pipeline"]["model_rebuild_job"]["parts"])
             self.assertIn("back", response.body["asset_pipeline"]["model_rebuild_job"]["parts"])
@@ -286,6 +300,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["contract_version"], "texture-probe.v1")
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["status"], "allowed_on_seed_proxy")
             self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["blocking"])
+            self.assertTrue(response.body["asset_pipeline"]["texture_probe_job"]["blocked_by_model_quality"])
+            self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
             self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["method"], "POST")
             self.assertEqual(response.body["asset_pipeline"]["texture_probe_job"]["endpoint"], "/api/generation-jobs")
@@ -337,11 +353,16 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["render_contract"]["overlay_part_count"], 5)
             self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["part_count"], 5)
             self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
+            self.assertEqual(quest.body["model_quality_gate"], quest.body["asset_pipeline"]["model_quality_gate"])
             self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
             self.assertEqual(quest.body["runtime_package"]["visual_layers"], quest.body["visual_layers"])
             self.assertEqual(quest.body["runtime_package"]["render_contract"], quest.body["render_contract"])
             self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["contract_version"], "armor-body-fit.v1")
             self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["height_cm"], 182.0)
+            self.assertEqual(quest.body["runtime_package"]["model_quality_gate"], quest.body["model_quality_gate"])
+            self.assertEqual(quest.body["runtime_package"]["runtime_checks"]["model_quality_gate_status"], "fail")
+            self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["model_quality_ready"])
+            self.assertFalse(quest.body["runtime_package"]["runtime_checks"]["texture_lock_allowed"])
             self.assertTrue(quest.body["runtime_package"]["runtime_checks"]["can_render_runtime_suit"])
             self.assertEqual(
                 quest.body["runtime_package"]["runtime_checks"]["required_layers"],

@@ -19,6 +19,7 @@ def build_runtime_suit_package(
     manifest: dict[str, Any] | None = None,
     visual_layers: dict[str, Any] | None = None,
     render_contract: dict[str, Any] | None = None,
+    model_quality_gate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the normalized package a runtime should consume.
 
@@ -46,6 +47,9 @@ def build_runtime_suit_package(
         part for part in contract["required_overlay_parts"] if part not in visible_overlay_parts
     ]
     fit_validation = body_fit_contract["validation"]
+    quality_gate = _clone(model_quality_gate) if isinstance(model_quality_gate, dict) else None
+    quality_status = str((quality_gate or {}).get("status") or "unknown")
+    texture_lock_allowed = bool((quality_gate or {}).get("texture_lock_allowed"))
     return {
         "contract_version": contract["contract_version"],
         "suitspec": normalized_suitspec,
@@ -53,6 +57,7 @@ def build_runtime_suit_package(
         "visual_layers": layers,
         "render_contract": contract,
         "body_fit_contract": body_fit_contract,
+        "model_quality_gate": quality_gate,
         "runtime_checks": {
             "vrm_only_is_valid": False,
             "required_layers": contract["required_layers"],
@@ -66,6 +71,9 @@ def build_runtime_suit_package(
             "missing_mirror_pairs": fit_validation["missing_mirror_pairs"],
             "body_fit_core_ready": fit_validation["can_render_core"],
             "body_fit_pairs_balanced": fit_validation["balanced_pairs"],
+            "model_quality_gate_status": quality_status,
+            "model_quality_ready": quality_status == "pass",
+            "texture_lock_allowed": texture_lock_allowed,
             "can_render_runtime_suit": fit_validation["can_render_core"]
             and not missing_required
             and len(visible_overlay_parts) >= contract["minimum_visible_overlay_parts"],

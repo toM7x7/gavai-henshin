@@ -95,6 +95,22 @@ class TestRuntimePackage(unittest.TestCase):
         self.assertEqual(checks["missing_required_body_fit_slots"], ["back"])
         self.assertEqual(checks["visible_overlay_count"], 2)
 
+    def test_runtime_package_carries_model_quality_gate_without_blocking_trial_render(self) -> None:
+        gate = {
+            "contract_version": "model-quality-gate.v1",
+            "status": "fail",
+            "texture_lock_allowed": False,
+            "reasons": ["helmet: bounds missing or invalid"],
+        }
+
+        package = build_runtime_suit_package(suitspec=_suitspec(), manifest={}, model_quality_gate=gate)
+
+        self.assertEqual(package["model_quality_gate"], gate)
+        self.assertEqual(package["runtime_checks"]["model_quality_gate_status"], "fail")
+        self.assertFalse(package["runtime_checks"]["model_quality_ready"])
+        self.assertFalse(package["runtime_checks"]["texture_lock_allowed"])
+        self.assertTrue(package["runtime_checks"]["can_render_runtime_suit"])
+
 
 if __name__ == "__main__":
     unittest.main()

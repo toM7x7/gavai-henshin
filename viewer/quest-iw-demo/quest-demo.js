@@ -524,10 +524,17 @@ function bodyFitContractFromPackage(runtimePackage) {
     : null;
 }
 
+function modelQualityGateFromPackage(runtimePackage) {
+  return runtimePackage?.model_quality_gate && typeof runtimePackage.model_quality_gate === "object"
+    ? runtimePackage.model_quality_gate
+    : null;
+}
+
 function makeEquipmentDiagnostic(suitspec, loadedPartCount = 0, suitRecord = null, runtimePackage = null) {
   const totalParts = ARMOR_PARTS.length;
   const checks = runtimeChecksFromPackage(runtimePackage);
   const bodyFit = bodyFitContractFromPackage(runtimePackage);
+  const modelGate = modelQualityGateFromPackage(runtimePackage);
   const runtimeEnabledParts = Array.isArray(checks?.enabled_overlay_parts) ? checks.enabled_overlay_parts : [];
   const visibleRuntimeParts = Array.isArray(checks?.visible_overlay_parts) ? checks.visible_overlay_parts : [];
   const enabledParts = runtimeEnabledParts.length ? runtimeEnabledParts : enabledArmorParts(suitspec);
@@ -540,6 +547,12 @@ function makeEquipmentDiagnostic(suitspec, loadedPartCount = 0, suitRecord = nul
     ...(Array.isArray(checks?.missing_required_body_fit_slots) ? checks.missing_required_body_fit_slots : []),
   ].filter((value, index, array) => value && array.indexOf(value) === index);
   const selectedSlotCount = Array.isArray(bodyFit?.selected_slots) ? bodyFit.selected_slots.length : enabledCount;
+  const gateSummary = modelGate?.summary || {};
+  const gateRequired = Number(gateSummary.required_count || modelGate?.required_parts?.length || modelGate?.p0_parts?.length || 0);
+  const gatePass = Number(gateSummary.required_pass_count || gateSummary.pass_count || 0);
+  const gateReason = Array.isArray(modelGate?.reasons) && modelGate.reasons.length
+    ? String(modelGate.reasons[0])
+    : "";
 
   if (!suitspec) {
     return {
@@ -586,6 +599,24 @@ function makeEquipmentDiagnostic(suitspec, loadedPartCount = 0, suitRecord = nul
     };
   }
 
+  if (modelGate?.status === "fail") {
+    return {
+      state: "warning",
+      label: "モデルGate未通過",
+      summary: `P0 ${gatePass}/${gateRequired || "?"} / 試験表示は可能`,
+      detail: gateReason || "bounds/UV/法線/三角形をWeb側で再構築してください",
+    };
+  }
+
+  if (modelGate?.status === "warn") {
+    return {
+      state: "warning",
+      label: "モデルGate要確認",
+      summary: `P0 ${gatePass}/${gateRequired || "?"} / 試験表示は可能`,
+      detail: gateReason || "P0モデル品質に警告があります",
+    };
+  }
+
   if (enabledCount < totalParts) {
     return {
       state: "warning",
@@ -600,7 +631,7 @@ function makeEquipmentDiagnostic(suitspec, loadedPartCount = 0, suitRecord = nul
     label: "装備OK",
     summary: `基礎OK / 分割鎧 ${loadedCount}/${enabledCount}`,
     detail: runtimePackage
-      ? `RuntimePackage確認済み / body-fit ${selectedSlotCount}スロット`
+      ? `RuntimePackage確認済み / body-fit ${selectedSlotCount}スロット / model ${modelGate?.status || "unknown"}`
       : "SuitSpec + Manifest確認済み",
   };
 }

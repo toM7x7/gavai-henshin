@@ -19,6 +19,8 @@
 - `src/henshin/armor_fit_contract.py` を追加し、VRM人体を基準にした `armor-body-fit.v1` の canonical slot map、左右ペア、身長スケール、必須slot監査を実装
 - Web Forgeの鎧立てに基礎スーツ層・装甲パーツ層・表面/テクスチャ層の状態表示を追加
 - Quest呼び出しUIに装備状態診断を追加し、`runtime_package.runtime_checks.can_render_runtime_suit=false` を装備不足として扱う導線へ更新
+- `src/henshin/armor_model_quality.py` を追加し、`helmet/chest/back/left_shoulder/right_shoulder` の `model-quality-gate.v1` を実装
+- Web Forge / Quest recall / RuntimePackage に `model_quality_gate` を接続し、生成コード発行と展示品質Gateを分離
 
 ### 結果
 
@@ -26,14 +28,18 @@
 - SuitSpecに後から入った `texture_path` を runtime manifest に投影するルールが純粋関数として分離された
 - GCP移行前でも、Cloud Run / Unity / PlayCanvas へ移植しやすい境界ができた
 - slot名の揺れは `shoulder_l` / `left_shoulder` などを `armor-body-fit.v1` で吸収し、runtime側では既存パーツ名を維持できる
+- 現行 `viewer/assets/meshes` のP0部位は `positions/uv/indices/normals` は読めるが、明示 `bounds` がないため `model_quality_gate.status=fail`
+- Web Forgeでは「モデル品質Gate」行、Questでは「モデルGate未通過」診断として、試験表示可能と最終テクスチャ不可を分けて見られる
 - `python -m pytest -q -p no:cacheprovider` は `140 passed, 50 subtests passed`
 - `node --check viewer/armor-forge/forge.js` と `node --check viewer/quest-iw-demo/quest-demo.js` は成功
 
 ### 次アクション
 
+- 既存 `mesh.v1` に明示 `bounds` を追記するか、GLB/glTF派生時にsidecarで固定するかを決める
+- `model_quality_gate.status=pass` になった時だけ Nano Banana の final texture lock を許可するよう、生成ジョブ側に接続する
 - `examples/suitspec.sample.json` の変更を canonical sample更新として採用するか判断する
 - `tests/.tmp` と参考資料bundleをコミット対象から分離し、必要なら `.gitignore` / docs取り込み方針を決める
-- 次の実装は `helmet/chest/back/shoulder` のモデル品質Gate、実テクスチャ生成の再接続、GLB/PlayCanvas/Unity向けの派生成果物contractへ進める
+- 次の実装は実テクスチャ生成の再接続、GLB/PlayCanvas/Unity向けの派生成果物contract、P0 mesh bounds/material sidecar整備へ進める
 
 ---
 

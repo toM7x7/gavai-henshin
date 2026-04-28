@@ -387,17 +387,56 @@ function setPreviewLayerRow(panel, key, label, title, detail, state) {
   row.querySelector(".preview-layer-detail").textContent = detail;
 }
 
+function modelGateStateForPipeline(pipeline) {
+  const gate = pipeline?.model_quality_gate || null;
+  if (!gate) {
+    return {
+      state: "planned",
+      title: "検査待ち",
+      detail: "helmet/chest/back/shoulder のモデル品質Gateを待っています。",
+    };
+  }
+  const summary = gate.summary || {};
+  const requiredCount = Number(summary.required_count || gate.required_parts?.length || gate.p0_parts?.length || 0);
+  const passCount = Number(summary.required_pass_count || summary.pass_count || 0);
+  const status = String(gate.status || "unknown");
+  const firstReason = Array.isArray(gate.reasons) && gate.reasons.length
+    ? String(gate.reasons[0])
+    : "";
+  if (status === "pass") {
+    return {
+      state: "ready",
+      title: `通過 ${passCount}/${requiredCount || passCount}`,
+      detail: "P0モデルは最終テクスチャ対象として扱えます。",
+    };
+  }
+  if (status === "warn") {
+    return {
+      state: "planned",
+      title: `要確認 ${passCount}/${requiredCount || "?"}`,
+      detail: firstReason || "P0モデルに警告があります。",
+    };
+  }
+  return {
+    state: "error",
+    title: `未通過 ${passCount}/${requiredCount || "?"}`,
+    detail: firstReason || "P0モデルのbounds/UV/法線/三角形を再構築してください。",
+  };
+}
+
 function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const panel = ensurePreviewLayerPanel();
   if (!panel) return;
 
   const records = previewRecordsFromData(data);
+  const pipeline = previewPipelineFromData(data);
   const selectedCount = selectedParts().length;
   const armorParts = stand?.previewStats?.armorParts || records.length || selectedCount;
   const fallbackParts = stand?.previewStats?.fallbackParts || 0;
   const height = Math.round(stand?.heightCm || declaredHeightCm());
   const heightScale = height / DEFAULT_HEIGHT_CM;
   const surface = layerStateForSurface(data, records);
+  const modelGate = modelGateStateForPipeline(pipeline);
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
   const armorDetail = fallbackParts > 0
@@ -414,6 +453,7 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   );
   setPreviewLayerRow(panel, "base", "基礎スーツ層", baseState === "ready" ? "表示中" : "待機中", "人体との差が読める半透明スーツです。", baseState);
   setPreviewLayerRow(panel, "armor", "装甲パーツ層", armorParts > 0 ? `${armorParts}パーツ配置` : `${selectedCount}パーツ選択中`, armorDetail, armorState);
+  setPreviewLayerRow(panel, "modelGate", "モデル品質Gate", modelGate.title, modelGate.detail, modelGate.state);
   setPreviewLayerRow(panel, "surface", "表面/テクスチャ層", surface.title, surface.detail, surface.state);
 }
 
@@ -493,6 +533,7 @@ function renderAssetPipeline(data = null) {
   const modelPlan = pipeline?.model_plan || {};
   const texturePlan = pipeline?.texture_plan || {};
   const modelJob = pipeline?.model_rebuild_job || {};
+  const modelGate = modelGateStateForPipeline(pipeline);
   const textureProbe = pipeline?.texture_probe_job || {};
   const provider = texturePlan.provider_profile || "nano_banana";
   const mode = texturePlan.texture_mode || "mesh_uv";
@@ -516,6 +557,7 @@ function renderAssetPipeline(data = null) {
   UI.assetPipelineDetail.textContent = [
     `基礎スーツ層: ${baseReady ? "表示中" : "待機中"}`,
     `装甲パーツ層: ${fallbackParts > 0 ? `仮形状${fallbackParts}パーツ含む` : "分割配置済み"}`,
+    `モデルGate: ${modelGate.title}`,
     `表面: ${surface.title}`,
   ].join(" / ");
   updatePreviewLayerPanel(data);

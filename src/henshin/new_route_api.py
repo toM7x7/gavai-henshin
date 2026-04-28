@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from .armor_fit_contract import build_body_fit_contract, visual_layer_slot_summary
+from .armor_model_quality import MODEL_QUALITY_BLOCKING_GATE, audit_viewer_mesh_assets
 from .ids import (
     generate_approval_id,
     generate_morphotype_id,
@@ -346,6 +347,7 @@ class NewRouteApi:
             suitspec_path=create.body["suitspec_path"],
         )
         asset_pipeline = preview["asset_pipeline"]
+        model_quality_ready = bool(asset_pipeline["model_quality_gate"].get("texture_lock_allowed"))
         return ApiResponse(
             status=HTTPStatus.CREATED,
             body={
@@ -356,7 +358,7 @@ class NewRouteApi:
                 "readiness": {
                     "suitspec_ready": True,
                     "manifest_ready": manifest_response.body["manifest"]["status"] == "READY",
-                    "model_quality_ready": False,
+                    "model_quality_ready": model_quality_ready,
                     "final_texture_ready": False,
                     "exhibition_ready": False,
                 },
@@ -365,6 +367,7 @@ class NewRouteApi:
                 "render_contract": asset_pipeline["render_contract"],
                 "preview": preview,
                 "asset_pipeline": asset_pipeline,
+                "model_quality_gate": asset_pipeline["model_quality_gate"],
                 "links": {
                     "quest_recall": f"/v1/quest/recall/{recall_code}",
                     "quest_viewer": f"/viewer/quest-iw-demo/?code={recall_code}&newRoute=1",
@@ -424,6 +427,7 @@ class NewRouteApi:
                 manifest=manifest if isinstance(manifest, dict) else {},
                 visual_layers=visual_layers,
                 render_contract=render_contract,
+                model_quality_gate=asset_pipeline.get("model_quality_gate"),
             )
             manifest = runtime_package["manifest"] if isinstance(manifest, dict) else manifest
             visual_layers = runtime_package["visual_layers"]
@@ -453,6 +457,7 @@ class NewRouteApi:
                 "render_contract": render_contract,
                 "runtime_package": runtime_package,
                 "asset_pipeline": asset_pipeline,
+                "model_quality_gate": asset_pipeline.get("model_quality_gate") if isinstance(asset_pipeline, dict) else None,
                 "links": {
                     "suit": f"/v1/suits/{suit_id}",
                     "manifest": f"/v1/suits/{suit_id}/manifest",
@@ -1104,7 +1109,7 @@ class NewRouteApi:
             "material_slots": ["base_surface", "accent", "emissive", "trim"],
             "mesh_source_status": "seed_proxy_requires_vrm_first_rebuild",
             "preview_mesh_role": "fit-check proxy, not final texture target",
-            "model_quality_gate": "mesh_fit_before_texture_final",
+            "model_quality_gate": MODEL_QUALITY_BLOCKING_GATE,
             "model_rebuild_wave": _FORGE_MODEL_REBUILD_WAVE,
             "model_rebuild_focus_parts": list(_FORGE_MODEL_REBUILD_PARTS),
             "next_model_quality_gate": "VRM-first Wave 1 rebuild: chest/back/waist/upperarm/forearm before final texture lock",
@@ -1367,11 +1372,16 @@ class NewRouteApi:
             {"status": "failed", "stage": "error", "event_type": "job_failed"},
             {"status": "cancelled", "stage": "error", "event_type": "job_cancelled"},
         ]
+        model_quality_gate = self._forge_model_quality_gate()
         model_rebuild_job = {
             "contract_version": "model-rebuild.v1",
             "status": "required",
             "source": "authoring_audit/current",
             "blocking": True,
+            "blocking_gate": MODEL_QUALITY_BLOCKING_GATE,
+            "quality_gate_contract_version": model_quality_gate["contract_version"],
+            "quality_gate_status": model_quality_gate["status"],
+            "quality_gate_reasons": self._clone_json(model_quality_gate.get("reasons", []))[:10],
             "wave": _FORGE_MODEL_REBUILD_WAVE,
             "parts": list(_FORGE_MODEL_REBUILD_PARTS),
             "selected_overlay_parts": self._clone_json(model_plan.get("overlay_parts", [])),
@@ -1388,6 +1398,8 @@ class NewRouteApi:
             "contract_version": "texture-probe.v1",
             "status": "allowed_on_seed_proxy",
             "blocking": False,
+            "final_texture_lock_allowed": bool(model_quality_gate.get("texture_lock_allowed")),
+            "blocked_by_model_quality": not bool(model_quality_gate.get("texture_lock_allowed")),
             "writes_final_texture": False,
             "method": "POST",
             "endpoint": job_links["create_generation_job"],
@@ -1409,6 +1421,7 @@ class NewRouteApi:
             "expected_status_flow": expected_status_flow,
             "model_rebuild_job": model_rebuild_job,
             "texture_probe_job": texture_probe_job,
+            "model_quality_gate": model_quality_gate,
             "generation_job": {
                 "contract_version": "generation-job.v1",
                 "alias_of": "texture_probe_job",
@@ -1422,6 +1435,18 @@ class NewRouteApi:
             "planned_quality_gates": self._clone_json(planned_quality_gates),
             "quality_policy": self._clone_json(quality_policy),
         }
+
+    def _forge_model_quality_gate(self) -> dict[str, Any]:
+        gate = self._clone_json(audit_viewer_mesh_assets(repo_root=self.repo_root))
+        gate.pop("repo_root", None)
+        if gate.get("mesh_dir"):
+            gate["mesh_dir"] = self._relative_path(Path(str(gate["mesh_dir"])))
+        parts = gate.get("parts") if isinstance(gate.get("parts"), dict) else {}
+        for part_result in parts.values():
+            if not isinstance(part_result, dict) or not part_result.get("path"):
+                continue
+            part_result["path"] = self._relative_path(Path(str(part_result["path"])))
+        return gate
 
     def _forge_enabled_parts(self, payload: dict[str, Any]) -> set[str]:
         modules = self._load_json("examples/suitspec.sample.json").get("modules", {})

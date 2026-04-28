@@ -201,6 +201,8 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("generation_job", js)
         self.assertIn("texture_probe_job", js)
         self.assertIn("model_rebuild_job", js)
+        self.assertIn("model_quality_gate", js)
+        self.assertIn("modelGateStateForPipeline", js)
         self.assertIn("job_payload_template", js)
         self.assertIn("model ${modelStatus}", js)
         self.assertIn("seed/proxy", js)

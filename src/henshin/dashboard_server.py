@@ -25,7 +25,12 @@ from .iw_henshin import (
     run_iwsdk_henshin,
 )
 from .new_route_api import NewRouteApi
-from .part_generation import DEFAULT_PROVIDER_PROFILE, GenerationRequest, run_generate_parts
+from .part_generation import (
+    DEFAULT_PROVIDER_PROFILE,
+    GenerationRequest,
+    normalize_provider_profile_name,
+    run_generate_parts,
+)
 
 
 def _is_within_root(path: Path, root: Path) -> bool:
@@ -104,6 +109,11 @@ class IWHenshinVoicePayload:
     explanation: str | None = None
     dry_run: bool = False
     tts_enabled: bool = True
+
+
+def _force_texture_provider(payload: GeneratePartsPayload) -> GeneratePartsPayload:
+    payload.provider_profile = normalize_provider_profile_name(payload.provider_profile)
+    return payload
 
 
 class GenerationJob:
@@ -218,6 +228,7 @@ class GenerationJobManager:
             _resolve_repo_path(self.repo_root, payload.fallback_dir)
 
     def create_job(self, payload: GeneratePartsPayload) -> GenerationJob:
+        payload = _force_texture_provider(payload)
         self._validate_payload(payload)
         job_id = f"job-{int(time.time() * 1000):x}"
         job = GenerationJob(job_id=job_id, payload=payload)
@@ -259,6 +270,7 @@ class GenerationJobManager:
 
 def run_generate_parts_sync(root: Path, payload: GeneratePartsPayload) -> dict[str, Any]:
     try:
+        payload = _force_texture_provider(payload)
         result = run_generate_parts(GenerationRequest(**asdict(payload)), repo_root=root)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": str(exc)}

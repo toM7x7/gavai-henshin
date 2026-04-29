@@ -52,6 +52,13 @@ class ProviderSpec:
     model_id: str
 
 
+def normalize_provider_profile_name(name: str | None) -> str:
+    profile = str(name or DEFAULT_PROVIDER_PROFILE).strip().lower().replace("-", "_")
+    if profile in {"nano_banana", "nanobanana", "exhibition"}:
+        return DEFAULT_PROVIDER_PROFILE
+    raise ValueError(f"Unsupported provider profile: {name}")
+
+
 @dataclass(slots=True)
 class GenerationRequest:
     suitspec: str
@@ -111,7 +118,7 @@ def _setting(*keys: str, default: str) -> str:
 
 
 def resolve_provider_profile(name: str) -> dict[str, ProviderSpec]:
-    profile = name.strip().lower().replace("-", "_")
+    profile = normalize_provider_profile_name(name)
 
     if profile == "nano_banana":
         fast_model = _setting("GEMINI_FAST_MODEL", default=DEFAULT_GEMINI_FAST_MODEL)
@@ -131,30 +138,6 @@ def resolve_provider_profile(name: str) -> dict[str, ProviderSpec]:
             "quality_refine": ProviderSpec("gemini", refine_model),
             "hero_render": ProviderSpec("gemini", hero_model),
             "fallback_fast": ProviderSpec("gemini", fallback_model),
-        }
-
-    if profile == "exhibition":
-        return {
-            "fast_draft": ProviderSpec(
-                "fal",
-                _setting("FAL_FAST_DRAFT_MODEL", default=DEFAULT_FAL_FAST_MODEL),
-            ),
-            "quality_refine": ProviderSpec(
-                "fal",
-                _setting("FAL_QUALITY_REFINE_MODEL", default=DEFAULT_FAL_REFINE_MODEL),
-            ),
-            "hero_render": ProviderSpec(
-                "openai",
-                _setting("OPENAI_HERO_MODEL", default=DEFAULT_OPENAI_HERO_MODEL),
-            ),
-            "fallback_fast": ProviderSpec(
-                "gemini",
-                _setting(
-                    "GEMINI_FALLBACK_MODEL",
-                    "GEMINI_FAST_MODEL",
-                    default=DEFAULT_GEMINI_FAST_MODEL,
-                ),
-            ),
         }
 
     raise ValueError(f"Unsupported provider profile: {name}")
@@ -558,7 +541,8 @@ def run_generate_parts(
     cache_dir = _ensure_cache_dirs(session_root)
     image_aspect_ratio = "1:1" if request.texture_mode == "mesh_uv" else None
     image_size = "2K" if request.texture_mode == "mesh_uv" else None
-    provider_profile = resolve_provider_profile(request.provider_profile)
+    effective_provider_profile_name = normalize_provider_profile_name(request.provider_profile)
+    provider_profile = resolve_provider_profile(effective_provider_profile_name)
     if request.model_id:
         provider_profile["fast_draft"] = ProviderSpec(provider_profile["fast_draft"].provider, request.model_id)
         provider_profile["quality_refine"] = ProviderSpec(provider_profile["quality_refine"].provider, request.model_id)
@@ -969,7 +953,7 @@ def run_generate_parts(
         generation = spec.setdefault("generation", {})
         generation["texture_mode"] = request.texture_mode
         generation["uv_refine"] = bool(request.uv_refine)
-        generation["provider_profile"] = request.provider_profile
+        generation["provider_profile"] = effective_provider_profile_name
         generation["tracking_source"] = request.tracking_source
         generation["last_generation_brief"] = effective_generation_brief or ""
         generation["last_generation_brief_raw"] = request.generation_brief or ""
@@ -999,7 +983,7 @@ def run_generate_parts(
     ordered_cancelled_parts = _order_part_list(cancelled_parts, requested)
     summary = {
         "session_id": session_id,
-        "provider_profile": request.provider_profile,
+        "provider_profile": effective_provider_profile_name,
         "priority_mode": request.priority_mode,
         "tracking_source": request.tracking_source,
         "operator_profile_raw": operator_context["operator_profile_raw"],
@@ -1080,6 +1064,7 @@ __all__ = [
     "_use_fallback_asset",
     "build_generation_cache_key",
     "build_generation_waves",
+    "normalize_provider_profile_name",
     "resolve_provider_profile",
     "run_generate_parts",
 ]

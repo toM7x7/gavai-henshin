@@ -169,6 +169,11 @@ class TestDashboardServer(unittest.TestCase):
             "assetPipeline",
             "assetPipelineTitle",
             "assetPipelineDetail",
+            "proxyWarning",
+            "modelerHandoff",
+            "modelerHandoffTitle",
+            "modelerHandoffDetail",
+            "modelerBlueprintUrl",
             "textureJobPanel",
             "textureJobButton",
             "textureJobTitle",
@@ -212,6 +217,17 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("textureFailedParts", js)
         self.assertIn("surfacePlanFromData", js)
         self.assertIn("data?.generation?.surface_plan", js)
+        self.assertIn('const TEXTURE_PROVIDER_PROFILE = "nano_banana"', js)
+        self.assertIn("provider_profile: TEXTURE_PROVIDER_PROFILE", js)
+        self.assertIn("proxy_envelope_only", js)
+        self.assertIn("仮プロキシ", html)
+        self.assertIn("半透明の箱/筒は発注対象外", html)
+        self.assertIn("modelerBlueprintUrl", js)
+        self.assertIn("asset_pipeline.modeler_blueprints", html)
+        self.assertIn("current_forge_response", js)
+        self.assertIn("selected parts", js)
+        self.assertIn("modeler-handoff", css)
+        self.assertIn("proxy-warning", css)
         self.assertIn("createArmorMockSurfaceTexture", js)
         self.assertIn("textureMockPreview", js)
         self.assertIn("!module?.texture_path && surfacePlan?.contract_version", js)
@@ -221,10 +237,28 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("originalMaterials.forEach", js)
         self.assertIn("SuitSpec texture_path is unchanged", js)
         self.assertIn("/v1/catalog/part-blueprints", Path("src/henshin/new_route_api.py").read_text(encoding="utf-8"))
+        modeler_brief = Path("docs/modeler-armor-brief.md").read_text(encoding="utf-8")
+        self.assertIn("viewer/assets/armor-parts/<module>/<module>.glb", modeler_brief)
+        self.assertIn("viewer/assets/armor-parts/<module>/<module>.modeler.json", modeler_brief)
+        self.assertIn("GET /v1/catalog/part-blueprints", modeler_brief)
+        self.assertIn("Nano Banana", modeler_brief)
+        armor_parts_readme = Path("viewer/assets/armor-parts/README.md").read_text(encoding="utf-8")
+        self.assertIn("Armor Parts Intake", armor_parts_readme)
+        self.assertIn("source/<module>.blend", armor_parts_readme)
+        self.assertIn("textures/", armor_parts_readme)
         blueprint_source = Path("src/henshin/modeler_blueprints.py").read_text(encoding="utf-8")
         self.assertIn("modeler-part-blueprint.v1", blueprint_source)
         self.assertIn("authoring_target_m", blueprint_source)
         self.assertIn("source_bbox_role", blueprint_source)
+        self.assertIn("PREVIEW_CONTRACT", blueprint_source)
+        self.assertIn("proxy_envelope_only", blueprint_source)
+        self.assertIn("do_not_model", blueprint_source)
+        self.assertIn("texture_provider_profile", blueprint_source)
+        self.assertIn("source/<module>.blend", blueprint_source)
+        self.assertIn("textures/", blueprint_source)
+        self.assertIn("Nano Bananaのみ", modeler_brief)
+        self.assertIn("viewer/assets/armor-parts/<module>/source/<module>.blend", modeler_brief)
+        self.assertIn("viewer/assets/armor-parts/<module>/textures/", modeler_brief)
         self.assertIn("base-suit-surface", js)
         self.assertIn("disposeMaterial", js)
         self.assertIn("parts_per_min", js)
@@ -637,6 +671,15 @@ class TestDashboardServer(unittest.TestCase):
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
         self.assertIn("lastCanvasSize", js)
         self.assertIn("this.lastCanvasSize.width === width", js)
+
+    def test_suit_dashboard_generation_profile_is_nano_banana_only(self) -> None:
+        html = Path("viewer/suit-dashboard/index.html").read_text(encoding="utf-8")
+        js = Path("viewer/suit-dashboard/dashboard.js").read_text(encoding="utf-8")
+
+        self.assertIn('<option value="nano_banana" selected>', html)
+        self.assertNotIn('option value="exhibition"', html)
+        self.assertIn('provider_profile: "nano_banana"', js)
+        self.assertNotIn("provider_profile: UI.providerProfile.value", js)
 
     def test_forge_generation_job_payload_matches_existing_job_api_contract(self) -> None:
         root = Path(".").resolve()

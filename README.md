@@ -55,6 +55,19 @@ Web Forge issues the four-character Quest input code from the dashboard server:
 http://localhost:8010/viewer/armor-forge/
 ```
 
+Modeler handoff:
+
+```text
+docs/modeler-armor-brief.md
+GET /v1/catalog/part-blueprints
+viewer/assets/armor-parts/<module>/<module>.glb
+viewer/assets/armor-parts/<module>/<module>.modeler.json
+viewer/assets/armor-parts/<module>/source/<module>.blend
+viewer/assets/armor-parts/<module>/textures/
+```
+
+The cyan Web Forge armor shells are proxy envelopes only. External model work should follow `authoring_target_m` from the blueprint API, and texture generation for this route is fixed to Nano Banana.
+
 The Quest runtime page is the Vite app on port `5173`, not the dashboard port. If Quest Browser gets `404` from a `localhost` URL, either run `npm run dev:quest:adb` first so Quest `localhost` is reversed to the PC, or open the PC LAN IP URL from Quest Browser. The VR scene also has a left-hand menu code input, so the visitor can open `/viewer/quest-iw-demo/?newRoute=1` and enter the four-character code inside VR.
 
 ### 2. Quest Trial

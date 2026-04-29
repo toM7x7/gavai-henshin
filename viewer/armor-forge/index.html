@@ -92,6 +92,10 @@
             <span><i class="legend-armor"></i>外装パーツ</span>
             <span><i class="legend-glow"></i>発光線</span>
           </div>
+          <div id="proxyWarning" class="proxy-warning" aria-live="polite">
+            <strong>仮プロキシ</strong>
+            <span>半透明の箱/筒は発注対象外。現在の生成結果内の設計図寸法を正本にします。</span>
+          </div>
           <canvas id="armorCanvas" aria-label="VRM基礎スーツと外装パーツの3Dプレビュー"></canvas>
           <div id="standControls" class="stand-controls" aria-label="鎧プレビュー操作">
             <button id="resetViewButton" type="button" title="正面へ戻す" aria-label="正面へ戻す">正面</button>
@@ -124,6 +128,12 @@
             <strong id="textureJobTitle">未開始</strong>
             <small id="textureJobDetail">モデル品質Gate通過後にSuitSpecへ反映します。</small>
             <div class="job-meter" aria-hidden="true"><i id="textureJobMeter"></i></div>
+          </div>
+          <div id="modelerHandoff" class="modeler-handoff" aria-live="polite">
+            <span>モデラー向け</span>
+            <strong id="modelerHandoffTitle">簡易メモ / 現在の生成結果</strong>
+            <small id="modelerHandoffDetail">docs/modeler-armor-brief.md / 生成レスポンス asset_pipeline.modeler_blueprints</small>
+            <input id="modelerBlueprintUrl" type="text" readonly value="生成後に現在の選択パーツ数を表示" aria-label="モデラー向け設計図参照" />
           </div>
           <div class="quest-url-card">
             <span>Quest VR入力ページ</span>

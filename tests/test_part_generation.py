@@ -11,6 +11,7 @@ from henshin.part_generation import (
     GenerationRequest,
     build_generation_cache_key,
     build_generation_waves,
+    normalize_provider_profile_name,
     resolve_provider_profile,
     run_generate_parts,
 )
@@ -111,10 +112,14 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(profile["hero_render"].model_id, "gemini-3-pro-image-preview")
         self.assertEqual(profile["fallback_fast"].model_id, "gemini-3.1-flash-image-preview")
 
-    def test_resolve_provider_profile_reads_env_at_call_time(self) -> None:
+    def test_legacy_exhibition_profile_aliases_to_nano_banana(self) -> None:
         with patch.dict(os.environ, {"GEMINI_FALLBACK_MODEL": "gemini-2.5-flash-image"}, clear=False):
             profile = resolve_provider_profile("exhibition")
 
+        self.assertEqual(normalize_provider_profile_name("exhibition"), "nano_banana")
+        self.assertEqual(profile["fast_draft"].provider, "gemini")
+        self.assertEqual(profile["quality_refine"].provider, "gemini")
+        self.assertEqual(profile["hero_render"].provider, "gemini")
         self.assertEqual(profile["fallback_fast"].provider, "gemini")
         self.assertEqual(profile["fallback_fast"].model_id, "gemini-2.5-flash-image")
 
@@ -170,6 +175,10 @@ class TestPartGeneration(unittest.TestCase):
         self.assertTrue(second["ok"])
         self.assertEqual(call_count["value"], 1)
         self.assertEqual(second["cache_hit_count"], 1)
+        first_summary = json.loads((self.root / first["summary_path"]).read_text(encoding="utf-8"))
+        second_summary = json.loads((self.root / second["summary_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(first_summary["provider_profile"], "nano_banana")
+        self.assertEqual(second_summary["provider_profile"], "nano_banana")
 
     def test_update_suitspec_runtime_metadata_does_not_poison_cache(self) -> None:
         call_count = {"value": 0}
@@ -222,6 +231,7 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(call_count["value"], 1)
         self.assertEqual(second["cache_hit_count"], 1)
         saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved_spec["generation"]["provider_profile"], "nano_banana")
         self.assertIn("part_prompts", saved_spec["generation"])
         self.assertNotIn("texture_path", saved_spec["modules"]["helmet"])
 

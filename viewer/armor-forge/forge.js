@@ -34,6 +34,7 @@ const MIN_HEIGHT_CM = 90;
 const MAX_HEIGHT_CM = 230;
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
 const DEFAULT_QUEST_DEV_PORT = 5173;
+const TEXTURE_PROVIDER_PROFILE = "nano_banana";
 const BODY_REFERENCE_COLOR = 0xe6c7a6;
 const BODY_REFERENCE_EMISSIVE = 0x2a1710;
 const BASE_SUIT_COLOR = 0x52777e;
@@ -98,6 +99,11 @@ const UI = {
   assetPipeline: document.getElementById("assetPipeline"),
   assetPipelineTitle: document.getElementById("assetPipelineTitle"),
   assetPipelineDetail: document.getElementById("assetPipelineDetail"),
+  proxyWarning: document.getElementById("proxyWarning"),
+  modelerHandoff: document.getElementById("modelerHandoff"),
+  modelerHandoffTitle: document.getElementById("modelerHandoffTitle"),
+  modelerHandoffDetail: document.getElementById("modelerHandoffDetail"),
+  modelerBlueprintUrl: document.getElementById("modelerBlueprintUrl"),
   textureJobPanel: document.getElementById("textureJobPanel"),
   textureJobButton: document.getElementById("textureJobButton"),
   textureJobTitle: document.getElementById("textureJobTitle"),
@@ -635,7 +641,7 @@ function renderAssetPipeline(data = null) {
   const modelJob = pipeline?.model_rebuild_job || {};
   const modelGate = modelGateStateForPipeline(pipeline);
   const textureProbe = pipeline?.texture_probe_job || {};
-  const provider = texturePlan.provider_profile || "nano_banana";
+  const provider = TEXTURE_PROVIDER_PROFILE;
   const mode = texturePlan.texture_mode || "mesh_uv";
   const status = texturePlan.status || pipeline?.surface_generation_status || "planned_not_generated";
   const fitStatus = pipeline?.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
@@ -643,12 +649,15 @@ function renderAssetPipeline(data = null) {
   const modelStatus = modelJob.status || modelPlan.status || "requires_rebuild";
   const probeStatus = textureProbe.status || "probe_only";
   UI.assetPipeline.dataset.pipelineContract = `model ${modelStatus} / ${fitStatus} / ${provider} / ${mode} / ${status} / ${meshStatus} / ${probeStatus}`;
+  if (UI.proxyWarning) {
+    UI.proxyWarning.dataset.previewRole = "proxy_envelope_only";
+  }
 
   UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
   if (!hasGeneratedPreview) {
     UI.assetPipeline.classList.add("pending");
     UI.assetPipelineTitle.textContent = "レイヤー待機中";
-    UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 表面: カラー設計`;
+    UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 仮プロキシ / 表面: ${provider}`;
     updatePreviewLayerPanel(data);
     return;
   }
@@ -656,9 +665,9 @@ function renderAssetPipeline(data = null) {
   UI.assetPipelineTitle.textContent = `基礎スーツ + 装甲${armorParts}パーツ`;
   UI.assetPipelineDetail.textContent = [
     `基礎スーツ層: ${baseReady ? "表示中" : "待機中"}`,
-    `装甲パーツ層: ${fallbackParts > 0 ? `仮形状${fallbackParts}パーツ含む` : "分割配置済み"}`,
+    `装甲パーツ層: ${fallbackParts > 0 ? `仮プロキシ${fallbackParts}パーツ含む` : "分割配置済み"}`,
     `モデルGate: ${modelGate.title}`,
-    `表面: ${surface.title}`,
+    `表面: ${surface.title} / ${provider}`,
   ].join(" / ");
   updatePreviewLayerPanel(data);
 }
@@ -730,6 +739,7 @@ function textureJobPayload(data) {
   }
   return {
     ...template,
+    provider_profile: TEXTURE_PROVIDER_PROFILE,
     root: template.root || "sessions",
     session_id: template.session_id || `S-FORGE-${data.recall_code || Date.now()}`,
     writes_final_texture: textureJobWritesFinal(data),
@@ -740,6 +750,28 @@ function textureJobPayload(data) {
 function textureJobLinks(data) {
   const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
   return pipeline?.texture_probe_job?.links || pipeline?.generation_job?.links || pipeline?.links || {};
+}
+
+function updateModelerHandoff(data = latestForgeData) {
+  if (!UI.modelerBlueprintUrl) return;
+  const code = String(data?.recall_code || "").trim();
+  const selectedBlueprints = data?.asset_pipeline?.modeler_blueprints || data?.preview?.asset_pipeline?.modeler_blueprints;
+  const partCount = Number(selectedBlueprints?.part_count || 0);
+  const blueprintRef = partCount > 0
+    ? `asset_pipeline.modeler_blueprints / ${partCount} selected parts`
+    : "GET /v1/catalog/part-blueprints / full seed catalog";
+  UI.modelerBlueprintUrl.value = blueprintRef;
+  if (UI.modelerHandoffTitle) {
+    UI.modelerHandoffTitle.textContent = code ? `現在の生成結果 / 呼び出し ${code}` : "簡易メモ / 設計図API";
+  }
+  if (UI.modelerHandoffDetail) {
+    UI.modelerHandoffDetail.textContent = "docs/modeler-armor-brief.md / viewer/assets/armor-parts/<module>/<module>.glb";
+  }
+  if (UI.modelerHandoff) {
+    UI.modelerHandoff.dataset.blueprintApi = "/v1/catalog/part-blueprints";
+    UI.modelerHandoff.dataset.blueprintSource = partCount > 0 ? "current_forge_response" : "seed_catalog";
+    UI.modelerHandoff.dataset.intakePath = "viewer/assets/armor-parts/<module>/<module>.glb";
+  }
 }
 
 function updateTextureJobFromSnapshot(snapshot) {
@@ -1116,7 +1148,7 @@ function createArmorShellMaterial(part, palette) {
     metalness: 0.18,
     roughness: 0.38,
     transparent: true,
-    opacity: 0.76,
+    opacity: 0.28,
     depthWrite: false,
     depthTest: true,
     side: THREE.DoubleSide,
@@ -1136,6 +1168,7 @@ function createArmorAttachmentShellMesh(part, module, palette) {
   mesh.userData.attachmentPreviewShell = true;
   mesh.userData.texturePath = null;
   mesh.userData.meshSource = "attachment_preview_shell";
+  mesh.userData.previewRole = "proxy_envelope_only";
   addArmorEdges(mesh, palette);
   return mesh;
 }
@@ -1944,6 +1977,7 @@ function applyResult(data) {
   if (UI.questUrl) UI.questUrl.value = quest.url;
   if (UI.questUrlHint) UI.questUrlHint.textContent = quest.hint;
   renderAssetPipeline(data);
+  updateModelerHandoff(data);
   updateTextureJobAvailability(data);
   UI.emptyStand.classList.add("hidden");
 }
@@ -1981,6 +2015,7 @@ renderPreviewLegend();
 renderAssetPipeline();
 syncPreviewLegendPalette();
 updateTextureJobAvailability();
+updateModelerHandoff();
 updatePreviewLayerPanel(latestForgeData);
 runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);

@@ -42,9 +42,20 @@ class TestNewRouteApi(unittest.TestCase):
         self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
         self.assertEqual(response.body["part_count"], 18)
         self.assertEqual(response.body["reference_body"]["height_cm"], 170)
-        self.assertEqual(response.body["deliverables"]["runtime"], "GLB/glTF 2.0 with applied transforms")
+        self.assertEqual(response.body["preview_contract"]["preview_role"], "proxy_envelope_only")
+        self.assertEqual(response.body["preview_contract"]["handoff_status"], "draft_ready_requires_silhouette_review")
+        self.assertIn("transparent blue boxes", response.body["preview_contract"]["do_not_model"])
+        self.assertEqual(response.body["deliverables"]["runtime"], "viewer/assets/armor-parts/<module>/<module>.glb")
+        self.assertEqual(response.body["deliverables"]["source"], "viewer/assets/armor-parts/<module>/source/<module>.blend")
+        self.assertEqual(response.body["deliverables"]["texture_directory"], "viewer/assets/armor-parts/<module>/textures/")
+        self.assertEqual(response.body["deliverables"]["texture_provider_profile"], "nano_banana")
         helmet = next(part for part in response.body["parts"] if part["module"] == "helmet")
+        self.assertEqual(helmet["preview_role"], "proxy_envelope_only")
+        self.assertEqual(helmet["handoff_status"], "draft_ready_requires_silhouette_review")
         self.assertEqual(helmet["mesh_requirements"]["runtime_format"], "glTF 2.0 GLB")
+        self.assertEqual(helmet["runtime_bindings"]["external_glb_target"], "viewer/assets/armor-parts/helmet/helmet.glb")
+        self.assertEqual(helmet["runtime_bindings"]["source_target"], "viewer/assets/armor-parts/helmet/source/helmet.blend")
+        self.assertEqual(helmet["runtime_bindings"]["texture_target_dir"], "viewer/assets/armor-parts/helmet/textures/")
         self.assertEqual(helmet["mesh_requirements"]["preview_format"], "mesh.v1")
         self.assertEqual(helmet["uv_requirements"]["base_color_px"], 2048)
         self.assertEqual(helmet["vrm_attachment"]["primary_bone"], "head")
@@ -503,6 +514,8 @@ class TestNewRouteApi(unittest.TestCase):
             visual_layers = generation.get("visual_layers")
             assert isinstance(visual_layers, dict)
             visual_layers.pop("surface_layer", None)
+            generation["texture_plan"] = {"provider_profile": "exhibition", "texture_mode": "mesh_uv"}
+            generation["job_defaults"] = {"provider_profile": "exhibition"}
             generation.pop("surface_plan", None)
             suitspec_path.write_text(json.dumps(suitspec, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -513,6 +526,11 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.status, 200)
             self.assertEqual(quest.body["visual_layers"]["surface_layer"]["layer_id"], "surface_materials")
             self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
+            self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["provider_profile"], "nano_banana")
+            self.assertEqual(quest.body["asset_pipeline"]["texture_plan"]["provider_profile"], "nano_banana")
+            self.assertEqual(quest.body["asset_pipeline"]["job_defaults"]["provider_profile"], "nano_banana")
+            self.assertEqual(quest.body["asset_pipeline"]["job_payload_template"]["provider_profile"], "nano_banana")
+            self.assertEqual(quest.body["asset_pipeline"]["texture_probe_job"]["payload"]["provider_profile"], "nano_banana")
             self.assertEqual(
                 quest.body["runtime_package"]["visual_layers"]["surface_layer"],
                 quest.body["visual_layers"]["surface_layer"],

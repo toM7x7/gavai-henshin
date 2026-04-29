@@ -1101,7 +1101,7 @@ class NewRouteApi:
             "layer_id": _FORGE_SURFACE_LAYER_ID,
             "status": _FORGE_SURFACE_GENERATION_STATUS,
             "style_intent": "bright_tokusatsu_hero",
-            "provider_profile": str(texture_plan.get("provider_profile") or _FORGE_TEXTURE_PROVIDER_PROFILE),
+            "provider_profile": _FORGE_TEXTURE_PROVIDER_PROFILE,
             "texture_mode": str(texture_plan.get("texture_mode") or _FORGE_TEXTURE_MODE),
             "target_resolution": str(texture_plan.get("target_resolution") or "2K"),
             "source_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
@@ -1130,6 +1130,22 @@ class NewRouteApi:
             },
             "preview_status": "web_preview_uses_parametric_materials_until_texture_job",
         }
+
+    def _forge_texture_plan(self, texture_plan: dict[str, Any] | None = None) -> dict[str, Any]:
+        source = texture_plan if isinstance(texture_plan, dict) else {}
+        normalized = self._clone_json(source)
+        normalized["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
+        normalized.setdefault("texture_mode", _FORGE_TEXTURE_MODE)
+        normalized.setdefault("status", _FORGE_SURFACE_GENERATION_STATUS)
+        normalized.setdefault("uv_refine", _FORGE_UV_REFINE)
+        normalized.setdefault("update_suitspec", True)
+        normalized.setdefault("use_cache", True)
+        normalized.setdefault("target_resolution", "2K")
+        normalized.setdefault(
+            "discipline",
+            ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
+        )
+        return normalized
 
     def _forge_modeler_blueprints(
         self,
@@ -1164,16 +1180,7 @@ class NewRouteApi:
             f"Style tags: {', '.join(style_tags)}. "
             "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
         )
-        texture_plan = {
-            "provider_profile": _FORGE_TEXTURE_PROVIDER_PROFILE,
-            "texture_mode": _FORGE_TEXTURE_MODE,
-            "status": _FORGE_SURFACE_GENERATION_STATUS,
-            "uv_refine": _FORGE_UV_REFINE,
-            "update_suitspec": True,
-            "use_cache": True,
-            "target_resolution": "2K",
-            "discipline": ["uv_guide_reference", "flat_texture_atlas", "part_catalog_resolved"],
-        }
+        texture_plan = self._forge_texture_plan()
         surface_plan = self._forge_surface_plan(enabled_parts, texture_plan, style_tags)
         body_fit_contract = build_body_fit_contract(
             {"body_profile": body_profile, "modules": {}},
@@ -1401,7 +1408,9 @@ class NewRouteApi:
         generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
         modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
         model_plan = generation.get("model_plan") if isinstance(generation.get("model_plan"), dict) else {}
-        texture_plan = generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {}
+        texture_plan = self._forge_texture_plan(
+            generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {}
+        )
         visual_layers = generation.get("visual_layers") if isinstance(generation.get("visual_layers"), dict) else {}
         render_contract = (
             generation.get("render_contract") if isinstance(generation.get("render_contract"), dict) else {}
@@ -1424,8 +1433,18 @@ class NewRouteApi:
                 texture_plan,
                 self._forge_style_tags(suitspec),
             )
+        else:
+            surface_plan = self._clone_json(surface_plan)
+            surface_plan["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
+            surface_plan.setdefault("texture_mode", texture_plan["texture_mode"])
+            surface_plan.setdefault("target_resolution", texture_plan.get("target_resolution") or "2K")
         modeler_blueprints = self._forge_modeler_blueprints(enabled_parts, suitspec=suitspec)
         job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
+        job_defaults = self._clone_json(job_defaults)
+        job_defaults["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
+        job_defaults.setdefault("texture_mode", texture_plan["texture_mode"])
+        job_defaults.setdefault("uv_refine", texture_plan["uv_refine"])
+        job_defaults.setdefault("update_suitspec", texture_plan["update_suitspec"])
         planned_quality_gates = (
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
         )
@@ -1435,6 +1454,9 @@ class NewRouteApi:
         for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts"):
             job_payload_template.pop(render_only_key, None)
         job_payload_template.pop("surface_plan", None)
+        job_payload_template["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
+        job_payload_template.setdefault("texture_mode", _FORGE_TEXTURE_MODE)
+        job_payload_template.setdefault("uv_refine", _FORGE_UV_REFINE)
         if suitspec_path:
             job_payload_template["suitspec"] = suitspec_path
         job_payload_template.setdefault("suitspec", "__SERVER_RESOLVED_SUITSPEC_PATH__")

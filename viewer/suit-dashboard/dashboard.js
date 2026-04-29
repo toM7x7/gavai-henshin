@@ -3040,7 +3040,7 @@ async function runGenerate() {
     fallback_dir: UI.fallbackDir.value.trim() || null,
     prefer_fallback: UI.preferFallback.checked,
     update_suitspec: UI.updateSuitspec.checked,
-    provider_profile: UI.providerProfile.value,
+    provider_profile: "nano_banana",
     priority_mode: "web_service",
     use_cache: UI.useCache.checked,
     hero_render: UI.heroRender.checked,

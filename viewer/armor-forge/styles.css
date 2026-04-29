@@ -380,6 +380,24 @@ a:focus-visible {
   grid-column: 1 / -1;
 }
 
+.modeler-handoff {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(132px, 0.24fr) minmax(0, 1fr);
+  align-items: center;
+}
+
+.modeler-handoff input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid rgba(10, 143, 176, 0.24);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #effbfe;
+  color: #0c4f5e;
+  font: 13px "Segoe UI Mono", Consolas, ui-monospace, monospace;
+}
+
 .texture-job {
   grid-column: 1 / -1;
   grid-template-columns: minmax(132px, 0.28fr) minmax(150px, 0.24fr) minmax(0, 1fr);
@@ -559,6 +577,35 @@ a:focus-visible {
   width: 12px;
   height: 12px;
   border-radius: 3px;
+}
+
+.proxy-warning {
+  position: absolute;
+  left: 18px;
+  bottom: 86px;
+  z-index: 4;
+  display: grid;
+  gap: 4px;
+  width: min(380px, calc(100% - 36px));
+  padding: 12px 14px;
+  border: 1px solid rgba(200, 135, 29, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 250, 235, 0.9);
+  box-shadow: 0 14px 32px rgba(31, 45, 43, 0.1);
+  color: #34240b;
+  backdrop-filter: blur(8px);
+}
+
+.proxy-warning strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.proxy-warning span {
+  color: #6f5626;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.45;
 }
 
 .preview-layer-panel {
@@ -785,6 +832,12 @@ a:focus-visible {
     min-height: 420px;
   }
 
+  .proxy-warning {
+    left: 18px;
+    bottom: 76px;
+    width: min(520px, calc(100% - 36px));
+  }
+
   .preview-layer-panel {
     position: absolute;
     top: 76px;
@@ -834,6 +887,12 @@ a:focus-visible {
     max-width: calc(100% - 24px);
     padding: 9px 10px;
     font-size: 11px;
+  }
+
+  .proxy-warning {
+    left: 12px;
+    bottom: 72px;
+    width: calc(100% - 24px);
   }
 
   .preview-layer-panel {

@@ -8,6 +8,13 @@ from typing import Any
 BLUEPRINT_CONTRACT_VERSION = "modeler-part-blueprint.v1"
 REFERENCE_HEIGHT_CM = 170
 REFERENCE_UNIT = "meter_in_vrm_preview_space"
+PREVIEW_CONTRACT = {
+    "preview_role": "proxy_envelope_only",
+    "do_not_model": ["transparent blue boxes", "stand pole", "floor grid", "height guide"],
+    "authoring_target": "GLB/glTF hard-surface armor fitted to VRM body",
+    "handoff_status": "draft_ready_requires_silhouette_review",
+    "blocking_gates": ["fit_clearance", "pivot_axis", "material_slots", "silhouette_review"],
+}
 
 _CLEARANCE_BY_CATEGORY = {
     "head": 0.018,
@@ -141,6 +148,7 @@ def build_modeler_blueprint_catalog(
             "unit": REFERENCE_UNIT,
             "pose": "Forge display A-pose for review; runtime attaches to VRM humanoid bones.",
         },
+        "preview_contract": dict(PREVIEW_CONTRACT),
         "coordinate_system": {
             "local_y": "proximal_to_distal_or_vertical_fit_axis",
             "local_z": "visible_outward_surface",
@@ -148,9 +156,12 @@ def build_modeler_blueprint_catalog(
             "scale_rule": "apply transforms before GLB export; runtime may uniformly scale by wearer height",
         },
         "deliverables": {
-            "source": "Blender .blend or equivalent DCC source",
-            "runtime": "GLB/glTF 2.0 with applied transforms",
-            "preview": "mesh.v1 JSON or GLB-derived checked preview",
+            "source": "viewer/assets/armor-parts/<module>/source/<module>.blend",
+            "runtime": "viewer/assets/armor-parts/<module>/<module>.glb",
+            "sidecar": "viewer/assets/armor-parts/<module>/<module>.modeler.json",
+            "preview": "viewer/assets/armor-parts/<module>/preview/<module>.mesh.json",
+            "texture_directory": "viewer/assets/armor-parts/<module>/textures/",
+            "texture_provider_profile": "nano_banana",
             "textures": ["base_color", "emissive_mask", "normal_optional", "roughness_optional"],
             "review_views": ["front", "side", "back", "three_quarter"],
         },
@@ -182,6 +193,8 @@ def _part_blueprint(part: dict[str, Any], *, module_override: dict[str, Any] | N
         "part_id": part.get("part_id"),
         "display_name": part.get("display_name") or module,
         "category": normalized_category,
+        "preview_role": PREVIEW_CONTRACT["preview_role"],
+        "handoff_status": PREVIEW_CONTRACT["handoff_status"],
         "side": part.get("side") or "center",
         "socket": attachment_slot,
         "wave": _WAVE_BY_MODULE.get(module, "wave_later"),
@@ -232,6 +245,9 @@ def _part_blueprint(part: dict[str, Any], *, module_override: dict[str, Any] | N
         },
         "runtime_bindings": {
             "asset_ref": asset_ref,
+            "external_glb_target": f"viewer/assets/armor-parts/{module}/{module}.glb",
+            "source_target": f"viewer/assets/armor-parts/{module}/source/{module}.blend",
+            "texture_target_dir": f"viewer/assets/armor-parts/{module}/textures/",
             "texture_path": f"SuitSpec.modules.{module}.texture_path",
             "material_slots": part.get("material_slot_bindings") or [],
         },

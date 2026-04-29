@@ -113,7 +113,9 @@ The Web forge now emits an `asset_pipeline` contract alongside the public previe
 - Texture provider: `nano_banana` provider profile, using Gemini-backed image generation through the existing `part_generation.py` provider abstraction.
 - Texture mode: `mesh_uv` with UV guide references, `uv_refine=true`, 2K square atlases, and SuitSpec texture write-back as the intended job default.
 - Surface status: `planned_not_generated` means the Web forge has issued a suit and generated the job contract, but it has not yet produced final texture atlases or written `texture_path` fields.
-- Job split: `model_rebuild_job` is the blocking track for body fit and mesh rebuilding; `texture_probe_job` is allowed only as a Nano Banana speed check and temporary write-back path on seed/proxy meshes.
+- Job split: `model_rebuild_job` is the blocking track for body fit and mesh rebuilding; `texture_probe_job` is allowed only as a Nano Banana speed check and temporary write-back path on seed/proxy meshes. A generated part record reports `provider_profile=nano_banana`; `source=nano_banana_*` means a Nano Banana job produced a texture, while `source=cache` or `source=fallback_asset` means reuse and must not be presented as newly generated output.
+- Fallback assets are preview/recovery inputs only. Even when the model quality gate passes, the backend does not write a fallback asset into `modules[*].texture_path` as a final Nano Banana texture.
+- Generation summaries expose `texture_generation_summary.status_counts`, `generated_now_count`, and `final_texture_writeable_count`; fallback assets are counted as `fallback_asset_reused` and never contribute to final writeable counts.
 - Planned quality gates: mesh bounds, fit clearance, UV contract, and Quest recall readiness must stay visible before the suit is treated as exhibition-ready. Texture quality remains warning-only until the asynchronous generation job completes.
 
 This deliberately separates "the suit is issued and recallable" from "final generated surface assets are complete." The public Web flow can issue a code immediately, then advance texture generation asynchronously without breaking Quest recall.

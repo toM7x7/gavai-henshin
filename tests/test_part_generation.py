@@ -6,7 +6,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from henshin.image_providers import GeneratedImage
+from PIL import Image
+
+from henshin.image_providers import GeneratedImage, ImageProviderError
 from henshin.part_generation import (
     GenerationRequest,
     build_generation_cache_key,
@@ -74,8 +76,8 @@ class TestPartGeneration(unittest.TestCase):
 
     def test_cache_key_changes_with_reference_hash(self) -> None:
         key_a = build_generation_cache_key(
-            provider="fal",
-            model_id="fal-ai/flux/schnell",
+            provider="gemini",
+            model_id="gemini-2.5-flash-image",
             part="helmet",
             texture_mode="mesh_uv",
             prompt="a",
@@ -83,8 +85,8 @@ class TestPartGeneration(unittest.TestCase):
             suitspec_generation_version="v1",
         )
         key_b = build_generation_cache_key(
-            provider="fal",
-            model_id="fal-ai/flux/schnell",
+            provider="gemini",
+            model_id="gemini-2.5-flash-image",
             part="helmet",
             texture_mode="mesh_uv",
             prompt="a",
@@ -135,8 +137,8 @@ class TestPartGeneration(unittest.TestCase):
         def fake_provider(*args, **kwargs):
             call_count["value"] += 1
             return GeneratedImage(
-                provider="fal",
-                model_id="fal-ai/flux/schnell",
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
                 mime_type="image/png",
                 image_bytes=b"fakepng",
                 prompt=kwargs["prompt"],
@@ -179,6 +181,24 @@ class TestPartGeneration(unittest.TestCase):
         second_summary = json.loads((self.root / second["summary_path"]).read_text(encoding="utf-8"))
         self.assertEqual(first_summary["provider_profile"], "nano_banana")
         self.assertEqual(second_summary["provider_profile"], "nano_banana")
+        self.assertTrue(first_summary["texture_generation_policy"]["provider_only"])
+        self.assertEqual(first_summary["generated"]["helmet"]["provider_profile"], "nano_banana")
+        self.assertEqual(first_summary["generated"]["helmet"]["source"], "nano_banana_fast_draft")
+        self.assertEqual(first_summary["generated"]["helmet"]["texture_generation_status"], "generated_by_provider_profile")
+        self.assertTrue(first_summary["generated"]["helmet"]["generated_now"])
+        self.assertEqual(second_summary["generated"]["helmet"]["source"], "cache")
+        self.assertEqual(second_summary["generated"]["helmet"]["texture_generation_status"], "cache_reused")
+        self.assertFalse(second_summary["generated"]["helmet"]["generated_now"])
+        self.assertEqual(first_summary["texture_generation_summary"]["status_counts"]["generated_by_provider_profile"], 1)
+        self.assertEqual(first_summary["texture_generation_summary"]["status_counts"]["cache_reused"], 0)
+        self.assertEqual(first_summary["texture_generation_summary"]["status_counts"]["fallback_asset_reused"], 0)
+        self.assertEqual(first_summary["texture_generation_summary"]["status_counts"]["not_requested_dry_run"], 0)
+        self.assertEqual(first_summary["texture_generation_summary"]["generated_now_count"], 1)
+        self.assertEqual(first_summary["texture_generation_summary"]["final_texture_writeable_count"], 1)
+        self.assertEqual(second_summary["texture_generation_summary"]["status_counts"]["generated_by_provider_profile"], 0)
+        self.assertEqual(second_summary["texture_generation_summary"]["status_counts"]["cache_reused"], 1)
+        self.assertEqual(second_summary["texture_generation_summary"]["generated_now_count"], 0)
+        self.assertEqual(second_summary["texture_generation_summary"]["final_texture_writeable_count"], 1)
 
     def test_update_suitspec_runtime_metadata_does_not_poison_cache(self) -> None:
         call_count = {"value": 0}
@@ -186,8 +206,8 @@ class TestPartGeneration(unittest.TestCase):
         def fake_provider(*args, **kwargs):
             call_count["value"] += 1
             return GeneratedImage(
-                provider="fal",
-                model_id="fal-ai/flux/schnell",
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
                 mime_type="image/png",
                 image_bytes=b"fakepng",
                 prompt=kwargs["prompt"],
@@ -238,8 +258,8 @@ class TestPartGeneration(unittest.TestCase):
     def test_writes_final_texture_with_passing_gate_updates_suitspec_texture_path(self) -> None:
         def fake_provider(*args, **kwargs):
             return GeneratedImage(
-                provider="fal",
-                model_id="fal-ai/flux/schnell",
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
                 mime_type="image/png",
                 image_bytes=b"fakepng",
                 prompt=kwargs["prompt"],
@@ -273,6 +293,53 @@ class TestPartGeneration(unittest.TestCase):
         saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
         expected_texture_path = result["summary_path"].rsplit("/", 1)[0] + "/helmet.generated.png"
         self.assertEqual(saved_spec["modules"]["helmet"]["texture_path"], expected_texture_path)
+        summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(summary["generated"]["helmet"]["source"], "nano_banana_fast_draft")
+        self.assertEqual(summary["generated"]["helmet"]["texture_generation_status"], "generated_by_provider_profile")
+        self.assertEqual(summary["texture_generation_summary"]["generated_now_count"], 1)
+        self.assertEqual(summary["texture_generation_summary"]["final_texture_writeable_count"], 1)
+
+    def test_fallback_asset_is_not_written_as_final_nano_banana_texture(self) -> None:
+        fallback_dir = self.root / "fallback"
+        fallback_dir.mkdir()
+        Image.new("RGBA", (128, 128), (32, 48, 72, 255)).save(fallback_dir / "helmet.png")
+
+        with (
+            patch("henshin.part_generation._provider_attempt", side_effect=ImageProviderError("offline")),
+            patch("henshin.part_generation.audit_viewer_mesh_assets", return_value={"status": "pass"}),
+        ):
+            result = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-FALLBACK-NOT-FINAL",
+                    parts=["helmet"],
+                    use_cache=False,
+                    texture_mode="mesh_uv",
+                    provider_profile="nano_banana",
+                    fallback_dir="fallback",
+                    update_suitspec=True,
+                    writes_final_texture=True,
+                    retry_count=0,
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["fallback_used_count"], 1)
+        saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        self.assertNotIn("texture_path", saved_spec["modules"]["helmet"])
+        summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
+        generated = summary["generated"]["helmet"]
+        self.assertEqual(generated["provider_profile"], "nano_banana")
+        self.assertEqual(generated["source"], "fallback_asset")
+        self.assertEqual(generated["texture_generation_status"], "fallback_asset_reused")
+        self.assertFalse(generated["generated_now"])
+        texture_summary = summary["texture_generation_summary"]
+        self.assertEqual(texture_summary["status_counts"]["fallback_asset_reused"], 1)
+        self.assertEqual(texture_summary["generated_now_count"], 0)
+        self.assertEqual(texture_summary["final_texture_writeable_count"], 0)
+        self.assertEqual(texture_summary["fallback_asset_final_writeable_count"], 0)
 
     def test_run_generate_parts_clamps_zero_parallelism(self) -> None:
         call_count = {"value": 0}
@@ -280,8 +347,8 @@ class TestPartGeneration(unittest.TestCase):
         def fake_provider(*args, **kwargs):
             call_count["value"] += 1
             return GeneratedImage(
-                provider="fal",
-                model_id="fal-ai/flux/schnell",
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
                 mime_type="image/png",
                 image_bytes=b"fakepng",
                 prompt=kwargs["prompt"],
@@ -316,8 +383,8 @@ class TestPartGeneration(unittest.TestCase):
             if "Target module: helmet" in prompt:
                 time.sleep(0.05)
             return GeneratedImage(
-                provider="fal",
-                model_id="fal-ai/flux/schnell",
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
                 mime_type="image/png",
                 image_bytes=b"fakepng",
                 prompt=prompt,
@@ -363,6 +430,8 @@ class TestPartGeneration(unittest.TestCase):
         )
 
         self.assertTrue(result["ok"])
+        self.assertEqual(result["provider_profile"], "nano_banana")
+        self.assertEqual(result["texture_generation_status"], "not_requested_dry_run")
         self.assertIn("design_dna", result)
         self.assertIn("uv_contracts", result)
         self.assertIn("emotion_profile", result)
@@ -419,6 +488,9 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(captured_references[0][0].mime_type, "image/png")
         summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
         self.assertIn("uv_guide_path", summary["generated"]["helmet"])
+        self.assertEqual(summary["generated"]["helmet"]["provider_profile"], "nano_banana")
+        self.assertEqual(summary["generated"]["helmet"]["source"], "nano_banana_fast_draft")
+        self.assertEqual(summary["generated"]["helmet"]["texture_generation_status"], "generated_by_provider_profile")
         self.assertEqual(summary["generated"]["helmet"]["reference_stack"][0]["role"], "uv_engineering_guide")
 
     def test_run_generate_parts_uv_refine_uses_guide_then_concept(self) -> None:
@@ -460,6 +532,8 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(captured_references[1][0].mime_type, "image/png")
         self.assertEqual(captured_references[1][1].mime_type, "image/png")
         summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(summary["generated"]["helmet"]["source"], "nano_banana_quality_refine")
+        self.assertEqual(summary["generated"]["helmet"]["texture_generation_status"], "generated_by_provider_profile")
         self.assertEqual(summary["generated"]["helmet"]["reference_stack"][0]["role"], "uv_engineering_guide")
         self.assertEqual(summary["generated"]["helmet"]["reference_stack"][1]["role"], "style_concept")
 

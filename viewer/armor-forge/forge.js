@@ -42,6 +42,7 @@ const BASE_SUIT_EMISSIVE = 0x10292c;
 const PREVIEW_FLOOR_Y = -0.43;
 const FALLBACK_MESH_SOURCE = "seed_proxy_fallback";
 const MIN_RENDERABLE_MESH_SIZE = 0.002;
+const ARMOR_ASSET_LOAD_CONCURRENCY = 4;
 const FORGE_DISPLAY_ARM_POSE_CHAINS = Object.freeze([
   { bone: "leftUpperArm", childBone: "leftLowerArm", outward: 0.62, down: -0.78, forward: 0.06, strength: 0.96 },
   { bone: "leftLowerArm", childBone: "leftHand", outward: 0.34, down: -0.93, forward: 0.08, strength: 0.9 },
@@ -755,6 +756,41 @@ function textureJobLinks(data) {
   return pipeline?.texture_probe_job?.links || pipeline?.generation_job?.links || pipeline?.links || {};
 }
 
+function textureGenerationSummaryFromSnapshot(snapshot) {
+  return snapshot?.result?.texture_generation_summary || snapshot?.texture_generation_summary || null;
+}
+
+function textureGenerationSummaryText(summary) {
+  if (!summary || typeof summary !== "object") return "";
+  const counts = summary.status_counts || {};
+  const generated = Number(counts.generated_by_provider_profile || 0);
+  const cache = Number(counts.cache_reused || 0);
+  const fallback = Number(counts.fallback_asset_reused || 0);
+  const generatedNow = Number(summary.generated_now_count || 0);
+  const writeable = Number(summary.final_texture_writeable_count || 0);
+  return `Nanobanana内訳: 新規${generated} / cache${cache} / fallback${fallback} / 今回生成${generatedNow} / 最終反映可${writeable}`;
+}
+
+async function snapshotWithTextureGenerationSummary(snapshot) {
+  if (textureGenerationSummaryFromSnapshot(snapshot)) return snapshot;
+  const summaryPath = snapshot?.result?.summary_path || snapshot?.summary_path;
+  if (!summaryPath) return snapshot;
+  try {
+    const summary = await fetchJson(summaryPath);
+    if (!summary?.texture_generation_summary) return snapshot;
+    return {
+      ...snapshot,
+      result: {
+        ...(snapshot.result || {}),
+        texture_generation_summary: summary.texture_generation_summary,
+      },
+    };
+  } catch (error) {
+    console.warn(`texture generation summary fetch failed: ${error?.message || error}`);
+    return snapshot;
+  }
+}
+
 function updateModelerHandoff(data = latestForgeData) {
   if (!UI.modelerBlueprintUrl) return;
   const code = String(data?.recall_code || "").trim();
@@ -790,6 +826,7 @@ function updateTextureJobFromSnapshot(snapshot) {
   const timingText = Number.isFinite(timingMs) && timingMs > 0 ? ` / 直近 ${(timingMs / 1000).toFixed(1)}s` : "";
   const progress = total > 0 ? done / total : snapshot.status === "completed" ? 1 : 0.08;
   const result = snapshot.result || {};
+  const textureSummaryText = textureGenerationSummaryText(textureGenerationSummaryFromSnapshot(snapshot));
   if (snapshot.status === "completed") {
     if (UI.textureJobButton) {
       UI.textureJobButton.disabled = false;
@@ -801,6 +838,9 @@ function updateTextureJobFromSnapshot(snapshot) {
       `所要 ${formatSeconds(result.total_elapsed_sec || elapsed)}${speedText}${timingText}。プレビューへ反映します。`,
       1,
     );
+    if (textureSummaryText && UI.textureJobDetail) {
+      UI.textureJobDetail.textContent = `${UI.textureJobDetail.textContent} / ${textureSummaryText}`;
+    }
     return;
   }
   if (snapshot.status === "failed" || snapshot.status === "cancelled") {
@@ -830,14 +870,15 @@ async function refreshPreviewFromGeneratedSuit(payload) {
 async function pollTextureJob(jobId, payload) {
   if (textureJobPollTimer) window.clearTimeout(textureJobPollTimer);
   const snapshot = await fetchJson(`/api/generation-jobs/${encodeURIComponent(jobId)}`);
-  updateTextureJobFromSnapshot(snapshot);
-  if (snapshot.status === "completed") {
+  const displaySnapshot = snapshot.status === "completed" ? await snapshotWithTextureGenerationSummary(snapshot) : snapshot;
+  updateTextureJobFromSnapshot(displaySnapshot);
+  if (displaySnapshot.status === "completed") {
     await refreshPreviewFromGeneratedSuit(payload).catch((error) => {
       console.warn(`texture preview refresh failed: ${error?.message || error}`);
     });
     return;
   }
-  if (snapshot.status === "failed" || snapshot.status === "cancelled") return;
+  if (displaySnapshot.status === "failed" || displaySnapshot.status === "cancelled") return;
   textureJobPollTimer = window.setTimeout(() => {
     pollTextureJob(jobId, payload).catch((error) => {
       setTextureJobState("error", "表面生成エラー", String(error?.message || error), 0);
@@ -898,6 +939,38 @@ function disposeMaterial(material) {
     textures.forEach((texture) => texture?.dispose?.());
     item.dispose?.();
   }
+}
+
+function disposeObjectTree(root) {
+  if (!root) return;
+  const geometries = new Set();
+  const materials = new Set();
+  root.traverse((object) => {
+    if (object.geometry) geometries.add(object.geometry);
+    const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of objectMaterials) {
+      if (material) materials.add(material);
+    }
+  });
+  geometries.forEach((geometry) => geometry.dispose?.());
+  materials.forEach((material) => disposeMaterial(material));
+}
+
+async function mapWithConcurrency(items, limit, worker, onProgress = null) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  let done = 0;
+  const workerCount = Math.min(Math.max(1, limit), Math.max(items.length, 1));
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+      done += 1;
+      onProgress?.({ done, total: items.length, index, result: results[index] });
+    }
+  }));
+  return results;
 }
 
 function createBaseSuitTexture(palette = {}) {
@@ -1165,40 +1238,46 @@ async function loadGlbArmorObject(asset, part) {
     throw new Error("GLB asset has no renderable scene.");
   }
 
-  const root = new THREE.Group();
-  root.name = `${part}-glb-root`;
-  root.add(model);
-  root.updateMatrixWorld(true);
+  let root = null;
+  try {
+    root = new THREE.Group();
+    root.name = `${part}-glb-root`;
+    root.add(model);
+    root.updateMatrixWorld(true);
 
-  const meshes = [];
-  root.traverse((child) => {
-    if (!child.isMesh || !child.geometry) return;
-    meshes.push(child);
-    child.renderOrder = 4;
-    if (!child.geometry.getAttribute("normal")) {
-      child.geometry.computeVertexNormals();
+    const meshes = [];
+    root.traverse((child) => {
+      if (!child.isMesh || !child.geometry) return;
+      meshes.push(child);
+      child.renderOrder = 4;
+      if (!child.geometry.getAttribute("normal")) {
+        child.geometry.computeVertexNormals();
+      }
+    });
+    if (!meshes.length) {
+      throw new Error("GLB asset has no renderable meshes.");
     }
-  });
-  if (!meshes.length) {
-    throw new Error("GLB asset has no renderable meshes.");
-  }
 
-  const box = new THREE.Box3().setFromObject(root);
-  if (box.isEmpty()) {
-    throw new Error("GLB asset bounds are empty.");
-  }
-  const size = box.getSize(new THREE.Vector3());
-  if (Math.max(size.x, size.y, size.z) < MIN_RENDERABLE_MESH_SIZE) {
-    throw new Error("GLB asset bounds are empty.");
-  }
+    const box = new THREE.Box3().setFromObject(root);
+    if (box.isEmpty()) {
+      throw new Error("GLB asset bounds are empty.");
+    }
+    const size = box.getSize(new THREE.Vector3());
+    if (Math.max(size.x, size.y, size.z) < MIN_RENDERABLE_MESH_SIZE) {
+      throw new Error("GLB asset bounds are empty.");
+    }
 
-  const center = box.getCenter(new THREE.Vector3());
-  model.position.sub(center);
-  root.updateMatrixWorld(true);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+    root.updateMatrixWorld(true);
 
-  const centeredBox = new THREE.Box3().setFromObject(root);
-  const sourceSize = centeredBox.getSize(new THREE.Vector3());
-  return { object: root, sourceSize };
+    const centeredBox = new THREE.Box3().setFromObject(root);
+    const sourceSize = centeredBox.getSize(new THREE.Vector3());
+    return { object: root, sourceSize };
+  } catch (error) {
+    disposeObjectTree(root || model);
+    throw error;
+  }
 }
 
 function applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture) {
@@ -2090,7 +2169,18 @@ class ArmorStand {
       this.applyPreviewPose(shell, part, module);
       this.group.add(shell);
     }
-    const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette, surfacePlan)));
+    const meshes = await mapWithConcurrency(
+      records,
+      ARMOR_ASSET_LOAD_CONCURRENCY,
+      ([part, module]) => createArmorMesh(part, module, palette, surfacePlan),
+      ({ done, total }) => {
+        this.previewStats.assetLoadDone = done;
+        this.previewStats.assetLoadTotal = total;
+        setStatus(`装甲アセット読込中... ${done}/${total}`, "pending");
+        this.publishPreviewStats();
+        updatePreviewLayerPanel(suitspec);
+      },
+    );
     for (let index = 0; index < meshes.length; index += 1) {
       const [part, module] = records[index];
       const mesh = meshes[index];

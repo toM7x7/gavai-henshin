@@ -37,13 +37,20 @@ WAVE_PRIORITY = [
 ]
 
 DEFAULT_PROVIDER_PROFILE = "nano_banana"
-DEFAULT_FAL_FAST_MODEL = "fal-ai/flux/schnell"
-DEFAULT_FAL_REFINE_MODEL = "fal-ai/flux/dev"
-DEFAULT_OPENAI_HERO_MODEL = "gpt-image-1"
 DEFAULT_GEMINI_FAST_MODEL = "gemini-2.5-flash-image"
 DEFAULT_GEMINI_REFINE_MODEL = DEFAULT_GEMINI_FAST_MODEL
 DEFAULT_GEMINI_HERO_MODEL = "gemini-3-pro-image-preview"
 DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-3.1-flash-image-preview"
+TEXTURE_STATUS_GENERATED = "generated_by_provider_profile"
+TEXTURE_STATUS_CACHE_REUSED = "cache_reused"
+TEXTURE_STATUS_FALLBACK_REUSED = "fallback_asset_reused"
+TEXTURE_STATUS_DRY_RUN = "not_requested_dry_run"
+TEXTURE_GENERATION_STATUSES = (
+    TEXTURE_STATUS_GENERATED,
+    TEXTURE_STATUS_CACHE_REUSED,
+    TEXTURE_STATUS_FALLBACK_REUSED,
+    TEXTURE_STATUS_DRY_RUN,
+)
 
 
 @dataclass(slots=True)
@@ -178,6 +185,43 @@ def build_generation_cache_key(
             suitspec_generation_version,
         ]
     )
+
+
+def _source_label(provider_profile: str, phase: str) -> str:
+    if provider_profile == DEFAULT_PROVIDER_PROFILE:
+        return f"{DEFAULT_PROVIDER_PROFILE}_{phase}"
+    return phase
+
+
+def _can_write_final_texture(info: dict[str, Any]) -> bool:
+    return info.get("texture_generation_status") in {TEXTURE_STATUS_GENERATED, TEXTURE_STATUS_CACHE_REUSED}
+
+
+def _texture_generation_summary(generated: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    status_counts = {status: 0 for status in TEXTURE_GENERATION_STATUSES}
+    unknown_status_count = 0
+    generated_now_count = 0
+    final_texture_writeable_count = 0
+
+    for info in generated.values():
+        status = str(info.get("texture_generation_status") or "")
+        if status in status_counts:
+            status_counts[status] += 1
+        else:
+            unknown_status_count += 1
+        if bool(info.get("generated_now")):
+            generated_now_count += 1
+        if _can_write_final_texture(info):
+            final_texture_writeable_count += 1
+
+    return {
+        "status_counts": status_counts,
+        "generated_now_count": generated_now_count,
+        "final_texture_writeable_count": final_texture_writeable_count,
+        "fallback_asset_final_writeable_count": 0,
+        "unknown_status_count": unknown_status_count,
+        "completed_part_count": len(generated),
+    }
 
 
 GENERATION_RUNTIME_KEYS = frozenset(
@@ -459,6 +503,7 @@ def run_generate_parts(
         request.generation_brief,
         user_armor_profile=user_armor_profile,
     )
+    effective_provider_profile_name = normalize_provider_profile_name(request.provider_profile)
     effective_generation_brief = emotion_context["compiled_brief"]
     style_variation = emotion_context["style_variation"]
     design_dna = serialize_suit_design_dna(resolve_suit_design_dna(spec))
@@ -509,6 +554,8 @@ def run_generate_parts(
         payload: dict[str, Any] = {
             "ok": True,
             "dry_run": True,
+            "provider_profile": effective_provider_profile_name,
+            "texture_generation_status": TEXTURE_STATUS_DRY_RUN,
             "parts": requested,
             "operator_profile_raw": operator_context["operator_profile_raw"],
             "operator_profile_resolved": operator_context["operator_profile_resolved"],
@@ -541,7 +588,6 @@ def run_generate_parts(
     cache_dir = _ensure_cache_dirs(session_root)
     image_aspect_ratio = "1:1" if request.texture_mode == "mesh_uv" else None
     image_size = "2K" if request.texture_mode == "mesh_uv" else None
-    effective_provider_profile_name = normalize_provider_profile_name(request.provider_profile)
     provider_profile = resolve_provider_profile(effective_provider_profile_name)
     if request.model_id:
         provider_profile["fast_draft"] = ProviderSpec(provider_profile["fast_draft"].provider, request.model_id)
@@ -599,6 +645,7 @@ def run_generate_parts(
         )
         guide_display_path = _display_path(guide_path, repo_root) if guide_path else None
         info_common = {
+            "provider_profile": effective_provider_profile_name,
             "uv_guide_path": guide_display_path,
             "uv_guide_hash": guide_info["guide_hash"] if guide_info else None,
             "mesh_asset_ref": resolve_mesh_asset_ref(part, spec.get("modules", {}).get(part)),
@@ -634,6 +681,9 @@ def run_generate_parts(
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
+                info["source"] = "cache"
+                info["texture_generation_status"] = TEXTURE_STATUS_CACHE_REUSED
+                info["generated_now"] = False
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
@@ -651,6 +701,9 @@ def run_generate_parts(
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
+                info["source"] = "fallback_asset"
+                info["texture_generation_status"] = TEXTURE_STATUS_FALLBACK_REUSED
+                info["generated_now"] = False
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
@@ -714,7 +767,7 @@ def run_generate_parts(
                             },
                         ),
                     )
-                    source = f"{result.provider}_refine"
+                    source = _source_label(effective_provider_profile_name, "quality_refine")
                     info_extra = {
                         "concept_path": _display_path(concept_path, repo_root),
                         "reference_stack": [
@@ -743,7 +796,7 @@ def run_generate_parts(
                             },
                         ),
                     )
-                    source = result.provider
+                    source = _source_label(effective_provider_profile_name, "fast_draft")
                     info_extra = {
                         "reference_stack": [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                     }
@@ -767,6 +820,8 @@ def run_generate_parts(
                     "image_path": _display_path(image_path, repo_root),
                     "meta_path": _display_path(meta_path, repo_root),
                     "source": source,
+                    "texture_generation_status": TEXTURE_STATUS_GENERATED,
+                    "generated_now": True,
                     "provider": result.provider,
                     "model_id": result.model_id,
                     "preview_url": "/" + _display_path(image_path, repo_root).lstrip("/"),
@@ -808,7 +863,9 @@ def run_generate_parts(
             info = {
                 "image_path": _display_path(image_path, repo_root),
                 "meta_path": _display_path(meta_path, repo_root),
-                "source": "fallback_fast",
+                "source": _source_label(effective_provider_profile_name, "fallback_fast"),
+                "texture_generation_status": TEXTURE_STATUS_GENERATED,
+                "generated_now": True,
                 "provider": result.provider,
                 "model_id": result.model_id,
                 "preview_url": "/" + _display_path(image_path, repo_root).lstrip("/"),
@@ -832,6 +889,9 @@ def run_generate_parts(
                 info["image_path"] = _display_path(info["image_path"], repo_root)
                 info["meta_path"] = _display_path(info["meta_path"], repo_root)
                 info["preview_url"] = "/" + info["image_path"].lstrip("/")
+                info["source"] = "fallback_asset"
+                info["texture_generation_status"] = TEXTURE_STATUS_FALLBACK_REUSED
+                info["generated_now"] = False
                 info["timing_ms"] = dict(metric)
                 info["reference_stack"] = [{"role": "uv_engineering_guide", "path": guide_display_path}] if guide_display_path else []
                 info.update(info_common)
@@ -970,6 +1030,8 @@ def run_generate_parts(
             and audit_viewer_mesh_assets(repo_root=repo_root or Path(".")).get("status") == "pass"
         ):
             for part, info in generated.items():
+                if not _can_write_final_texture(info):
+                    continue
                 module = modules.setdefault(part, {"enabled": True, "asset_ref": f"modules/{part}/base.prefab"})
                 module["texture_path"] = info["image_path"]
         write_json(suitspec_path, spec)
@@ -981,9 +1043,16 @@ def run_generate_parts(
     ordered_fallback_used = _order_part_list(fallback_used, requested)
     ordered_cache_hits = _order_part_list(cache_hits, requested)
     ordered_cancelled_parts = _order_part_list(cancelled_parts, requested)
+    texture_generation_summary = _texture_generation_summary(ordered_generated)
     summary = {
         "session_id": session_id,
         "provider_profile": effective_provider_profile_name,
+        "texture_generation_policy": {
+            "provider_profile": effective_provider_profile_name,
+            "provider_only": effective_provider_profile_name == DEFAULT_PROVIDER_PROFILE,
+            "generated_status": TEXTURE_STATUS_GENERATED,
+            "non_generated_reuse_statuses": [TEXTURE_STATUS_CACHE_REUSED, TEXTURE_STATUS_FALLBACK_REUSED],
+        },
         "priority_mode": request.priority_mode,
         "tracking_source": request.tracking_source,
         "operator_profile_raw": operator_context["operator_profile_raw"],
@@ -1018,6 +1087,7 @@ def run_generate_parts(
         "fallback_used": ordered_fallback_used,
         "cache_hits": ordered_cache_hits,
         "generated": ordered_generated,
+        "texture_generation_summary": texture_generation_summary,
         "hero_result": hero_result,
         "errors": ordered_errors,
         "part_metrics": ordered_part_metrics,

@@ -31,6 +31,7 @@ class TestTextureQuality(unittest.TestCase):
         quality = analyze_texture_quality(path)
 
         self.assertEqual(quality["status"], "ok")
+        self.assertEqual(quality["probe_scope"], "image_probe_not_generation_status")
         self.assertEqual(quality["width"], 128)
         self.assertEqual(quality["height"], 128)
         self.assertGreater(quality["color_bin_count"], 2)
@@ -43,6 +44,7 @@ class TestTextureQuality(unittest.TestCase):
         quality = analyze_texture_quality(path)
 
         self.assertEqual(quality["mode"], "warning_only")
+        self.assertEqual(quality["probe_scope"], "image_probe_not_generation_status")
         self.assertEqual(quality["status"], "warn")
         self.assertIn("blank_area_high", quality["warnings"])
         self.assertIn("low_color_variety", quality["warnings"])

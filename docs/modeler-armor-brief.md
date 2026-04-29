@@ -1,72 +1,59 @@
-# モデラー向け装甲パーツ依頼メモ
+# モデラー向け装甲パーツ制作メモ
 
-Updated: 2026-04-29
+Updated: 2026-04-30
 
-## Intake validation note
+## まず見る場所
 
-- Final delivered GLBs live at `viewer/assets/armor-parts/<module>/<module>.glb`.
-- Modeler sidecars live at `viewer/assets/armor-parts/<module>/<module>.modeler.json`.
-- Blender source files live at `viewer/assets/armor-parts/<module>/source/<module>.blend`.
-- Do not store Blender backup files such as `*.blend1` in the handoff tree.
-- Optional shared review masters can live under `viewer/assets/armor-parts/_masters/`.
-- Run `python tools/validate_armor_parts_intake.py` before treating a delivery as formally staged.
+- 依頼メモ: `docs/modeler-armor-brief.md`
+- 詳細な設計図API: `GET /v1/catalog/part-blueprints`
+- 設計図生成コード: `src/henshin/modeler_blueprints.py`
+- 受け入れチェック: `python tools/validate_armor_parts_intake.py`
 
-## モデラーさんへ渡す最小情報
+## 格納場所
 
-- 依頼対象: Web Forgeの水色プロキシを置き換える外装GLBパーツです。
-- 正本: `GET /v1/catalog/part-blueprints` の `authoring_target_m` と `vrm_attachment` です。
-- 納品先: `viewer/assets/armor-parts/<module>/<module>.glb`
-- 制作元: `viewer/assets/armor-parts/<module>/source/<module>.blend`
-- テクスチャ: `viewer/assets/armor-parts/<module>/textures/`
-- 補足: `viewer/assets/armor-parts/<module>/<module>.modeler.json`
-- テクスチャ生成: Nano Bananaのみを使います。
-- 進捗状態: draft readyです。発注前にシルエットレビューと干渉確認を通します。
+モデルは次の形で格納します。
 
-## 目的
+```text
+viewer/assets/armor-parts/<module>/
+  <module>.glb
+  <module>.modeler.json
+  source/<module>.blend
+  preview/<module>.mesh.json
+  textures/
+```
 
-現在のWebプレビューは完成ヒーロースーツではなく、`VRM人体 + 基礎スーツ表面 + 仮装甲プロキシ` の接続試験です。
-モデラーさんへ依頼する対象は、この仮プロキシを置き換える外装パーツです。
+例: ヘルメットは `viewer/assets/armor-parts/helmet/helmet.glb` に置きます。
 
-ロアは固定です。
+`*.blend1` などのBlenderバックアップファイルは格納しません。共有レビュー用のマスターは `viewer/assets/armor-parts/_masters/` に置けます。
+
+## 体験上の前提
+
+ロアの導線は固定です。
 
 ```text
 Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
 ```
 
-## 格納場所
-
-- 人が読む簡易メモ: `docs/modeler-armor-brief.md`
-- 詳細な機械可読設計図API: `GET /v1/catalog/part-blueprints`
-- 設計図生成コード: `src/henshin/modeler_blueprints.py`
-- 現行の仮パーツ: `viewer/assets/meshes/*.mesh.json`
-- 外部制作GLBの受け入れ先: `viewer/assets/armor-parts/<module>/<module>.glb`
-- 制作元ファイルの受け入れ先: `viewer/assets/armor-parts/<module>/source/<module>.blend`
-- テクスチャ成果物の受け入れ先: `viewer/assets/armor-parts/<module>/textures/`
-- GLBごとの補足sidecar: `viewer/assets/armor-parts/<module>/<module>.modeler.json`
+Web Forgeでは、VRM人体の表面を「基礎スーツ」として扱い、その上に分割した硬質装甲パーツを載せます。青い透明ボックスは最終デザインではなく、位置・大きさ・分割の確認用プロキシです。
 
 ## 制作ルール
 
-- 納品形式は `glTF 2.0 GLB` を基本にします。
-- Blenderなどの制作元ファイルも残してください。
+- ランタイム形式は `glTF 2.0 GLB` を基本にします。
 - 単位はメートル相当です。Web Forgeの170cm基準VRMに合わせます。
-- pivotはパーツ中心、transformは適用済みにしてください。
-- UV0必須、Base ColorとEmissive Maskを貼れる状態にします。
-- テクスチャ生成は Nano Banana のみを使います。
-- 現行の水色箱/筒は発注寸法そのものではありません。設計図APIの `authoring_target_m` を優先してください。
-
-## レイヤー分け
-
-- 基礎スーツ: VRM表面に貼るボディスーツ。体に沿う模様、発光ライン、布/素材感を担当。
-- 外装パーツ: ヘルメット、胸、背中、肩、腕甲、ベルト、すね、ブーツなどの硬い装甲。
-- 手足全体を固い筒で覆いすぎると動きが壊れるため、関節付近は分割と逃げを優先します。
+- transformは適用済みにし、見えないDCCオフセットを残さないでください。
+- pivotはパーツ中心を基準にし、Quest/Web側で骨や装着スロットに載せ替えやすくします。
+- UV0は必須です。Base ColorとEmissive Maskを貼れる状態にします。
+- テクスチャ生成はNanobananaのみを使います。
+- `base_surface`, `accent`, `emissive`, `trim` の材料スロットが分かる構成にします。
+- パーツはVRM体表にめり込ませず、少し浮いた硬質装甲として見えるようにします。
 
 ## 優先Wave
 
-| Wave | 優先部位 | 目的 |
+| Wave | 優先パーツ | 目的 |
 |---|---|---|
-| Wave 1 | chest, back, waist, shoulders, upperarms, forearms | 胴体から腕のヒーローシルエットを成立させる |
-| Wave 2 | thighs, shins, boots | 下半身と足元の接地感を整える |
-| Wave 3 | helmet, hands | 顔、手先、展示映えを仕上げる |
+| Wave 1 | chest, back, waist, shoulder, upperarm, forearm | 胴体から腕のヒーローシルエットを成立させる |
+| Wave 2 | thigh, shin, boot | 下半身と接地感を整える |
+| Wave 3 | helmet, hand | 顔まわり、手元、展示映えを詰める |
 
 ## パーツ一覧
 
@@ -93,15 +80,15 @@ Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
 
 ## 納品チェック
 
-- 正面、側面、背面、斜めの確認画像がある
-- 左右ペアの寸法差が3%以内
-- VRM人体にめり込まず、少し浮いた外装として見える
-- UVが重なっていない
-- `base_surface`, `accent`, `emissive`, `trim` の素材意図が分かる
-- 明るめの特撮ヒーローとして、暗すぎず攻撃的すぎない
+1. 正面、側面、背面、斜めの確認画像がある。
+2. 左右ペアの寸法差が3%以内に収まっている。
+3. VRM人体にめり込まず、少し浮いた外装として見える。
+4. UV0が重なっていない。
+5. `base_surface`, `accent`, `emissive`, `trim` の材料意図が分かる。
+6. 明るめの特撮ヒーローとして読みやすく、暗すぎたり武器的すぎたりしない。
 
 ## 現時点の注意
 
-胸・背中・腰の箱プロキシは、形状検討用の仮表示です。
-最終的には人体に沿う胸板、背面ユニット、ベルトへ置き換えます。
-テクスチャを先に詰めすぎると箱の形に引っ張られるため、Wave 1の形状品質を先に上げます。
+現在のWebプレビューは、最終モデルの完成見本ではありません。人体表面の基礎スーツ、GLB外装パーツ、Nanobanana表面生成を接続するための開発プレビューです。
+
+胸・背中・腰の箱状プロキシは最終形ではなく、Wave 1で人体に沿う板・背面ユニット・ベルトへ置き換える対象です。テクスチャを詰める前に、まず形状のフィット品質を上げます。

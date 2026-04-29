@@ -133,6 +133,7 @@ const REPLAY_MOTION_SOURCE_MIXED = "body_sim_plus_live_pose";
 const REPLAY_MOTION_SOURCE_STATIC = "static_fallback";
 const REPLAY_MOTION_SOURCE_CAPTURE = "live_capture";
 const REPLAY_MOTION_SOURCE_SELF = "first_person";
+const ARMOR_ASSET_LOAD_CONCURRENCY = 4;
 const SELF_VIEW_HIDDEN_PARTS = new Set(["helmet", "left_hand", "right_hand"]);
 const SELF_VIEW_STANDBY_HIDDEN_PARTS = new Set(["helmet"]);
 const VR_REPLAY_OBSERVER_DISTANCE = 2.15;
@@ -1032,10 +1033,59 @@ function createMaterial(color, opacity = 0.0) {
   });
 }
 
+function disposeObjectResources(root, disposedGeometries = new Set(), disposedMaterials = new Set()) {
+  if (!root) return { disposedGeometries, disposedMaterials };
+  root.traverse((object) => {
+    if (object.geometry && !disposedGeometries.has(object.geometry)) {
+      disposedGeometries.add(object.geometry);
+      object.geometry.dispose?.();
+    }
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!material || disposedMaterials.has(material)) continue;
+      disposedMaterials.add(material);
+      material.dispose?.();
+    }
+  });
+  return { disposedGeometries, disposedMaterials };
+}
+
+function disposeGltfResources(gltf) {
+  const scenes = [gltf?.scene, ...(Array.isArray(gltf?.scenes) ? gltf.scenes : [])].filter(Boolean);
+  const seen = new Set();
+  const disposedGeometries = new Set();
+  const disposedMaterials = new Set();
+  for (const scene of scenes) {
+    if (seen.has(scene)) continue;
+    seen.add(scene);
+    disposeObjectResources(scene, disposedGeometries, disposedMaterials);
+  }
+}
+
+async function mapWithConcurrency(items, limit, worker, onProgress = null) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  let done = 0;
+  const workerCount = Math.min(Math.max(1, limit), Math.max(items.length, 1));
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+      done += 1;
+      onProgress?.({ done, total: items.length, index, result: results[index] });
+    }
+  }));
+  return results;
+}
+
 function fallbackGeometry(part) {
-  return part === "helmet"
+  const geometry = part === "helmet"
     ? new THREE.SphereGeometry(0.18, 32, 18)
     : new THREE.CapsuleGeometry(0.18, 0.62, 8, 20);
+  geometry.userData.meshSource = "generated_fallback";
+  geometry.userData.loadedAssetRef = null;
+  return geometry;
 }
 
 function normalizeGeometry(geometry) {
@@ -1113,6 +1163,7 @@ function geometryFromGltf(gltf, assetPath) {
 
   const merged = geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false);
   if (!merged) {
+    for (const geometry of geometries) geometry.dispose?.();
     throw new Error(`GLB geometry merge failed: ${assetPath}`);
   }
   for (const geometry of geometries) {
@@ -1122,21 +1173,31 @@ function geometryFromGltf(gltf, assetPath) {
 }
 
 async function loadGlbGeometry(assetPath) {
-  const gltf = await new Promise((resolve, reject) => {
-    gltfLoader.load(
-      assetPath,
-      resolve,
-      undefined,
-      (error) => reject(error || new Error(`GLB load failed: ${assetPath}`)),
-    );
-  });
-  return geometryFromGltf(gltf, assetPath);
+  let gltf = null;
+  try {
+    gltf = await new Promise((resolve, reject) => {
+      gltfLoader.load(
+        assetPath,
+        resolve,
+        undefined,
+        (error) => reject(error || new Error(`GLB load failed: ${assetPath}`)),
+      );
+    });
+    const geometry = geometryFromGltf(gltf, assetPath);
+    geometry.userData.meshSource = "glb_asset";
+    geometry.userData.loadedAssetRef = assetPath;
+    return geometry;
+  } finally {
+    disposeGltfResources(gltf);
+  }
 }
 
 async function loadJsonMeshGeometry(assetPath) {
   if (geometryCache.has(assetPath)) return geometryCache.get(assetPath).clone();
   const payload = await loadJson(assetPath);
   const geometry = meshGeometryFromPayload(payload);
+  geometry.userData.meshSource = "mesh_asset";
+  geometry.userData.loadedAssetRef = assetPath;
   geometryCache.set(assetPath, geometry);
   return geometry.clone();
 }
@@ -1146,7 +1207,10 @@ async function loadMeshGeometry(assetRef, part) {
   const assetPath = normalizePath(assetRef || fallbackPath);
   if (geometryCache.has(assetPath)) return geometryCache.get(assetPath).clone();
   if (!isGlbAssetPath(assetPath)) {
-    return loadJsonMeshGeometry(assetPath);
+    const geometry = await loadJsonMeshGeometry(assetPath);
+    geometry.userData.meshSource = "mesh_asset";
+    geometry.userData.loadedAssetRef = assetPath;
+    return geometry;
   }
 
   try {
@@ -1155,7 +1219,11 @@ async function loadMeshGeometry(assetRef, part) {
     return geometry.clone();
   } catch (error) {
     console.warn(`GLB mesh fallback for ${part}: ${fallbackPath}`, error);
-    return loadJsonMeshGeometry(fallbackPath);
+    const geometry = await loadJsonMeshGeometry(fallbackPath);
+    geometry.userData.meshSource = "mesh_json_fallback";
+    geometry.userData.loadedAssetRef = fallbackPath;
+    geometry.userData.meshError = `GLB: ${String(error?.message || error)}`;
+    return geometry;
   }
 }
 
@@ -1195,15 +1263,21 @@ async function createArmorMesh(part, module, suitspec) {
   } catch (error) {
     console.warn(`mesh fallback for ${part}`, error);
     geometry = fallbackGeometry(part);
+    geometry.userData.meshError = String(error?.message || error);
   }
 
   const mesh = new THREE.Mesh(geometry, createMaterial(color, 0.0));
   mesh.name = part;
   mesh.userData.module = module || {};
+  mesh.userData.meshSource = geometry.userData?.meshSource || "mesh_asset";
+  mesh.userData.assetRef = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
+  mesh.userData.loadedAssetRef = geometry.userData?.loadedAssetRef || null;
+  mesh.userData.meshError = geometry.userData?.meshError || "";
   if (module?.texture_path) {
     const allowPaletteFallback = suitspec?.texture_fallback?.mode === "palette_material";
     loadTexture(module.texture_path, { allowPaletteFallback })
       .then((texture) => {
+        if (mesh.userData.disposed) return;
         if (!texture) {
           mesh.userData.textureFallbackActive = allowPaletteFallback;
           return;
@@ -1213,6 +1287,7 @@ async function createArmorMesh(part, module, suitspec) {
         mesh.material.needsUpdate = true;
       })
       .catch((error) => {
+        if (mesh.userData.disposed) return;
         mesh.userData.textureFallbackActive = allowPaletteFallback;
         console.warn(`texture fallback for ${part}`, error);
       });
@@ -2945,11 +3020,17 @@ class QuestHenshinDemo {
   }
 
   clearArmorMeshes() {
+    const disposedGeometries = new Set();
+    const disposedMaterials = new Set();
     for (const mesh of this.meshes.values()) {
+      mesh.userData.disposed = true;
+      disposeObjectResources(mesh, disposedGeometries, disposedMaterials);
       mesh.removeFromParent();
     }
     this.meshes.clear();
     for (const mesh of this.liveMirrorMeshes.values()) {
+      mesh.userData.disposed = true;
+      disposeObjectResources(mesh, disposedGeometries, disposedMaterials);
       mesh.removeFromParent();
     }
     this.liveMirrorMeshes.clear();
@@ -3270,12 +3351,23 @@ class QuestHenshinDemo {
   async loadArmorMeshes() {
     const modules = this.suitspec?.modules || {};
     this.refreshBaseSuitSurface();
-    const loadedMeshes = await Promise.all(ARMOR_PARTS.map(async (part, index) => {
+    const enabledRecords = ARMOR_PARTS.map((part, index) => {
       const module = modules[part];
       if (!module || module.enabled !== true) return null;
+      return { part, index, module };
+    }).filter(Boolean);
+    if (UI.micState) {
+      UI.micState.textContent = `装甲アセット読込中 0/${enabledRecords.length}.`;
+    }
+    const loadedMeshes = await mapWithConcurrency(enabledRecords, ARMOR_ASSET_LOAD_CONCURRENCY, async ({ part, index, module }) => {
       const mesh = await createArmorMesh(part, module, this.suitspec);
       return { index, mesh, part };
-    }));
+    }, ({ done, total, result }) => {
+      const source = result?.mesh?.userData?.meshSource || "pending";
+      if (UI.micState) {
+        UI.micState.textContent = `装甲アセット読込中 ${done}/${total}. Last: ${result?.part || "--"} (${source}).`;
+      }
+    });
     for (const record of loadedMeshes) {
       if (!record) continue;
       record.mesh.userData.partIndex = record.index;
@@ -3295,8 +3387,10 @@ class QuestHenshinDemo {
       this.suitspec?.texture_fallback?.mode === "palette_material"
         ? "Palette fallback armed for missing runtime textures."
         : "No texture fallback contract.";
+    const meshFallbackCount = Array.from(this.meshes.values()).filter((mesh) => String(mesh.userData.meshSource || "").includes("fallback")).length;
+    const glbCount = Array.from(this.meshes.values()).filter((mesh) => mesh.userData.meshSource === "glb_asset").length;
     setRouteContract(UI.routeContract, this.suitspec, this.runtimePackage);
-    UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets. FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
+    UI.micState.textContent = `Loaded ${this.meshes.size} mesh assets (${glbCount} GLB, ${meshFallbackCount} mesh fallback). FIT ${formatFitContract(this.suitspec)}. TEX ${formatTextureFallback(this.suitspec)}. ${fallbackText}`;
     this.refreshEquipmentStatus();
   }
 

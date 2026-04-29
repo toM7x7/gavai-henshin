@@ -95,6 +95,27 @@ class TestArmorPartsIntake(unittest.TestCase):
         self.assertTrue(any("declared length must match file size" in reason for reason in result["reasons"]))
         self.assertTrue(any("backup file must not be committed" in reason for reason in result["reasons"]))
 
+    def test_committed_armor_parts_tree_keeps_all_18_glb_deliveries_renderable(self) -> None:
+        armor_intake.EXPECTED_PARTS = self.previous_expected
+
+        result = armor_intake.validate_armor_parts(armor_intake.DEFAULT_ARMOR_PARTS_DIR)
+
+        self.assertEqual(len(armor_intake.EXPECTED_PARTS), 18)
+        self.assertEqual(result["status"], "pass", result["reasons"])
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["part_count"], 18)
+        self.assertEqual(result["missing_parts"], [])
+        self.assertEqual(result["warnings"], [])
+        self.assertEqual(set(result["present_parts"]), set(armor_intake.EXPECTED_PARTS))
+        for part in armor_intake.EXPECTED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(result["parts"][part]["status"], "pass")
+                self.assertEqual(result["parts"][part]["glb"]["metrics"]["magic"], "glTF")
+                self.assertEqual(result["parts"][part]["glb"]["metrics"]["version"], 2)
+                self.assertEqual(result["parts"][part]["glb"]["metrics"]["asset_version"], "2.0")
+                self.assertIn("base_surface", result["parts"][part]["sidecar"]["metrics"]["material_zones"])
+                self.assertGreater(result["parts"][part]["sidecar"]["metrics"]["triangle_count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

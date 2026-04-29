@@ -245,10 +245,11 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("SuitSpec texture_path is unchanged", js)
         self.assertIn("/v1/catalog/part-blueprints", Path("src/henshin/new_route_api.py").read_text(encoding="utf-8"))
         modeler_brief = Path("docs/modeler-armor-brief.md").read_text(encoding="utf-8")
-        self.assertIn("viewer/assets/armor-parts/<module>/<module>.glb", modeler_brief)
-        self.assertIn("viewer/assets/armor-parts/<module>/<module>.modeler.json", modeler_brief)
+        self.assertIn("viewer/assets/armor-parts/<module>/", modeler_brief)
+        self.assertIn("<module>.glb", modeler_brief)
+        self.assertIn("<module>.modeler.json", modeler_brief)
         self.assertIn("GET /v1/catalog/part-blueprints", modeler_brief)
-        self.assertIn("Nano Banana", modeler_brief)
+        self.assertIn("Nanobanana", modeler_brief)
         armor_parts_readme = Path("viewer/assets/armor-parts/README.md").read_text(encoding="utf-8")
         self.assertIn("Armor Parts Intake", armor_parts_readme)
         self.assertIn("source/<module>.blend", armor_parts_readme)
@@ -263,13 +264,19 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("texture_provider_profile", blueprint_source)
         self.assertIn("source/<module>.blend", blueprint_source)
         self.assertIn("textures/", blueprint_source)
-        self.assertIn("Nano Bananaのみ", modeler_brief)
-        self.assertIn("viewer/assets/armor-parts/<module>/source/<module>.blend", modeler_brief)
-        self.assertIn("viewer/assets/armor-parts/<module>/textures/", modeler_brief)
+        self.assertIn("Nanobanana", modeler_brief)
+        self.assertIn("source/<module>.blend", modeler_brief)
+        self.assertIn("textures/", modeler_brief)
         self.assertIn("base-suit-surface", js)
         self.assertIn("disposeMaterial", js)
         self.assertIn("parts_per_min", js)
         self.assertIn("last_timing_ms", js)
+        self.assertIn("textureGenerationSummaryFromSnapshot", js)
+        self.assertIn("snapshotWithTextureGenerationSummary", js)
+        self.assertIn("texture_generation_summary", js)
+        self.assertIn("generated_by_provider_profile", js)
+        self.assertIn("fallback_asset_reused", js)
+        self.assertIn("final_texture_writeable_count", js)
         self.assertIn("generation_job", js)
         self.assertIn("texture_probe_job", js)
         self.assertIn("model_rebuild_job", js)
@@ -522,14 +529,15 @@ class TestDashboardServer(unittest.TestCase):
             "this.refreshBaseSuitSurface(palette);",
             "const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));",
             "this.group.add(shell);",
-            "const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette, surfacePlan)));",
+            "const meshes = await mapWithConcurrency(",
+            "([part, module]) => createArmorMesh(part, module, palette, surfacePlan),",
             "this.group.add(mesh);",
             "this.previewStats.armorParts = meshes.length;",
             "this.publishPreviewStats();",
         ]
         previous = -1
         for token in ordered_tokens:
-            current = render_block.index(token)
+            current = render_block.index(token, previous + 1)
             self.assertGreater(current, previous)
             previous = current
 

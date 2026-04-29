@@ -144,6 +144,54 @@ class TestQuestRecallRenderContract(unittest.TestCase):
                 recalled.body["suitspec"]["modules"]["helmet"]["asset_ref"],
             )
 
+    def test_quest_viewer_static_smoke_keeps_recall_input_and_glb_fallback(self) -> None:
+        html = (self.repo_root / "viewer" / "quest-iw-demo" / "index.html").read_text(encoding="utf-8")
+        js = (self.repo_root / "viewer" / "quest-iw-demo" / "quest-demo.js").read_text(encoding="utf-8")
+
+        for token in {
+            'id="recallCodeInput"',
+            'inputmode="text"',
+            'maxlength="4"',
+            'enterkeyhint="go"',
+            'aria-describedby="recallCodeState"',
+            'id="btnLoadRecallCode"',
+            'id="recallCodeState"',
+        }:
+            self.assertIn(token, html)
+
+        for token in {
+            'const XR_RECALL_CHARS = "0123456789";',
+            'return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);',
+            "if (draft.length >= 4) break;",
+            'if (draft.length !== 4 || draft.includes("-")) return "";',
+            "UI.recallCodeInput.onkeydown = (event) =>",
+            'if (event.key !== "Enter") return;',
+            "UI.btnLoadRecallCode.onclick = () =>",
+            "await this.loadSuitByRecallCode(code, { reloadMeshes: true, pushUrl: true });",
+        }:
+            self.assertIn(token, js)
+
+        for token in {
+            'import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";',
+            "const gltfLoader = new GLTFLoader();",
+            "function isGlbAssetPath(assetPath)",
+            'return /\\.glb(?:$|[?#])/i.test(assetPath || "");',
+            "async function loadGlbGeometry(assetPath)",
+            "gltfLoader.load(",
+            'geometry.userData.meshSource = "glb_asset";',
+            "geometry = await loadMeshGeometry(module?.asset_ref, part);",
+            "const fallbackPath = normalizePath(`viewer/assets/meshes/${part}.mesh.json`);",
+            "const assetPath = normalizePath(assetRef || fallbackPath);",
+            "if (!isGlbAssetPath(assetPath))",
+            "const geometry = await loadGlbGeometry(assetPath);",
+            "console.warn(`GLB mesh fallback for ${part}: ${fallbackPath}`",
+            "const geometry = await loadJsonMeshGeometry(fallbackPath);",
+            'geometry.userData.meshSource = "mesh_json_fallback";',
+            "geometry = fallbackGeometry(part);",
+            'geometry.userData.meshSource = "generated_fallback";',
+        }:
+            self.assertIn(token, js)
+
     def test_quest_viewer_contract_detects_vrm_only_render_regressions(self) -> None:
         js = (self.repo_root / "viewer" / "quest-iw-demo" / "quest-demo.js").read_text(encoding="utf-8")
 

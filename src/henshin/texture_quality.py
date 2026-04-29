@@ -16,6 +16,7 @@ def analyze_texture_quality(path: str | Path, *, texture_mode: str = "mesh_uv") 
     result: dict[str, Any] = {
         "schema_version": "texture_quality.v0",
         "mode": "warning_only",
+        "probe_scope": "image_probe_not_generation_status",
         "texture_mode": texture_mode,
         "status": "ok",
         "warnings": [],

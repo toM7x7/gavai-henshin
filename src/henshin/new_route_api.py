@@ -28,6 +28,7 @@ from .ids import (
     parse_suit_id,
 )
 from .manifest import project_suitspec_to_manifest
+from .modeler_blueprints import build_modeler_blueprint_catalog
 from .runtime_package import build_runtime_suit_package
 from .validators import validate_against_schema, validate_suitspec
 
@@ -801,6 +802,18 @@ class NewRouteApi:
             },
         )
 
+    def get_part_blueprints(self) -> ApiResponse:
+        catalog = self._load_json("examples/partcatalog.seed.json")
+        validate_against_schema(catalog, "partcatalog")
+        blueprints = build_modeler_blueprint_catalog(catalog)
+        return ApiResponse(
+            status=HTTPStatus.OK,
+            body={
+                "ok": True,
+                **blueprints,
+            },
+        )
+
     def get_manifest(self, manifest_id: str) -> ApiResponse:
         if not manifest_id:
             return ApiResponse(status=HTTPStatus.BAD_REQUEST, body={"ok": False, "error": "manifest_id is required"})
@@ -828,6 +841,8 @@ class NewRouteApi:
             return self.health()
         if normalized == "/v1/catalog/parts":
             return self.get_part_catalog()
+        if normalized == "/v1/catalog/part-blueprints":
+            return self.get_part_blueprints()
         if normalized == "/v1/trials":
             return self.list_trials()
         if normalized == "/v1/trials/latest":
@@ -1116,6 +1131,25 @@ class NewRouteApi:
             "preview_status": "web_preview_uses_parametric_materials_until_texture_job",
         }
 
+    def _forge_modeler_blueprints(
+        self,
+        enabled_parts: list[str],
+        *,
+        suitspec: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        catalog = self._load_json("examples/partcatalog.seed.json")
+        validate_against_schema(catalog, "partcatalog")
+        modules = (
+            suitspec.get("modules")
+            if isinstance(suitspec, dict) and isinstance(suitspec.get("modules"), dict)
+            else {}
+        )
+        return build_modeler_blueprint_catalog(
+            catalog,
+            selected_modules=enabled_parts,
+            module_overrides=modules,
+        )
+
     def _forge_generation(
         self,
         payload: dict[str, Any],
@@ -1390,6 +1424,7 @@ class NewRouteApi:
                 texture_plan,
                 self._forge_style_tags(suitspec),
             )
+        modeler_blueprints = self._forge_modeler_blueprints(enabled_parts, suitspec=suitspec)
         job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
         planned_quality_gates = (
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
@@ -1484,6 +1519,7 @@ class NewRouteApi:
             "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
             "surface_generation_status": str(generation.get("surface_generation_status") or _FORGE_SURFACE_GENERATION_STATUS),
             "surface_plan": self._clone_json(surface_plan),
+            "modeler_blueprints": self._clone_json(modeler_blueprints),
             "job_defaults": self._clone_json(job_defaults),
             "job_payload_template": job_payload_template,
             "links": job_links,

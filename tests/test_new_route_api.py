@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from henshin.modeler_blueprints import build_modeler_blueprint_catalog
 from henshin.new_route_api import NewRouteApi
 
 
@@ -29,6 +30,69 @@ class TestNewRouteApi(unittest.TestCase):
         self.assertTrue(response.body["ok"])
         self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
         self.assertEqual(len(response.body["parts"]), 18)
+
+    def test_catalog_part_blueprints_returns_modeler_contract(self) -> None:
+        response = self.api.get("/v1/catalog/part-blueprints")
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 200)
+        self.assertTrue(response.body["ok"])
+        self.assertEqual(response.body["contract_version"], "modeler-part-blueprint.v1")
+        self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
+        self.assertEqual(response.body["part_count"], 18)
+        self.assertEqual(response.body["reference_body"]["height_cm"], 170)
+        self.assertEqual(response.body["deliverables"]["runtime"], "GLB/glTF 2.0 with applied transforms")
+        helmet = next(part for part in response.body["parts"] if part["module"] == "helmet")
+        self.assertEqual(helmet["mesh_requirements"]["runtime_format"], "glTF 2.0 GLB")
+        self.assertEqual(helmet["mesh_requirements"]["preview_format"], "mesh.v1")
+        self.assertEqual(helmet["uv_requirements"]["base_color_px"], 2048)
+        self.assertEqual(helmet["vrm_attachment"]["primary_bone"], "head")
+        self.assertEqual(helmet["target_envelope"]["unit"], "meter_in_vrm_preview_space")
+        self.assertEqual(helmet["target_envelope"]["source_bbox_role"], "seed_proxy_measurement_not_authoring_target")
+        self.assertEqual(helmet["target_envelope"]["authoring_target_m"]["y"], 0.34)
+        left_forearm = next(part for part in response.body["parts"] if part["module"] == "left_forearm")
+        self.assertEqual(left_forearm["mirror_of"], "right_forearm")
+        self.assertIn("upperarm_to_forearm", left_forearm["uv_requirements"]["seam_priority"])
+
+    def test_modeler_blueprints_apply_selection_and_suitspec_overrides(self) -> None:
+        catalog = json.loads(Path("examples/partcatalog.seed.json").read_text(encoding="utf-8"))
+
+        empty_selection = build_modeler_blueprint_catalog(catalog, selected_modules=[])
+        helmet_only = build_modeler_blueprint_catalog(
+            catalog,
+            selected_modules=["helmet"],
+            module_overrides={
+                "helmet": {
+                    "asset_ref": "viewer/assets/meshes/custom_helmet.glb",
+                    "attachment_slot": "custom_helmet_socket",
+                    "fit": {
+                        "shape": "sphere",
+                        "source": "head",
+                        "attach": "center",
+                        "offsetY": 0.42,
+                        "zOffset": 0.08,
+                        "scale": [0.11, 0.22, 0.33],
+                        "follow": [0.44, 0.55, 0.66],
+                        "minScale": [0.07, 0.08, 0.09],
+                    },
+                    "vrm_anchor": {
+                        "bone": "head",
+                        "offset": [0.01, 0.02, 0.03],
+                        "rotation": [1, 2, 3],
+                    },
+                }
+            },
+        )
+
+        self.assertEqual(empty_selection["part_count"], 0)
+        self.assertEqual(helmet_only["part_count"], 1)
+        helmet = helmet_only["parts"][0]
+        self.assertEqual(helmet["socket"], "custom_helmet_socket")
+        self.assertEqual(helmet["fit_reference"]["scale"], [0.11, 0.22, 0.33])
+        self.assertEqual(helmet["fit_reference"]["offset_y"], 0.42)
+        self.assertEqual(helmet["vrm_attachment"]["offset_m"], [0.01, 0.02, 0.03])
+        self.assertEqual(helmet["runtime_bindings"]["asset_ref"], "viewer/assets/meshes/custom_helmet.glb")
 
     def test_get_manifest_returns_sample_manifest(self) -> None:
         response = self.api.get("/v1/manifests/MNF-20260424-SAMP")
@@ -270,6 +334,24 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["asset_pipeline"]["surface_plan"]["emissive"]["texture_role"],
                 "emissive_line_mask",
             )
+            self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["contract_version"], "modeler-part-blueprint.v1")
+            self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 5)
+            self.assertEqual(
+                [part["module"] for part in response.body["asset_pipeline"]["modeler_blueprints"]["parts"]],
+                ["helmet", "chest", "back", "left_forearm", "right_forearm"],
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["modeler_blueprints"]["parts"][0]["mesh_requirements"]["runtime_format"],
+                "glTF 2.0 GLB",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["modeler_blueprints"]["parts"][0]["runtime_bindings"]["asset_ref"],
+                response.body["preview"]["modules"]["helmet"]["asset_ref"],
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["modeler_blueprints"]["parts"][0]["fit_reference"]["shape"],
+                response.body["preview"]["modules"]["helmet"]["fit"]["shape"],
+            )
             self.assertTrue(response.body["asset_pipeline"]["texture_plan"]["uv_refine"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["asset_contract"], "vrm-base-suit+mesh-v1-overlay")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
@@ -384,6 +466,7 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["visual_layers"]["surface_layer"]["kind"], "texture_and_emissive_maps")
             self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
             self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["style_intent"], "bright_tokusatsu_hero")
+            self.assertEqual(quest.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 5)
             self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
             self.assertEqual(quest.body["model_quality_gate"], quest.body["asset_pipeline"]["model_quality_gate"])
             self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
@@ -472,6 +555,8 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertFalse(response.body["model_quality_gate"]["texture_lock_allowed"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["overlay_parts"], ["helmet"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 1)
+            self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 1)
+            self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["parts"][0]["module"], "helmet")
             self.assertEqual(response.body["asset_pipeline"]["job_defaults"]["parts"], ["helmet"])
             self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["parts"], ["helmet"])
             self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])

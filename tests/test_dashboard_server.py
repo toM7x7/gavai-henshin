@@ -29,6 +29,13 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(response.body["catalog_id"], "PCAT-VIEWER-SEED-0001")
 
+        blueprint_response = DashboardHandler._new_route_response_for_test(root, "/v1/catalog/part-blueprints")
+        self.assertIsNotNone(blueprint_response)
+        assert blueprint_response is not None
+        self.assertEqual(blueprint_response.status, 200)
+        self.assertEqual(blueprint_response.body["contract_version"], "modeler-part-blueprint.v1")
+        self.assertEqual(blueprint_response.body["part_count"], 18)
+
     def test_new_route_post_paths_are_served_by_dashboard_handler(self) -> None:
         suitspec = json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,6 +205,26 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("attachment_preview_shell", js)
         self.assertIn("seed_proxy_fallback", js)
         self.assertIn("previewFallbackParts", js)
+        self.assertIn("previewMockTexturedParts", js)
+        self.assertIn("previewTextureFailedParts", js)
+        self.assertIn("mockTexturedParts", js)
+        self.assertIn("textureLoaded", js)
+        self.assertIn("textureFailedParts", js)
+        self.assertIn("surfacePlanFromData", js)
+        self.assertIn("data?.generation?.surface_plan", js)
+        self.assertIn("createArmorMockSurfaceTexture", js)
+        self.assertIn("textureMockPreview", js)
+        self.assertIn("!module?.texture_path && surfacePlan?.contract_version", js)
+        self.assertIn("textureLoadFailed", js)
+        self.assertIn("baseSuitMaterialKey", js)
+        self.assertIn("getBaseSuitMaterial", js)
+        self.assertIn("originalMaterials.forEach", js)
+        self.assertIn("SuitSpec texture_path is unchanged", js)
+        self.assertIn("/v1/catalog/part-blueprints", Path("src/henshin/new_route_api.py").read_text(encoding="utf-8"))
+        blueprint_source = Path("src/henshin/modeler_blueprints.py").read_text(encoding="utf-8")
+        self.assertIn("modeler-part-blueprint.v1", blueprint_source)
+        self.assertIn("authoring_target_m", blueprint_source)
+        self.assertIn("source_bbox_role", blueprint_source)
         self.assertIn("base-suit-surface", js)
         self.assertIn("disposeMaterial", js)
         self.assertIn("parts_per_min", js)
@@ -449,10 +476,11 @@ class TestDashboardServer(unittest.TestCase):
 
         render_block = js[js.index("  async renderSuit(suitspec) {") : js.index("\n\n  resize()")]
         ordered_tokens = [
+            "const surfacePlan = surfacePlanFromData(suitspec) || surfacePlanFromData(latestForgeData);",
             "this.refreshBaseSuitSurface(palette);",
             "const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));",
             "this.group.add(shell);",
-            "const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette)));",
+            "const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette, surfacePlan)));",
             "this.group.add(mesh);",
             "this.previewStats.armorParts = meshes.length;",
             "this.publishPreviewStats();",

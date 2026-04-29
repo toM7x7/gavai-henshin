@@ -179,6 +179,16 @@ function numberOr(value, fallback) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function hashString(value) {
+  let hash = 2166136261;
+  const raw = String(value || "");
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function fitVector(value, fallback) {
   return [0, 1, 2].map((index) => numberOr(Array.isArray(value) ? value[index] : undefined, fallback[index]));
 }
@@ -348,8 +358,21 @@ function previewPipelineFromData(data = latestForgeData) {
   return data?.asset_pipeline || data?.preview?.asset_pipeline || null;
 }
 
+function surfacePlanFromData(data = latestForgeData) {
+  return data?.asset_pipeline?.surface_plan
+    || data?.preview?.asset_pipeline?.surface_plan
+    || data?.preview?.generation?.surface_plan
+    || data?.suitspec?.asset_pipeline?.surface_plan
+    || data?.suitspec?.generation?.surface_plan
+    || data?.generation?.surface_plan
+    || null;
+}
+
 function layerStateForSurface(data = latestForgeData, records = previewRecordsFromData(data)) {
-  const texturedCount = records.filter(([, module]) => module?.texture_path).length;
+  const declaredTextureCount = records.filter(([, module]) => module?.texture_path).length;
+  const texturedCount = armorStand?.previewStats?.texturedParts || 0;
+  const textureFailedCount = armorStand?.previewStats?.textureFailedParts || 0;
+  const mockTexturedCount = armorStand?.previewStats?.mockTexturedParts || 0;
   const pipeline = previewPipelineFromData(data);
   const template = pipeline?.texture_probe_job?.payload || pipeline?.generation_job?.payload || pipeline?.job_payload_template;
   const canRun = Boolean(template?.suitspec);
@@ -359,6 +382,20 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
       state: "ready",
       title: `${texturedCount}パーツ反映`,
       detail: "生成済みテクスチャをプレビューに重ねています。",
+    };
+  }
+  if (textureFailedCount > 0) {
+    return {
+      state: "planned",
+      title: `${textureFailedCount}/${declaredTextureCount} texture failed`,
+      detail: "SuitSpec texture_path exists, but the Web preview could not load it. Mock maps are not used here.",
+    };
+  }
+  if (mockTexturedCount > 0) {
+    return {
+      state: "ready",
+      title: `Mock ${mockTexturedCount} parts`,
+      detail: "Preview-only mock surface maps are attached. SuitSpec texture_path is unchanged.",
     };
   }
   if (UI.textureJobPanel?.classList.contains("running")) {
@@ -822,11 +859,8 @@ function disposeMaterial(material) {
   const materials = Array.isArray(material) ? material : [material];
   for (const item of materials) {
     if (!item) continue;
-    item.map?.dispose?.();
-    item.emissiveMap?.dispose?.();
-    item.normalMap?.dispose?.();
-    item.roughnessMap?.dispose?.();
-    item.metalnessMap?.dispose?.();
+    const textures = new Set([item.map, item.emissiveMap, item.normalMap, item.roughnessMap, item.metalnessMap]);
+    textures.forEach((texture) => texture?.dispose?.());
     item.dispose?.();
   }
 }
@@ -893,6 +927,69 @@ function createBaseSuitMaterial(palette = {}, options = {}) {
     depthWrite: false,
     side: THREE.DoubleSide,
   });
+}
+
+function baseSuitMaterialKey(palette = {}, options = {}) {
+  return JSON.stringify({
+    primary: palette.primary || BASE_SUIT_COLOR,
+    secondary: palette.secondary || "#52777E",
+    emissive: palette.emissive || BASE_SUIT_EMISSIVE,
+    opacity: numberOr(options.opacity, 0.94),
+    emissiveIntensity: numberOr(options.emissiveIntensity, 0.18),
+  });
+}
+
+function createArmorMockSurfaceTexture(part, palette = {}, surfacePlan = {}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  const primary = palette.primary || "#F4F1E8";
+  const secondary = palette.secondary || "#8C96A3";
+  const emissive = palette.emissive || "#43D8FF";
+  const seed = hashString(`${part}:${surfacePlan.contract_version || "surface-plan.v1"}`);
+  ctx.fillStyle = secondary;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = primary;
+  const stripeWidth = 42 + (seed % 26);
+  for (let x = -512; x < 1024; x += stripeWidth) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 22, 0);
+    ctx.lineTo(x + 534, 512);
+    ctx.lineTo(x + 512, 512);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 0.92;
+  ctx.strokeStyle = emissive;
+  ctx.lineWidth = 4;
+  for (let x = 64 + (seed % 32); x < 512; x += 128) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + ((seed % 2) ? 70 : -70), 512);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.66;
+  ctx.strokeStyle = "#132d32";
+  for (let y = 96; y < 512; y += 112) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + (seed % 17));
+    ctx.lineTo(512, y - (seed % 23));
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.2, 1.8);
+  texture.anisotropy = 4;
+  texture.name = `texture_mock_preview:${part}`;
+  texture.userData.textureMockPreview = true;
+  texture.userData.surfacePlanContract = surfacePlan.contract_version || "surface-plan.v1";
+  return texture;
 }
 
 function materialForPart(part, palette) {
@@ -1043,7 +1140,7 @@ function createArmorAttachmentShellMesh(part, module, palette) {
   return mesh;
 }
 
-async function createArmorMesh(part, module, palette) {
+async function createArmorMesh(part, module, palette, surfacePlan = null) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
   let geometry;
   let meshSource = "mesh_asset";
@@ -1062,10 +1159,18 @@ async function createArmorMesh(part, module, palette) {
   geometry.boundingBox.getSize(sourceSize);
   const material = materialForPart(part, palette);
   const texture = await loadTextureMap(module?.texture_path);
+  let mockSurfaceTexture = null;
   if (texture) {
     material.map = texture;
     material.color.setHex(0xffffff);
     material.emissiveIntensity *= 0.72;
+    material.needsUpdate = true;
+  } else if (!module?.texture_path && surfacePlan?.contract_version) {
+    mockSurfaceTexture = createArmorMockSurfaceTexture(part, palette, surfacePlan);
+    material.map = mockSurfaceTexture;
+    material.color.setHex(0xffffff);
+    material.emissiveMap = mockSurfaceTexture;
+    material.emissiveIntensity *= 0.62;
     material.needsUpdate = true;
   }
   const mesh = new THREE.Mesh(geometry, material);
@@ -1073,6 +1178,10 @@ async function createArmorMesh(part, module, palette) {
   mesh.renderOrder = 4;
   mesh.userData.sourceSize = sourceSize;
   mesh.userData.texturePath = module?.texture_path || null;
+  mesh.userData.textureLoaded = Boolean(texture);
+  mesh.userData.textureMockPreview = Boolean(mockSurfaceTexture);
+  mesh.userData.textureLoadFailed = Boolean(module?.texture_path && !texture);
+  mesh.userData.surfacePlanContract = mockSurfaceTexture?.userData?.surfacePlanContract || null;
   mesh.userData.meshSource = meshSource;
   mesh.userData.assetRef = asset;
   mesh.userData.meshError = meshError;
@@ -1103,6 +1212,8 @@ class ArmorStand {
     this.metricsCache = null;
     this.lastCanvasSize = { width: 0, height: 0 };
     this.currentPalette = {};
+    this.baseSuitMaterial = null;
+    this.baseSuitMaterialKey = "";
     this.viewYaw = 0;
     this.viewPitch = 0;
     this.viewZoom = 1;
@@ -1112,6 +1223,8 @@ class ArmorStand {
       armorParts: 0,
       fallbackParts: 0,
       texturedParts: 0,
+      textureFailedParts: 0,
+      mockTexturedParts: 0,
       baseSuitVisible: true,
       vrmVisible: false,
       heightCm: DEFAULT_HEIGHT_CM,
@@ -1145,6 +1258,8 @@ class ArmorStand {
     this.canvas.dataset.previewArmorParts = String(this.previewStats.armorParts);
     this.canvas.dataset.previewFallbackParts = String(this.previewStats.fallbackParts);
     this.canvas.dataset.previewTexturedParts = String(this.previewStats.texturedParts);
+    this.canvas.dataset.previewTextureFailedParts = String(this.previewStats.textureFailedParts || 0);
+    this.canvas.dataset.previewMockTexturedParts = String(this.previewStats.mockTexturedParts || 0);
     this.canvas.dataset.previewBaseSuit = this.previewStats.baseSuitVisible ? "visible" : "hidden";
     this.canvas.dataset.previewVrm = this.previewStats.vrmVisible ? "visible" : "fallback";
     this.canvas.dataset.previewHeightCm = String(Math.round(this.heightCm));
@@ -1663,24 +1778,43 @@ class ArmorStand {
     mesh.userData.fitPreview = pose.source;
   }
 
+  getBaseSuitMaterial(palette = this.currentPalette, options = {}) {
+    const key = baseSuitMaterialKey(palette, options);
+    if (!this.baseSuitMaterial || this.baseSuitMaterialKey !== key) {
+      disposeMaterial(this.baseSuitMaterial);
+      this.baseSuitMaterial = createBaseSuitMaterial(palette, options);
+      this.baseSuitMaterialKey = key;
+    }
+    return this.baseSuitMaterial;
+  }
+
   refreshBaseSuitSurface(palette = this.currentPalette) {
     this.currentPalette = palette || {};
     if (!this.vrmModel) return;
+    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
     this.vrmModel.traverse((obj) => {
       if (!obj.isMesh) return;
-      disposeMaterial(obj.material);
-      obj.material = createBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+      if (obj.material !== material && obj.userData.baseSuitSurface !== "vrm_surface_texture") {
+        disposeMaterial(obj.material);
+      }
+      obj.material = material;
       obj.renderOrder = 2;
       obj.userData.baseSuitSurface = "vrm_surface_texture";
     });
   }
 
   prepareVrmMannequin(model) {
+    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+    const originalMaterials = new Set();
     model.traverse((obj) => {
       if (!obj.isMesh) return;
       obj.renderOrder = 2;
-      obj.material = createBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+      originalMaterials.add(obj.material);
+      obj.material = material;
       obj.userData.baseSuitSurface = "vrm_surface_texture";
+    });
+    originalMaterials.forEach((originalMaterial) => {
+      if (originalMaterial !== material) disposeMaterial(originalMaterial);
     });
   }
 
@@ -1738,6 +1872,7 @@ class ArmorStand {
     this.metricsCache = null;
     const modules = suitspec?.modules || {};
     const palette = suitspec?.palette || {};
+    const surfacePlan = surfacePlanFromData(suitspec) || surfacePlanFromData(latestForgeData);
     this.refreshBaseSuitSurface(palette);
     const records = Object.entries(modules).filter(([, module]) => module?.enabled);
     const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));
@@ -1747,7 +1882,7 @@ class ArmorStand {
       this.applyPreviewPose(shell, part, module);
       this.group.add(shell);
     }
-    const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette)));
+    const meshes = await Promise.all(records.map(([part, module]) => createArmorMesh(part, module, palette, surfacePlan)));
     for (let index = 0; index < meshes.length; index += 1) {
       const [part, module] = records[index];
       const mesh = meshes[index];
@@ -1758,7 +1893,9 @@ class ArmorStand {
     }
     this.previewStats.armorParts = meshes.length;
     this.previewStats.fallbackParts = meshes.filter((mesh) => mesh.userData.meshSource === FALLBACK_MESH_SOURCE).length;
-    this.previewStats.texturedParts = meshes.filter((mesh) => mesh.userData.texturePath).length;
+    this.previewStats.texturedParts = meshes.filter((mesh) => mesh.userData.textureLoaded).length;
+    this.previewStats.textureFailedParts = meshes.filter((mesh) => mesh.userData.textureLoadFailed).length;
+    this.previewStats.mockTexturedParts = meshes.filter((mesh) => mesh.userData.textureMockPreview).length;
     this.publishPreviewStats();
   }
 

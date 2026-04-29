@@ -1,0 +1,60 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "waist",
+  "part_id": "viewer.mesh.waist.v1",
+  "category": "waist",
+  "bbox_m": {
+    "x": 0.49147674441337585,
+    "y": 0.1475760042667389,
+    "z": 0.19166800379753113,
+    "size": [
+      0.49147674441337585,
+      0.1475760042667389,
+      0.19166800379753113
+    ],
+    "dimensions": [
+      0.49147674441337585,
+      0.1475760042667389,
+      0.19166800379753113
+    ]
+  },
+  "triangle_count": 876,
+  "material_zones": [
+    "accent",
+    "base_surface"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "hips",
+    "offset_m": [
+      0,
+      0,
+      0.06
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "hips",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 876,
+  "target_envelope_m": {
+    "x": 0.4896,
+    "y": 0.1716,
+    "z": 0.1904
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

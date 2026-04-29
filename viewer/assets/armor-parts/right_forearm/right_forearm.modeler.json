@@ -1,0 +1,62 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "right_forearm",
+  "part_id": "viewer.mesh.right_forearm.v1",
+  "category": "arm",
+  "bbox_m": {
+    "x": 0.08771999925374985,
+    "y": 0.2516320049762726,
+    "z": 0.09783999994397163,
+    "size": [
+      0.08771999925374985,
+      0.2516320049762726,
+      0.09783999994397163
+    ],
+    "dimensions": [
+      0.08771999925374985,
+      0.2516320049762726,
+      0.09783999994397163
+    ]
+  },
+  "triangle_count": 708,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "armor_left_forearm_v001",
+  "vrm_attachment": {
+    "primary_bone": "rightLowerArm",
+    "offset_m": [
+      0,
+      -0.01,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "rightLowerArm",
+      "rightUpperArm",
+      "rightHand"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 708,
+  "target_envelope_m": {
+    "x": 0.102,
+    "y": 0.2788,
+    "z": 0.102
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

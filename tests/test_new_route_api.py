@@ -318,11 +318,11 @@ class TestNewRouteApi(unittest.TestCase):
             )
             self.assertEqual(
                 response.body["asset_pipeline"]["model_plan"]["mesh_source_status"],
-                "seed_proxy_requires_vrm_first_rebuild",
+                "modeler_glb_available",
             )
             self.assertEqual(
                 response.body["asset_pipeline"]["model_plan"]["preview_mesh_role"],
-                "fit-check proxy, not final texture target",
+                "modeler GLB primary; mesh.v1 retained as runtime fallback",
             )
             self.assertIn("VRM-first Wave 1", response.body["asset_pipeline"]["model_plan"]["next_model_quality_gate"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["model_quality_gate"], "mesh_fit_before_texture_final")
@@ -364,7 +364,17 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["preview"]["modules"]["helmet"]["fit"]["shape"],
             )
             self.assertTrue(response.body["asset_pipeline"]["texture_plan"]["uv_refine"])
-            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["asset_contract"], "vrm-base-suit+mesh-v1-overlay")
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["asset_contract"],
+                "vrm-base-suit+modeler-glb-overlay+mesh-v1-fallback",
+            )
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["primary_format"], "glb")
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["modeler_glb_count"], 5)
+            self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["fallback_count"], 0)
+            self.assertEqual(
+                response.body["preview"]["modules"]["helmet"]["asset_ref"],
+                "viewer/assets/armor-parts/helmet/helmet.glb",
+            )
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 5)
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract"]["height_cm"], 182.0)

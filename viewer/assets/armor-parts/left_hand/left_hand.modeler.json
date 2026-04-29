@@ -1,0 +1,62 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "left_hand",
+  "part_id": "viewer.mesh.left_hand.v1",
+  "category": "hand",
+  "bbox_m": {
+    "x": 0.08323200047016144,
+    "y": 0.07254400104284286,
+    "z": 0.09130000323057175,
+    "size": [
+      0.08323200047016144,
+      0.07254400104284286,
+      0.09130000323057175
+    ],
+    "dimensions": [
+      0.08323200047016144,
+      0.07254400104284286,
+      0.09130000323057175
+    ]
+  },
+  "triangle_count": 536,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "trim",
+    "emissive"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "right_hand",
+  "vrm_attachment": {
+    "primary_bone": "leftHand",
+    "offset_m": [
+      0,
+      0,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "leftHand",
+      "leftLowerArm"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 536,
+  "target_envelope_m": {
+    "x": 0.1156,
+    "y": 0.0816,
+    "z": 0.136
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

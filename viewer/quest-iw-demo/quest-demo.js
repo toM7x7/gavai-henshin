@@ -5,6 +5,8 @@ import {
   World,
 } from "@iwsdk/core";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const DEFAULT_REPLAY = "/sessions/S-IW-DEMO/artifacts/iwsdk-deposition-replay.json";
 const DEFAULT_SUITSPEC = "/examples/suitspec.sample.json";
@@ -118,6 +120,7 @@ const UI = {
 };
 
 const textureLoader = new THREE.TextureLoader();
+const gltfLoader = new GLTFLoader();
 const geometryCache = new Map();
 const textureCache = new Map();
 const TAU = Math.PI * 2;
@@ -1075,13 +1078,85 @@ function meshGeometryFromPayload(payload) {
   return normalizeGeometry(geometry);
 }
 
-async function loadMeshGeometry(assetRef, part) {
-  const assetPath = normalizePath(assetRef || `viewer/assets/meshes/${part}.mesh.json`);
+function isGlbAssetPath(assetPath) {
+  return /\.glb(?:$|[?#])/i.test(assetPath || "");
+}
+
+function geometryFromGltf(gltf, assetPath) {
+  const scene = gltf?.scene || gltf?.scenes?.[0];
+  if (!scene) {
+    throw new Error(`GLB has no scene: ${assetPath}`);
+  }
+
+  const geometries = [];
+  scene.updateMatrixWorld(true);
+  scene.traverse((node) => {
+    if (!node.isMesh || !node.geometry) return;
+    let geometry = node.geometry.clone();
+    if (geometry.index) geometry = geometry.toNonIndexed();
+    geometry.applyMatrix4(node.matrixWorld);
+    if (!geometry.getAttribute("normal")) geometry.computeVertexNormals();
+    for (const name of Object.keys(geometry.attributes)) {
+      if (!["position", "normal", "uv"].includes(name)) geometry.deleteAttribute(name);
+    }
+    geometry.morphAttributes = {};
+    geometries.push(geometry);
+  });
+
+  if (!geometries.length) {
+    throw new Error(`GLB has no mesh geometry: ${assetPath}`);
+  }
+
+  if (!geometries.every((geometry) => geometry.getAttribute("uv"))) {
+    for (const geometry of geometries) geometry.deleteAttribute("uv");
+  }
+
+  const merged = geometries.length === 1 ? geometries[0] : mergeGeometries(geometries, false);
+  if (!merged) {
+    throw new Error(`GLB geometry merge failed: ${assetPath}`);
+  }
+  for (const geometry of geometries) {
+    if (geometry !== merged) geometry.dispose?.();
+  }
+  return normalizeGeometry(merged);
+}
+
+async function loadGlbGeometry(assetPath) {
+  const gltf = await new Promise((resolve, reject) => {
+    gltfLoader.load(
+      assetPath,
+      resolve,
+      undefined,
+      (error) => reject(error || new Error(`GLB load failed: ${assetPath}`)),
+    );
+  });
+  return geometryFromGltf(gltf, assetPath);
+}
+
+async function loadJsonMeshGeometry(assetPath) {
   if (geometryCache.has(assetPath)) return geometryCache.get(assetPath).clone();
   const payload = await loadJson(assetPath);
   const geometry = meshGeometryFromPayload(payload);
   geometryCache.set(assetPath, geometry);
   return geometry.clone();
+}
+
+async function loadMeshGeometry(assetRef, part) {
+  const fallbackPath = normalizePath(`viewer/assets/meshes/${part}.mesh.json`);
+  const assetPath = normalizePath(assetRef || fallbackPath);
+  if (geometryCache.has(assetPath)) return geometryCache.get(assetPath).clone();
+  if (!isGlbAssetPath(assetPath)) {
+    return loadJsonMeshGeometry(assetPath);
+  }
+
+  try {
+    const geometry = await loadGlbGeometry(assetPath);
+    geometryCache.set(assetPath, geometry);
+    return geometry.clone();
+  } catch (error) {
+    console.warn(`GLB mesh fallback for ${part}: ${fallbackPath}`, error);
+    return loadJsonMeshGeometry(fallbackPath);
+  }
 }
 
 async function loadTexture(texturePath, options = {}) {

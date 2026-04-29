@@ -1,4 +1,5 @@
 import json
+import struct
 import tempfile
 import unittest
 from pathlib import Path
@@ -159,6 +160,10 @@ class TestQuestRecallRenderContract(unittest.TestCase):
             "const BASE_SUIT_SURFACE_PARTS = [",
             "function createBaseSuitTexture(suitspec)",
             "function createBaseSuitMaterial(suitspec)",
+            "GLTFLoader",
+            "function isGlbAssetPath(assetPath)",
+            "function loadGlbGeometry(assetPath)",
+            "GLB mesh fallback",
             "this.baseSuitGroup = new THREE.Group();",
             "this.refreshBaseSuitSurface();",
             "updateBaseSuitVisibility({ standbyPreview, selfView, reveal })",
@@ -183,7 +188,11 @@ class TestQuestRecallRenderContract(unittest.TestCase):
     def _assert_renderable_module(self, part: str, module: dict) -> None:
         self.assertTrue(REQUIRED_MODULE_KEYS.issubset(module.keys()), part)
         self.assertIsInstance(module["asset_ref"], str)
-        self.assertTrue(module["asset_ref"].endswith(f"{part}.mesh.json"), module["asset_ref"])
+        self.assertTrue(
+            module["asset_ref"].endswith(f"{part}.mesh.json")
+            or module["asset_ref"].endswith(f"{part}.glb"),
+            module["asset_ref"],
+        )
         self.assertIsInstance(module["fit"], dict)
         self.assertTrue(REQUIRED_FIT_KEYS.issubset(module["fit"].keys()), module["fit"])
         self.assertIsInstance(module["vrm_anchor"], dict)
@@ -193,6 +202,14 @@ class TestQuestRecallRenderContract(unittest.TestCase):
     def _assert_mesh_asset_can_load(self, asset_ref: str) -> None:
         path = (self.repo_root / asset_ref).resolve()
         self.assertTrue(path.is_file(), asset_ref)
+        if asset_ref.endswith(".glb"):
+            data = path.read_bytes()
+            self.assertGreaterEqual(len(data), 20, asset_ref)
+            magic, version, declared_length = struct.unpack_from("<4sII", data, 0)
+            self.assertEqual(magic, b"glTF", asset_ref)
+            self.assertEqual(version, 2, asset_ref)
+            self.assertEqual(declared_length, len(data), asset_ref)
+            return
         payload = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(payload["format"], "mesh.v1")
         self.assertGreaterEqual(len(payload.get("positions") or []), 9)

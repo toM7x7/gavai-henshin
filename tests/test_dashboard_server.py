@@ -203,6 +203,12 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("textureJobPayload", js)
         self.assertIn("startTextureGeneration", js)
         self.assertIn("TextureLoader", js)
+        self.assertIn("getGLTFLoaderClass", js)
+        self.assertIn("loadGlbArmorObject", js)
+        self.assertIn("glb_asset", js)
+        self.assertIn('"three/addons/": "../body-fit/vendor/three/examples/jsm/"', html)
+        self.assertTrue(Path("viewer/body-fit/vendor/three/examples/jsm/loaders/GLTFLoader.js").is_file())
+        self.assertTrue(Path("viewer/body-fit/vendor/three/examples/jsm/utils/BufferGeometryUtils.js").is_file())
         self.assertIn("loadTextureMap", js)
         self.assertIn("texture_path", js)
         self.assertIn("createFallbackArmorGeometry", js)
@@ -210,6 +216,7 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("attachment_preview_shell", js)
         self.assertIn("seed_proxy_fallback", js)
         self.assertIn("previewFallbackParts", js)
+        self.assertIn("previewGlbParts", js)
         self.assertIn("previewMockTexturedParts", js)
         self.assertIn("previewTextureFailedParts", js)
         self.assertIn("mockTexturedParts", js)
@@ -321,6 +328,7 @@ class TestDashboardServer(unittest.TestCase):
             "refreshBaseSuitSurface",
             "baseSuitVisible",
             "dataset.previewBaseSuit",
+            "dataset.previewGlbParts",
             '"base",',
             "VRMの体表テクスチャを特撮ボディスーツとして扱います。",
         }:
@@ -328,7 +336,7 @@ class TestDashboardServer(unittest.TestCase):
         self.assertRegex(js, r'this\.ghostGroup\.name = "base-suit-[^"]*surface[^"]*"')
 
         for token in {
-            '_FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"',
+            '_FORGE_ASSET_CONTRACT = "vrm-base-suit+modeler-glb-overlay+mesh-v1-fallback"',
             '_FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"',
             '_FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"',
             '_FORGE_SURFACE_LAYER_ID = "surface_materials"',

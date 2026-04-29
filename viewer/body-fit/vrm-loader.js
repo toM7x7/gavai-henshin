@@ -21,7 +21,7 @@ async function importFirstSuccessful(loaders) {
   throw lastError || new Error("Module import failed.");
 }
 
-async function getGLTFLoaderClass() {
+export async function getGLTFLoaderClass() {
   if (!gltfLoaderClassPromise) {
     gltfLoaderClassPromise = importFirstSuccessful([
       () => import("three/addons/loaders/GLTFLoader.js"),

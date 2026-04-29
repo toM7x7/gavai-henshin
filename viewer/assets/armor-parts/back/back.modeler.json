@@ -1,0 +1,62 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "back",
+  "part_id": "viewer.mesh.back.v1",
+  "category": "dorsal",
+  "bbox_m": {
+    "x": 0.543096661567688,
+    "y": 0.43192167580127716,
+    "z": 0.06830829381942749,
+    "size": [
+      0.543096661567688,
+      0.43192167580127716,
+      0.06830829381942749
+    ],
+    "dimensions": [
+      0.543096661567688,
+      0.43192167580127716,
+      0.06830829381942749
+    ]
+  },
+  "triangle_count": 520,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.01,
+      -0.1
+    ],
+    "rotation_deg": [
+      0,
+      180,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 520,
+  "target_envelope_m": {
+    "x": 0.5984,
+    "y": 0.5148,
+    "z": 0.136
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

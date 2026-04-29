@@ -1,0 +1,62 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "left_shin",
+  "part_id": "viewer.mesh.left_shin.v1",
+  "category": "leg",
+  "bbox_m": {
+    "x": 0.1170269325375557,
+    "y": 0.37834200263023376,
+    "z": 0.09488581866025925,
+    "size": [
+      0.1170269325375557,
+      0.37834200263023376,
+      0.09488581866025925
+    ],
+    "dimensions": [
+      0.1170269325375557,
+      0.37834200263023376,
+      0.09488581866025925
+    ]
+  },
+  "triangle_count": 644,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "right_shin",
+  "vrm_attachment": {
+    "primary_bone": "leftLowerLeg",
+    "offset_m": [
+      0,
+      -0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "leftLowerLeg",
+      "leftUpperLeg",
+      "leftFoot"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 644,
+  "target_envelope_m": {
+    "x": 0.1156,
+    "y": 0.3956,
+    "z": 0.1156
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

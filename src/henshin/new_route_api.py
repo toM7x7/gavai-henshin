@@ -98,7 +98,7 @@ _FORGE_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
 _FORGE_TEXTURE_PROVIDER_PROFILE = "nano_banana"
 _FORGE_TEXTURE_MODE = "mesh_uv"
 _FORGE_UV_REFINE = True
-_FORGE_ASSET_CONTRACT = "vrm-base-suit+mesh-v1-overlay"
+_FORGE_ASSET_CONTRACT = "vrm-base-suit+modeler-glb-overlay+mesh-v1-fallback"
 _FORGE_VISUAL_LAYER_CONTRACT = "base-suit-overlay.v1"
 _FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"
 _FORGE_ARMOR_OVERLAY_LAYER_ID = "armor_overlay_parts"
@@ -1016,9 +1016,52 @@ class NewRouteApi:
             if not isinstance(module, dict):
                 continue
             module["enabled"] = part_name in enabled_parts
+            modeler_glb_ref = self._forge_modeler_glb_asset_ref(part_name)
+            if modeler_glb_ref:
+                module["asset_ref"] = modeler_glb_ref
             module.pop("texture_path", None)
+        self._annotate_forge_model_plan_with_runtime_assets(suitspec, enabled_parts)
         self._assert_forge_visible_overlay_modules(modules, enabled_parts)
         return suitspec
+
+    def _forge_modeler_glb_asset_ref(self, part_name: str) -> str | None:
+        module = str(part_name or "").strip()
+        if not module:
+            return None
+        target = self.repo_root / "viewer" / "assets" / "armor-parts" / module / f"{module}.glb"
+        if not target.is_file():
+            return None
+        return self._relative_path(target)
+
+    def _annotate_forge_model_plan_with_runtime_assets(
+        self,
+        suitspec: dict[str, Any],
+        enabled_parts: set[str],
+    ) -> None:
+        generation = suitspec.get("generation")
+        if not isinstance(generation, dict):
+            return
+        model_plan = generation.get("model_plan")
+        if not isinstance(model_plan, dict):
+            return
+        selected = sorted(str(part) for part in enabled_parts if str(part).strip())
+        modeler_glb_parts = [part for part in selected if self._forge_modeler_glb_asset_ref(part)]
+        mesh_v1_fallback_parts = [part for part in selected if part not in modeler_glb_parts]
+        model_plan["asset_contract"] = _FORGE_ASSET_CONTRACT
+        model_plan["runtime_asset_parts"] = {
+            "primary_format": "glb" if modeler_glb_parts else "mesh.v1",
+            "modeler_glb": modeler_glb_parts,
+            "mesh_v1_fallback": mesh_v1_fallback_parts,
+            "selected_count": len(selected),
+            "modeler_glb_count": len(modeler_glb_parts),
+            "fallback_count": len(mesh_v1_fallback_parts),
+        }
+        if modeler_glb_parts and not mesh_v1_fallback_parts:
+            model_plan["mesh_source_status"] = "modeler_glb_available"
+            model_plan["preview_mesh_role"] = "modeler GLB primary; mesh.v1 retained as runtime fallback"
+        elif modeler_glb_parts:
+            model_plan["mesh_source_status"] = "mixed_modeler_glb_and_seed_proxy"
+            model_plan["preview_mesh_role"] = "modeler GLB where delivered; mesh.v1 proxy fallback for missing parts"
 
     def _forge_palette(self, value: Any, fallback: dict[str, Any]) -> dict[str, str]:
         payload = value if isinstance(value, dict) else {}

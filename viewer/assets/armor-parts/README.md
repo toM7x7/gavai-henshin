@@ -12,6 +12,15 @@ viewer/assets/armor-parts/<module>/textures/
 viewer/assets/armor-parts/<module>/preview/<module>.mesh.json
 ```
 
+Do not commit Blender backup files such as `*.blend1`. Optional shared review
+sources can live under `viewer/assets/armor-parts/_masters/`.
+
+Lightweight intake validation:
+
+```bash
+python tools/validate_armor_parts_intake.py
+```
+
 The current runtime still uses `viewer/assets/meshes/*.mesh.json` as the seed/proxy fallback.
 See `docs/modeler-armor-brief.md` and `GET /v1/catalog/part-blueprints` before adding final GLB assets.
 Texture generation for this route is Nano Banana only; do not prepare provider-specific fal/openai texture assumptions for these parts.

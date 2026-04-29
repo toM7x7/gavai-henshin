@@ -1,5 +1,5 @@
 import * as THREE from "../body-fit/vendor/three/build/three.module.js";
-import { loadVrmScene } from "../body-fit/vrm-loader.js";
+import { getGLTFLoaderClass, loadVrmScene } from "../body-fit/vrm-loader.js";
 import {
   VRM_BONE_ALIASES,
   effectiveFitFor,
@@ -532,13 +532,16 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const selectedCount = selectedParts().length;
   const armorParts = stand?.previewStats?.armorParts || records.length || selectedCount;
   const fallbackParts = stand?.previewStats?.fallbackParts || 0;
+  const glbParts = stand?.previewStats?.glbParts || 0;
   const height = Math.round(stand?.heightCm || declaredHeightCm());
   const heightScale = height / DEFAULT_HEIGHT_CM;
   const surface = layerStateForSurface(data, records);
   const modelGate = modelGateStateForPipeline(pipeline);
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
-  const armorDetail = fallbackParts > 0
+  const armorDetail = glbParts > 0
+    ? `${glbParts}パーツは納品GLBを読込中。仮形状はフォールバックとして保持しています。`
+    : fallbackParts > 0
     ? `${fallbackParts}パーツは仮形状。分割位置を先に確認できます。`
     : "人体基準に合わせて、パーツを分けて重ねています。";
 
@@ -1056,6 +1059,47 @@ function addArmorEdges(mesh, palette) {
   mesh.add(seam, glow);
 }
 
+function addArmorEdgesToObject(object, palette) {
+  const meshes = [];
+  object.traverse((child) => {
+    if (child.isMesh && child.geometry) meshes.push(child);
+  });
+  for (const mesh of meshes) {
+    addArmorEdges(mesh, palette);
+  }
+}
+
+function isGltfAsset(path) {
+  return /\.(glb|gltf)$/i.test(String(path || "").split(/[?#]/)[0]);
+}
+
+function adjacentPreviewMeshAsset(asset) {
+  const clean = String(asset || "").replace(/[?#].*$/, "");
+  const match = clean.match(/^(.*)\/([^/]+)\.(?:glb|gltf)$/i);
+  return match ? `${match[1]}/preview/${match[2]}.mesh.json` : null;
+}
+
+function uniquePaths(paths) {
+  const seen = new Set();
+  return paths.filter((path) => {
+    if (!path || seen.has(path)) return false;
+    seen.add(path);
+    return true;
+  });
+}
+
+function meshJsonAssetCandidates(part, asset) {
+  const defaultAsset = normalizePath(`viewer/assets/meshes/${part}.mesh.json`);
+  const candidates = [];
+  if (isGltfAsset(asset)) {
+    candidates.push(adjacentPreviewMeshAsset(asset));
+  } else {
+    candidates.push(asset);
+  }
+  candidates.push(defaultAsset);
+  return uniquePaths(candidates);
+}
+
 function meshGeometryFromPayload(payload) {
   if (!payload || payload.format !== "mesh.v1") {
     throw new Error("Unsupported mesh asset format.");
@@ -1088,6 +1132,103 @@ function meshGeometryFromPayload(payload) {
   }
   geometry.center();
   return geometry;
+}
+
+async function loadMeshJsonGeometry(part, asset) {
+  const errors = [];
+  for (const candidate of meshJsonAssetCandidates(part, asset)) {
+    try {
+      const payload = await fetchJson(candidate);
+      return {
+        geometry: meshGeometryFromPayload(payload),
+        loadedAssetRef: candidate,
+      };
+    } catch (error) {
+      errors.push(`${candidate}: ${String(error?.message || error)}`);
+    }
+  }
+  throw new Error(errors.join(" | ") || "Mesh JSON asset failed.");
+}
+
+async function loadGltf(asset) {
+  const GLTFLoader = await getGLTFLoaderClass();
+  const loader = new GLTFLoader();
+  return new Promise((resolve, reject) => {
+    loader.load(asset, resolve, undefined, reject);
+  });
+}
+
+async function loadGlbArmorObject(asset, part) {
+  const gltf = await loadGltf(asset);
+  const model = gltf?.scene || gltf?.scenes?.[0] || null;
+  if (!model) {
+    throw new Error("GLB asset has no renderable scene.");
+  }
+
+  const root = new THREE.Group();
+  root.name = `${part}-glb-root`;
+  root.add(model);
+  root.updateMatrixWorld(true);
+
+  const meshes = [];
+  root.traverse((child) => {
+    if (!child.isMesh || !child.geometry) return;
+    meshes.push(child);
+    child.renderOrder = 4;
+    if (!child.geometry.getAttribute("normal")) {
+      child.geometry.computeVertexNormals();
+    }
+  });
+  if (!meshes.length) {
+    throw new Error("GLB asset has no renderable meshes.");
+  }
+
+  const box = new THREE.Box3().setFromObject(root);
+  if (box.isEmpty()) {
+    throw new Error("GLB asset bounds are empty.");
+  }
+  const size = box.getSize(new THREE.Vector3());
+  if (Math.max(size.x, size.y, size.z) < MIN_RENDERABLE_MESH_SIZE) {
+    throw new Error("GLB asset bounds are empty.");
+  }
+
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.sub(center);
+  root.updateMatrixWorld(true);
+
+  const centeredBox = new THREE.Box3().setFromObject(root);
+  const sourceSize = centeredBox.getSize(new THREE.Vector3());
+  return { object: root, sourceSize };
+}
+
+function applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture) {
+  const next = material?.clone?.() || new THREE.MeshStandardMaterial();
+  const surfaceTexture = texture || mockSurfaceTexture;
+  if (!surfaceTexture) return next;
+  next.map = surfaceTexture;
+  next.color?.setHex?.(0xffffff);
+  if (mockSurfaceTexture) {
+    next.emissiveMap = mockSurfaceTexture;
+  }
+  if (typeof next.emissiveIntensity === "number") {
+    next.emissiveIntensity *= texture ? 0.72 : 0.62;
+  }
+  next.needsUpdate = true;
+  return next;
+}
+
+function applyArmorSurfaceToObject(object, part, palette, texture, mockSurfaceTexture) {
+  object.traverse((child) => {
+    if (!child.isMesh) return;
+    child.renderOrder = 4;
+    if (!child.material) {
+      child.material = materialForPart(part, palette);
+    }
+    if (!texture && !mockSurfaceTexture) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    const nextMaterials = materials.map((material) => applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture));
+    child.material = Array.isArray(child.material) ? nextMaterials : nextMaterials[0];
+  });
 }
 
 function createFallbackArmorGeometry(part) {
@@ -1175,38 +1316,68 @@ function createArmorAttachmentShellMesh(part, module, palette) {
 
 async function createArmorMesh(part, module, palette, surfacePlan = null) {
   const asset = normalizePath(module?.asset_ref || `viewer/assets/meshes/${part}.mesh.json`);
+  const isGlbAsset = isGltfAsset(asset);
   let geometry;
+  let object = null;
+  let sourceSize = null;
   let meshSource = "mesh_asset";
   let meshError = "";
-  try {
-    const payload = await fetchJson(asset);
-    geometry = meshGeometryFromPayload(payload);
-  } catch (error) {
-    meshSource = FALLBACK_MESH_SOURCE;
-    meshError = String(error?.message || error);
-    console.warn(`armor mesh fallback for ${part}: ${meshError}`);
-    geometry = createFallbackArmorGeometry(part);
+  let loadedAssetRef = asset;
+  if (isGlbAsset) {
+    try {
+      const result = await loadGlbArmorObject(asset, part);
+      object = result.object;
+      sourceSize = result.sourceSize;
+      meshSource = "glb_asset";
+    } catch (error) {
+      meshError = `GLB: ${String(error?.message || error)}`;
+      console.warn(`armor GLB fallback for ${part}: ${meshError}`);
+    }
   }
-  const sourceSize = new THREE.Vector3();
-  geometry.computeBoundingBox();
-  geometry.boundingBox.getSize(sourceSize);
-  const material = materialForPart(part, palette);
+
+  try {
+    if (!object) {
+      const result = await loadMeshJsonGeometry(part, asset);
+      geometry = result.geometry;
+      loadedAssetRef = result.loadedAssetRef;
+      meshSource = "mesh_asset";
+    }
+  } catch (jsonError) {
+    if (!object) {
+      meshSource = FALLBACK_MESH_SOURCE;
+      meshError = [meshError, `Mesh JSON: ${String(jsonError?.message || jsonError)}`].filter(Boolean).join("; ");
+      console.warn(`armor mesh fallback for ${part}: ${meshError}`);
+      geometry = createFallbackArmorGeometry(part);
+      loadedAssetRef = null;
+    }
+  }
+  if (!sourceSize) {
+    sourceSize = new THREE.Vector3();
+    geometry.computeBoundingBox();
+    geometry.boundingBox.getSize(sourceSize);
+  }
+  const material = object ? null : materialForPart(part, palette);
   const texture = await loadTextureMap(module?.texture_path);
   let mockSurfaceTexture = null;
-  if (texture) {
+  if (texture && !object) {
     material.map = texture;
     material.color.setHex(0xffffff);
     material.emissiveIntensity *= 0.72;
     material.needsUpdate = true;
   } else if (!module?.texture_path && surfacePlan?.contract_version) {
     mockSurfaceTexture = createArmorMockSurfaceTexture(part, palette, surfacePlan);
-    material.map = mockSurfaceTexture;
-    material.color.setHex(0xffffff);
-    material.emissiveMap = mockSurfaceTexture;
-    material.emissiveIntensity *= 0.62;
-    material.needsUpdate = true;
+    if (!object) {
+      material.map = mockSurfaceTexture;
+      material.color.setHex(0xffffff);
+      material.emissiveMap = mockSurfaceTexture;
+      material.emissiveIntensity *= 0.62;
+      material.needsUpdate = true;
+    }
   }
-  const mesh = new THREE.Mesh(geometry, material);
+  const mesh = object || new THREE.Mesh(geometry, material);
+  if (object) {
+    applyArmorSurfaceToObject(object, part, palette, texture, mockSurfaceTexture);
+  }
   mesh.name = part;
   mesh.renderOrder = 4;
   mesh.userData.sourceSize = sourceSize;
@@ -1217,8 +1388,10 @@ async function createArmorMesh(part, module, palette, surfacePlan = null) {
   mesh.userData.surfacePlanContract = mockSurfaceTexture?.userData?.surfacePlanContract || null;
   mesh.userData.meshSource = meshSource;
   mesh.userData.assetRef = asset;
+  mesh.userData.loadedAssetRef = loadedAssetRef;
   mesh.userData.meshError = meshError;
-  addArmorEdges(mesh, palette);
+  if (object) addArmorEdgesToObject(mesh, palette);
+  else addArmorEdges(mesh, palette);
   return mesh;
 }
 
@@ -1254,6 +1427,7 @@ class ArmorStand {
     this.dragState = null;
     this.previewStats = {
       armorParts: 0,
+      glbParts: 0,
       fallbackParts: 0,
       texturedParts: 0,
       textureFailedParts: 0,
@@ -1289,6 +1463,7 @@ class ArmorStand {
     if (!this.canvas) return;
     this.previewStats.baseSuitVisible = Boolean(this.vrmModel || this.ghostGroup?.visible);
     this.canvas.dataset.previewArmorParts = String(this.previewStats.armorParts);
+    this.canvas.dataset.previewGlbParts = String(this.previewStats.glbParts || 0);
     this.canvas.dataset.previewFallbackParts = String(this.previewStats.fallbackParts);
     this.canvas.dataset.previewTexturedParts = String(this.previewStats.texturedParts);
     this.canvas.dataset.previewTextureFailedParts = String(this.previewStats.textureFailedParts || 0);
@@ -1925,6 +2100,7 @@ class ArmorStand {
       this.group.add(mesh);
     }
     this.previewStats.armorParts = meshes.length;
+    this.previewStats.glbParts = meshes.filter((mesh) => mesh.userData.meshSource === "glb_asset").length;
     this.previewStats.fallbackParts = meshes.filter((mesh) => mesh.userData.meshSource === FALLBACK_MESH_SOURCE).length;
     this.previewStats.texturedParts = meshes.filter((mesh) => mesh.userData.textureLoaded).length;
     this.previewStats.textureFailedParts = meshes.filter((mesh) => mesh.userData.textureLoadFailed).length;

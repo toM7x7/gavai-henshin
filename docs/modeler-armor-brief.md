@@ -2,6 +2,15 @@
 
 Updated: 2026-04-29
 
+## Intake validation note
+
+- Final delivered GLBs live at `viewer/assets/armor-parts/<module>/<module>.glb`.
+- Modeler sidecars live at `viewer/assets/armor-parts/<module>/<module>.modeler.json`.
+- Blender source files live at `viewer/assets/armor-parts/<module>/source/<module>.blend`.
+- Do not store Blender backup files such as `*.blend1` in the handoff tree.
+- Optional shared review masters can live under `viewer/assets/armor-parts/_masters/`.
+- Run `python tools/validate_armor_parts_intake.py` before treating a delivery as formally staged.
+
 ## モデラーさんへ渡す最小情報
 
 - 依頼対象: Web Forgeの水色プロキシを置き換える外装GLBパーツです。

@@ -1,0 +1,64 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "helmet",
+  "part_id": "viewer.mesh.helmet.v1",
+  "category": "head",
+  "bbox_m": {
+    "x": 0.25090399384498596,
+    "y": 0.30959999561309814,
+    "z": 0.16995754837989807,
+    "size": [
+      0.25090399384498596,
+      0.30959999561309814,
+      0.16995754837989807
+    ],
+    "dimensions": [
+      0.25090399384498596,
+      0.30959999561309814,
+      0.16995754837989807
+    ]
+  },
+  "triangle_count": 540,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "emissive",
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "head",
+    "offset_m": [
+      0,
+      0.08,
+      0.12
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "head",
+      "neck",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 540,
+  "target_envelope_m": {
+    "x": 0.2856,
+    "y": 0.34,
+    "z": 0.2584
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

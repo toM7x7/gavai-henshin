@@ -1,0 +1,63 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "left_shoulder",
+  "part_id": "viewer.mesh.left_shoulder.v1",
+  "category": "shoulder",
+  "bbox_m": {
+    "x": 0.143422469496727,
+    "y": 0.09705688059329987,
+    "z": 0.08510898984968662,
+    "size": [
+      0.143422469496727,
+      0.09705688059329987,
+      0.08510898984968662
+    ],
+    "dimensions": [
+      0.143422469496727,
+      0.09705688059329987,
+      0.08510898984968662
+    ]
+  },
+  "triangle_count": 452,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "right_shoulder",
+  "vrm_attachment": {
+    "primary_bone": "leftShoulder",
+    "offset_m": [
+      0.02,
+      0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "leftShoulder",
+      "leftUpperArm",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 452,
+  "target_envelope_m": {
+    "x": 0.1904,
+    "y": 0.1224,
+    "z": 0.1632
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+}

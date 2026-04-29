@@ -2,16 +2,9 @@
 
 Updated: 2026-04-30
 
-## まず見る場所
+## 現状の格納場所
 
-- 依頼メモ: `docs/modeler-armor-brief.md`
-- 詳細な設計図API: `GET /v1/catalog/part-blueprints`
-- 設計図生成コード: `src/henshin/modeler_blueprints.py`
-- 受け入れチェック: `python tools/validate_armor_parts_intake.py`
-
-## 格納場所
-
-モデルは次の形で格納します。
+装甲パーツは次の形で格納します。
 
 ```text
 viewer/assets/armor-parts/<module>/
@@ -23,72 +16,57 @@ viewer/assets/armor-parts/<module>/
 ```
 
 例: ヘルメットは `viewer/assets/armor-parts/helmet/helmet.glb` に置きます。
+Blenderのバックアップファイル（`*.blend1` など）は格納しません。
 
-`*.blend1` などのBlenderバックアップファイルは格納しません。共有レビュー用のマスターは `viewer/assets/armor-parts/_masters/` に置けます。
+## いま見えている問題
 
-## 体験上の前提
+最新のWeb Forgeでは `modeler_glb_available` として12/12パーツがロード済みです。
+ただし見た目は半透明プロキシが主役で、まだ「ヒーロースーツを着ている」状態に見えません。
 
-ロアの導線は固定です。
+特に直したい見え方:
 
-```text
-Webでスーツ成立 -> Questで変身試験 -> Replayで体験を残す
+- 透明箱: 胸・腰まわりの検査用ボックスが最終形に見える。
+- 胴体箱: 胸装甲が人体の胸郭を包まず、四角い箱として読める。
+- 肩: 肩パーツが肩球の上に乗っている小物に見え、胸/背中へ差し込まれていない。
+- 腰: ベルトが骨盤に巻き付かず、浮いた輪に見える。
+- 足元: 靴底の接地とすね-ブーツ接続が弱く、装着感が崩れる。
+- 全体: パーツがVRM表面に沿う外装ではなく、人体の前に重ねた透明ガイドに見える。
+
+## Wave 1優先
+
+Wave 1は「Webプレビュー正面でヒーロースーツとして成立するか」を最優先にします。
+テクスチャや発光ラインより先に、シルエット、接地、人体への装着感を直してください。
+表面テクスチャ生成はNanobanana前提です。GLB側はUV0と `base_surface`, `accent`, `emissive`, `trim` の意図が読める状態にしてください。
+
+| 優先 | module | 直しポイント |
+|---|---|---|
+| P0 | chest | 透明な胴体箱をやめ、胸郭を包む曲面胸装甲にする。腹側の箱エッジを消す。 |
+| P0 | back | 板箱ではなく、肩甲骨から腰へ流れる背面装甲にする。胸装甲と側面でつながる厚みを持たせる。 |
+| P0 | waist | 腰に浮いた輪ではなく、骨盤へ巻き付くベルトにする。胸装甲と脚の間の隙間を隠す。 |
+| P0 | left_shoulder / right_shoulder | 肩球に乗る小物ではなく、三角筋を覆う肩アーマーにする。胸/背中側へ薄く差し込むリップを作る。 |
+| P1 | left_upperarm / right_upperarm | 棒状プロキシではなく、腕に沿う分割外装にする。肩と前腕の隙間を小さく保つ。 |
+| P1 | left_forearm / right_forearm | 円筒ガイドに見せず、手首側へ細くなる前腕装甲にする。 |
+| P0 visual blocker | left_boot / right_boot | Wave 2制作対象でも、Webの第一印象を壊すため足元の接地感は先に確認する。靴底を床面に揃える。 |
+| P1 visual blocker | left_shin / right_shin | ブーツとの継ぎ目を受ける下端形状にし、脚の透明プロキシを主役にしない。 |
+
+## Webプレビューで検収する観点
+
+正面、側面、回転で次を確認します。
+
+- 胸/背中/腰が一体の外装として人体を包んでいる。
+- 肩が胸・背中側へ接続され、浮いて見えない。
+- 腰ベルトが骨盤に巻き付いていて、前後左右の高さが破綻しない。
+- 足元が床に接地し、すね装甲とブーツの継ぎ目が読める。
+- 半透明プロキシやbboxが見た目の主役になっていない。
+- 左右ペアの寸法差が意図しない差に見えない。
+
+## 格納後の確認コマンド
+
+```bash
+python tools/validate_armor_parts_intake.py
+python tools/audit_armor_part_fit_handoff.py --format markdown --output docs/armor-part-fit-modeler-requests.md
 ```
 
-Web Forgeでは、VRM人体の表面を「基礎スーツ」として扱い、その上に分割した硬質装甲パーツを載せます。青い透明ボックスは最終デザインではなく、位置・大きさ・分割の確認用プロキシです。
-
-## 制作ルール
-
-- ランタイム形式は `glTF 2.0 GLB` を基本にします。
-- 単位はメートル相当です。Web Forgeの170cm基準VRMに合わせます。
-- transformは適用済みにし、見えないDCCオフセットを残さないでください。
-- pivotはパーツ中心を基準にし、Quest/Web側で骨や装着スロットに載せ替えやすくします。
-- UV0は必須です。Base ColorとEmissive Maskを貼れる状態にします。
-- テクスチャ生成はNanobananaのみを使います。
-- `base_surface`, `accent`, `emissive`, `trim` の材料スロットが分かる構成にします。
-- パーツはVRM体表にめり込ませず、少し浮いた硬質装甲として見えるようにします。
-
-## 優先Wave
-
-| Wave | 優先パーツ | 目的 |
-|---|---|---|
-| Wave 1 | chest, back, waist, shoulder, upperarm, forearm | 胴体から腕のヒーローシルエットを成立させる |
-| Wave 2 | thigh, shin, boot | 下半身と接地感を整える |
-| Wave 3 | helmet, hand | 顔まわり、手元、展示映えを詰める |
-
-## パーツ一覧
-
-| module | 日本語 | 種別 | 左右 | 目安寸法 x/y/z m |
-|---|---|---|---|---|
-| helmet | ヘルメット | head | center | 0.286 / 0.340 / 0.258 |
-| chest | 胸部装甲 | torso | center | 0.639 / 0.499 / 0.163 |
-| back | 背面ユニット | dorsal | center | 0.598 / 0.515 / 0.136 |
-| waist | ベルト | waist | center | 0.490 / 0.172 / 0.190 |
-| left_shoulder | 左肩 | shoulder | left | 0.190 / 0.122 / 0.163 |
-| right_shoulder | 右肩 | shoulder | right | 0.190 / 0.122 / 0.163 |
-| left_upperarm | 左上腕 | arm | left | 0.109 / 0.292 / 0.109 |
-| right_upperarm | 右上腕 | arm | right | 0.109 / 0.292 / 0.109 |
-| left_forearm | 左腕甲 | arm | left | 0.102 / 0.279 / 0.102 |
-| right_forearm | 右腕甲 | arm | right | 0.102 / 0.279 / 0.102 |
-| left_hand | 左手甲 | hand | left | 0.116 / 0.082 / 0.136 |
-| right_hand | 右手甲 | hand | right | 0.116 / 0.082 / 0.136 |
-| left_thigh | 左太腿 | leg | left | 0.136 / 0.396 / 0.129 |
-| right_thigh | 右太腿 | leg | right | 0.136 / 0.396 / 0.129 |
-| left_shin | 左すね | leg | left | 0.116 / 0.396 / 0.116 |
-| right_shin | 右すね | leg | right | 0.116 / 0.396 / 0.116 |
-| left_boot | 左ブーツ | foot | left | 0.122 / 0.088 / 0.286 |
-| right_boot | 右ブーツ | foot | right | 0.122 / 0.088 / 0.286 |
-
-## 納品チェック
-
-1. 正面、側面、背面、斜めの確認画像がある。
-2. 左右ペアの寸法差が3%以内に収まっている。
-3. VRM人体にめり込まず、少し浮いた外装として見える。
-4. UV0が重なっていない。
-5. `base_surface`, `accent`, `emissive`, `trim` の材料意図が分かる。
-6. 明るめの特撮ヒーローとして読みやすく、暗すぎたり武器的すぎたりしない。
-
-## 現時点の注意
-
-現在のWebプレビューは、最終モデルの完成見本ではありません。人体表面の基礎スーツ、GLB外装パーツ、Nanobanana表面生成を接続するための開発プレビューです。
-
-胸・背中・腰の箱状プロキシは最終形ではなく、Wave 1で人体に沿う板・背面ユニット・ベルトへ置き換える対象です。テクスチャを詰める前に、まず形状のフィット品質を上げます。
+修正依頼の詳細は `docs/armor-part-fit-modeler-requests.md` を更新してモデラーさんに渡します。
+Wave 1だけを短く依頼する場合は `docs/modeler-wave1-checklist.md` を使います。
+必要な設計図データは `GET /v1/catalog/part-blueprints` でも確認できます。

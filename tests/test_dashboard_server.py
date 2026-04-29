@@ -242,7 +242,7 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("baseSuitMaterialKey", js)
         self.assertIn("getBaseSuitMaterial", js)
         self.assertIn("originalMaterials.forEach", js)
-        self.assertIn("SuitSpec texture_path is unchanged", js)
+        self.assertIn("SuitSpec texture_pathは未変更", js)
         self.assertIn("/v1/catalog/part-blueprints", Path("src/henshin/new_route_api.py").read_text(encoding="utf-8"))
         modeler_brief = Path("docs/modeler-armor-brief.md").read_text(encoding="utf-8")
         self.assertIn("viewer/assets/armor-parts/<module>/", modeler_brief)
@@ -508,9 +508,22 @@ class TestDashboardServer(unittest.TestCase):
             "mesh.userData.armorPart = true;",
             "mesh.userData.attachmentPreviewShell = true;",
             'mesh.userData.meshSource = "attachment_preview_shell";',
-            "addArmorEdges(mesh, palette);",
+            'mesh.userData.previewPriority = "auxiliary_proxy";',
         }:
             self.assertIn(token, shell_block)
+        self.assertRegex(shell_block, r"glowDepthTest:\s*true")
+        self.assertRegex(shell_block, r"glowRenderOrder:\s*4\.7")
+        demote_block = js[
+            js.index("function demoteAttachmentPreviewShell") : js.index("\n\nasync function createArmorMesh")
+        ]
+        for token in {
+            'shell.userData.previewPriority = "post_load_hidden_guide";',
+            "shell.visible = false;",
+            "material.opacity = 0.018;",
+            "material.wireframe = true;",
+            "object.material.opacity = Math.min(numberOr(object.material.opacity, 0.08), 0.08);",
+        }:
+            self.assertIn(token, demote_block)
 
         base_surface_block = js[js.index("  refreshBaseSuitSurface(") : js.index("\n\n  prepareVrmMannequin")]
         for token in {
@@ -529,9 +542,13 @@ class TestDashboardServer(unittest.TestCase):
             "this.refreshBaseSuitSurface(palette);",
             "const shells = records.map(([part, module]) => createArmorAttachmentShellMesh(part, module, palette));",
             "this.group.add(shell);",
-            "const meshes = await mapWithConcurrency(",
+            "let meshes = [];",
+            "try {",
+            "meshes = await mapWithConcurrency(",
             "([part, module]) => createArmorMesh(part, module, palette, surfacePlan),",
             "this.group.add(mesh);",
+            "} finally {",
+            "shells.forEach((shell) => demoteAttachmentPreviewShell(shell));",
             "this.previewStats.armorParts = meshes.length;",
             "this.publishPreviewStats();",
         ]

@@ -39,6 +39,7 @@ const BODY_REFERENCE_COLOR = 0xe6c7a6;
 const BODY_REFERENCE_EMISSIVE = 0x2a1710;
 const BASE_SUIT_COLOR = 0x52777e;
 const BASE_SUIT_EMISSIVE = 0x10292c;
+const ARMOR_PREVIEW_RED = 0xd93632;
 const PREVIEW_FLOOR_Y = -0.43;
 const FALLBACK_MESH_SOURCE = "seed_proxy_fallback";
 const MIN_RENDERABLE_MESH_SIZE = 0.002;
@@ -388,7 +389,7 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
     return {
       state: "ready",
       title: `${texturedCount}パーツ反映`,
-      detail: "生成済みテクスチャをプレビューに重ねています。",
+      detail: "Nanobanana生成済みテクスチャをプレビューに重ねています。",
     };
   }
   if (textureFailedCount > 0) {
@@ -401,22 +402,22 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
   if (mockTexturedCount > 0) {
     return {
       state: "ready",
-      title: `Mock ${mockTexturedCount} parts`,
-      detail: "Preview-only mock surface maps are attached. SuitSpec texture_path is unchanged.",
+      title: `プレビュー表面 ${mockTexturedCount}パーツ`,
+      detail: "Nanobanana本番生成前の仮表面です。SuitSpec texture_pathは未変更です。",
     };
   }
   if (UI.textureJobPanel?.classList.contains("running")) {
     return {
       state: "running",
       title: "生成中",
-      detail: "表面テクスチャを作成しています。",
+      detail: "Nanobananaで表面テクスチャを作成しています。",
     };
   }
   if (UI.textureJobPanel?.classList.contains("complete")) {
     return {
       state: "ready",
       title: "生成完了",
-      detail: "表面を再読み込みしてプレビューへ反映します。",
+      detail: "生成済み表面を再読み込みしてプレビューへ反映します。",
     };
   }
   if (canRun) {
@@ -541,7 +542,7 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
   const armorDetail = glbParts > 0
-    ? `${glbParts}パーツは納品GLBを読込中。仮形状はフォールバックとして保持しています。`
+    ? `${glbParts}パーツは納品GLBを主表示。寸法ガイドは読み込み後に隠します。`
     : fallbackParts > 0
     ? `${fallbackParts}パーツは仮形状。分割位置を先に確認できます。`
     : "人体基準に合わせて、パーツを分けて重ねています。";
@@ -636,6 +637,7 @@ function renderAssetPipeline(data = null) {
   const selectedCount = selectedParts().length;
   const armorParts = armorStand?.previewStats?.armorParts || records.length || selectedCount;
   const fallbackParts = armorStand?.previewStats?.fallbackParts || 0;
+  const glbParts = armorStand?.previewStats?.glbParts || 0;
   const surface = layerStateForSurface(data, records);
   const baseReady = armorStand?.previewStats?.baseSuitVisible !== false;
   const hasGeneratedPreview = Boolean(data);
@@ -655,6 +657,16 @@ function renderAssetPipeline(data = null) {
   UI.assetPipeline.dataset.pipelineContract = `model ${modelStatus} / ${fitStatus} / ${provider} / ${mode} / ${status} / ${meshStatus} / ${probeStatus}`;
   if (UI.proxyWarning) {
     UI.proxyWarning.dataset.previewRole = "proxy_envelope_only";
+    UI.proxyWarning.classList.toggle("is-auxiliary", hasGeneratedPreview && glbParts > 0 && fallbackParts === 0);
+    const title = UI.proxyWarning.querySelector("strong");
+    const detail = UI.proxyWarning.querySelector("span");
+    if (hasGeneratedPreview && glbParts > 0 && fallbackParts === 0) {
+      if (title) title.textContent = "納品GLB主表示";
+      if (detail) detail.textContent = "寸法ガイドは補助扱いです。形状修正はモデラー向けWave 1仕様に反映します。";
+    } else {
+      if (title) title.textContent = "仮プロキシ";
+      if (detail) detail.textContent = "半透明の箱/筒は発注対象外。現在の生成結果内の設計図寸法を正本にします。";
+    }
   }
 
   UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
@@ -669,7 +681,7 @@ function renderAssetPipeline(data = null) {
   UI.assetPipelineTitle.textContent = `基礎スーツ + 装甲${armorParts}パーツ`;
   UI.assetPipelineDetail.textContent = [
     `基礎スーツ層: ${baseReady ? "表示中" : "待機中"}`,
-    `装甲パーツ層: ${fallbackParts > 0 ? `仮プロキシ${fallbackParts}パーツ含む` : "分割配置済み"}`,
+    `装甲パーツ層: ${fallbackParts > 0 ? `仮プロキシ${fallbackParts}パーツ含む` : glbParts > 0 ? `納品GLB主表示 ${glbParts}パーツ` : "分割配置済み"}`,
     `モデルGate: ${modelGate.title}`,
     `表面: ${surface.title} / ${provider}`,
   ].join(" / ");
@@ -1100,35 +1112,74 @@ function createArmorMockSurfaceTexture(part, palette = {}, surfacePlan = {}) {
   return texture;
 }
 
-function materialForPart(part, palette) {
+function armorPreviewColorForPart(part, palette) {
   const primary = new THREE.Color(palette?.primary || "#F4F1E8");
   const secondary = new THREE.Color(palette?.secondary || "#8C96A3");
-  const emissive = new THREE.Color(palette?.emissive || "#43D8FF");
-  const color = secondary.clone().lerp(primary, part === "helmet" ? 0.16 : 0.06);
-  return new THREE.MeshStandardMaterial({
-    color,
-    emissive,
-    emissiveIntensity: part === "chest" || part === "helmet" ? 0.48 : 0.3,
-    metalness: 0.34,
-    roughness: 0.34,
-    side: THREE.DoubleSide,
-  });
+  const heroRed = new THREE.Color(ARMOR_PREVIEW_RED);
+  const redWeight = part === "helmet" || part === "chest" || part === "back" ? 0.14 : 0.08;
+  return secondary.clone().lerp(primary, 0.18).lerp(heroRed, redWeight);
 }
 
-function addArmorEdges(mesh, palette) {
+function finishArmorPreviewMaterial(material, part, palette, options = {}) {
+  const emissive = new THREE.Color(palette?.emissive || "#43D8FF");
+  if (options.surfaceTexture) {
+    material.color?.setHex?.(0xffffff);
+  } else {
+    material.color?.copy?.(armorPreviewColorForPart(part, palette));
+  }
+  material.emissive?.copy?.(emissive);
+  material.emissiveIntensity = Math.max(
+    numberOr(material.emissiveIntensity, 0),
+    part === "chest" || part === "helmet" ? 0.46 : 0.28,
+  );
+  if ("metalness" in material) material.metalness = Math.max(numberOr(material.metalness, 0), 0.34);
+  if ("roughness" in material) material.roughness = clamp(numberOr(material.roughness, 0.34), 0.28, 0.48);
+  material.transparent = false;
+  material.opacity = 1;
+  material.depthWrite = true;
+  material.depthTest = true;
+  material.side = THREE.DoubleSide;
+  material.needsUpdate = true;
+  return material;
+}
+
+function materialForPart(part, palette) {
+  return finishArmorPreviewMaterial(
+    new THREE.MeshStandardMaterial({
+      name: `armor-preview-material:${part}`,
+      metalness: 0.36,
+      roughness: 0.34,
+      side: THREE.DoubleSide,
+    }),
+    part,
+    palette,
+  );
+}
+
+function addArmorEdges(mesh, palette, options = {}) {
   const color = new THREE.Color(palette?.emissive || "#43D8FF");
   const seam = new THREE.LineSegments(
     new THREE.EdgesGeometry(mesh.geometry, 28),
-    new THREE.LineBasicMaterial({ color: 0x1d2a28, transparent: true, opacity: 0.44 }),
+    new THREE.LineBasicMaterial({
+      color: 0x1d2a28,
+      transparent: true,
+      opacity: numberOr(options.seamOpacity, 0.44),
+      depthTest: options.seamDepthTest ?? true,
+    }),
   );
   seam.name = `${mesh.name}-part-seams`;
-  seam.renderOrder = 6;
+  seam.renderOrder = numberOr(options.seamRenderOrder, 6);
   const glow = new THREE.LineSegments(
     new THREE.EdgesGeometry(mesh.geometry, 28),
-    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.86, depthTest: false }),
+    new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: numberOr(options.glowOpacity, 0.86),
+      depthTest: options.glowDepthTest ?? false,
+    }),
   );
   glow.name = `${mesh.name}-surface-lines`;
-  glow.renderOrder = 10;
+  glow.renderOrder = numberOr(options.glowRenderOrder, 10);
   mesh.add(seam, glow);
 }
 
@@ -1292,6 +1343,10 @@ function applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture) {
   if (typeof next.emissiveIntensity === "number") {
     next.emissiveIntensity *= texture ? 0.72 : 0.62;
   }
+  next.transparent = false;
+  next.opacity = 1;
+  next.depthWrite = true;
+  next.depthTest = true;
   next.needsUpdate = true;
   return next;
 }
@@ -1299,13 +1354,20 @@ function applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture) {
 function applyArmorSurfaceToObject(object, part, palette, texture, mockSurfaceTexture) {
   object.traverse((child) => {
     if (!child.isMesh) return;
-    child.renderOrder = 4;
+    child.renderOrder = 7;
     if (!child.material) {
       child.material = materialForPart(part, palette);
     }
-    if (!texture && !mockSurfaceTexture) return;
     const materials = Array.isArray(child.material) ? child.material : [child.material];
-    const nextMaterials = materials.map((material) => applySurfaceTextureToMaterial(material, texture, mockSurfaceTexture));
+    const nextMaterials = materials.map((material) => {
+      const previewMaterial = finishArmorPreviewMaterial(
+        material?.clone?.() || new THREE.MeshStandardMaterial(),
+        part,
+        palette,
+        { surfaceTexture: Boolean(texture || mockSurfaceTexture || material?.map) },
+      );
+      return applySurfaceTextureToMaterial(previewMaterial, texture, mockSurfaceTexture);
+    });
     child.material = Array.isArray(child.material) ? nextMaterials : nextMaterials[0];
   });
 }
@@ -1358,17 +1420,17 @@ function createFallbackArmorGeometry(part) {
 }
 
 function createArmorShellMaterial(part, palette) {
-  const secondary = new THREE.Color(palette?.secondary || "#8C96A3");
+  const secondary = new THREE.Color(palette?.secondary || "#8C96A3").lerp(new THREE.Color(0xffffff), 0.32);
   const emissive = new THREE.Color(palette?.emissive || "#43D8FF");
   return new THREE.MeshStandardMaterial({
     name: "armor-attachment-preview-shell-material",
     color: secondary,
     emissive,
-    emissiveIntensity: part === "helmet" || part === "chest" ? 0.52 : 0.34,
-    metalness: 0.18,
-    roughness: 0.38,
+    emissiveIntensity: part === "helmet" || part === "chest" ? 0.14 : 0.08,
+    metalness: 0.04,
+    roughness: 0.68,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.08,
     depthWrite: false,
     depthTest: true,
     side: THREE.DoubleSide,
@@ -1389,8 +1451,42 @@ function createArmorAttachmentShellMesh(part, module, palette) {
   mesh.userData.texturePath = null;
   mesh.userData.meshSource = "attachment_preview_shell";
   mesh.userData.previewRole = "proxy_envelope_only";
-  addArmorEdges(mesh, palette);
+  mesh.userData.previewPriority = "auxiliary_proxy";
+  addArmorEdges(mesh, palette, {
+    seamOpacity: 0.08,
+    glowOpacity: 0.16,
+    glowDepthTest: true,
+    seamRenderOrder: 4.6,
+    glowRenderOrder: 4.7,
+  });
   return mesh;
+}
+
+function demoteAttachmentPreviewShell(shell) {
+  shell.userData.previewPriority = "post_load_hidden_guide";
+  shell.visible = false;
+  shell.renderOrder = 4.4;
+  shell.traverse((object) => {
+    if (object.isMesh && object.material) {
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        material.transparent = true;
+        material.opacity = 0.018;
+        material.depthWrite = false;
+        material.depthTest = true;
+        material.wireframe = true;
+        material.needsUpdate = true;
+      }
+      object.renderOrder = 4.4;
+      return;
+    }
+    if (object.isLineSegments && object.material) {
+      object.material.opacity = Math.min(numberOr(object.material.opacity, 0.08), 0.08);
+      object.material.depthTest = true;
+      object.material.needsUpdate = true;
+      object.renderOrder = 4.5;
+    }
+  });
 }
 
 async function createArmorMesh(part, module, palette, surfacePlan = null) {
@@ -1440,14 +1536,14 @@ async function createArmorMesh(part, module, palette, surfacePlan = null) {
   let mockSurfaceTexture = null;
   if (texture && !object) {
     material.map = texture;
-    material.color.setHex(0xffffff);
+    finishArmorPreviewMaterial(material, part, palette, { surfaceTexture: true });
     material.emissiveIntensity *= 0.72;
     material.needsUpdate = true;
   } else if (!module?.texture_path && surfacePlan?.contract_version) {
     mockSurfaceTexture = createArmorMockSurfaceTexture(part, palette, surfacePlan);
     if (!object) {
       material.map = mockSurfaceTexture;
-      material.color.setHex(0xffffff);
+      finishArmorPreviewMaterial(material, part, palette, { surfaceTexture: true });
       material.emissiveMap = mockSurfaceTexture;
       material.emissiveIntensity *= 0.62;
       material.needsUpdate = true;
@@ -1458,7 +1554,7 @@ async function createArmorMesh(part, module, palette, surfacePlan = null) {
     applyArmorSurfaceToObject(object, part, palette, texture, mockSurfaceTexture);
   }
   mesh.name = part;
-  mesh.renderOrder = 4;
+  mesh.renderOrder = 7;
   mesh.userData.sourceSize = sourceSize;
   mesh.userData.texturePath = module?.texture_path || null;
   mesh.userData.textureLoaded = Boolean(texture);
@@ -2169,25 +2265,30 @@ class ArmorStand {
       this.applyPreviewPose(shell, part, module);
       this.group.add(shell);
     }
-    const meshes = await mapWithConcurrency(
-      records,
-      ARMOR_ASSET_LOAD_CONCURRENCY,
-      ([part, module]) => createArmorMesh(part, module, palette, surfacePlan),
-      ({ done, total }) => {
-        this.previewStats.assetLoadDone = done;
-        this.previewStats.assetLoadTotal = total;
-        setStatus(`装甲アセット読込中... ${done}/${total}`, "pending");
-        this.publishPreviewStats();
-        updatePreviewLayerPanel(suitspec);
-      },
-    );
-    for (let index = 0; index < meshes.length; index += 1) {
-      const [part, module] = records[index];
-      const mesh = meshes[index];
-      this.applyPreviewPose(mesh, part, module);
-      mesh.userData.armorPart = true;
-      mesh.renderOrder = 6;
-      this.group.add(mesh);
+    let meshes = [];
+    try {
+      meshes = await mapWithConcurrency(
+        records,
+        ARMOR_ASSET_LOAD_CONCURRENCY,
+        ([part, module]) => createArmorMesh(part, module, palette, surfacePlan),
+        ({ done, total }) => {
+          this.previewStats.assetLoadDone = done;
+          this.previewStats.assetLoadTotal = total;
+          setStatus(`装甲アセット読込中... ${done}/${total}`, "pending");
+          this.publishPreviewStats();
+          updatePreviewLayerPanel(suitspec);
+        },
+      );
+      for (let index = 0; index < meshes.length; index += 1) {
+        const [part, module] = records[index];
+        const mesh = meshes[index];
+        this.applyPreviewPose(mesh, part, module);
+        mesh.userData.armorPart = true;
+        mesh.renderOrder = 7;
+        this.group.add(mesh);
+      }
+    } finally {
+      shells.forEach((shell) => demoteAttachmentPreviewShell(shell));
     }
     this.previewStats.armorParts = meshes.length;
     this.previewStats.glbParts = meshes.filter((mesh) => mesh.userData.meshSource === "glb_asset").length;

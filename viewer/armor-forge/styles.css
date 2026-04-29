@@ -583,29 +583,38 @@ a:focus-visible {
   position: absolute;
   left: 18px;
   bottom: 86px;
-  z-index: 4;
+  z-index: 2;
   display: grid;
   gap: 4px;
-  width: min(380px, calc(100% - 36px));
-  padding: 12px 14px;
-  border: 1px solid rgba(200, 135, 29, 0.38);
+  width: min(340px, calc(100% - 36px));
+  padding: 9px 11px;
+  border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
-  background: rgba(255, 250, 235, 0.9);
-  box-shadow: 0 14px 32px rgba(31, 45, 43, 0.1);
-  color: #34240b;
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: none;
+  color: #53625d;
+  opacity: 0.78;
+  backdrop-filter: blur(6px);
 }
 
 .proxy-warning strong {
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.2;
 }
 
 .proxy-warning span {
-  color: #6f5626;
-  font-size: 12px;
+  color: #63726e;
+  font-size: 11px;
   font-weight: 760;
   line-height: 1.45;
+}
+
+.proxy-warning.is-auxiliary {
+  width: min(300px, calc(100% - 36px));
+  border-color: rgba(20, 122, 133, 0.14);
+  background: rgba(255, 255, 255, 0.5);
+  color: #5f706b;
+  opacity: 0.56;
 }
 
 .preview-layer-panel {

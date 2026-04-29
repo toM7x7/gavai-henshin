@@ -41,17 +41,37 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
             self.assertIn("triangle_count", part)
             self.assertIn("material_zones", part)
             self.assertIn("primary_bone", part)
+            self.assertIn("visual_priority_wave1", part)
             self.assertIn("modeler_requests", part)
 
-    def test_markdown_report_contains_simple_modeler_request_table(self) -> None:
+    def test_markdown_report_contains_modeler_handoff_sections(self) -> None:
         audit = fit_handoff.collect_fit_handoff_audit(self.repo_root / "viewer/assets/armor-parts")
 
         markdown = fit_handoff.render_modeler_fix_requests_markdown(audit)
 
-        self.assertIn("# 装甲パーツ フィット監査・モデラー修正依頼", markdown)
-        self.assertIn("| module | anchor | bbox 実測 -> 目標 m | 差分 | triangles | material_zones | 修正依頼 |", markdown)
+        self.assertIn("# 装甲パーツ フィット監査 / モデラー修正依頼", markdown)
+        self.assertIn("## 現状の格納場所", markdown)
+        self.assertIn("## Wave 1優先 / Webプレビュー検収観点", markdown)
+        self.assertIn("modeler_glb_available", markdown)
+        self.assertIn("見た目優先度/Wave 1", markdown)
         self.assertIn("| helmet | head |", markdown)
-        self.assertIn("認識パーツ: 18 / 18", markdown)
+        self.assertIn("ロード済みパーツ: 18 / 18", markdown)
+        self.assertIn("python tools/audit_armor_part_fit_handoff.py --format markdown --output docs/armor-part-fit-modeler-requests.md", markdown)
+
+    def test_wave1_checklist_is_short_modeler_handoff(self) -> None:
+        checklist = (self.repo_root / "docs/modeler-wave1-checklist.md").read_text(encoding="utf-8")
+
+        self.assertIn("# Wave 1 モデラー発注チェックリスト", checklist)
+        self.assertIn("## 格納場所", checklist)
+        self.assertIn("## 対象パーツ", checklist)
+        self.assertIn("## P0観点", checklist)
+        self.assertIn("## P1観点", checklist)
+        self.assertIn("## Webプレビュー検収", checklist)
+        self.assertIn("## 納品チェック", checklist)
+        self.assertIn("## 確認コマンド", checklist)
+        self.assertIn("`chest`, `back`, `waist`, `left_shoulder`, `right_shoulder`", checklist)
+        self.assertIn("python tools/validate_armor_parts_intake.py", checklist)
+        self.assertIn("python tools/audit_armor_part_fit_handoff.py --format markdown --output docs/armor-part-fit-modeler-requests.md", checklist)
 
     def test_bbox_and_anchor_mismatches_generate_direct_modeler_requests(self) -> None:
         self._write_sidecar(
@@ -69,10 +89,12 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
 
         self.assertEqual(helmet["module"], "helmet")
         self.assertIn("x", helmet["bbox_outside_tolerance_axes"])
-        self.assertTrue(any("bboxを調整してください" in item for item in helmet["modeler_requests"]))
+        self.assertEqual(helmet["visual_priority_wave1"]["priority"], "P1 / Wave 1 review")
+        self.assertTrue(any("bbox を調整してください" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("trianglesを" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("base_surface" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("body-fit anchor" in item for item in helmet["modeler_requests"]))
+        self.assertTrue(any("見た目優先度/Wave 1" in item for item in helmet["modeler_requests"]))
 
     def _write_sidecar(self, module: str, overrides: dict) -> None:
         module_dir = self.tmp_root / module

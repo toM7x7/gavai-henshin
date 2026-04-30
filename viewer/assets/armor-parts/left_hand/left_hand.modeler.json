@@ -4,26 +4,26 @@
   "part_id": "viewer.mesh.left_hand.v1",
   "category": "hand",
   "bbox_m": {
-    "x": 0.08323200047016144,
-    "y": 0.07254400104284286,
-    "z": 0.09130000323057175,
+    "x": 0.11500000208616257,
+    "y": 0.07827199995517731,
+    "z": 0.1400371789932251,
     "size": [
-      0.08323200047016144,
-      0.07254400104284286,
-      0.09130000323057175
+      0.11500000208616257,
+      0.07827199995517731,
+      0.1400371789932251
     ],
     "dimensions": [
-      0.08323200047016144,
-      0.07254400104284286,
-      0.09130000323057175
+      0.11500000208616257,
+      0.07827199995517731,
+      0.1400371789932251
     ]
   },
-  "triangle_count": 536,
+  "triangle_count": 296,
   "material_zones": [
     "accent",
     "base_surface",
-    "trim",
-    "emissive"
+    "emissive",
+    "trim"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": "right_hand",
@@ -52,7 +52,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 536,
+  "triangles": 296,
   "target_envelope_m": {
     "x": 0.1156,
     "y": 0.0816,

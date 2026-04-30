@@ -10,12 +10,45 @@ from .constants import OATHS
 from .ids import generate_morphotype_id, generate_suit_id
 
 
+RUNTIME_ARMOR_MODULES: tuple[str, ...] = (
+    "helmet",
+    "chest",
+    "back",
+    "left_shoulder",
+    "right_shoulder",
+    "left_upperarm",
+    "right_upperarm",
+    "left_forearm",
+    "right_forearm",
+    "waist",
+    "left_thigh",
+    "right_thigh",
+    "left_shin",
+    "right_shin",
+    "left_boot",
+    "right_boot",
+    "left_hand",
+    "right_hand",
+)
+
+
+def armor_glb_asset_ref(module: str, repo_root: str | Path = ".") -> str | None:
+    """Return the canonical GLB asset_ref for a delivered armor module."""
+
+    name = str(module or "").strip()
+    if not name:
+        return None
+    rel = f"viewer/assets/armor-parts/{name}/{name}.glb"
+    return rel if (Path(repo_root) / rel).is_file() else None
+
+
 def create_draft_suitspec(
     suit_id: str | None = None,
     *,
     style_tags: list[str] | None = None,
     oath: str = "INTEGRITY_FIRST",
     model_id: str = "gemini-3-pro-image-preview",
+    repo_root: str | Path = ".",
 ) -> dict[str, Any]:
     if oath not in OATHS:
         raise ValueError(f"Unsupported oath: {oath}")
@@ -23,26 +56,12 @@ def create_draft_suitspec(
     sid = suit_id or generate_suit_id()
     tags = style_tags or ["metal", "visor", "audit"]
 
-    modules = {
-        "helmet": {"enabled": True, "asset_ref": "viewer/assets/meshes/helmet.mesh.json"},
-        "chest": {"enabled": True, "asset_ref": "viewer/assets/meshes/chest.mesh.json"},
-        "back": {"enabled": True, "asset_ref": "viewer/assets/meshes/back.mesh.json"},
-        "left_shoulder": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_shoulder.mesh.json"},
-        "right_shoulder": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_shoulder.mesh.json"},
-        "left_upperarm": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_upperarm.mesh.json"},
-        "right_upperarm": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_upperarm.mesh.json"},
-        "left_forearm": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_forearm.mesh.json"},
-        "right_forearm": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_forearm.mesh.json"},
-        "waist": {"enabled": True, "asset_ref": "viewer/assets/meshes/waist.mesh.json"},
-        "left_thigh": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_thigh.mesh.json"},
-        "right_thigh": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_thigh.mesh.json"},
-        "left_shin": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_shin.mesh.json"},
-        "right_shin": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_shin.mesh.json"},
-        "left_boot": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_boot.mesh.json"},
-        "right_boot": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_boot.mesh.json"},
-        "left_hand": {"enabled": True, "asset_ref": "viewer/assets/meshes/left_hand.mesh.json"},
-        "right_hand": {"enabled": True, "asset_ref": "viewer/assets/meshes/right_hand.mesh.json"},
-    }
+    modules: dict[str, dict[str, Any]] = {}
+    for module_name in RUNTIME_ARMOR_MODULES:
+        asset_ref = armor_glb_asset_ref(module_name, repo_root=repo_root) or (
+            f"viewer/assets/meshes/{module_name}.mesh.json"
+        )
+        modules[module_name] = {"enabled": True, "asset_ref": asset_ref}
 
     return {
         "schema_version": "0.2",

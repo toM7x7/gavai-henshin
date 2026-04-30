@@ -4,24 +4,25 @@
   "part_id": "viewer.mesh.left_shin.v1",
   "category": "leg",
   "bbox_m": {
-    "x": 0.1170269325375557,
-    "y": 0.37834200263023376,
-    "z": 0.09488581866025925,
+    "x": 0.10779999941587448,
+    "y": 0.39668799936771393,
+    "z": 0.11389999836683273,
     "size": [
-      0.1170269325375557,
-      0.37834200263023376,
-      0.09488581866025925
+      0.10779999941587448,
+      0.39668799936771393,
+      0.11389999836683273
     ],
     "dimensions": [
-      0.1170269325375557,
-      0.37834200263023376,
-      0.09488581866025925
+      0.10779999941587448,
+      0.39668799936771393,
+      0.11389999836683273
     ]
   },
-  "triangle_count": 644,
+  "triangle_count": 396,
   "material_zones": [
     "accent",
     "base_surface",
+    "emissive",
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
@@ -52,7 +53,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 644,
+  "triangles": 396,
   "target_envelope_m": {
     "x": 0.1156,
     "y": 0.3956,

@@ -1,0 +1,2195 @@
+{
+  "contract_version": "modeler-part-blueprint.v1",
+  "catalog_id": "PCAT-VIEWER-SEED-0001",
+  "reference_body": {
+    "height_cm": 170,
+    "unit": "meter_in_vrm_preview_space",
+    "pose": "Forge display A-pose for review; runtime attaches to VRM humanoid bones."
+  },
+  "preview_contract": {
+    "preview_role": "proxy_envelope_only",
+    "do_not_model": [
+      "transparent blue boxes",
+      "stand pole",
+      "floor grid",
+      "height guide"
+    ],
+    "authoring_target": "GLB/glTF hard-surface armor fitted to VRM body",
+    "handoff_status": "draft_ready_requires_silhouette_review",
+    "blocking_gates": [
+      "fit_clearance",
+      "pivot_axis",
+      "material_slots",
+      "silhouette_review"
+    ]
+  },
+  "coordinate_system": {
+    "local_y": "proximal_to_distal_or_vertical_fit_axis",
+    "local_z": "visible_outward_surface",
+    "origin": "part_center_after_transforms_applied",
+    "scale_rule": "apply transforms before GLB export; runtime may uniformly scale by wearer height"
+  },
+  "deliverables": {
+    "source": "viewer/assets/armor-parts/<module>/source/<module>.blend",
+    "runtime": "viewer/assets/armor-parts/<module>/<module>.glb",
+    "sidecar": "viewer/assets/armor-parts/<module>/<module>.modeler.json",
+    "preview": "viewer/assets/armor-parts/<module>/preview/<module>.mesh.json",
+    "texture_directory": "viewer/assets/armor-parts/<module>/textures/",
+    "texture_provider_profile": "nano_banana",
+    "textures": [
+      "base_color",
+      "emissive_mask",
+      "normal_optional",
+      "roughness_optional"
+    ],
+    "review_views": [
+      "front",
+      "side",
+      "back",
+      "three_quarter"
+    ]
+  },
+  "qa_gates": [
+    "stable_part_name",
+    "bbox_within_target_envelope",
+    "non_overlapping_uv0",
+    "single_surface_base_material_or_declared_slots",
+    "mirror_pair_dimension_delta_below_3_percent",
+    "no_body_intersection_at_reference_pose"
+  ],
+  "part_count": 18,
+  "parts": [
+    {
+      "module": "helmet",
+      "part_id": "viewer.mesh.helmet.v1",
+      "display_name": "Helmet",
+      "category": "head",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "center",
+      "socket": "helmet",
+      "wave": "wave_3_head_hands",
+      "mirror_of": null,
+      "fit_reference": {
+        "shape": "sphere",
+        "source": "chest_core",
+        "attach": "start",
+        "offset_y": 0.2,
+        "z_offset": 0.02,
+        "scale": [
+          0.3,
+          0.32,
+          0.3
+        ],
+        "follow": [
+          0.34,
+          0.42,
+          0.34
+        ],
+        "min_scale": [
+          0.14,
+          0.16,
+          0.14
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "head",
+        "offset_m": [
+          0,
+          0.08,
+          0.12
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "head",
+          "neck",
+          "upperChest",
+          "chest"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.7904,
+          "y": 1.18,
+          "z": 0.87
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.2856,
+          "y": 0.34,
+          "z": 0.2584
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.035,
+        "fit_scale": [
+          0.3,
+          0.32,
+          0.3
+        ],
+        "min_scale": [
+          0.14,
+          0.16,
+          0.14
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1800,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_helmet_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "helmet_to_neck",
+          "visor"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/helmet.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/helmet/helmet.glb",
+        "source_target": "viewer/assets/armor-parts/helmet/source/helmet.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/helmet/textures/",
+        "texture_path": "SuitSpec.modules.helmet.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FFCD4F"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Keep visor and helmet shell as separable material zones for later emissive mask work."
+      ]
+    },
+    {
+      "module": "chest",
+      "part_id": "viewer.mesh.chest.v1",
+      "display_name": "Chest",
+      "category": "torso",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "center",
+      "socket": "chest",
+      "wave": "wave_1_core",
+      "mirror_of": null,
+      "fit_reference": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.72,
+          0.78,
+          0.66
+        ],
+        "follow": [
+          0.72,
+          0.78,
+          0.72
+        ],
+        "min_scale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "upperChest",
+        "offset_m": [
+          0,
+          0.03,
+          0.1
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "upperChest",
+          "chest",
+          "spine",
+          "hips"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 1.0686,
+          "y": 1.28,
+          "z": 0.64
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.6392,
+          "y": 0.4992,
+          "z": 0.1632
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.024,
+        "shell_thickness_target_m": 0.045,
+        "fit_scale": [
+          0.72,
+          0.78,
+          0.66
+        ],
+        "min_scale": [
+          0.48,
+          0.56,
+          0.46
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1800,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_chest_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "chest_to_back",
+          "chest_to_waist",
+          "shoulder_socket"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/chest.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/chest/chest.glb",
+        "source_target": "viewer/assets/armor-parts/chest/source/chest.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/chest/textures/",
+        "texture_path": "SuitSpec.modules.chest.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#4FA8FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Treat torso pieces as a connected shell set; seams must read cleanly from front and mirror views."
+      ]
+    },
+    {
+      "module": "back",
+      "part_id": "viewer.mesh.back.v1",
+      "display_name": "Back",
+      "category": "dorsal",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "center",
+      "socket": "back",
+      "wave": "wave_1_core",
+      "mirror_of": null,
+      "fit_reference": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "center",
+        "offset_y": -0.02,
+        "z_offset": -0.1,
+        "scale": [
+          0.68,
+          0.74,
+          0.6
+        ],
+        "follow": [
+          0.68,
+          0.76,
+          0.68
+        ],
+        "min_scale": [
+          0.18,
+          0.12,
+          0.14
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "upperChest",
+        "offset_m": [
+          0,
+          0.01,
+          -0.1
+        ],
+        "rotation_deg": [
+          0,
+          180,
+          0
+        ],
+        "fallback_bones": [
+          "upperChest",
+          "chest",
+          "spine"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.9058,
+          "y": 1.18,
+          "z": 0.54
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.5984,
+          "y": 0.5148,
+          "z": 0.136
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.026,
+        "shell_thickness_target_m": 0.05,
+        "fit_scale": [
+          0.68,
+          0.74,
+          0.6
+        ],
+        "min_scale": [
+          0.18,
+          0.12,
+          0.14
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1600,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_back_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "back_to_chest",
+          "backpack_mount"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/back.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/back/back.glb",
+        "source_target": "viewer/assets/armor-parts/back/source/back.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/back/textures/",
+        "texture_path": "SuitSpec.modules.back.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#4F88E8"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Treat torso pieces as a connected shell set; seams must read cleanly from front and mirror views."
+      ]
+    },
+    {
+      "module": "waist",
+      "part_id": "viewer.mesh.waist.v1",
+      "display_name": "Waist",
+      "category": "waist",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "center",
+      "socket": "waist",
+      "wave": "wave_1_core",
+      "mirror_of": null,
+      "fit_reference": {
+        "shape": "box",
+        "source": "chest_core",
+        "attach": "end",
+        "offset_y": -0.08,
+        "z_offset": 0,
+        "scale": [
+          0.52,
+          0.38,
+          0.46
+        ],
+        "follow": [
+          0.62,
+          0.7,
+          0.62
+        ],
+        "min_scale": [
+          0.14,
+          0.1,
+          0.12
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "hips",
+        "offset_m": [
+          0,
+          0,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "hips",
+          "spine"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.9202,
+          "y": 0.74,
+          "z": 0.83
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.4896,
+          "y": 0.1716,
+          "z": 0.1904
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.022,
+        "shell_thickness_target_m": 0.034,
+        "fit_scale": [
+          0.52,
+          0.38,
+          0.46
+        ],
+        "min_scale": [
+          0.14,
+          0.1,
+          0.12
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1200,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_waist_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "waist_to_chest",
+          "waist_to_thigh"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/waist.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/waist/waist.glb",
+        "source_target": "viewer/assets/armor-parts/waist/source/waist.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/waist/textures/",
+        "texture_path": "SuitSpec.modules.waist.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#62C9FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Treat torso pieces as a connected shell set; seams must read cleanly from front and mirror views."
+      ]
+    },
+    {
+      "module": "left_shoulder",
+      "part_id": "viewer.mesh.left_shoulder.v1",
+      "display_name": "Left Shoulder",
+      "category": "shoulder",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_shoulder",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "right_shoulder",
+      "fit_reference": {
+        "shape": "sphere",
+        "source": "left_upperarm",
+        "attach": "start",
+        "offset_y": 0.08,
+        "z_offset": 0,
+        "scale": [
+          0.24,
+          0.24,
+          0.24
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "min_scale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftShoulder",
+        "offset_m": [
+          0.02,
+          0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftShoulder",
+          "leftUpperArm",
+          "upperChest",
+          "chest"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.648,
+          "y": 0.49,
+          "z": 0.64
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1904,
+          "y": 0.1224,
+          "z": 0.1632
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.028,
+        "shell_thickness_target_m": 0.038,
+        "fit_scale": [
+          0.24,
+          0.24,
+          0.24
+        ],
+        "min_scale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 900,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_shoulder_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shoulder_to_upperarm"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_shoulder.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_shoulder/left_shoulder.glb",
+        "source_target": "viewer/assets/armor-parts/left_shoulder/source/left_shoulder.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_shoulder/textures/",
+        "texture_path": "SuitSpec.modules.left_shoulder.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FF8F6A"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    },
+    {
+      "module": "right_shoulder",
+      "part_id": "viewer.mesh.right_shoulder.v1",
+      "display_name": "Right Shoulder",
+      "category": "shoulder",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_shoulder",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "left_shoulder",
+      "fit_reference": {
+        "shape": "sphere",
+        "source": "right_upperarm",
+        "attach": "start",
+        "offset_y": 0.08,
+        "z_offset": 0,
+        "scale": [
+          0.24,
+          0.24,
+          0.24
+        ],
+        "follow": [
+          0.56,
+          0.5,
+          0.56
+        ],
+        "min_scale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightShoulder",
+        "offset_m": [
+          -0.02,
+          0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightShoulder",
+          "rightUpperArm",
+          "upperChest",
+          "chest"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.648,
+          "y": 0.49,
+          "z": 0.64
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1904,
+          "y": 0.1224,
+          "z": 0.1632
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.028,
+        "shell_thickness_target_m": 0.038,
+        "fit_scale": [
+          0.24,
+          0.24,
+          0.24
+        ],
+        "min_scale": [
+          0.16,
+          0.16,
+          0.16
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 900,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_shoulder_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shoulder_to_upperarm"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_shoulder.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_shoulder/right_shoulder.glb",
+        "source_target": "viewer/assets/armor-parts/right_shoulder/source/right_shoulder.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_shoulder/textures/",
+        "texture_path": "SuitSpec.modules.right_shoulder.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FF6A8F"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    },
+    {
+      "module": "left_upperarm",
+      "part_id": "viewer.mesh.left_upperarm.v1",
+      "display_name": "Left Upper Arm",
+      "category": "arm",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_upperarm",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "right_upperarm",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "left_upperarm",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.94,
+          1,
+          0.94
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "min_scale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftUpperArm",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftUpperArm",
+          "leftShoulder",
+          "leftLowerArm"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.412,
+          "y": 1.04,
+          "z": 0.36
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1088,
+          "y": 0.2924,
+          "z": 0.1088
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.028,
+        "fit_scale": [
+          0.94,
+          1,
+          0.94
+        ],
+        "min_scale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_upperarm_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shoulder_to_upperarm",
+          "upperarm_to_forearm"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_upperarm.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_upperarm/left_upperarm.glb",
+        "source_target": "viewer/assets/armor-parts/left_upperarm/source/left_upperarm.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_upperarm/textures/",
+        "texture_path": "SuitSpec.modules.left_upperarm.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#9A8CFF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "right_upperarm",
+      "part_id": "viewer.mesh.right_upperarm.v1",
+      "display_name": "Right Upper Arm",
+      "category": "arm",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_upperarm",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "left_upperarm",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "right_upperarm",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.94,
+          1,
+          0.94
+        ],
+        "follow": [
+          0.88,
+          0.94,
+          0.88
+        ],
+        "min_scale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightUpperArm",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightUpperArm",
+          "rightShoulder",
+          "rightLowerArm"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.412,
+          "y": 1.04,
+          "z": 0.36
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1088,
+          "y": 0.2924,
+          "z": 0.1088
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.028,
+        "fit_scale": [
+          0.94,
+          1,
+          0.94
+        ],
+        "min_scale": [
+          0.18,
+          0.14,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_upperarm_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shoulder_to_upperarm",
+          "upperarm_to_forearm"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_upperarm.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_upperarm/right_upperarm.glb",
+        "source_target": "viewer/assets/armor-parts/right_upperarm/source/right_upperarm.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_upperarm/textures/",
+        "texture_path": "SuitSpec.modules.right_upperarm.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#7F99FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "left_forearm",
+      "part_id": "viewer.mesh.left_forearm.v1",
+      "display_name": "Left Forearm",
+      "category": "arm",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_forearm",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "right_forearm",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "left_forearm",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.9,
+          1.02,
+          0.9
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "min_scale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftLowerArm",
+        "offset_m": [
+          0,
+          -0.01,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftLowerArm",
+          "leftUpperArm",
+          "leftHand"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3914,
+          "y": 1.08,
+          "z": 0.36
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.102,
+          "y": 0.2788,
+          "z": 0.102
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.028,
+        "fit_scale": [
+          0.9,
+          1.02,
+          0.9
+        ],
+        "min_scale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_forearm_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "upperarm_to_forearm",
+          "forearm_to_hand"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_forearm.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_forearm/left_forearm.glb",
+        "source_target": "viewer/assets/armor-parts/left_forearm/source/left_forearm.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_forearm/textures/",
+        "texture_path": "SuitSpec.modules.left_forearm.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#63D5FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "right_forearm",
+      "part_id": "viewer.mesh.right_forearm.v1",
+      "display_name": "Right Forearm",
+      "category": "arm",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_forearm",
+      "wave": "wave_1_arm_seams",
+      "mirror_of": "left_forearm",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "right_forearm",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.9,
+          1.02,
+          0.9
+        ],
+        "follow": [
+          0.9,
+          0.96,
+          0.9
+        ],
+        "min_scale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightLowerArm",
+        "offset_m": [
+          0,
+          -0.01,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightLowerArm",
+          "rightUpperArm",
+          "rightHand"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3914,
+          "y": 1.08,
+          "z": 0.36
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.102,
+          "y": 0.2788,
+          "z": 0.102
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.028,
+        "fit_scale": [
+          0.9,
+          1.02,
+          0.9
+        ],
+        "min_scale": [
+          0.16,
+          0.14,
+          0.16
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_forearm_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "upperarm_to_forearm",
+          "forearm_to_hand"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_forearm.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_forearm/right_forearm.glb",
+        "source_target": "viewer/assets/armor-parts/right_forearm/source/right_forearm.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_forearm/textures/",
+        "texture_path": "SuitSpec.modules.right_forearm.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#5DEEC3"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "left_hand",
+      "part_id": "viewer.mesh.left_hand.v1",
+      "display_name": "Left Hand",
+      "category": "hand",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_hand",
+      "wave": "wave_3_head_hands",
+      "mirror_of": "right_hand",
+      "fit_reference": {
+        "shape": "sphere",
+        "source": "left_hand",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0.03,
+        "scale": [
+          0.2,
+          0.2,
+          0.2
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "min_scale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftHand",
+        "offset_m": [
+          0,
+          0,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftHand",
+          "leftLowerArm"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.294,
+          "y": 0.494,
+          "z": 0.51
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1156,
+          "y": 0.0816,
+          "z": 0.136
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.014,
+        "shell_thickness_target_m": 0.02,
+        "fit_scale": [
+          0.2,
+          0.2,
+          0.2
+        ],
+        "min_scale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 700,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_hand_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "forearm_to_hand"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_hand.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_hand/left_hand.glb",
+        "source_target": "viewer/assets/armor-parts/left_hand/source/left_hand.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_hand/textures/",
+        "texture_path": "SuitSpec.modules.left_hand.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#D4FF73"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    },
+    {
+      "module": "right_hand",
+      "part_id": "viewer.mesh.right_hand.v1",
+      "display_name": "Right Hand",
+      "category": "hand",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_hand",
+      "wave": "wave_3_head_hands",
+      "mirror_of": "left_hand",
+      "fit_reference": {
+        "shape": "sphere",
+        "source": "right_hand",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0.03,
+        "scale": [
+          0.2,
+          0.2,
+          0.2
+        ],
+        "follow": [
+          0.38,
+          0.34,
+          0.38
+        ],
+        "min_scale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightHand",
+        "offset_m": [
+          0,
+          0,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightHand",
+          "rightLowerArm"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.294,
+          "y": 0.494,
+          "z": 0.51
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1156,
+          "y": 0.0816,
+          "z": 0.136
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.014,
+        "shell_thickness_target_m": 0.02,
+        "fit_scale": [
+          0.2,
+          0.2,
+          0.2
+        ],
+        "min_scale": [
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 700,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_hand_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "forearm_to_hand"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_hand.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_hand/right_hand.glb",
+        "source_target": "viewer/assets/armor-parts/right_hand/source/right_hand.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_hand/textures/",
+        "texture_path": "SuitSpec.modules.right_hand.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#B2FF73"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    },
+    {
+      "module": "left_thigh",
+      "part_id": "viewer.mesh.left_thigh.v1",
+      "display_name": "Left Thigh",
+      "category": "leg",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_thigh",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "right_thigh",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "left_thigh",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          1,
+          1.04,
+          1
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "min_scale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftUpperLeg",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftUpperLeg",
+          "hips",
+          "leftLowerLeg"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.594,
+          "y": 1.26,
+          "z": 0.53
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.136,
+          "y": 0.3956,
+          "z": 0.1292
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.02,
+        "shell_thickness_target_m": 0.03,
+        "fit_scale": [
+          1,
+          1.04,
+          1
+        ],
+        "min_scale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_thigh_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "waist_to_thigh",
+          "thigh_to_shin"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_thigh.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_thigh/left_thigh.glb",
+        "source_target": "viewer/assets/armor-parts/left_thigh/source/left_thigh.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_thigh/textures/",
+        "texture_path": "SuitSpec.modules.left_thigh.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FF8EC8"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "right_thigh",
+      "part_id": "viewer.mesh.right_thigh.v1",
+      "display_name": "Right Thigh",
+      "category": "leg",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_thigh",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "left_thigh",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "right_thigh",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          1,
+          1.04,
+          1
+        ],
+        "follow": [
+          0.94,
+          0.96,
+          0.94
+        ],
+        "min_scale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightUpperLeg",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightUpperLeg",
+          "hips",
+          "rightLowerLeg"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.594,
+          "y": 1.26,
+          "z": 0.53
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.136,
+          "y": 0.3956,
+          "z": 0.1292
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.02,
+        "shell_thickness_target_m": 0.03,
+        "fit_scale": [
+          1,
+          1.04,
+          1
+        ],
+        "min_scale": [
+          0.22,
+          0.22,
+          0.2
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_thigh_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "waist_to_thigh",
+          "thigh_to_shin"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_thigh.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_thigh/right_thigh.glb",
+        "source_target": "viewer/assets/armor-parts/right_thigh/source/right_thigh.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_thigh/textures/",
+        "texture_path": "SuitSpec.modules.right_thigh.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FF82AB"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "left_shin",
+      "part_id": "viewer.mesh.left_shin.v1",
+      "display_name": "Left Shin",
+      "category": "leg",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_shin",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "right_shin",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "left_shin",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.96,
+          1.04,
+          0.96
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "min_scale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftLowerLeg",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftLowerLeg",
+          "leftUpperLeg",
+          "leftFoot"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3744,
+          "y": 1.16,
+          "z": 0.38
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1156,
+          "y": 0.3956,
+          "z": 0.1156
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.02,
+        "shell_thickness_target_m": 0.03,
+        "fit_scale": [
+          0.96,
+          1.04,
+          0.96
+        ],
+        "min_scale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_shin_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "thigh_to_shin",
+          "shin_to_boot"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_shin.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_shin/left_shin.glb",
+        "source_target": "viewer/assets/armor-parts/left_shin/source/left_shin.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_shin/textures/",
+        "texture_path": "SuitSpec.modules.left_shin.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#7CD7FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "right_shin",
+      "part_id": "viewer.mesh.right_shin.v1",
+      "display_name": "Right Shin",
+      "category": "leg",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_shin",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "left_shin",
+      "fit_reference": {
+        "shape": "cylinder",
+        "source": "right_shin",
+        "attach": "center",
+        "offset_y": 0,
+        "z_offset": 0,
+        "scale": [
+          0.96,
+          1.04,
+          0.96
+        ],
+        "follow": [
+          0.92,
+          0.96,
+          0.92
+        ],
+        "min_scale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightLowerLeg",
+        "offset_m": [
+          0,
+          -0.02,
+          0.02
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightLowerLeg",
+          "rightUpperLeg",
+          "rightFoot"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3744,
+          "y": 1.16,
+          "z": 0.38
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1156,
+          "y": 0.3956,
+          "z": 0.1156
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.02,
+        "shell_thickness_target_m": 0.03,
+        "fit_scale": [
+          0.96,
+          1.04,
+          0.96
+        ],
+        "min_scale": [
+          0.2,
+          0.22,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 1100,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_shin_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "thigh_to_shin",
+          "shin_to_boot"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_shin.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_shin/right_shin.glb",
+        "source_target": "viewer/assets/armor-parts/right_shin/source/right_shin.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_shin/textures/",
+        "texture_path": "SuitSpec.modules.right_shin.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#63C6FF"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile.",
+        "Use segmented hard panels instead of one rigid tube when bending visibility matters."
+      ]
+    },
+    {
+      "module": "left_boot",
+      "part_id": "viewer.mesh.left_boot.v1",
+      "display_name": "Left Boot",
+      "category": "foot",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "left",
+      "socket": "left_boot",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "right_boot",
+      "fit_reference": {
+        "shape": "box",
+        "source": "left_shin",
+        "attach": "end",
+        "offset_y": 0,
+        "z_offset": 0.08,
+        "scale": [
+          0.28,
+          0.22,
+          0.4
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "min_scale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "leftFoot",
+        "offset_m": [
+          0,
+          -0.01,
+          0.08
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "leftFoot",
+          "leftLowerLeg"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3952,
+          "y": 0.8836,
+          "z": 0.8849
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1224,
+          "y": 0.0884,
+          "z": 0.2856
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.032,
+        "fit_scale": [
+          0.28,
+          0.22,
+          0.4
+        ],
+        "min_scale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 900,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_left_boot_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shin_to_boot",
+          "sole_clearance"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/left_boot.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/left_boot/left_boot.glb",
+        "source_target": "viewer/assets/armor-parts/left_boot/source/left_boot.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/left_boot/textures/",
+        "texture_path": "SuitSpec.modules.left_boot.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FFE48A"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    },
+    {
+      "module": "right_boot",
+      "part_id": "viewer.mesh.right_boot.v1",
+      "display_name": "Right Boot",
+      "category": "foot",
+      "preview_role": "proxy_envelope_only",
+      "handoff_status": "draft_ready_requires_silhouette_review",
+      "side": "right",
+      "socket": "right_boot",
+      "wave": "wave_2_lower_body",
+      "mirror_of": "left_boot",
+      "fit_reference": {
+        "shape": "box",
+        "source": "right_shin",
+        "attach": "end",
+        "offset_y": 0,
+        "z_offset": 0.08,
+        "scale": [
+          0.28,
+          0.22,
+          0.4
+        ],
+        "follow": [
+          0.58,
+          0.52,
+          0.62
+        ],
+        "min_scale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "vrm_attachment": {
+        "primary_bone": "rightFoot",
+        "offset_m": [
+          0,
+          -0.01,
+          0.08
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "fallback_bones": [
+          "rightFoot",
+          "rightLowerLeg"
+        ]
+      },
+      "target_envelope": {
+        "unit": "meter_in_vrm_preview_space",
+        "source_bbox_m": {
+          "x": 0.3952,
+          "y": 0.8836,
+          "z": 0.8849
+        },
+        "source_bbox_role": "seed_proxy_measurement_not_authoring_target",
+        "authoring_target_m": {
+          "x": 0.1224,
+          "y": 0.0884,
+          "z": 0.2856
+        },
+        "authoring_target_basis": "Forge reference VRM metrics at 170cm; use as first-pass external model envelope",
+        "clearance_from_body_m": 0.018,
+        "shell_thickness_target_m": 0.032,
+        "fit_scale": [
+          0.28,
+          0.22,
+          0.4
+        ],
+        "min_scale": [
+          0.16,
+          0.1,
+          0.18
+        ]
+      },
+      "mesh_requirements": {
+        "runtime_format": "glTF 2.0 GLB",
+        "preview_format": "mesh.v1",
+        "max_triangles": 900,
+        "max_materials": 3,
+        "apply_transforms": true,
+        "pivot": "centered; no hidden DCC offsets",
+        "naming": "armor_right_boot_v001"
+      },
+      "uv_requirements": {
+        "uv0_required": true,
+        "base_color_px": 2048,
+        "emissive_mask_px": 2048,
+        "non_overlap": true,
+        "texel_density": "consistent inside mirror pair and adjacent seam pair",
+        "seam_priority": [
+          "shin_to_boot",
+          "sole_clearance"
+        ]
+      },
+      "runtime_bindings": {
+        "asset_ref": "viewer/assets/meshes/right_boot.mesh.json",
+        "external_glb_target": "viewer/assets/armor-parts/right_boot/right_boot.glb",
+        "source_target": "viewer/assets/armor-parts/right_boot/source/right_boot.blend",
+        "texture_target_dir": "viewer/assets/armor-parts/right_boot/textures/",
+        "texture_path": "SuitSpec.modules.right_boot.texture_path",
+        "material_slots": [
+          {
+            "slot_id": "surface_base",
+            "binding": "module.texture_path",
+            "fallback_color": "#FFD36F"
+          }
+        ]
+      },
+      "modeler_notes": [
+        "Preserve the body-conforming base suit as the inner layer; this part sits above it.",
+        "Leave enough negative space for the VRM body surface and animation deformation.",
+        "Keep the readable tokusatsu silhouette bright and non-hostile."
+      ]
+    }
+  ]
+}

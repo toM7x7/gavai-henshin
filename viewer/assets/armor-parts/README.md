@@ -10,15 +10,18 @@ viewer/assets/armor-parts/<module>/<module>.modeler.json
 viewer/assets/armor-parts/<module>/source/<module>.blend
 viewer/assets/armor-parts/<module>/textures/
 viewer/assets/armor-parts/<module>/preview/<module>.mesh.json
+viewer/assets/armor-parts/<module>/preview/<module>_closeup_<view>.png
+viewer/assets/armor-parts/_masters/full_suit_<view>.png
 ```
 
 Do not commit Blender backup files such as `*.blend1`. Optional shared review
 sources can live under `viewer/assets/armor-parts/_masters/`.
 
-Lightweight intake validation:
+Lightweight intake and runtime smoke validation:
 
 ```bash
 python tools/validate_armor_parts_intake.py
+python tools/smoke_web_glb_load.py
 ```
 
 The current runtime still uses `viewer/assets/meshes/*.mesh.json` as the seed/proxy fallback.

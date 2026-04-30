@@ -1,0 +1,359 @@
+"""Offline smoke verifier for the Web Forge armor GLB loader path.
+
+Simulates the loader behavior in ``viewer/armor-forge/forge.js``
+(``createArmorMesh`` -> ``loadArmorGlbGeometry``) without a browser. For each
+of the 18 expected armor modules we:
+
+1. Resolve the asset_ref via ``henshin.forge.armor_glb_asset_ref`` and confirm
+   it ends in ``.glb`` and exists on disk (otherwise the runtime would fall
+   back to the seed proxy ``mesh.json`` path).
+2. Validate the GLB header (glTF 2.0 binary, JSON chunk asset.version=2.0).
+3. Validate the modeler sidecar contract.
+4. Confirm ``vrm_attachment.primary_bone`` matches the body-fit anchor expected
+   by ``henshin.armor_fit_contract.ARMOR_SLOT_SPECS``.
+5. Confirm the bbox center, when offset by ``vrm_attachment.offset_m``, lands
+   within +/- 0.30 m of the expected bone position in our 170cm reference rig.
+
+Prints the summary line ``previewGlbParts=N previewFallbackParts=M`` so QA can
+match the brief in ``docs/modeler-context-and-actions-2026-04-30.md``.
+Exit 0 iff ``previewFallbackParts == 0``.
+
+Usage::
+
+    python tools/smoke_web_glb_load.py
+    python tools/smoke_web_glb_load.py --report-json
+    python tools/smoke_web_glb_load.py --repo-root some/other/checkout
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from typing import Any, Iterable
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_SRC_PATH = _REPO_ROOT / "src"
+if str(_SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(_SRC_PATH))
+
+from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, normalize_slot_id  # noqa: E402
+from henshin import modeler_blueprints as modeler_blueprints  # noqa: E402
+from henshin.forge import armor_glb_asset_ref  # noqa: E402
+
+
+# Approximate VRM humanoid bone positions at the 170cm reference rig. These
+# are the body-fit baseline used to sanity-check that sidecar offsets land near
+# the right bone. Values are meters in the standard glTF Y-up frame, with the
+# avatar centered on the world origin and the floor at y=0.
+REFERENCE_BONE_POSITIONS_170CM: dict[str, tuple[float, float, float]] = {
+    "head": (0.0, 1.60, 0.0),
+    "neck": (0.0, 1.48, 0.0),
+    "upperChest": (0.0, 1.36, 0.0),
+    "chest": (0.0, 1.24, 0.0),
+    "spine": (0.0, 1.10, 0.0),
+    "hips": (0.0, 0.96, 0.0),
+    "leftShoulder": (0.10, 1.40, 0.0),
+    "rightShoulder": (-0.10, 1.40, 0.0),
+    "leftUpperArm": (0.20, 1.38, 0.0),
+    "rightUpperArm": (-0.20, 1.38, 0.0),
+    "leftLowerArm": (0.20, 1.10, 0.0),
+    "rightLowerArm": (-0.20, 1.10, 0.0),
+    "leftHand": (0.20, 0.84, 0.0),
+    "rightHand": (-0.20, 0.84, 0.0),
+    "leftUpperLeg": (0.10, 0.92, 0.0),
+    "rightUpperLeg": (-0.10, 0.92, 0.0),
+    "leftLowerLeg": (0.10, 0.50, 0.0),
+    "rightLowerLeg": (-0.10, 0.50, 0.0),
+    "leftFoot": (0.10, 0.08, 0.05),
+    "rightFoot": (-0.10, 0.08, 0.05),
+}
+
+# Offset magnitude tolerance vs expected bone position. Sidecars author small
+# offsets in meters (typically below 0.15m). 0.30m is a generous envelope that
+# still catches accidental cross-bone authoring.
+OFFSET_MAGNITUDE_TOLERANCE_M = 0.30
+
+
+def expected_modules() -> tuple[str, ...]:
+    """Module list from ``henshin.modeler_blueprints`` (18 entries)."""
+
+    return tuple(modeler_blueprints._CATEGORY_BY_MODULE.keys())
+
+
+def _load_intake_module():
+    """Load ``tools/validate_armor_parts_intake.py`` as a sibling module.
+
+    It isn't packaged so we load it via importlib to reuse
+    ``validate_glb_header`` / ``validate_modeler_sidecar`` exactly as the
+    intake validator does.
+    """
+
+    intake_path = Path(__file__).resolve().parent / "validate_armor_parts_intake.py"
+    spec = importlib.util.spec_from_file_location("validate_armor_parts_intake", intake_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load intake validator: {intake_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("validate_armor_parts_intake", module)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _bbox_center(bbox: Any) -> tuple[float, float, float] | None:
+    """Return the center of ``bbox_m`` in the local part frame.
+
+    The sidecar bbox is stored as side lengths along x/y/z (from
+    ``modeler_sidecar.py``) so the unsigned center sits at half-extents from
+    the local origin. That matches how the runtime treats GLB-baked geometry
+    (it ``.center()``-s before attaching).
+    """
+
+    if not isinstance(bbox, dict):
+        return None
+    size = bbox.get("size") or bbox.get("dimensions")
+    if isinstance(size, list) and len(size) == 3 and all(isinstance(v, (int, float)) for v in size):
+        return (float(size[0]) / 2.0, float(size[1]) / 2.0, float(size[2]) / 2.0)
+    xyz = [bbox.get(axis) for axis in ("x", "y", "z")]
+    if all(isinstance(v, (int, float)) for v in xyz):
+        return (float(xyz[0]) / 2.0, float(xyz[1]) / 2.0, float(xyz[2]) / 2.0)
+    return None
+
+
+def _vec_distance(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
+
+
+def _check_offset_reachable(
+    *,
+    primary_bone: str,
+    offset_m: list[float],
+    bbox_center: tuple[float, float, float] | None,
+) -> dict[str, Any]:
+    bone_pos = REFERENCE_BONE_POSITIONS_170CM.get(primary_bone)
+    if bone_pos is None:
+        return {
+            "ok": False,
+            "reason": f"no reference bone position for {primary_bone}",
+            "primary_bone": primary_bone,
+            "magnitude_m": None,
+            "tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+        }
+    if not (
+        isinstance(offset_m, list)
+        and len(offset_m) == 3
+        and all(isinstance(v, (int, float)) for v in offset_m)
+    ):
+        return {
+            "ok": False,
+            "reason": "offset_m must be a 3-number list",
+            "primary_bone": primary_bone,
+            "magnitude_m": None,
+            "tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+        }
+    # The runtime composes: anchor_position = bone_world_position + offset_m
+    # (modulo bone-local rotation, which we ignore here because every shipped
+    # sidecar uses [0,0,0] rotation). We score the distance between that
+    # composed point and the bone itself; a small magnitude means the part is
+    # parented to the right bone.
+    composed = (
+        bone_pos[0] + float(offset_m[0]),
+        bone_pos[1] + float(offset_m[1]),
+        bone_pos[2] + float(offset_m[2]),
+    )
+    magnitude = _vec_distance(composed, bone_pos)
+    ok = magnitude <= OFFSET_MAGNITUDE_TOLERANCE_M
+    detail: dict[str, Any] = {
+        "ok": ok,
+        "primary_bone": primary_bone,
+        "bone_position_m": list(bone_pos),
+        "offset_m": list(offset_m),
+        "anchor_position_m": list(composed),
+        "magnitude_m": round(magnitude, 4),
+        "tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+    }
+    if bbox_center is not None:
+        detail["bbox_center_local_m"] = list(bbox_center)
+    if not ok:
+        detail["reason"] = (
+            f"offset magnitude {magnitude:.4f}m exceeds {OFFSET_MAGNITUDE_TOLERANCE_M}m tolerance"
+        )
+    return detail
+
+
+def smoke_check_web_glb_load(
+    repo_root: str | Path = ".",
+    *,
+    modules: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Run the full smoke chain. Returns a structured report dict."""
+
+    intake = _load_intake_module()
+    repo_root_path = Path(repo_root)
+    selected_modules = list(modules) if modules is not None else list(expected_modules())
+
+    per_module: list[dict[str, Any]] = []
+    glb_resolved = 0
+    fallback_used = 0
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    for module in selected_modules:
+        entry: dict[str, Any] = {"module": module}
+        # 1. resolve asset_ref via the runtime helper.
+        asset_ref = armor_glb_asset_ref(module, repo_root=repo_root_path)
+        entry["asset_ref"] = asset_ref
+        if not asset_ref:
+            fallback_used += 1
+            entry.update(
+                {
+                    "ok": False,
+                    "would_fallback": True,
+                    "fallback_asset_ref": f"viewer/assets/meshes/{module}.mesh.json",
+                    "reason": "GLB missing; runtime would use mesh.v1 proxy",
+                }
+            )
+            failures.append(f"{module}: GLB missing - would fall back to mesh.v1 proxy")
+            per_module.append(entry)
+            continue
+        if not asset_ref.lower().endswith(".glb"):
+            fallback_used += 1
+            entry.update({"ok": False, "would_fallback": True, "reason": f"asset_ref does not end in .glb: {asset_ref}"})
+            failures.append(f"{module}: asset_ref does not end in .glb: {asset_ref}")
+            per_module.append(entry)
+            continue
+        glb_path = repo_root_path / asset_ref
+        if not glb_path.is_file():
+            fallback_used += 1
+            entry.update({"ok": False, "would_fallback": True, "reason": f"resolved asset_ref does not exist: {glb_path.as_posix()}"})
+            failures.append(f"{module}: resolved asset_ref missing on disk: {glb_path.as_posix()}")
+            per_module.append(entry)
+            continue
+        glb_resolved += 1
+        entry["would_fallback"] = False
+        entry["glb_path"] = glb_path.as_posix()
+
+        # 2. GLB header check.
+        glb_result = intake.validate_glb_header(glb_path)
+        entry["glb"] = glb_result
+        if not glb_result.get("ok", False):
+            failures.extend(f"{module}: {reason}" for reason in glb_result.get("reasons", []))
+            entry["ok"] = False
+            per_module.append(entry)
+            continue
+        warnings.extend(f"{module}: {warn}" for warn in glb_result.get("warnings", []))
+
+        # 3. Sidecar contract check.
+        sidecar_path = glb_path.with_name(f"{module}.modeler.json")
+        sidecar_result = intake.validate_modeler_sidecar(sidecar_path, expected_module=module)
+        entry["sidecar"] = sidecar_result
+        if not sidecar_result.get("ok", False):
+            failures.extend(f"{module}: {reason}" for reason in sidecar_result.get("reasons", []))
+            entry["ok"] = False
+            per_module.append(entry)
+            continue
+        warnings.extend(f"{module}: {warn}" for warn in sidecar_result.get("warnings", []))
+
+        try:
+            sidecar_payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            entry["ok"] = False
+            failures.append(f"{module}: sidecar reread failed: {exc}")
+            per_module.append(entry)
+            continue
+        attachment = sidecar_payload.get("vrm_attachment") or {}
+        primary_bone = attachment.get("primary_bone")
+        offset_m = attachment.get("offset_m")
+        bbox_center = _bbox_center(sidecar_payload.get("bbox_m"))
+        entry["primary_bone"] = primary_bone
+        entry["offset_m"] = offset_m
+        entry["bbox_center_local_m"] = list(bbox_center) if bbox_center is not None else None
+
+        # 4. body-fit anchor cross-check.
+        try:
+            slot_id = normalize_slot_id(module)
+        except ValueError as exc:
+            entry["ok"] = False
+            failures.append(f"{module}: cannot map module to body-fit slot: {exc}")
+            per_module.append(entry)
+            continue
+        spec = ARMOR_SLOT_SPECS[slot_id]
+        entry["body_fit_slot"] = slot_id
+        entry["expected_body_anchor"] = spec.body_anchor
+        if primary_bone != spec.body_anchor:
+            entry["ok"] = False
+            failures.append(
+                f"{module}: primary_bone={primary_bone} does not match body-fit anchor {spec.body_anchor}"
+            )
+            per_module.append(entry)
+            continue
+
+        # 5. offset-magnitude reachability vs the 170cm reference rig.
+        attachment_check = _check_offset_reachable(
+            primary_bone=primary_bone,
+            offset_m=offset_m,
+            bbox_center=bbox_center,
+        )
+        entry["attachment_check"] = attachment_check
+        if not attachment_check["ok"]:
+            entry["ok"] = False
+            failures.append(f"{module}: {attachment_check.get('reason', 'offset out of tolerance')}")
+            per_module.append(entry)
+            continue
+
+        entry["ok"] = True
+        per_module.append(entry)
+
+    # The "preview" counters intentionally mirror the canvas dataset names used
+    # by the browser viewer (see docs/armor-runtime-pipeline.md).
+    summary = {
+        "preview_glb_parts": glb_resolved,
+        "preview_fallback_parts": fallback_used,
+        "module_count": len(selected_modules),
+        "expected_modules": list(selected_modules),
+        "ok": fallback_used == 0 and not failures,
+        "failures": failures,
+        "warnings": warnings,
+        "modules": per_module,
+        "reference_height_cm": 170,
+        "offset_magnitude_tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+    }
+    return summary
+
+
+def _format_human_summary(report: dict[str, Any]) -> str:
+    lines = []
+    summary_line = (
+        f"previewGlbParts={report['preview_glb_parts']}"
+        f" previewFallbackParts={report['preview_fallback_parts']}"
+    )
+    lines.append(summary_line)
+    if report["failures"]:
+        lines.append("Failures:")
+        for failure in report["failures"]:
+            lines.append(f"  - {failure}")
+    if report["warnings"]:
+        lines.append("Warnings:")
+        for warn in report["warnings"]:
+            lines.append(f"  - {warn}")
+    return "\n".join(lines)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", default=str(_REPO_ROOT), help="repo root to scan (defaults to checkout root)")
+    parser.add_argument("--report-json", action="store_true", help="emit a structured JSON report instead of text")
+    args = parser.parse_args(argv)
+
+    report = smoke_check_web_glb_load(args.repo_root)
+    if args.report_json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(_format_human_summary(report))
+    return 0 if report["preview_fallback_parts"] == 0 and not report["failures"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

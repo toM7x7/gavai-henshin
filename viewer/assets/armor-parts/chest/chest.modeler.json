@@ -4,25 +4,25 @@
   "part_id": "viewer.mesh.chest.v1",
   "category": "torso",
   "bbox_m": {
-    "x": 0.6626512408256531,
-    "y": 0.45732106268405914,
-    "z": 0.08918120712041855,
+    "x": 0.5889999866485596,
+    "y": 0.4599999934434891,
+    "z": 0.1607472002506256,
     "size": [
-      0.6626512408256531,
-      0.45732106268405914,
-      0.08918120712041855
+      0.5889999866485596,
+      0.4599999934434891,
+      0.1607472002506256
     ],
     "dimensions": [
-      0.6626512408256531,
-      0.45732106268405914,
-      0.08918120712041855
+      0.5889999866485596,
+      0.4599999934434891,
+      0.1607472002506256
     ]
   },
-  "triangle_count": 1196,
+  "triangle_count": 352,
   "material_zones": [
     "accent",
     "base_surface",
-    "trim"
+    "emissive"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": null,
@@ -53,7 +53,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 1196,
+  "triangles": 352,
   "target_envelope_m": {
     "x": 0.6392,
     "y": 0.4992,

@@ -4,24 +4,25 @@
   "part_id": "viewer.mesh.waist.v1",
   "category": "waist",
   "bbox_m": {
-    "x": 0.49147674441337585,
-    "y": 0.1475760042667389,
-    "z": 0.19166800379753113,
+    "x": 0.44999998807907104,
+    "y": 0.16554523259401321,
+    "z": 0.1928858682513237,
     "size": [
-      0.49147674441337585,
-      0.1475760042667389,
-      0.19166800379753113
+      0.44999998807907104,
+      0.16554523259401321,
+      0.1928858682513237
     ],
     "dimensions": [
-      0.49147674441337585,
-      0.1475760042667389,
-      0.19166800379753113
+      0.44999998807907104,
+      0.16554523259401321,
+      0.1928858682513237
     ]
   },
-  "triangle_count": 876,
+  "triangle_count": 464,
   "material_zones": [
     "accent",
-    "base_surface"
+    "base_surface",
+    "emissive"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": null,
@@ -50,7 +51,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 876,
+  "triangles": 464,
   "target_envelope_m": {
     "x": 0.4896,
     "y": 0.1716,

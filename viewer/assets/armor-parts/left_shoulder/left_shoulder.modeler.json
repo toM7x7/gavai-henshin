@@ -4,25 +4,24 @@
   "part_id": "viewer.mesh.left_shoulder.v1",
   "category": "shoulder",
   "bbox_m": {
-    "x": 0.143422469496727,
-    "y": 0.09705688059329987,
-    "z": 0.08510898984968662,
+    "x": 0.17716799676418304,
+    "y": 0.11800000071525574,
+    "z": 0.16820000112056732,
     "size": [
-      0.143422469496727,
-      0.09705688059329987,
-      0.08510898984968662
+      0.17716799676418304,
+      0.11800000071525574,
+      0.16820000112056732
     ],
     "dimensions": [
-      0.143422469496727,
-      0.09705688059329987,
-      0.08510898984968662
+      0.17716799676418304,
+      0.11800000071525574,
+      0.16820000112056732
     ]
   },
-  "triangle_count": 452,
+  "triangle_count": 204,
   "material_zones": [
     "accent",
-    "base_surface",
-    "trim"
+    "base_surface"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": "right_shoulder",
@@ -53,7 +52,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 452,
+  "triangles": 204,
   "target_envelope_m": {
     "x": 0.1904,
     "y": 0.1224,

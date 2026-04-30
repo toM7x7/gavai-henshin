@@ -4,25 +4,26 @@
   "part_id": "viewer.mesh.back.v1",
   "category": "dorsal",
   "bbox_m": {
-    "x": 0.543096661567688,
-    "y": 0.43192167580127716,
-    "z": 0.06830829381942749,
+    "x": 0.545199990272522,
+    "y": 0.5150319933891296,
+    "z": 0.14395128190517426,
     "size": [
-      0.543096661567688,
-      0.43192167580127716,
-      0.06830829381942749
+      0.545199990272522,
+      0.5150319933891296,
+      0.14395128190517426
     ],
     "dimensions": [
-      0.543096661567688,
-      0.43192167580127716,
-      0.06830829381942749
+      0.545199990272522,
+      0.5150319933891296,
+      0.14395128190517426
     ]
   },
-  "triangle_count": 520,
+  "triangle_count": 396,
   "material_zones": [
     "accent",
     "base_surface",
-    "trim"
+    "trim",
+    "emissive"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": null,
@@ -52,7 +53,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 520,
+  "triangles": 396,
   "target_envelope_m": {
     "x": 0.5984,
     "y": 0.5148,

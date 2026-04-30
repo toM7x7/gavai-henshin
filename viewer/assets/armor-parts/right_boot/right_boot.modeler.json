@@ -4,24 +4,25 @@
   "part_id": "viewer.mesh.right_boot.v1",
   "category": "foot",
   "bbox_m": {
-    "x": 0.11505600064992905,
-    "y": 0.09174799546599388,
-    "z": 0.2627519965171814,
+    "x": 0.11500000208616257,
+    "y": 0.08900001272559166,
+    "z": 0.2900000065565109,
     "size": [
-      0.11505600064992905,
-      0.09174799546599388,
-      0.2627519965171814
+      0.11500000208616257,
+      0.08900001272559166,
+      0.2900000065565109
     ],
     "dimensions": [
-      0.11505600064992905,
-      0.09174799546599388,
-      0.2627519965171814
+      0.11500000208616257,
+      0.08900001272559166,
+      0.2900000065565109
     ]
   },
-  "triangle_count": 792,
+  "triangle_count": 532,
   "material_zones": [
     "accent",
     "base_surface",
+    "emissive",
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
@@ -51,7 +52,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 792,
+  "triangles": 532,
   "target_envelope_m": {
     "x": 0.1224,
     "y": 0.0884,

@@ -2,13 +2,15 @@
 
 Updated: 2026-04-30
 
-## Wave 1受け入れ監査メモ（2026-04-30）
+## Wave 1+受け入れ監査メモ（2026-04-30）
 
 - ローカル実態: 18 moduleすべてに `.glb`, `.modeler.json`, `source/<module>.blend`, `preview/<module>.mesh.json`, preview PNG 4枚がある。
 - `*.blend1` は `viewer/assets/armor-parts` 配下に見つからなかった。
-- `_masters` は存在するが、現時点で中身は `review_master.blend` のみ。モデラー返答にあった `viewer/assets/armor-parts/_masters/full_suit_*.png` は未格納。
-- `python tools/validate_armor_parts_intake.py` は `pass`。一方で `python tools/audit_armor_part_fit_handoff.py --format json` は `warn` で、bboxが±9%以内という返答はローカルsidecar上では確認できない。
-- 返答で言及された `docs/armor-build-wave1-results.md` と `docs/armor-part-fit-modeler-requests.before.md` は、監査開始時点ではローカルに未格納だった。
+- `_masters` には `review_master.blend` と `full_suit_front/side/back/3q/overlay.png` が格納済み。
+- closeup PNGは18 module x 4視点で格納済み。
+- `python tools/validate_armor_parts_intake.py` は `pass`。
+- `python tools/audit_armor_part_fit_handoff.py --format json` は `warn` のまま。ただしこれは視覚優先度ガイダンスを残すためで、bbox実測は最大絶対値8.9% / 平均3.7%。
+- `docs/armor-build-wave1-results.md` と `docs/armor-part-fit-modeler-requests.before.md` は格納済み。
 
 ## 格納場所
 

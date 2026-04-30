@@ -6,6 +6,13 @@
 - GLB: `viewer/assets/armor-parts/<module>/<module>.glb`
 - 生成元: `src/henshin/modeler_blueprints.py` / `henshin.armor_fit_contract`
 
+## Wave 1成果物照合（2026-04-30）
+
+- あるもの: 18 module、各 `.glb`、各 `.modeler.json`、各 `source/<module>.blend`、各 `preview/<module>.mesh.json`、各 preview PNG 4枚、`_masters/review_master.blend`。
+- ないもの: `viewer/assets/armor-parts/_masters/full_suit_*.png`、`docs/armor-part-fit-modeler-requests.before.md`。`docs/armor-build-wave1-results.md` も監査開始時点では未格納だったため、本監査で新規作成する。
+- `*.blend1` は見つからない。バックアップファイル混入なし。
+- intake validationは `pass`。fit handoff auditは `warn` で、bbox deltaに大きい軸が残る。モデラー返答の「bbox ±9%」はローカル実態としては未確認。
+
 ## 監査サマリ
 
 - 判定: `warn`

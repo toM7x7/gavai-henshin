@@ -217,6 +217,10 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("seed_proxy_fallback", js)
         self.assertIn("previewFallbackParts", js)
         self.assertIn("previewGlbParts", js)
+        self.assertIn("delivered_glb_primary", js)
+        self.assertIn('previewLayer = "armor_model"', js)
+        self.assertIn('previewLayer = "surface_lines"', js)
+        self.assertIn('previewLayer = "dimension_guide"', js)
         self.assertIn("previewMockTexturedParts", js)
         self.assertIn("previewTextureFailedParts", js)
         self.assertIn("mockTexturedParts", js)
@@ -242,7 +246,9 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("baseSuitMaterialKey", js)
         self.assertIn("getBaseSuitMaterial", js)
         self.assertIn("originalMaterials.forEach", js)
-        self.assertIn("SuitSpec texture_pathは未変更", js)
+        self.assertIn("プレビュー表面", js)
+        self.assertIn("仮表面を表示中。", js)
+        self.assertIn("納品GLB主表示", js)
         self.assertIn("/v1/catalog/part-blueprints", Path("src/henshin/new_route_api.py").read_text(encoding="utf-8"))
         modeler_brief = Path("docs/modeler-armor-brief.md").read_text(encoding="utf-8")
         self.assertIn("viewer/assets/armor-parts/<module>/", modeler_brief)
@@ -287,8 +293,8 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("seed/proxy", js)
         self.assertIn("planned", js)
         self.assertIn('title: "部分生成"', js)
-        self.assertIn("本番スーツ化には ${missing} が必要です。現在は部分プレビューです。", js)
-        self.assertIn("本番スーツ化に必要な外装パーツ数が足りません。現在は部分プレビューです。", js)
+        self.assertIn("不足: ${missing}", js)
+        self.assertIn("本番化に必要な外装が不足。", js)
         self.assertIn("color-scheme: light", css)
         self.assertIn("--body-reference", css)
         self.assertIn("--base-suit", css)
@@ -677,7 +683,7 @@ class TestDashboardServer(unittest.TestCase):
             "position: sticky;",
             "top: 0;",
             "height: 100vh;",
-            "grid-template-rows: minmax(360px, 1fr) auto;",
+            "grid-template-rows: minmax(0, 1fr) auto;",
             "overflow: hidden;",
         }:
             self.assertIn(token, stand_panel)
@@ -695,7 +701,7 @@ class TestDashboardServer(unittest.TestCase):
         }:
             self.assertIn(token, mobile_stand_panel)
         mobile_stand_stage = self._css_block(mobile_css, ".stand-stage")
-        self.assertIn("height: clamp(420px, 62vh, 620px);", mobile_stand_stage)
+        self.assertIn("height: clamp(440px, 64svh, 640px);", mobile_stand_stage)
         mobile_layer_panel = self._css_block(mobile_css, ".preview-layer-panel")
         self.assertIn("position: absolute;", mobile_layer_panel)
         self.assertIn("margin: 0;", mobile_layer_panel)

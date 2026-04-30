@@ -238,7 +238,7 @@ a:focus-visible {
   top: 0;
   height: 100vh;
   min-height: 720px;
-  grid-template-rows: minmax(360px, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   background: var(--stage);
   overflow: hidden;
 }
@@ -250,9 +250,9 @@ a:focus-visible {
   isolation: isolate;
   background:
     radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.92), transparent 28%),
-    radial-gradient(circle at 52% 74%, rgba(10, 143, 176, 0.1), transparent 38%),
-    linear-gradient(rgba(22, 42, 40, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 42, 40, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 52% 74%, rgba(10, 143, 176, 0.055), transparent 38%),
+    linear-gradient(rgba(22, 42, 40, 0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 42, 40, 0.024) 1px, transparent 1px),
     var(--stage);
   background-size: 42px 42px;
 }
@@ -273,22 +273,30 @@ a:focus-visible {
 
 .stand-controls {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
+  right: 14px;
+  bottom: 14px;
   z-index: 4;
   display: inline-flex;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 16px 36px rgba(31, 45, 43, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 10px 24px rgba(31, 45, 43, 0.1);
+  opacity: 0.82;
   backdrop-filter: blur(10px);
+  transition: opacity 160ms ease, background-color 160ms ease;
+}
+
+.stand-controls:hover,
+.stand-controls:focus-within {
+  background: rgba(255, 255, 255, 0.92);
+  opacity: 1;
 }
 
 .stand-controls button {
-  min-width: 44px;
-  height: 40px;
+  min-width: 38px;
+  height: 36px;
   border: 1px solid rgba(16, 24, 23, 0.18);
   border-radius: 6px;
   background: #ffffff;
@@ -339,23 +347,25 @@ a:focus-visible {
 
 .result-panel {
   display: grid;
-  grid-template-columns: minmax(170px, 0.72fr) minmax(0, 1fr) minmax(0, 0.9fr);
-  gap: 12px;
-  padding: 18px clamp(18px, 3vw, 32px) 24px;
+  grid-template-columns: minmax(132px, 0.55fr) minmax(0, 0.8fr) minmax(0, 0.78fr);
+  gap: 10px;
+  max-height: clamp(260px, 34vh, 380px);
+  padding: 12px clamp(14px, 2vw, 22px) 14px;
   border-top: 1px solid var(--line);
   background: #f3f6f2;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .result-panel div {
   display: grid;
   align-content: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  min-height: 72px;
+  min-height: 64px;
   border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
-  padding: 12px;
+  padding: 9px 10px;
   background: #ffffff;
 }
 
@@ -363,13 +373,13 @@ a:focus-visible {
   min-width: 0;
   overflow-wrap: anywhere;
   font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .result-panel small {
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 .quest-url-card {
@@ -398,10 +408,17 @@ a:focus-visible {
   font: 13px "Segoe UI Mono", Consolas, ui-monospace, monospace;
 }
 
-.texture-job {
+.result-panel .texture-job {
   grid-column: 1 / -1;
   grid-template-columns: minmax(132px, 0.28fr) minmax(150px, 0.24fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 8px;
+  column-gap: 10px;
   align-items: center;
+  min-height: 88px;
+}
+
+.result-panel .modeler-handoff {
+  min-height: 96px;
 }
 
 .texture-job > span {
@@ -411,7 +428,7 @@ a:focus-visible {
 .texture-job button {
   grid-column: 2;
   grid-row: 1 / span 3;
-  min-height: 46px;
+  min-height: 38px;
   border: 1px solid rgba(10, 143, 176, 0.38);
   border-radius: 6px;
   background: #0f6e80;
@@ -501,7 +518,7 @@ a:focus-visible {
 
 #recallCode {
   color: var(--accent);
-  font-size: clamp(30px, 5vw, 58px);
+  font-size: clamp(28px, 4vw, 44px);
   line-height: 1;
 }
 
@@ -509,9 +526,9 @@ a:focus-visible {
 .quest-link {
   display: grid;
   place-items: center;
-  min-height: 48px;
+  min-height: 42px;
   border-radius: 6px;
-  padding: 12px;
+  padding: 10px;
   text-align: center;
   font-weight: 800;
 }
@@ -612,9 +629,9 @@ a:focus-visible {
 .proxy-warning.is-auxiliary {
   width: min(300px, calc(100% - 36px));
   border-color: rgba(20, 122, 133, 0.14);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.42);
   color: #5f706b;
-  opacity: 0.56;
+  opacity: 0.44;
 }
 
 .preview-layer-panel {
@@ -696,31 +713,34 @@ a:focus-visible {
 
 .preview-layer-panel {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 14px;
+  right: 14px;
   z-index: 3;
   display: grid;
   gap: 2px;
-  width: min(320px, calc(100% - 36px));
-  padding: 12px;
+  width: min(260px, calc(100% - 28px));
+  max-height: calc(100% - 96px);
+  overflow: hidden;
+  padding: 9px 10px;
   border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 16px 36px rgba(31, 45, 43, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 24px rgba(31, 45, 43, 0.08);
   color: #172420;
+  pointer-events: none;
   backdrop-filter: blur(10px);
 }
 
 .stand-stage.has-layer-panel .preview-legend {
-  max-width: min(420px, calc(100% - 380px));
+  max-width: min(420px, calc(100% - 310px));
 }
 
 .preview-layer-row {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  gap: 9px;
-  min-height: 56px;
-  padding: 8px 0;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 7px;
+  min-height: 0;
+  padding: 6px 0;
   border-top: 1px solid rgba(39, 58, 55, 0.12);
 }
 
@@ -734,8 +754,8 @@ a:focus-visible {
 }
 
 .preview-layer-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   margin-top: 5px;
   border-radius: 50%;
   background: #8c9792;
@@ -764,7 +784,7 @@ a:focus-visible {
 
 .preview-layer-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -774,21 +794,25 @@ a:focus-visible {
   margin-top: 1px;
   overflow-wrap: anywhere;
   color: #132b26;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.24;
 }
 
 .preview-layer-row[data-layer="height"] .preview-layer-title {
   color: var(--accent);
   font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .preview-layer-detail {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 10px;
+  line-height: 1.25;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 @media (max-width: 1180px) {
@@ -800,7 +824,7 @@ a:focus-visible {
     top: 76px;
     right: auto;
     left: 18px;
-    width: min(520px, calc(100% - 36px));
+    width: min(360px, calc(100% - 36px));
   }
 }
 
@@ -831,13 +855,13 @@ a:focus-visible {
   .stand-panel {
     position: relative;
     height: auto;
-    min-height: 780px;
+    min-height: auto;
     grid-template-rows: auto auto;
     overflow: visible;
   }
 
   .stand-stage {
-    height: clamp(420px, 62vh, 620px);
+    height: clamp(440px, 64svh, 640px);
     min-height: 420px;
   }
 
@@ -852,12 +876,13 @@ a:focus-visible {
     top: 76px;
     right: auto;
     left: 18px;
-    width: min(520px, calc(100% - 36px));
+    width: min(360px, calc(100% - 36px));
     margin: 0;
   }
 
   .result-panel {
     grid-template-columns: 1fr;
+    max-height: none;
   }
 
   .texture-job {
@@ -905,27 +930,28 @@ a:focus-visible {
   }
 
   .preview-layer-panel {
-    top: 112px;
+    top: 82px;
     left: 12px;
     width: calc(100% - 24px);
+    max-height: 170px;
     padding: 10px;
   }
 
   .stand-controls {
     right: 12px;
     bottom: 12px;
-    left: 12px;
-    justify-content: space-between;
+    left: auto;
+    justify-content: flex-end;
   }
 
   .stand-controls button {
-    min-width: 0;
-    flex: 1;
+    min-width: 38px;
+    flex: 0 0 auto;
   }
 
   .stand-stage {
-    height: 560px;
-    min-height: 560px;
+    height: clamp(420px, 68svh, 560px);
+    min-height: 420px;
   }
 
   .preview-layer-row {

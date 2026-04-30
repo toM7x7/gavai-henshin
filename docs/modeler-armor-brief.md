@@ -18,6 +18,15 @@ viewer/assets/armor-parts/<module>/
 例: ヘルメットは `viewer/assets/armor-parts/helmet/helmet.glb` に置きます。
 Blenderのバックアップファイル（`*.blend1` など）は格納しません。
 
+## 次回受け入れ時の必須確認
+
+- 18 moduleすべてに `<module>.glb`, `<module>.modeler.json`, `source/<module>.blend`, `preview/<module>.mesh.json`, preview PNG（front/back/side/3q）があること。
+- `viewer/assets/armor-parts` 配下に `*.blend1` がないこと。
+- `_masters/review_master.blend` に加え、全身確認画像 `viewer/assets/armor-parts/_masters/full_suit_*.png` が納品されていること。
+- `docs/armor-build-wave1-results.md` にモデラー側の完了報告、受け入れ結果、差分、実行コマンド結果を残すこと。
+- 既存依頼を上書き更新する場合は、前版スナップショット `docs/armor-part-fit-modeler-requests.before.md` を添えること。
+- bboxが「±9%以内」と報告された場合は、sidecarの `bbox_m` と fit audit のdeltaで再確認すること。現ローカルWave 1では `validate_armor_parts_intake.py` はpassだが、fit auditはwarn。
+
 ## いま見えている問題
 
 最新のWeb Forgeでは `modeler_glb_available` として12/12パーツがロード済みです。

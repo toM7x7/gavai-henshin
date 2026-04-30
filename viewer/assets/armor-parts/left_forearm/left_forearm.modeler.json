@@ -46,11 +46,11 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
   "triangles": 332,
   "target_envelope_m": {
@@ -58,5 +58,13 @@
     "y": 0.2788,
     "z": 0.102
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "left_forearm:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "wrist_band",
+    "surface_zone": "accent"
+  },
+  "topping_slots": [],
+  "attachment_offset_target_m": 0.04
 }

@@ -211,6 +211,96 @@ function fitVector(value, fallback) {
   return [0, 1, 2].map((index) => numberOr(Array.isArray(value) ? value[index] : undefined, fallback[index]));
 }
 
+function optionalVector(value) {
+  if (Array.isArray(value) && value.length >= 3) {
+    return [numberOr(value[0], 0), numberOr(value[1], 0), numberOr(value[2], 0)];
+  }
+  if (value && typeof value === "object") {
+    return [numberOr(value.x, 0), numberOr(value.y, 0), numberOr(value.z, 0)];
+  }
+  return null;
+}
+
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function stringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object") {
+        return firstString(item.topping_slot, item.slot, item.name, item.proposal_id);
+      }
+      return "";
+    })
+    .filter(Boolean);
+}
+
+function sidecarMetadataForModule(part, module = {}) {
+  const sidecar = module?.modeler_sidecar
+    || module?.sidecar_metadata
+    || module?.sidecar
+    || module?.metadata?.modeler_sidecar
+    || {};
+  const attachment = module?.vrm_attachment || sidecar?.vrm_attachment || {};
+  const anchor = module?.vrm_anchor || {};
+  const auxiliarySlots = Array.isArray(sidecar?.auxiliary_part_suggestions)
+    ? sidecar.auxiliary_part_suggestions
+        .map((item) => firstString(item?.proposal_id, item?.slot, item?.parent_module))
+        .filter(Boolean)
+    : [];
+  const toppingSlots = stringArray(
+    module?.topping_slots
+    || sidecar?.topping_slots
+    || module?.toppings
+    || auxiliarySlots,
+  );
+  const offsetTarget = optionalVector(
+    module?.attachment_offset_target_m
+    || module?.attachment_offset_m
+    || attachment?.offset_m
+    || sidecar?.attachment_offset_target_m
+    || sidecar?.attachment_offset_m
+    || anchor?.offset,
+  );
+  const hasExplicitSidecarOffset = Boolean(
+    module?.attachment_offset_target_m
+    || module?.attachment_offset_m
+    || attachment?.offset_m
+    || sidecar?.attachment_offset_target_m
+    || sidecar?.attachment_offset_m
+    || sidecar?.vrm_attachment,
+  );
+  return {
+    part,
+    offsetTarget,
+    toppingSlots,
+    variantKey: firstString(module?.variant_key, module?.asset_variant_key, module?.variant?.key, sidecar?.variant_key),
+    source: offsetTarget
+      ? hasExplicitSidecarOffset || String(module?.asset_ref || "").includes("/armor-parts/")
+        ? "modeler_sidecar"
+        : "module_vrm_anchor"
+      : "none",
+  };
+}
+
+function offsetTargetLabel(metadata) {
+  if (!metadata?.offsetTarget) return "";
+  return `${metadata.part}:${metadata.offsetTarget.map((value) => value.toFixed(3)).join(",")}`;
+}
+
+function compactDataList(values, limit = 3, empty = "none") {
+  const items = Array.from(new Set((values || []).filter(Boolean)));
+  if (!items.length) return empty;
+  if (items.length <= limit) return items.join(" / ");
+  return `${items.slice(0, limit).join(" / ")} +${items.length - limit}`;
+}
+
 function softFitFactor(value, baseline) {
   return clamp(1 + (numberOr(value, baseline) - baseline) * 0.22, 0.82, 1.28);
 }
@@ -395,10 +485,11 @@ function thinRatioThresholdForPart(part) {
   return PREVIEW_QA_THIN_RATIO_WARN;
 }
 
-function fitQaForMesh(part, mesh) {
+function fitQaForMesh(part, mesh, module = {}) {
   const actualSize = scaledPreviewSize(mesh);
   const targetSize = vectorFromArray(mesh?.userData?.fitTargetSize);
   const gapM = Math.max(0, numberOr(mesh?.userData?.fitGapM, 0));
+  const sidecar = sidecarMetadataForModule(part, module);
   const sideProfileRatio = actualSize
     ? actualSize.z / Math.max(actualSize.x, actualSize.y, 0.001)
     : 1;
@@ -417,13 +508,17 @@ function fitQaForMesh(part, mesh) {
     gapM,
     sideProfileRatio,
     thicknessRatio,
+    offsetAllowanceM: Math.max(0, numberOr(mesh?.userData?.fitOffsetAllowanceM, 0)),
+    attachmentOffsetTargetM: sidecar.offsetTarget,
+    variantKey: sidecar.variantKey,
+    toppingSlots: sidecar.toppingSlots,
     meshSource: mesh?.userData?.meshSource || "unknown",
     fitPreview: mesh?.userData?.fitPreview || "unknown",
   };
 }
 
 function summarizePreviewFitQa(records, meshes) {
-  const entries = records.map(([part], index) => fitQaForMesh(part, meshes[index])).filter(Boolean);
+  const entries = records.map(([part, module], index) => fitQaForMesh(part, meshes[index], module)).filter(Boolean);
   const byPart = Object.fromEntries(entries.map((entry) => [entry.part, entry]));
   const gapParts = entries.filter((entry) => entry.warnings.includes("gap")).map((entry) => entry.part);
   const thinParts = entries.filter((entry) => entry.warnings.includes("thin")).map((entry) => entry.part);
@@ -437,6 +532,67 @@ function summarizePreviewFitQa(records, meshes) {
     thinParts,
     fallbackPoseParts,
     parts: byPart,
+  };
+}
+
+function sidecarQaFor(records = previewRecordsFromData()) {
+  const entries = records.map(([part, module]) => sidecarMetadataForModule(part, module));
+  const offsetEntries = entries.filter((entry) => entry.offsetTarget);
+  const focusEntries = offsetEntries.filter((entry) => entry.part === "back" || entry.part.includes("boot"));
+  const detailEntries = focusEntries.length ? focusEntries : offsetEntries.slice(0, 4);
+  const offsetTargets = offsetEntries.map(offsetTargetLabel).filter(Boolean);
+  const toppingSlots = entries.flatMap((entry) => entry.toppingSlots.map((slot) => `${entry.part}:${slot}`));
+  const variantKeys = entries.filter((entry) => entry.variantKey).map((entry) => `${entry.part}:${entry.variantKey}`);
+  const offsetTitle = `${offsetEntries.length}/${records.length || 0} targets`;
+  const toppingTitle = toppingSlots.length ? `${toppingSlots.length} slots` : "no slots";
+  const variantTitle = variantKeys.length ? `${variantKeys.length} variants` : "default variants";
+  return {
+    state: offsetEntries.length ? "ready" : "planned",
+    title: `${offsetEntries.length}/${records.length || 0} offset targets`,
+    detail: detailEntries.length
+      ? detailEntries.map(offsetTargetLabel).join(" / ")
+      : "attachment_offset_target_m pending",
+    offsetTitle,
+    offsetDetail: detailEntries.length
+      ? compactDataList(detailEntries.map(offsetTargetLabel), 3)
+      : "back/boots offset target pending",
+    offsetState: offsetEntries.length ? "ready" : "planned",
+    toppingTitle,
+    toppingDetail: compactDataList(toppingSlots, 3, "topping_slots pending"),
+    toppingState: toppingSlots.length ? "ready" : "planned",
+    variantTitle,
+    variantDetail: compactDataList(variantKeys, 3, "variant_key pending"),
+    variantState: variantKeys.length ? "ready" : "planned",
+    offsetParts: offsetEntries.map((entry) => entry.part),
+    offsetTargets,
+    toppingSlots,
+    variantKeys,
+  };
+}
+
+function layerReadabilityFor(stand, records, surface) {
+  const armorParts = stand?.previewStats?.armorParts || records.length || selectedParts().length;
+  const glbParts = stand?.previewStats?.glbParts || 0;
+  const fallbackParts = stand?.previewStats?.fallbackParts || 0;
+  const texturedParts = stand?.previewStats?.texturedParts || 0;
+  const mockTexturedParts = stand?.previewStats?.mockTexturedParts || 0;
+  const baseVisible = stand?.previewStats?.baseSuitVisible !== false;
+  const lineState = texturedParts > 0 || mockTexturedParts > 0 || surface?.state === "ready" ? "ready" : "planned";
+  const state = baseVisible && armorParts > 0 && lineState === "ready" ? "ready" : armorParts > 0 ? "planned" : "queued";
+  const armorText = glbParts > 0
+    ? `armor GLB ${glbParts}${fallbackParts > 0 ? ` + proxy ${fallbackParts}` : ""}`
+    : armorParts > 0
+    ? `armor proxy ${armorParts}`
+    : "armor pending";
+  const lineText = texturedParts > 0
+    ? `surface texture ${texturedParts}`
+    : mockTexturedParts > 0
+    ? `surface mock ${mockTexturedParts}`
+    : surface?.title || "surface pending";
+  return {
+    state,
+    title: `${baseVisible ? "base visible" : "base pending"} / ${armorText}`,
+    detail: `${lineText} / parts ${records.length || armorParts}`,
   };
 }
 
@@ -493,7 +649,7 @@ function previewViewQaFor(stand = armorStand) {
   };
 }
 
-function publishQaDatasets(stand, coverage, fitQa) {
+function publishQaDatasets(stand, coverage, fitQa, sidecarQa) {
   const canvas = stand?.canvas;
   if (!canvas) return;
   const qaReady = coverage.state === "ready" && fitQa.state === "ready";
@@ -504,6 +660,13 @@ function publishQaDatasets(stand, coverage, fitQa) {
   canvas.dataset.previewFitGapParts = fitQa.gapParts.join(",");
   canvas.dataset.previewThinParts = fitQa.thinParts.join(",");
   canvas.dataset.previewFallbackPoseParts = fitQa.fallbackPoseParts.join(",");
+  canvas.dataset.previewAttachmentOffsetParts = (sidecarQa?.offsetParts || []).join(",");
+  canvas.dataset.previewAttachmentOffsetTargets = (sidecarQa?.offsetTargets || []).join("|");
+  canvas.dataset.previewToppingSlots = (sidecarQa?.toppingSlots || []).join("|");
+  canvas.dataset.previewVariantKeys = (sidecarQa?.variantKeys || []).join("|");
+  canvas.dataset.previewAttachmentOffsetCount = String(sidecarQa?.offsetTargets?.length || 0);
+  canvas.dataset.previewToppingSlotCount = String(sidecarQa?.toppingSlots?.length || 0);
+  canvas.dataset.previewVariantKeyCount = String(sidecarQa?.variantKeys?.length || 0);
 }
 
 function renderPartGrid() {
@@ -534,6 +697,41 @@ function syncPreviewLegendPalette() {
 
 function renderPreviewLegend() {
   if (!UI.previewLegend) return;
+  const stats = armorStand?.previewStats || {};
+  const armorParts = Number(stats.armorParts || 0);
+  const glbParts = Number(stats.glbParts || 0);
+  const fallbackParts = Number(stats.fallbackParts || 0);
+  const texturedParts = Number(stats.texturedParts || 0);
+  const mockTexturedParts = Number(stats.mockTexturedParts || 0);
+  const readableItems = [
+    ["legend-skin", "Body reference", stats.vrmVisible === false ? "fallback" : "VRM"],
+    ["legend-suit", "Base suit", stats.baseSuitVisible === false ? "pending" : "visible"],
+    [
+      "legend-armor",
+      "Armor parts",
+      glbParts > 0 ? `${glbParts} GLB${fallbackParts > 0 ? ` + ${fallbackParts} proxy` : ""}` : armorParts > 0 ? `${armorParts} proxy` : "pending",
+    ],
+    [
+      "legend-glow",
+      "Surface lines",
+      texturedParts > 0 ? `${texturedParts} texture` : mockTexturedParts > 0 ? `${mockTexturedParts} mock` : "planned",
+    ],
+  ];
+  UI.previewLegend.replaceChildren(
+    ...readableItems.map(([className, label, status]) => {
+      const item = document.createElement("span");
+      item.dataset.previewLegend = className.replace("legend-", "");
+      const swatch = document.createElement("i");
+      swatch.className = className;
+      const labelNode = document.createElement("b");
+      labelNode.textContent = label;
+      const statusNode = document.createElement("small");
+      statusNode.textContent = status;
+      item.append(swatch, labelNode, statusNode);
+      return item;
+    }),
+  );
+  return;
   const items = [
     ["legend-skin", "VRM骨格"],
     ["legend-suit", "VRM表面ボディスーツ"],
@@ -737,6 +935,8 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const viewQa = previewViewQaFor(stand);
   const coverage = coverageQaFor(data, records);
   const fitQa = fitQaSummaryFor(stand);
+  const sidecarQa = sidecarQaFor(records);
+  const layerReadability = layerReadabilityFor(stand, records, surface);
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
   const armorDetail = glbParts > 0
@@ -744,7 +944,16 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
     : fallbackParts > 0
     ? `仮形状 ${fallbackParts}パーツを表示。`
     : "人体基準で分割表示中。";
-  publishQaDatasets(stand, coverage, fitQa);
+  renderPreviewLegend();
+  publishQaDatasets(stand, coverage, fitQa, sidecarQa);
+  if (stand?.canvas) {
+    stand.canvas.dataset.previewLayerReadability = layerReadability.state;
+  }
+  setPreviewLayerRow(panel, "readability", "Layers", layerReadability.title, layerReadability.detail, layerReadability.state);
+  setPreviewLayerRow(panel, "sidecar", "Sidecar", sidecarQa.title, sidecarQa.detail, sidecarQa.state);
+  setPreviewLayerRow(panel, "offset", "Offset", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);
+  setPreviewLayerRow(panel, "topping", "Topping", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);
+  setPreviewLayerRow(panel, "variant", "Variant", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);
 
   setPreviewLayerRow(panel, "view", "ビュー", viewQa.title, viewQa.detail, viewQa.state);
   setPreviewLayerRow(panel, "coverage", "構成QA", coverage.title, coverage.detail, coverage.state);
@@ -2377,12 +2586,21 @@ class ArmorStand {
     }
   }
 
-  fitClearanceForPart(part, center, targetSize, metrics) {
+  fitOffsetAllowanceForPart(part, module, segmentQuat = null) {
+    const offsetTarget = sidecarMetadataForModule(part, module).offsetTarget;
+    if (!offsetTarget) return 0;
+    const offset = new THREE.Vector3(offsetTarget[0], offsetTarget[1], offsetTarget[2]);
+    if (segmentQuat) offset.applyQuaternion(segmentQuat);
+    return clamp(Math.abs(offset.z), 0, 0.18);
+  }
+
+  fitClearanceForPart(part, center, targetSize, metrics, module = null, segmentQuat = null) {
     const reference = this.fitReferenceCenterForPart(part, metrics);
     if (!reference || !center || !targetSize) return 0;
     const expectedDepth = Math.max(targetSize.z * 0.5, 0.001);
     const depthDistance = Math.abs(center.z - reference.z);
-    const exposedGap = Math.max(0, depthDistance - expectedDepth);
+    const offsetAllowance = this.fitOffsetAllowanceForPart(part, module, segmentQuat);
+    const exposedGap = Math.max(0, depthDistance - expectedDepth - offsetAllowance);
     if (part === "chest" || part === "back" || part === "waist") return exposedGap;
     return exposedGap > 0.04 ? exposedGap : 0;
   }
@@ -2445,6 +2663,7 @@ class ArmorStand {
   targetCenterForPart(part, module, metrics) {
     const fit = effectiveFitFor(part, module);
     const anchor = effectiveVrmAnchorFor(part, module);
+    const sidecar = sidecarMetadataForModule(part, module);
     const front = part === "back" ? -1 : 1;
     const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);
     const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);
@@ -2490,7 +2709,7 @@ class ArmorStand {
       if (anchorBone) center = anchorBone;
     }
     if (!center) return null;
-    center = addOrientedOffset(center, anchor.offset, segmentQuat);
+    center = addOrientedOffset(center, sidecar.offsetTarget || anchor.offset, segmentQuat);
     center.y += clamp(numberOr(fit.offsetY, 0), -0.42, 0.42) * 0.12;
     center.z += clamp(numberOr(fit.zOffset, 0), -0.25, 0.25) * 0.55 * front;
     return center;
@@ -2523,7 +2742,9 @@ class ArmorStand {
       q: quaternion ? quaternion.toArray() : null,
       source: "vrm_bone_metrics",
       targetSize: targetSize.toArray(),
-      fitGapM: this.fitClearanceForPart(part, center, targetSize, metrics),
+      fitGapM: this.fitClearanceForPart(part, center, targetSize, metrics, module, segmentQuat),
+      fitOffsetAllowanceM: this.fitOffsetAllowanceForPart(part, module, segmentQuat),
+      attachmentOffsetTargetM: sidecarMetadataForModule(part, module).offsetTarget,
     };
   }
 
@@ -2536,6 +2757,8 @@ class ArmorStand {
       source: "fallback_pose",
       targetSize: fallbackPose.s,
       fitGapM: 0,
+      fitOffsetAllowanceM: 0,
+      attachmentOffsetTargetM: sidecarMetadataForModule(part, module).offsetTarget,
     };
     mesh.position.set(...pose.p);
     if (pose.q) mesh.quaternion.set(...pose.q);
@@ -2544,6 +2767,8 @@ class ArmorStand {
     mesh.userData.fitPreview = pose.source;
     mesh.userData.fitTargetSize = pose.targetSize || fallbackPose.s;
     mesh.userData.fitGapM = numberOr(pose.fitGapM, 0);
+    mesh.userData.fitOffsetAllowanceM = numberOr(pose.fitOffsetAllowanceM, 0);
+    mesh.userData.attachmentOffsetTargetM = pose.attachmentOffsetTargetM || null;
   }
 
   getBaseSuitMaterial(palette = this.currentPalette, options = {}) {

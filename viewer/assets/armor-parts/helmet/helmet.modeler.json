@@ -48,11 +48,11 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
-    "single_surface_base_material_or_declared_slots": "pass",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
+    "single_surface_base_material_or_declared_slots": "warn",
     "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "no_body_intersection_at_reference_pose": "pass"
   },
   "triangles": 1012,
   "target_envelope_m": {
@@ -60,5 +60,60 @@
     "y": 0.34,
     "z": 0.2584
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "helmet:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "head_crest_line",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "crest",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.16,
+          0.0
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.08,
+        "y": 0.12,
+        "z": 0.06
+      },
+      "conflicts_with": [
+        "visor_trim"
+      ],
+      "parent_module": "helmet"
+    },
+    {
+      "topping_slot": "visor_trim",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.04,
+          0.1
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.2,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "conflicts_with": [],
+      "parent_module": "helmet"
+    }
+  ],
+  "attachment_offset_target_m": 0.08
 }

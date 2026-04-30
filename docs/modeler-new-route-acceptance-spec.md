@@ -220,3 +220,48 @@ python tools/smoke_web_glb_load.py
 
 最終判断は、数値gateとWeb previewの第一印象の両方で行います。
 数値がpassでも、背面が薄い、装着位置が浮く、基礎スーツと外装が別物に見える場合は未達として戻します。
+
+## Wave 1++後のwarn 8件の意味
+
+Wave 1++時点の `warn` は、GLB納品やbboxの失敗ではありません。
+18/18 GLB、fallback 0、bbox許容内を前提に、次Waveへ残す検収論点を8つの作業単位として扱います。
+
+| warn | 意味 | 次の解消条件 |
+|---|---|---|
+| 1. `offset_m` 品質gate | sidecar offsetは小さくなったが、Web/Quest実装が最終配置根拠として使う前に、骨anchorとの意味を固定する必要がある。 | moduleごとに `primary_bone`, `offset_m`, `rotation_deg`, local forward/upを確認し、見た目補正ではなく装着関係の値として説明できる。 |
+| 2. metadata gate | P0の `variant_key`, `part_family`, `base_motif_link`, `topping_slots`, `conflicts_with` がまだ生成/分岐の契約として閉じていない。 | P0 moduleがsidecar相当メモで上記metadataを持ち、Web QAとNanobanana promptで同じ名前を参照できる。 |
+| 3. chest silhouette | 胸は寸法内だが、第一印象で箱や検査用ボリュームに戻るリスクが残る。 | 正面/側面/3Qで胸郭を包む曲面外装に見え、腹側の箱エッジが主役にならない。 |
+| 4. back dorsal wrap | `back` のz寸法は範囲内だが、薄い板に見えたら未達。 | 肩甲骨から腰へ流れる背面装甲として、胸/腰と側面で胴体を挟む厚みが読める。 |
+| 5. waist and pelvis contact | 腰のbboxは改善済みだが、浮いた輪に見えるとWebの鎧立て感を壊す。 | ベルトが骨盤へ巻き付き、前後左右の高さが破綻せず、胸装甲と脚の隙間を受ける。 |
+| 6. shoulder integration | 左右肩は寸法・ミラーとしては成立しているが、肩球上の小物に見えるリスクが残る。 | 三角筋を覆い、胸/背中側へ薄いリップで差し込まれた肩アーマーに見える。 |
+| 7. shin/boot grounding | すねとブーツはWave 2寄りでも、足元の接地不良は第一印象を壊す。 | 靴底がfloor planeへ接し、すね-ブーツ接続がカフ/段差で読め、左右底面差が0.015m以内に見える。 |
+| 8. Nanobanana texture unity | 素材はまだplaceholderで、基礎スーツと外装が別物に見える危険が残る。 | Nanobananaで `unified_design` を先に決め、基礎スーツと外装が同じ色面・発光線・素材コントラストでつながる。 |
+
+この8件は「passまであと8つの数値不合格」ではなく、「次Waveで閉じるべき検収観点」です。
+特に 1 と 2 を先に閉じないと、Web QAとテクスチャ生成が別々の言葉で進み、後から分岐・toppingを増やすときに破綻します。
+
+## 次Waveの実装順
+
+ロア上の順序は、Webで鎧立てを確定し、Questで呼び出し、変身体験へ持ち込む流れです。
+そのため次Waveは次の順で進めます。
+
+1. `offset_m` / metadata gate完了: sidecarの装着値とP0 metadataを正本化する。ここで `base_motif_link` と `topping_slots` も名前を固定する。
+2. Web QA反映: Web Forgeの正面/側面/回転で、offset、浮き、箱感、接地、fallback 0、layer表示を確認する。
+3. Nanobanana基礎スーツ/外装統一: `unified_design` を先に生成し、`base_suit_surface` と `armor_overlay_parts` へ分配する。単色基礎スーツは禁止する。
+4. topping library拡張: P0の親moduleが単体で合格した後、`crest`, `visor_trim`, `chest_core`, `shoulder_fin`, `belt_buckle`, `shin_spike` などを追加する。
+
+## Nanobananaオンリーのテクスチャプロンプト方針
+
+最終テクスチャ生成はNanobananaオンリーを前提にします。
+fallback asset、単色塗り、検査用proxy色、外装だけの別モチーフは最終成果として扱いません。
+入力パラメータ、出力asset pointers、Quest recall連携まで含む詳細契約は `docs/nanobanana-texture-prompt-contract.md` を正本にします。
+
+プロンプトは必ず次の順で書きます。
+
+1. `unified_design`: 明るい特撮ヒーローとして、全身の色面、発光ライン、素材コントラスト、モチーフ反復を先に定義する。
+2. `base_suit_surface`: VRM表面に貼る完成ボディスーツ。単色禁止。ラバー/繊維質、細密パネル、関節部の連続柄、外装隙間から見える発光導線を含める。
+3. `armor_overlay_parts`: GLB外装。基礎スーツのラインを受ける縁、段差、トリム、発光アクセントを持たせる。胸/肩/腰/すね/ブーツが同じヒーロー文法に見えること。
+4. `negative`: plain single color undersuit, unrelated armor pieces, dark warehouse sci-fi, gray proxy material, inspection bbox, transparent guide box, muddy low contrast を避ける。
+
+明るさの基準は「展示会のWebプレビューで、来場者がこれを装着したいと思える特撮ヒーロー感」です。
+暗く重いSF兵器ではなく、白/シルバー/鮮やかな主色、読みやすい差し色、細い発光線で、Web上でも形が読める方向へ寄せます。

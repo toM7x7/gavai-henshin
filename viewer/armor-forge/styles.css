@@ -600,6 +600,27 @@ a:focus-visible {
   white-space: nowrap;
 }
 
+.preview-legend b,
+.preview-legend small {
+  display: inline-block;
+  line-height: 1.15;
+}
+
+.preview-legend b {
+  color: #172420;
+  font-size: 11px;
+}
+
+.preview-legend small {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(23, 36, 32, 0.08);
+  color: #53625d;
+  font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .preview-legend i {
   display: inline-block;
   width: 12px;
@@ -696,6 +717,7 @@ a:focus-visible {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .preview-layer-title {
@@ -704,6 +726,10 @@ a:focus-visible {
   color: var(--fg);
   font-size: 13px;
   line-height: 1.25;
+}
+
+.preview-layer-row[data-layer="sidecar"] .preview-layer-title {
+  color: #0f6e80;
 }
 
 .legend-skin {
@@ -843,8 +869,49 @@ a:focus-visible {
 
 .preview-layer-row[data-layer="coverage"] .preview-layer-detail,
 .preview-layer-row[data-layer="fit"] .preview-layer-detail,
-.preview-layer-row[data-layer="view"] .preview-layer-detail {
+.preview-layer-row[data-layer="view"] .preview-layer-detail,
+.preview-layer-row[data-layer="readability"] .preview-layer-detail,
+.preview-layer-row[data-layer="sidecar"] .preview-layer-detail,
+.preview-layer-row[data-layer="offset"] .preview-layer-detail,
+.preview-layer-row[data-layer="topping"] .preview-layer-detail,
+.preview-layer-row[data-layer="variant"] .preview-layer-detail {
   -webkit-line-clamp: 2;
+}
+
+.preview-layer-row[data-layer="readability"],
+.preview-layer-row[data-layer="base"],
+.preview-layer-row[data-layer="armor"],
+.preview-layer-row[data-layer="surface"] {
+  margin-inline: -5px;
+  padding-inline: 5px;
+  border-radius: 6px;
+  background: rgba(10, 143, 176, 0.055);
+}
+
+.preview-layer-row[data-layer="readability"] .preview-layer-title,
+.preview-layer-row[data-layer="base"] .preview-layer-title,
+.preview-layer-row[data-layer="armor"] .preview-layer-title,
+.preview-layer-row[data-layer="surface"] .preview-layer-title {
+  color: #0b5968;
+}
+
+.preview-layer-row[data-layer="sidecar"],
+.preview-layer-row[data-layer="offset"],
+.preview-layer-row[data-layer="topping"],
+.preview-layer-row[data-layer="variant"] {
+  margin-inline: -5px;
+  padding-inline: 5px;
+  border-radius: 6px;
+  background: rgba(230, 170, 54, 0.08);
+}
+
+.preview-layer-row[data-layer="sidecar"] .preview-layer-title,
+.preview-layer-row[data-layer="offset"] .preview-layer-title,
+.preview-layer-row[data-layer="topping"] .preview-layer-title,
+.preview-layer-row[data-layer="variant"] .preview-layer-title {
+  color: #7b520f;
+  font-family: "Segoe UI Mono", Consolas, ui-monospace, monospace;
+  font-size: 12px;
 }
 
 @media (max-width: 1180px) {

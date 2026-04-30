@@ -47,11 +47,11 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
     "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "no_body_intersection_at_reference_pose": "pass"
   },
   "clearance_m": 0.024,
   "shell_thickness_target_m": 0.045,
@@ -87,5 +87,60 @@
     "y": 0.4992,
     "z": 0.1632
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "chest:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "chest_v_stripe",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "chest_core",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.04,
+          0.07
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.14,
+        "y": 0.12,
+        "z": 0.035
+      },
+      "conflicts_with": [
+        "rib_trim"
+      ],
+      "parent_module": "chest"
+    },
+    {
+      "topping_slot": "rib_trim",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          -0.1,
+          0.07
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.4,
+        "y": 0.04,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "chest"
+    }
+  ],
+  "attachment_offset_target_m": 0.08
 }

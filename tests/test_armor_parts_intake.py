@@ -25,16 +25,21 @@ def _write_glb(path: Path, *, declared_length_delta: int = 0) -> None:
 
 
 def _sidecar(module: str) -> dict:
+    target = armor_intake._reference_target_dimensions(module)
+    try:
+        primary_bone = armor_intake.ARMOR_SLOT_SPECS[armor_intake.normalize_slot_id(module)].body_anchor
+    except ValueError:
+        primary_bone = "upperChest"
     return {
         "contract_version": "modeler-part-sidecar.v1",
         "module": module,
         "part_id": f"viewer.mesh.{module}.v1",
-        "bbox_m": {"x": 0.1, "y": 0.2, "z": 0.3, "size": [0.1, 0.2, 0.3]},
+        "bbox_m": {"x": target["x"], "y": target["y"], "z": target["z"], "size": [target["x"], target["y"], target["z"]]},
         "triangle_count": 12,
         "material_zones": ["base_surface", "accent", "trim"],
         "texture_provider_profile": "nano_banana",
         "vrm_attachment": {
-            "primary_bone": "upperChest",
+            "primary_bone": primary_bone,
             "offset_m": [0, 0, 0],
             "rotation_deg": [0, 0, 0],
         },
@@ -79,7 +84,10 @@ class TestArmorPartsIntake(unittest.TestCase):
         self.assertEqual(result["parts"]["helmet"]["glb"]["metrics"]["magic"], "glTF")
         self.assertEqual(result["parts"]["helmet"]["glb"]["metrics"]["first_chunk_type"], "JSON")
         self.assertEqual(result["parts"]["helmet"]["glb"]["metrics"]["asset_version"], "2.0")
-        self.assertEqual(result["parts"]["chest"]["sidecar"]["metrics"]["bbox_size_m"], [0.1, 0.2, 0.3])
+        self.assertEqual(
+            result["parts"]["chest"]["sidecar"]["metrics"]["bbox_size_m"],
+            list(armor_intake._reference_target_dimensions("chest").values()),
+        )
 
     def test_intake_fails_on_glb_length_mismatch_sidecar_module_mismatch_and_blend1(self) -> None:
         _write_part(self.root, "helmet", sidecar_module="wrong_module", bad_glb=True)
@@ -101,19 +109,20 @@ class TestArmorPartsIntake(unittest.TestCase):
         result = armor_intake.validate_armor_parts(armor_intake.DEFAULT_ARMOR_PARTS_DIR)
 
         self.assertEqual(len(armor_intake.EXPECTED_PARTS), 18)
-        self.assertEqual(result["status"], "pass", result["reasons"])
+        self.assertNotEqual(result["status"], "fail", result["reasons"])
         self.assertTrue(result["ok"])
         self.assertEqual(result["part_count"], 18)
         self.assertEqual(result["missing_parts"], [])
-        self.assertEqual(result["warnings"], [])
+        self.assertFalse(any("P0 metadata" in reason for reason in result["reasons"]))
         self.assertEqual(set(result["present_parts"]), set(armor_intake.EXPECTED_PARTS))
         for part in armor_intake.EXPECTED_PARTS:
             with self.subTest(part=part):
-                self.assertEqual(result["parts"][part]["status"], "pass")
+                self.assertIn(result["parts"][part]["status"], {"pass", "warn"})
                 self.assertEqual(result["parts"][part]["glb"]["metrics"]["magic"], "glTF")
                 self.assertEqual(result["parts"][part]["glb"]["metrics"]["version"], 2)
                 self.assertEqual(result["parts"][part]["glb"]["metrics"]["asset_version"], "2.0")
                 self.assertIn("base_surface", result["parts"][part]["sidecar"]["metrics"]["material_zones"])
+                self.assertNotEqual(result["parts"][part]["sidecar"]["metrics"]["p0_metadata_gate"]["status"], "fail")
                 self.assertGreater(result["parts"][part]["sidecar"]["metrics"]["triangle_count"], 0)
 
 

@@ -371,6 +371,60 @@ class TestDashboardServer(unittest.TestCase):
         }:
             self.assertIn(token, api)
 
+    def test_armor_forge_sidecar_offset_metadata_reaches_preview_qa_static_contract(self) -> None:
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")
+
+        for token in {
+            "function sidecarMetadataForModule(part, module = {})",
+            "item.topping_slot",
+            "module?.attachment_offset_target_m",
+            "module?.topping_slots",
+            "module?.variant_key",
+            "function sidecarQaFor(records = previewRecordsFromData())",
+            'setPreviewLayerRow(panel, "sidecar", "Sidecar", sidecarQa.title, sidecarQa.detail, sidecarQa.state);',
+            "canvas.dataset.previewAttachmentOffsetTargets",
+            "canvas.dataset.previewToppingSlots",
+            "canvas.dataset.previewVariantKeys",
+            "canvas.dataset.previewAttachmentOffsetCount",
+            "canvas.dataset.previewToppingSlotCount",
+            "canvas.dataset.previewVariantKeyCount",
+            "stand.canvas.dataset.previewLayerReadability",
+            "function compactDataList(values, limit = 3, empty = \"none\")",
+            "function layerReadabilityFor(stand, records, surface)",
+            "attachmentOffsetTargetM",
+            "offsetAllowanceM",
+            'setPreviewLayerRow(panel, "readability", "Layers", layerReadability.title, layerReadability.detail, layerReadability.state);',
+            'setPreviewLayerRow(panel, "offset", "Offset", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);',
+            'setPreviewLayerRow(panel, "topping", "Topping", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);',
+            'setPreviewLayerRow(panel, "variant", "Variant", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);',
+            '"Body reference"',
+            '"Base suit"',
+            '"Armor parts"',
+            '"Surface lines"',
+        }:
+            self.assertIn(token, js)
+
+        target_center_block = js[js.index("  targetCenterForPart(") : js.index("\n\n  vrmPoseFor")]
+        self.assertIn("const sidecar = sidecarMetadataForModule(part, module);", target_center_block)
+        self.assertIn("sidecar.offsetTarget || anchor.offset", target_center_block)
+
+        offset_allowance_block = js[js.index("  fitOffsetAllowanceForPart(") : js.index("\n\n  fitClearanceForPart")]
+        self.assertIn("fitOffsetAllowanceForPart(part, module, segmentQuat = null)", offset_allowance_block)
+        self.assertIn("sidecarMetadataForModule(part, module).offsetTarget", offset_allowance_block)
+
+        clearance_block = js[js.index("  fitClearanceForPart(") : js.index("\n\n  targetSizeForPart")]
+        self.assertIn("const offsetAllowance = this.fitOffsetAllowanceForPart(part, module, segmentQuat);", clearance_block)
+        self.assertIn("depthDistance - expectedDepth - offsetAllowance", clearance_block)
+
+        self.assertIn('.preview-layer-row[data-layer="sidecar"] .preview-layer-title', css)
+        self.assertIn('.preview-layer-row[data-layer="readability"]', css)
+        self.assertIn('.preview-layer-row[data-layer="offset"]', css)
+        self.assertIn('.preview-layer-row[data-layer="topping"]', css)
+        self.assertIn('.preview-layer-row[data-layer="variant"]', css)
+        self.assertIn(".preview-legend small", css)
+        self.assertIn("overflow-wrap: anywhere;", css)
+
     def test_armor_forge_limb_pose_uses_3d_segment_frame_static_contract(self) -> None:
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
 
@@ -445,7 +499,8 @@ class TestDashboardServer(unittest.TestCase):
         for token in {
             "const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);",
             "const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);",
-            "center = addOrientedOffset(center, anchor.offset, segmentQuat);",
+            "const sidecar = sidecarMetadataForModule(part, module);",
+            "center = addOrientedOffset(center, sidecar.offsetTarget || anchor.offset, segmentQuat);",
         }:
             self.assertIn(token, center_block)
 

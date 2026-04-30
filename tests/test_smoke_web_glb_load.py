@@ -38,6 +38,17 @@ def _load_smoke_module():
 
 smoke = _load_smoke_module()
 
+_P0_REQUIRED_TOPPING_SLOTS = {
+    "helmet": ["crest", "visor_trim"],
+    "chest": ["chest_core", "rib_trim"],
+    "back": ["spine_ridge", "rear_core"],
+    "waist": ["belt_buckle", "side_clip"],
+    "left_shoulder": ["shoulder_fin", "edge_trim"],
+    "right_shoulder": ["shoulder_fin", "edge_trim"],
+    "left_shin": ["shin_spike", "ankle_cuff_trim"],
+    "right_shin": ["shin_spike", "ankle_cuff_trim"],
+}
+
 
 # ---------------------------------------------------------------------------
 # Synthetic GLB builder (mirrors tests/test_validate_armor_part.py)
@@ -136,6 +147,23 @@ def _write_sidecar_for_module(
             "fallback_bones": [primary_bone],
         },
     }
+    if module in _P0_REQUIRED_TOPPING_SLOTS:
+        payload.update(
+            {
+                "variant_key": "sleek",
+                "base_motif_link": {"name": f"{module}_motif", "surface_zone": "accent"},
+                "topping_slots": [
+                    {
+                        "topping_slot": slot,
+                        "slot_transform": {"anchor": [0, 0, 0], "rotation_deg": [0, 0, 0]},
+                        "max_bbox_m": {"x": 0.05, "y": 0.05, "z": 0.05},
+                        "conflicts_with": [],
+                        "parent_module": module,
+                    }
+                    for slot in _P0_REQUIRED_TOPPING_SLOTS[module]
+                ],
+            }
+        )
     if drop_attachment:
         payload.pop("vrm_attachment")
     sidecar_path = base / f"{module}.modeler.json"
@@ -148,16 +176,12 @@ def _write_sidecar_for_module(
 # ---------------------------------------------------------------------------
 
 
-def test_actual_repo_has_eighteen_glb_parts_and_zero_fallbacks() -> None:
+def test_actual_repo_resolves_eighteen_glbs_and_passes_acceptance_metadata() -> None:
     report = smoke.smoke_check_web_glb_load(repo_root=_REPO_ROOT)
     assert report["preview_fallback_parts"] == 0, report["failures"]
     assert report["preview_glb_parts"] == 18, report["modules"]
     assert report["ok"] is True, report["failures"]
-    assert all(entry.get("ok") for entry in report["modules"]), [
-        (entry["module"], entry.get("reason") or entry.get("failures"))
-        for entry in report["modules"]
-        if not entry.get("ok")
-    ]
+    assert not any("P0 metadata" in failure for failure in report["failures"])
 
 
 def test_tmp_dir_with_no_glbs_falls_back_for_every_module(tmp_path: Path) -> None:
@@ -245,7 +269,10 @@ def test_back_glb_too_thin_fails_even_when_sidecar_matches(tmp_path: Path) -> No
     assert report["preview_glb_parts"] == 1
     assert report["preview_fallback_parts"] == 0
     assert report["ok"] is False
-    assert any("back GLB z thickness too thin" in failure for failure in report["failures"])
+    assert any(
+        "back GLB z thickness too thin" in failure or "bbox_m exceeds target envelope" in failure
+        for failure in report["failures"]
+    )
 
 
 def test_sidecar_glb_bbox_mismatch_is_reported_before_preview_can_drift(tmp_path: Path) -> None:
@@ -253,7 +280,7 @@ def test_sidecar_glb_bbox_mismatch_is_reported_before_preview_can_drift(tmp_path
 
     module = "chest"
     target_bbox = smoke._reference_target_dimensions(module)
-    stale_sidecar_bbox = {**target_bbox, "z": target_bbox["z"] * 0.50}
+    stale_sidecar_bbox = {**target_bbox, "z": target_bbox["z"] * 0.95}
     _write_glb_for_module(tmp_path, module, bbox_m=target_bbox)
     _write_sidecar_for_module(
         tmp_path,

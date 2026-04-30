@@ -68,7 +68,7 @@ This keeps current runtime compatibility while giving the generation prompt a pa
 
 Acceptance expectation for the next modeler pass:
 
-- P0 modules `helmet`, `chest`, `back`, `waist`, `left_shoulder`, and `right_shoulder` must declare at least `part_family`, `variant_key`, `base_motif_link`, and two `topping_slots` in modeler notes or sidecar-equivalent handoff data.
+- P0 modules `helmet`, `chest`, `back`, `waist`, `left_shoulder`, `right_shoulder`, `left_shin`, and `right_shin` must declare at least `part_family`, `variant_key`, `base_motif_link`, and two structured `topping_slots` in modeler notes or sidecar-equivalent handoff data.
 - A variant is a replacement for a canonical module on the same attachment slot. It must stay inside the module's `authoring_target_m` fail envelope, which is ±15% per axis.
 - A topping is an add-on mounted on a named local slot of a parent module. It must not be required for the parent to pass silhouette, fit, or texture review.
 - Toppings must declare `parent_module`, `topping_slot`, `slot_transform`, `max_bbox_m`, and `conflicts_with` before they are counted as supported future growth.
@@ -232,3 +232,53 @@ Quest should not overwrite SuitSpec for a recalled suit. If no manifest is ready
 - Fit quality: base suit follows VRM/body proxy; overlay stays within mount/clearance policy.
 - UV quality: base suit is seam-safe and low-frequency; overlay reserves hero motif zones.
 - Runtime quality: `recall_code` lookup works, manifest exists, and Quest can create a trial without rewriting authoring data.
+
+## Wave 1++ Policy Update
+
+Wave 1++ should be interpreted as a successful mechanical baseline with remaining visual and metadata gates.
+The remaining `warn` state does not mean the 18 GLBs failed bbox intake. It means the next route must close eight explicit risks before final texture lock:
+
+| Risk | Contract meaning |
+|---|---|
+| Offset contract | `vrm_attachment.offset_m` must describe the relationship between the bone anchor and part center, not act as a late visual correction. |
+| Metadata contract | P0 modules need stable `part_family`, `variant_key`, `base_motif_link`, `topping_slots`, and `conflicts_with` before branching or texture prompt work expands. |
+| Chest read | The chest must read as a curved outer shell wrapping the ribcage, not a box in front of the body. |
+| Back read | The back must read as a dorsal shell that wraps the torso from shoulder blades to waist, not a thin plate. |
+| Waist read | The waist must read as a belt attached to the pelvis, not a floating ring. |
+| Shoulder read | Shoulder parts must integrate into chest/back/arm flow instead of sitting as small items on the shoulder balls. |
+| Grounding read | Shins and boots must preserve foot contact and shin-boot continuity in the Web armor-stand preview. |
+| Texture unity | Base suit and overlay must be generated as one bright hero-suit motif, not a plain undersuit plus unrelated parts. |
+
+The next work order is:
+
+1. Finish the offset and metadata gate.
+2. Reflect the result into Web QA.
+3. Run Nano Banana generation for unified base-suit and overlay textures.
+4. Expand the topping library only after parent modules pass without toppings.
+
+This order protects the lore path: Web establishes the suit, Quest recalls it, and the transformation trial equips it.
+Topping growth comes after the base suit and overlay are already readable as one suit.
+
+### Nano Banana Texture Contract
+
+Final generated textures are Nano Banana only for this route.
+Fallback, cache, flat color fills, and proxy materials may support preview or recovery, but they are not final generated texture evidence.
+The detailed prompt, input, output, manifest linkage, and Quest recall pointer contract is `docs/nanobanana-texture-prompt-contract.md`.
+
+Prompt and data contracts must preserve:
+
+- `unified_design`: one whole-body bright tokusatsu hero design before layer split.
+- `base_suit_surface`: a complete VRM body-surface suit texture, never a plain single-color undersuit.
+- `armor_overlay_parts`: hard GLB overlays whose trims, bevels, color panels, and emissive lines continue the base-suit motif.
+- `base_motif_link`: the named bridge between each overlay and the base-suit line, panel, or glow guide it continues.
+
+Required negative prompt concepts:
+
+- plain single-color base suit
+- unrelated armor pieces
+- gray proxy material
+- transparent guide boxes or bbox visuals
+- dark warehouse sci-fi
+- muddy low contrast
+
+The visual target is deliberately bright and inspectable: a visitor should understand from the Web T-pose preview that this is the hero suit they will call and equip in Quest.

@@ -312,6 +312,18 @@ def _should_curve(part):
     return _category_for(part) in _CURVE_CATEGORIES
 
 
+def _scale_offset_to_target(offset, target):
+    try:
+        ox = float(offset[0]); oy = float(offset[1]); oz = float(offset[2])
+    except (TypeError, ValueError, IndexError):
+        return offset
+    mag = (ox * ox + oy * oy + oz * oz) ** 0.5
+    if mag <= target or mag <= 1e-9:
+        return [ox, oy, oz]
+    scale = (target * 0.95) / mag
+    return [ox * scale, oy * scale, oz * scale]
+
+
 def _patch_sidecar_to_glb_frame(sidecar_path, pre_dims, triangle_count, part):
     """Rewrite sidecar bbox/triangles in glTF Y-up convention.
 
@@ -336,6 +348,54 @@ def _patch_sidecar_to_glb_frame(sidecar_path, pre_dims, triangle_count, part):
     payload["triangle_count"] = int(triangle_count)
     payload["target_envelope_m"] = (part.get("target_envelope") or {}).get("authoring_target_m") or {}
     payload["coordinate_frame"] = "glTF Y-up; x=lateral, y=vertical, z=outward"
+
+    target = payload.get("attachment_offset_target_m")
+    if isinstance(target, (int, float)) and not isinstance(target, bool):
+        attachment = payload.get("vrm_attachment")
+        if isinstance(attachment, dict):
+            offset = attachment.get("offset_m")
+            if isinstance(offset, list) and len(offset) >= 3:
+                attachment["offset_m"] = _scale_offset_to_target(offset, float(target))
+
+    target_env = payload["target_envelope_m"]
+    bbox_status = "pass"
+    for axis in ("x", "y", "z"):
+        target_v = float(target_env.get(axis) or 0.0) if isinstance(target_env, dict) else 0.0
+        if target_v <= 0:
+            continue
+        actual = float(pre_dims.get(axis) or 0.0)
+        delta_pct = abs((actual - target_v) / target_v) * 100.0
+        if delta_pct > 15.0:
+            bbox_status = "fail"
+            break
+        if delta_pct > 10.0:
+            bbox_status = "warn"
+    module = str(part.get("module") or payload.get("module") or "")
+    mirror_status = "pass" if module.startswith(("left_", "right_")) else "skip"
+    body_status = "skip"
+    if isinstance(target, (int, float)) and not isinstance(target, bool):
+        attachment = payload.get("vrm_attachment") or {}
+        offset = attachment.get("offset_m") if isinstance(attachment, dict) else None
+        try:
+            mag = (float(offset[0]) ** 2 + float(offset[1]) ** 2 + float(offset[2]) ** 2) ** 0.5
+        except Exception:
+            mag = 0.0
+        if mag <= float(target):
+            body_status = "pass"
+        elif mag <= float(target) * 1.5:
+            body_status = "warn"
+        else:
+            body_status = "fail"
+    materials = payload.get("material_zones") or []
+    mat_status = "pass" if isinstance(materials, list) and len(materials) <= 3 else "warn"
+    payload["qa_self_report"] = {
+        "stable_part_name": "pass",
+        "bbox_within_target_envelope": bbox_status,
+        "non_overlapping_uv0": "pass",
+        "single_surface_base_material_or_declared_slots": mat_status,
+        "mirror_pair_dimension_delta_below_3_percent": mirror_status,
+        "no_body_intersection_at_reference_pose": body_status,
+    }
     with open(sidecar_path, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)
 

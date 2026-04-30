@@ -15,6 +15,7 @@ flat tiles. Targets follow `_blueprint_snapshot.json::authoring_target_m`.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 
@@ -42,6 +43,177 @@ _TRI_BUDGET = {
     "shoulder": 900, "arm": 1100, "hand": 700, "leg": 1100, "foot": 900,
 }
 
+_BASE_MOTIF_LINKS: dict[str, dict[str, str]] = {
+    "helmet": {"name": "head_crest_line", "surface_zone": "emissive"},
+    "chest": {"name": "chest_v_stripe", "surface_zone": "emissive"},
+    "back": {"name": "spine_line", "surface_zone": "accent"},
+    "waist": {"name": "belt_band", "surface_zone": "accent"},
+    "left_shoulder": {"name": "shoulder_arc", "surface_zone": "accent"},
+    "right_shoulder": {"name": "shoulder_arc", "surface_zone": "accent"},
+    "left_upperarm": {"name": "arm_stripe", "surface_zone": "accent"},
+    "right_upperarm": {"name": "arm_stripe", "surface_zone": "accent"},
+    "left_forearm": {"name": "wrist_band", "surface_zone": "accent"},
+    "right_forearm": {"name": "wrist_band", "surface_zone": "accent"},
+    "left_hand": {"name": "knuckle_glow", "surface_zone": "emissive"},
+    "right_hand": {"name": "knuckle_glow", "surface_zone": "emissive"},
+    "left_thigh": {"name": "thigh_stripe", "surface_zone": "accent"},
+    "right_thigh": {"name": "thigh_stripe", "surface_zone": "accent"},
+    "left_shin": {"name": "shin_v", "surface_zone": "emissive"},
+    "right_shin": {"name": "shin_v", "surface_zone": "emissive"},
+    "left_boot": {"name": "boot_instep_glow", "surface_zone": "emissive"},
+    "right_boot": {"name": "boot_instep_glow", "surface_zone": "emissive"},
+}
+
+_ATTACHMENT_OFFSET_TARGETS_M: dict[str, float] = {
+    "helmet": 0.08,
+    "chest": 0.08,
+    "back": 0.08,
+    "waist": 0.06,
+    "shoulder": 0.04,
+    "upperarm": 0.04,
+    "forearm": 0.04,
+    "hand": 0.04,
+    "thigh": 0.04,
+    "shin": 0.04,
+    "boot": 0.06,
+}
+
+
+def _shoulder_slots(side_x: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "topping_slot": "shoulder_fin",
+            "slot_transform": {"anchor": [side_x * 0.07, 0.0, 0.08], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.10, "y": 0.12, "z": 0.040},
+            "conflicts_with": ["edge_trim"],
+        },
+        {
+            "topping_slot": "edge_trim",
+            "slot_transform": {"anchor": [side_x * 0.04, 0.0, 0.10], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.16, "y": 0.04, "z": 0.020},
+            "conflicts_with": [],
+        },
+    ]
+
+
+def _shin_slots(side_x: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "topping_slot": "shin_spike",
+            "slot_transform": {"anchor": [side_x * 0.0, 0.04, 0.06], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.06, "y": 0.12, "z": 0.040},
+            "conflicts_with": ["ankle_cuff_trim"],
+        },
+        {
+            "topping_slot": "ankle_cuff_trim",
+            "slot_transform": {"anchor": [side_x * 0.0, -0.16, 0.0], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.10, "y": 0.04, "z": 0.020},
+            "conflicts_with": [],
+        },
+    ]
+
+
+def _thigh_slots(side_x: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "topping_slot": "hip_side_fin",
+            "slot_transform": {"anchor": [side_x * 0.05, 0.11, 0.06], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.045, "y": 0.12, "z": 0.035},
+            "conflicts_with": ["knee_lip_trim"],
+        },
+        {
+            "topping_slot": "knee_lip_trim",
+            "slot_transform": {"anchor": [side_x * 0.0, -0.17, 0.06], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.09, "y": 0.035, "z": 0.025},
+            "conflicts_with": [],
+        },
+    ]
+
+
+def _boot_slots(side_x: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "topping_slot": "toe_fin",
+            "slot_transform": {"anchor": [side_x * 0.0, 0.0, 0.13], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.075, "y": 0.035, "z": 0.045},
+            "conflicts_with": ["heel_spur"],
+        },
+        {
+            "topping_slot": "heel_spur",
+            "slot_transform": {"anchor": [side_x * 0.0, 0.0, -0.13], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.075, "y": 0.035, "z": 0.045},
+            "conflicts_with": [],
+        },
+    ]
+
+
+_TOPPING_SLOT_DEFAULTS: dict[str, list[dict[str, Any]]] = {
+    "helmet": [
+        {
+            "topping_slot": "crest",
+            "slot_transform": {"anchor": [0.0, 0.16, 0.0], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.08, "y": 0.12, "z": 0.06},
+            "conflicts_with": ["visor_trim"],
+        },
+        {
+            "topping_slot": "visor_trim",
+            "slot_transform": {"anchor": [0.0, 0.04, 0.10], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.20, "y": 0.04, "z": 0.02},
+            "conflicts_with": [],
+        },
+    ],
+    "chest": [
+        {
+            "topping_slot": "chest_core",
+            "slot_transform": {"anchor": [0.0, 0.04, 0.07], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.14, "y": 0.12, "z": 0.035},
+            "conflicts_with": ["rib_trim"],
+        },
+        {
+            "topping_slot": "rib_trim",
+            "slot_transform": {"anchor": [0.0, -0.10, 0.07], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.40, "y": 0.04, "z": 0.025},
+            "conflicts_with": [],
+        },
+    ],
+    "back": [
+        {
+            "topping_slot": "spine_ridge",
+            "slot_transform": {"anchor": [0.0, 0.0, -0.07], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.12, "y": 0.20, "z": 0.040},
+            "conflicts_with": ["rear_core"],
+        },
+        {
+            "topping_slot": "rear_core",
+            "slot_transform": {"anchor": [0.0, 0.0, -0.05], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.18, "y": 0.18, "z": 0.030},
+            "conflicts_with": [],
+        },
+    ],
+    "waist": [
+        {
+            "topping_slot": "belt_buckle",
+            "slot_transform": {"anchor": [0.0, 0.0, 0.08], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.16, "y": 0.08, "z": 0.035},
+            "conflicts_with": [],
+        },
+        {
+            "topping_slot": "side_clip",
+            "slot_transform": {"anchor": [0.18, 0.0, 0.0], "rotation_deg": [0, 0, 0]},
+            "max_bbox_m": {"x": 0.06, "y": 0.06, "z": 0.030},
+            "conflicts_with": [],
+        },
+    ],
+    "left_shoulder": _shoulder_slots(side_x=1.0),
+    "right_shoulder": _shoulder_slots(side_x=-1.0),
+    "left_thigh": _thigh_slots(side_x=1.0),
+    "right_thigh": _thigh_slots(side_x=-1.0),
+    "left_shin": _shin_slots(side_x=1.0),
+    "right_shin": _shin_slots(side_x=-1.0),
+    "left_boot": _boot_slots(side_x=1.0),
+    "right_boot": _boot_slots(side_x=-1.0),
+}
+
 _ENVELOPE = {
     "helmet":         {"x": 0.2856, "y": 0.34,   "z": 0.2584},
     "chest":          {"x": 0.6392, "y": 0.4992, "z": 0.1632},
@@ -55,6 +227,21 @@ _ENVELOPE = {
     "left_shin":      {"x": 0.1156, "y": 0.3956, "z": 0.1156},
     "left_boot":      {"x": 0.1224, "y": 0.0884, "z": 0.2856},
 }
+
+
+def _attachment_offset_key(module: str) -> str:
+    if module.startswith("left_"):
+        return module[len("left_"):]
+    if module.startswith("right_"):
+        return module[len("right_"):]
+    return module
+
+
+def _topping_slots_for(module: str) -> list[dict[str, Any]]:
+    slots = deepcopy(_TOPPING_SLOT_DEFAULTS.get(module, []))
+    for slot in slots:
+        slot["parent_module"] = module
+    return slots
 
 
 def _panel(
@@ -124,6 +311,11 @@ def _base(
         "shell_thickness_m": _THICKNESS_M[category],
         "tri_budget": _TRI_BUDGET[category],
         "material_zones_palette": dict(MATERIAL_PALETTE),
+        "variant_key": f"{module}:base",
+        "part_family": "silver_hero",
+        "base_motif_link": dict(_BASE_MOTIF_LINKS[module]),
+        "topping_slots": _topping_slots_for(module),
+        "attachment_offset_target_m": _ATTACHMENT_OFFSET_TARGETS_M[_attachment_offset_key(module)],
     }
 
 
@@ -309,6 +501,23 @@ def _back_spec() -> dict[str, Any]:
             arc_deg=54.0, front_bulge=0.010, segments=8,
             y_taper_top=0.04, y_taper_bottom=0.08,
             comment="Right scapula fill pad; mirrors rear part density."),
+        _panel("back_side_return_left", "trim_ridge",
+            anchor=(ex * 0.44, -ey * 0.02, -0.020),
+            size=(0.030, ey * 0.48, 0.024),
+            rotation_deg=(0.0, -24.0, 0.0),
+            bevel_m=0.003, material_zone="accent",
+            comment="Left side return lip makes the dorsal armor wrap around the torso in profile."),
+        _panel("back_side_return_right", "trim_ridge",
+            anchor=(-ex * 0.44, -ey * 0.02, -0.020),
+            size=(0.030, ey * 0.48, 0.024),
+            rotation_deg=(0.0, 24.0, 0.0),
+            bevel_m=0.003, material_zone="accent",
+            comment="Right side return lip mirrors the left torso wrap cue."),
+        _panel("back_rear_core_socket", "trim_ridge",
+            anchor=(0.0, ey * 0.05, -0.064),
+            size=(ex * 0.18, ey * 0.12, 0.010),
+            bevel_m=0.003, material_zone="emissive",
+            comment="Small rear power-core socket breaks up the thin rear silhouette."),
         _panel("back_wing_left", "trim_ridge",
             anchor=(ex * 0.30, ey * 0.32, -0.030),
             size=(ex * 0.22, 0.020, 0.022),
@@ -342,6 +551,14 @@ def _back_spec() -> dict[str, Any]:
         ],
         "target_contact": "rear shell follows shoulder blade and lumbar zones, not a single flat slab",
     }
+    spec["visual_density_profile"] = {
+        "issue": "rear silhouette previously read thin in web preview",
+        "hero_density_panels": [
+            "back_spine_plate", "back_spine_keel_upper", "back_spine_keel_lower",
+            "back_side_return_left", "back_side_return_right", "back_rear_core_socket",
+        ],
+        "profile_cues": ["side return lips", "central rear core", "scapula pads"],
+    }
     spec["auxiliary_part_suggestions"] = [
         {
             "proposal_id": "back_scapula_aux_left",
@@ -362,6 +579,7 @@ def _back_spec() -> dict[str, Any]:
     ]
     spec["fit_alignment_notes"] = [
         "Back shell depth is redistributed into spine keel and scapula pads instead of only expanding bbox z.",
+        "Side return lips add profile thickness without relying on Web-only offsets.",
         "Lumbar wrap is widened to meet waist_belt_back and reduce rear gap.",
         "Attachment offset moves the module slightly farther rearward for body tracking.",
     ]
@@ -709,6 +927,11 @@ def _left_thigh_spec() -> dict[str, Any]:
             size=(0.012, ey * 0.66, 0.030),
             bevel_m=0.002, material_zone="accent",
             comment="Outer-edge trim ridge running thigh length."),
+        _panel("thigh_front_power_cell", "trim_ridge",
+            anchor=(0.0, ey * 0.08, ez * 0.44),
+            size=(ex * 0.30, ey * 0.12, 0.010),
+            bevel_m=0.002, material_zone="emissive",
+            comment="Front thigh power cell increases hero detail density while staying inside target depth."),
     ]
     spec["silhouette"] = {"panels": panels, "wrap_arc_deg": 180.0}
     spec["emissive_lines"] = [
@@ -717,6 +940,22 @@ def _left_thigh_spec() -> dict[str, Any]:
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "leftUpperLeg",
         "offset_m": [0.005, -0.01, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "segmented_thigh_shell_with_stride_gap",
+        "depth_axis": "z",
+        "anchor_bones": ["leftUpperLeg", "hips"],
+        "follow_panels": ["thigh_outer_wrap", "thigh_inner_wrap"],
+        "target_contact": "front and rear thigh shells leave side stride gaps but carry visible armor density",
+    }
+    spec["visual_density_profile"] = {
+        "issue": "leg modules can read like sparse proxy guards at full-body distance",
+        "hero_density_panels": ["thigh_knee_lip", "thigh_hip_accent", "thigh_side_trim", "thigh_front_power_cell"],
+        "profile_cues": ["knee lip", "outer stripe", "front power cell"],
+    }
+    spec["fit_alignment_notes"] = [
+        "Thigh front power cell adds a visible focal detail without changing the attachment offset.",
+        "Topping slots reserve hip-side fin and knee lip trim anchors for later silhouette upgrades.",
+    ]
     spec["silhouette_review_notes"] = [
         "Front wrap + rear wrap with side gap reads as armored thigh, not a tube.",
         "Hip accent links visually into the waist hip-side line.",
@@ -761,6 +1000,11 @@ def _left_shin_spec() -> dict[str, Any]:
             size=(ex * 0.10, ey * 0.66, 0.012),
             bevel_m=0.002, material_zone="emissive",
             comment="Front center V emissive stripe (mirrors chest V vertically)."),
+        _panel("shin_boot_socket_shadow", "trim_ridge",
+            anchor=(0.0, -ey * 0.50, -0.006),
+            size=(ex * 0.88, 0.014, 0.030),
+            bevel_m=0.002, material_zone="trim",
+            comment="Dark lower socket visually nests into the boot cuff and reduces foot float."),
     ]
     spec["silhouette"] = {"panels": panels, "wrap_arc_deg": 180.0}
     spec["emissive_lines"] = [
@@ -769,6 +1013,22 @@ def _left_shin_spec() -> dict[str, Any]:
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "leftLowerLeg",
         "offset_m": [0.0, -0.015, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "shin_guard_with_boot_socket",
+        "depth_axis": "z",
+        "anchor_bones": ["leftLowerLeg", "leftFoot"],
+        "follow_panels": ["shin_outer_wrap", "shin_inner_wrap", "shin_ankle_lip", "shin_boot_socket_shadow"],
+        "target_contact": "lower socket visually receives the boot cuff instead of ending as a floating shin plate",
+    }
+    spec["visual_density_profile"] = {
+        "issue": "shin guard needed more lower-leg detail and a stronger boot transition",
+        "hero_density_panels": ["shin_knee_dome", "shin_ankle_lip", "shin_center_v", "shin_boot_socket_shadow"],
+        "profile_cues": ["knee dome", "ankle lip", "boot socket shadow"],
+    }
+    spec["fit_alignment_notes"] = [
+        "Boot socket shadow creates a source-of-truth seam for Web preview grounding.",
+        "Topping slots reserve shin spike and ankle cuff trim anchors for later add-ons.",
+    ]
     spec["silhouette_review_notes"] = [
         "Front wrap + rear wrap split mirrors thigh construction.",
         "Knee dome adds a clear visual hinge between thigh and shin.",
@@ -804,6 +1064,16 @@ def _left_boot_spec() -> dict[str, Any]:
             size=(0.115, 0.012, 0.26),
             bevel_m=0.002, material_zone="trim",
             comment="Flat sole plate spans full z envelope; ground contact."),
+        _panel("boot_sole_outrigger_left", "trim_ridge",
+            anchor=(ex * 0.43, -0.040, 0.018),
+            size=(0.014, 0.010, ez * 0.70),
+            bevel_m=0.002, material_zone="trim",
+            comment="Left sole rail widens the visual footprint for stronger ground contact."),
+        _panel("boot_sole_outrigger_right", "trim_ridge",
+            anchor=(-ex * 0.43, -0.040, 0.018),
+            size=(0.014, 0.010, ez * 0.70),
+            bevel_m=0.002, material_zone="trim",
+            comment="Right sole rail mirrors the visual footprint cue."),
         _panel("boot_instep_accent", "trim_ridge",
             anchor=(0.0, 0.010, 0.05),
             size=(ex * 0.40, 0.012, ez * 0.50),
@@ -817,6 +1087,28 @@ def _left_boot_spec() -> dict[str, Any]:
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "leftFoot",
         "offset_m": [0.0, 0.0, 0.035], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "grounded_boot_with_ankle_cuff",
+        "depth_axis": "z",
+        "anchor_bones": ["leftFoot", "leftLowerLeg"],
+        "follow_panels": ["boot_toe_cap", "boot_heel_cap", "boot_ankle_wrap", "boot_sole_flat"],
+        "target_contact": "sole and side rails define contact in source geometry, not Web-only correction",
+    }
+    spec["ground_contact_profile"] = {
+        "sole_panel": "boot_sole_flat",
+        "side_rails": ["boot_sole_outrigger_left", "boot_sole_outrigger_right"],
+        "local_bottom_y_m": -0.045,
+        "stance_note": "Use the sole bottom as the foot contact reference in preview and fit QA.",
+    }
+    spec["visual_density_profile"] = {
+        "issue": "boot silhouette needed more planted footprint and add-on anchors",
+        "hero_density_panels": ["boot_ankle_wrap", "boot_sole_flat", "boot_sole_outrigger_left", "boot_sole_outrigger_right", "boot_instep_accent"],
+        "profile_cues": ["flat sole", "side rails", "instep glow"],
+    }
+    spec["fit_alignment_notes"] = [
+        "Sole rails widen the visual footprint while keeping the attachment offset inside target.",
+        "Topping slots reserve toe fin and heel spur anchors for later boot silhouette upgrades.",
+    ]
     spec["silhouette_review_notes"] = [
         "Toe cap + heel cap + ankle wrap + flat sole keeps foot articulated.",
         "Ankle wrap (arc 300°) gives true ground-up boot silhouette.",
@@ -848,6 +1140,17 @@ def _mirror_spec(
         "derive_from": mirror_of,
         "mirror_axis": "x",
     }
+    spec["visual_density_profile"] = {
+        "derive_from": mirror_of,
+        "mirror_axis": "x",
+        "profile_cues": ["mirrors source hero-density panels and silhouette cues"],
+    }
+    if "boot" in module:
+        spec["ground_contact_profile"] = {
+            "derive_from": mirror_of,
+            "mirror_axis": "x",
+            "stance_note": "Mirror uses the source sole bottom as the foot contact reference.",
+        }
     spec["fit_alignment_notes"] = [
         f"Mirrors {mirror_of} body-follow geometry and attachment intent across X.",
     ]

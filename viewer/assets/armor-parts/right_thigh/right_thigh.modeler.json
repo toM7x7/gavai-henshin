@@ -18,13 +18,14 @@
       0.12370001524686813
     ]
   },
-  "triangle_count": 348,
+  "triangle_count": 392,
   "material_zones": [
     "accent",
-    "base_surface"
+    "base_surface",
+    "emissive"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_thigh_v001",
+  "mirror_of": "left_thigh",
   "vrm_attachment": {
     "primary_bone": "rightUpperLeg",
     "offset_m": [
@@ -45,13 +46,89 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 348,
+  "clearance_m": 0.02,
+  "shell_thickness_target_m": 0.03,
+  "variant_key": "right_thigh:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "thigh_stripe",
+    "surface_zone": "accent"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "hip_side_fin",
+      "slot_transform": {
+        "anchor": [
+          -0.05,
+          0.11,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.045,
+        "y": 0.12,
+        "z": 0.035
+      },
+      "conflicts_with": [
+        "knee_lip_trim"
+      ],
+      "parent_module": "right_thigh"
+    },
+    {
+      "topping_slot": "knee_lip_trim",
+      "slot_transform": {
+        "anchor": [
+          -0.0,
+          -0.17,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.09,
+        "y": 0.035,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "right_thigh"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_thigh",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_thigh body-follow geometry and attachment intent across X."
+  ],
+  "silhouette_review_notes": [
+    "Right-side mirror of left_thigh; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_thigh",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
+  "triangles": 392,
   "target_envelope_m": {
     "x": 0.136,
     "y": 0.3956,

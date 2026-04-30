@@ -18,13 +18,14 @@
       0.12370000034570694
     ]
   },
-  "triangle_count": 348,
+  "triangle_count": 392,
   "material_zones": [
     "accent",
-    "base_surface"
+    "base_surface",
+    "emissive"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_thigh",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftUpperLeg",
     "offset_m": [
@@ -45,13 +46,106 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 348,
+  "clearance_m": 0.02,
+  "shell_thickness_target_m": 0.03,
+  "variant_key": "left_thigh:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "thigh_stripe",
+    "surface_zone": "accent"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "hip_side_fin",
+      "slot_transform": {
+        "anchor": [
+          0.05,
+          0.11,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.045,
+        "y": 0.12,
+        "z": 0.035
+      },
+      "conflicts_with": [
+        "knee_lip_trim"
+      ],
+      "parent_module": "left_thigh"
+    },
+    {
+      "topping_slot": "knee_lip_trim",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          -0.17,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.09,
+        "y": 0.035,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "left_thigh"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "segmented_thigh_shell_with_stride_gap",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "leftUpperLeg",
+      "hips"
+    ],
+    "follow_panels": [
+      "thigh_outer_wrap",
+      "thigh_inner_wrap"
+    ],
+    "target_contact": "front and rear thigh shells leave side stride gaps but carry visible armor density"
+  },
+  "fit_alignment_notes": [
+    "Thigh front power cell adds a visible focal detail without changing the attachment offset.",
+    "Topping slots reserve hip-side fin and knee lip trim anchors for later silhouette upgrades."
+  ],
+  "silhouette_review_notes": [
+    "Front wrap + rear wrap with side gap reads as armored thigh, not a tube.",
+    "Hip accent links visually into the waist hip-side line.",
+    "Side trim stripe ties into shin guard groove below."
+  ],
+  "visual_density_profile": {
+    "issue": "leg modules can read like sparse proxy guards at full-body distance",
+    "hero_density_panels": [
+      "thigh_knee_lip",
+      "thigh_hip_accent",
+      "thigh_side_trim",
+      "thigh_front_power_cell"
+    ],
+    "profile_cues": [
+      "knee lip",
+      "outer stripe",
+      "front power cell"
+    ]
+  },
+  "triangles": 392,
   "target_envelope_m": {
     "x": 0.136,
     "y": 0.3956,

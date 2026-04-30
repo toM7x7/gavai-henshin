@@ -712,6 +712,24 @@ def _part_spec_attachment(module):
     hint = part_spec.get("vrm_attachment_hint") if isinstance(part_spec, dict) else None
     return hint if isinstance(hint, dict) else None
 
+def _part_spec_attachment_offset_target(module):
+    part_spec = _part_spec_entry(module)
+    if not isinstance(part_spec, dict):
+        return None
+    target = part_spec.get("attachment_offset_target_m")
+    return float(target) if isinstance(target, (int, float)) and not isinstance(target, bool) else None
+
+def _scale_offset_to_target(offset, target):
+    try:
+        ox = float(offset[0]); oy = float(offset[1]); oz = float(offset[2])
+    except (TypeError, ValueError, IndexError):
+        return offset
+    mag = (ox * ox + oy * oy + oz * oz) ** 0.5
+    if mag <= target or mag <= 1e-9:
+        return [ox, oy, oz]
+    scale = (target * 0.95) / mag
+    return [ox * scale, oy * scale, oz * scale]
+
 def _part_spec_sidecar_metadata(module):
     part_spec = _part_spec_entry(module)
     if not isinstance(part_spec, dict):
@@ -722,13 +740,20 @@ def _part_spec_sidecar_metadata(module):
     if isinstance(part_spec.get("shell_thickness_m"), (int, float)):
         payload["shell_thickness_target_m"] = float(part_spec["shell_thickness_m"])
     for key in (
+        "variant_key",
+        "part_family",
+        "base_motif_link",
+        "topping_slots",
+        "attachment_offset_target_m",
         "body_follow_profile",
         "fit_alignment_notes",
         "auxiliary_part_suggestions",
         "silhouette_review_notes",
+        "visual_density_profile",
+        "ground_contact_profile",
     ):
         value = part_spec.get(key)
-        if isinstance(value, (dict, list)):
+        if isinstance(value, (str, int, float, dict, list)) and not isinstance(value, bool):
             payload[key] = value
     return payload
 
@@ -744,9 +769,13 @@ def _sidecar_attachment(blueprint_part):
     module = str(blueprint_part.get("module", ""))
     fallback = blueprint_part.get("vrm_attachment") if isinstance(blueprint_part.get("vrm_attachment"), dict) else {}
     hint = _part_spec_attachment(module) or {}
+    offset = list(hint.get("offset_m") or fallback.get("offset_m") or [0, 0, 0])
+    target = _part_spec_attachment_offset_target(module)
+    if target is not None:
+        offset = _scale_offset_to_target(offset, target)
     return {
         "primary_bone": str(hint.get("primary_bone") or fallback.get("primary_bone") or ""),
-        "offset_m": list(hint.get("offset_m") or fallback.get("offset_m") or [0, 0, 0]),
+        "offset_m": offset,
         "rotation_deg": list(hint.get("rotation_deg") or fallback.get("rotation_deg") or [0, 0, 0]),
         "fallback_bones": list(fallback.get("fallback_bones") or []),
     }

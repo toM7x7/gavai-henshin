@@ -54,6 +54,35 @@ def _write_synthetic_glb(path: Path, bbox: dict[str, float]) -> None:
     )
 
 
+def _p0_metadata(module: str) -> dict:
+    slots = {
+        "helmet": ["crest", "visor_trim"],
+        "chest": ["chest_core", "rib_trim"],
+        "back": ["spine_ridge", "rear_core"],
+        "waist": ["belt_buckle", "side_clip"],
+        "left_shoulder": ["shoulder_fin", "edge_trim"],
+        "right_shoulder": ["shoulder_fin", "edge_trim"],
+        "left_shin": ["shin_spike", "ankle_cuff_trim"],
+        "right_shin": ["shin_spike", "ankle_cuff_trim"],
+    }.get(module)
+    if not slots:
+        return {}
+    return {
+        "variant_key": "sleek",
+        "base_motif_link": {"name": f"{module}_motif", "surface_zone": "accent"},
+        "topping_slots": [
+            {
+                "topping_slot": slot,
+                "slot_transform": {"anchor": [0, 0, 0], "rotation_deg": [0, 0, 0]},
+                "max_bbox_m": {"x": 0.05, "y": 0.05, "z": 0.05},
+                "conflicts_with": [],
+                "parent_module": module,
+            }
+            for slot in slots
+        ],
+    }
+
+
 class TestArmorPartFitHandoffAudit(unittest.TestCase):
     def setUp(self) -> None:
         self.repo_root = Path(__file__).resolve().parents[1]
@@ -73,6 +102,8 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
         self.assertEqual(audit["part_count"], 18)
         self.assertEqual(audit["expected_part_count"], 18)
         self.assertEqual(audit["missing_modules"], [])
+        self.assertNotEqual(audit["status"], "fail", audit["failed_modules"])
+        self.assertEqual(audit["failed_modules"], [])
         self.assertEqual([part["module"] for part in audit["parts"]], fit_handoff.expected_runtime_modules())
         self.assertGreater(audit["total_triangles"], 0)
         self.assertIn("base_surface", audit["material_zone_counts"])
@@ -87,7 +118,11 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
             self.assertIn("material_zones", part)
             self.assertIn("primary_bone", part)
             self.assertIn("visual_priority_wave1", part)
+            self.assertIn("bbox_target_status", part)
+            self.assertIn("glb_bbox_target_status", part)
+            self.assertIn("p0_metadata_check", part)
             self.assertIn("modeler_requests", part)
+        self.assertTrue(audit["mirror_pair_checks"])
 
     def test_markdown_report_contains_modeler_handoff_sections(self) -> None:
         audit = fit_handoff.collect_fit_handoff_audit(self.repo_root / "viewer/assets/armor-parts")
@@ -135,8 +170,8 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
         self.assertEqual(helmet["module"], "helmet")
         self.assertIn("x", helmet["bbox_outside_tolerance_axes"])
         self.assertEqual(helmet["visual_priority_wave1"]["priority"], "P1 / Wave 1 review")
-        self.assertTrue(any("bbox を調整してください" in item for item in helmet["modeler_requests"]))
-        self.assertTrue(any("trianglesを" in item for item in helmet["modeler_requests"]))
+        self.assertTrue(any("bbox is outside target envelope" in item for item in helmet["modeler_requests"]))
+        self.assertTrue(any("triangles" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("base_surface" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("body-fit anchor" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("見た目優先度/Wave 1" in item for item in helmet["modeler_requests"]))
@@ -166,6 +201,72 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
         self.assertEqual(back["sidecar_glb_bbox_outside_tolerance_axes"], ["z"])
         self.assertTrue(any("Sync sidecar `bbox_m`" in item for item in back["modeler_requests"]))
         self.assertTrue(any("Back GLB z-thickness is too thin" in item for item in back["modeler_requests"]))
+
+    def test_bbox_acceptance_tiers_warn_between_10_and_15_and_fail_above_15(self) -> None:
+        target = fit_handoff._reference_target_dimensions("helmet")
+        warn_bbox = {axis: target[axis] * 1.12 for axis in ("x", "y", "z")}
+        self._write_sidecar(
+            "helmet",
+            {
+                **_p0_metadata("helmet"),
+                "bbox_m": {"size": [warn_bbox["x"], warn_bbox["y"], warn_bbox["z"]]},
+                "target_envelope_m": target,
+                "vrm_attachment": {"primary_bone": "head"},
+            },
+        )
+        _write_synthetic_glb(self.tmp_root / "helmet" / "helmet.glb", warn_bbox)
+
+        audit = fit_handoff.collect_fit_handoff_audit(self.tmp_root)
+        helmet = audit["parts"][0]
+
+        self.assertEqual(helmet["bbox_target_status"], "warn")
+        self.assertEqual(helmet["glb_bbox_target_status"], "warn")
+        self.assertEqual(helmet["status"], "warn")
+
+        fail_bbox = {axis: target[axis] * 1.20 for axis in ("x", "y", "z")}
+        self._write_sidecar(
+            "helmet",
+            {
+                **_p0_metadata("helmet"),
+                "bbox_m": {"size": [fail_bbox["x"], fail_bbox["y"], fail_bbox["z"]]},
+                "target_envelope_m": target,
+                "vrm_attachment": {"primary_bone": "head"},
+            },
+        )
+        _write_synthetic_glb(self.tmp_root / "helmet" / "helmet.glb", fail_bbox)
+
+        audit = fit_handoff.collect_fit_handoff_audit(self.tmp_root)
+        helmet = audit["parts"][0]
+
+        self.assertEqual(helmet["bbox_target_status"], "fail")
+        self.assertEqual(helmet["glb_bbox_target_status"], "fail")
+        self.assertEqual(helmet["status"], "fail")
+
+    def test_mirror_pair_dimension_delta_above_five_percent_fails_pair(self) -> None:
+        left_target = fit_handoff._reference_target_dimensions("left_forearm")
+        right_bbox = {**left_target, "x": left_target["x"] * 1.06}
+        self._write_sidecar(
+            "left_forearm",
+            {
+                "bbox_m": {"size": [left_target["x"], left_target["y"], left_target["z"]]},
+                "vrm_attachment": {"primary_bone": "leftLowerArm"},
+            },
+        )
+        self._write_sidecar(
+            "right_forearm",
+            {
+                "bbox_m": {"size": [right_bbox["x"], right_bbox["y"], right_bbox["z"]]},
+                "vrm_attachment": {"primary_bone": "rightLowerArm"},
+            },
+        )
+        _write_synthetic_glb(self.tmp_root / "left_forearm" / "left_forearm.glb", left_target)
+        _write_synthetic_glb(self.tmp_root / "right_forearm" / "right_forearm.glb", right_bbox)
+
+        audit = fit_handoff.collect_fit_handoff_audit(self.tmp_root)
+        pair = next(check for check in audit["mirror_pair_checks"] if check["pair"] == ["left_forearm", "right_forearm"])
+
+        self.assertEqual(pair["status"], "fail")
+        self.assertGreater(pair["max_delta_pct"], 5.0)
 
     def _write_sidecar(self, module: str, overrides: dict) -> None:
         module_dir = self.tmp_root / module

@@ -80,7 +80,26 @@ REFERENCE_BONE_POSITIONS_170CM: dict[str, tuple[float, float, float]] = {
 OFFSET_MAGNITUDE_TOLERANCE_M = 0.30
 SIDECAR_GLB_BBOX_TOLERANCE_M = 0.002
 TARGET_BBOX_TOLERANCE_RATIO = 0.15
+TARGET_BBOX_PASS_RATIO = 0.10
+MIRROR_PAIR_WARN_TOLERANCE_RATIO = 0.03
+MIRROR_PAIR_FAIL_TOLERANCE_RATIO = 0.05
 MIN_RENDERABLE_MESH_SIZE_M = 0.002
+ATTACHMENT_OFFSET_TARGET_BY_MODULE = {
+    "helmet": 0.08,
+    "chest": 0.08,
+    "back": 0.08,
+    "waist": 0.06,
+    "left_shoulder": 0.04,
+    "right_shoulder": 0.04,
+    "left_upperarm": 0.04,
+    "right_upperarm": 0.04,
+    "left_forearm": 0.04,
+    "right_forearm": 0.04,
+    "left_shin": 0.04,
+    "right_shin": 0.04,
+    "left_boot": 0.06,
+    "right_boot": 0.06,
+}
 
 _WEB_FORGE_PART_RE = re.compile(
     r'\[\s*"(?P<module>[^"]+)"\s*,\s*"(?P<label>[^"]*)"\s*,\s*(?P<checked>true|false)\s*\]'
@@ -168,6 +187,16 @@ def _bbox_axes_outside_target(
 ) -> list[str]:
     delta = _bbox_delta_pct(bbox, target)
     return [axis for axis, value in delta.items() if abs(value) > tolerance_ratio * 100]
+
+
+def _bbox_target_status(bbox: dict[str, float], target: dict[str, float]) -> str:
+    delta = _bbox_delta_pct(bbox, target)
+    max_abs = max(abs(value) for value in delta.values())
+    if max_abs > TARGET_BBOX_TOLERANCE_RATIO * 100:
+        return "fail"
+    if max_abs > TARGET_BBOX_PASS_RATIO * 100:
+        return "warn"
+    return "pass"
 
 
 def _bbox_axes_outside_abs_delta(
@@ -347,6 +376,104 @@ def _check_offset_reachable(
     return detail
 
 
+def _check_attachment_offset_target(module: str, offset_m: Any) -> dict[str, Any]:
+    target = ATTACHMENT_OFFSET_TARGET_BY_MODULE.get(module, 0.08)
+    if not (
+        isinstance(offset_m, list)
+        and len(offset_m) == 3
+        and all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in offset_m)
+    ):
+        return {
+            "status": "fail",
+            "reason": "offset_m must be a 3-number list",
+            "target_m": target,
+            "hard_fail_tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+        }
+    magnitude = sum(float(value) ** 2 for value in offset_m) ** 0.5
+    if magnitude > OFFSET_MAGNITUDE_TOLERANCE_M:
+        status = "fail"
+    elif magnitude > target:
+        status = "warn"
+    else:
+        status = "pass"
+    return {
+        "status": status,
+        "offset_m": [float(value) for value in offset_m],
+        "magnitude_m": round(magnitude, 4),
+        "target_m": target,
+        "hard_fail_tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+    }
+
+
+def _mirror_pair_checks(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_module = {entry["module"]: entry for entry in entries}
+    checks = []
+    for module in expected_modules():
+        try:
+            slot_id = normalize_slot_id(module)
+        except ValueError:
+            continue
+        spec = ARMOR_SLOT_SPECS[slot_id]
+        if not spec.mirror_pair or slot_id > spec.mirror_pair:
+            continue
+        partner_module = ARMOR_SLOT_SPECS[spec.mirror_pair].runtime_part_id
+        if module not in by_module and partner_module not in by_module:
+            continue
+        bbox = _entry_comparison_bbox(by_module.get(module))
+        partner_bbox = _entry_comparison_bbox(by_module.get(partner_module))
+        check = {
+            "pair": [module, partner_module],
+            "left_bbox_m": bbox,
+            "right_bbox_m": partner_bbox,
+            "warn_tolerance_pct": MIRROR_PAIR_WARN_TOLERANCE_RATIO * 100,
+            "fail_tolerance_pct": MIRROR_PAIR_FAIL_TOLERANCE_RATIO * 100,
+        }
+        if bbox is None or partner_bbox is None:
+            checks.append({**check, "status": "fail", "reason": "missing bbox for mirror comparison"})
+            continue
+        axis_delta_pct = {}
+        max_delta = 0.0
+        for axis in ("x", "y", "z"):
+            denom = max(abs(bbox[axis]), abs(partner_bbox[axis]), 1e-9)
+            delta = abs(bbox[axis] - partner_bbox[axis]) / denom
+            axis_delta_pct[axis] = round(delta * 100, 2)
+            max_delta = max(max_delta, delta)
+        if max_delta > MIRROR_PAIR_FAIL_TOLERANCE_RATIO:
+            status = "fail"
+        elif max_delta > MIRROR_PAIR_WARN_TOLERANCE_RATIO:
+            status = "warn"
+        else:
+            status = "pass"
+        checks.append(
+            {
+                **check,
+                "status": status,
+                "axis_delta_pct": axis_delta_pct,
+                "max_delta_pct": round(max_delta * 100, 2),
+            }
+        )
+    return checks
+
+
+def _entry_comparison_bbox(entry: dict[str, Any] | None) -> dict[str, float] | None:
+    if not isinstance(entry, dict):
+        return None
+    bbox = entry.get("glb_bbox_m")
+    if isinstance(bbox, dict):
+        return bbox
+    bbox = entry.get("sidecar_bbox_m")
+    if isinstance(bbox, dict):
+        return bbox
+    sidecar_bbox = entry.get("sidecar", {}).get("metrics", {}).get("bbox_size_m")
+    if (
+        isinstance(sidecar_bbox, list)
+        and len(sidecar_bbox) == 3
+        and all(isinstance(value, (int, float)) for value in sidecar_bbox)
+    ):
+        return {axis: float(sidecar_bbox[index]) for index, axis in enumerate(("x", "y", "z"))}
+    return None
+
+
 def _parse_web_forge_parts(js_text: str) -> list[dict[str, Any]]:
     start = js_text.find("const PARTS = [")
     if start < 0:
@@ -503,7 +630,11 @@ def smoke_check_web_glb_load(
 
         # 3. Sidecar contract check.
         sidecar_path = glb_path.with_name(f"{module}.modeler.json")
-        sidecar_result = intake.validate_modeler_sidecar(sidecar_path, expected_module=module)
+        sidecar_result = intake.validate_modeler_sidecar(
+            sidecar_path,
+            expected_module=module,
+            enforce_p0_metadata=True,
+        )
         entry["sidecar"] = sidecar_result
         if not sidecar_result.get("ok", False):
             failures.extend(f"{module}: {reason}" for reason in sidecar_result.get("reasons", []))
@@ -559,8 +690,16 @@ def smoke_check_web_glb_load(
 
         glb_target_delta = _bbox_delta_pct(glb_bbox, target_bbox)
         glb_target_axes = _bbox_axes_outside_target(glb_bbox, target_bbox)
+        glb_target_warn_axes = _bbox_axes_outside_target(
+            glb_bbox,
+            target_bbox,
+            tolerance_ratio=TARGET_BBOX_PASS_RATIO,
+        )
+        glb_target_status = _bbox_target_status(glb_bbox, target_bbox)
         entry["glb_target_bbox_delta_pct"] = glb_target_delta
         entry["glb_target_bbox_outside_tolerance_axes"] = glb_target_axes
+        entry["glb_target_bbox_warn_axes"] = glb_target_warn_axes
+        entry["glb_target_bbox_status"] = glb_target_status
         if module == "back" and glb_bbox["z"] < target_bbox["z"] * (1.0 - TARGET_BBOX_TOLERANCE_RATIO):
             entry["ok"] = False
             failures.append(
@@ -577,6 +716,11 @@ def smoke_check_web_glb_load(
             )
             per_module.append(entry)
             continue
+        if glb_target_status == "warn":
+            warnings.append(
+                f"{module}: GLB bbox outside pass envelope on {glb_target_warn_axes} "
+                f"(delta_pct={glb_target_delta}, pass_tolerance_pct={TARGET_BBOX_PASS_RATIO * 100:.1f})"
+            )
 
         # 4. body-fit anchor cross-check.
         try:
@@ -610,8 +754,39 @@ def smoke_check_web_glb_load(
             per_module.append(entry)
             continue
 
+        attachment_target_check = _check_attachment_offset_target(module, offset_m)
+        entry["attachment_target_check"] = attachment_target_check
+        if attachment_target_check["status"] == "fail":
+            entry["ok"] = False
+            failures.append(
+                f"{module}: offset magnitude {attachment_target_check.get('magnitude_m')}m exceeds "
+                f"{attachment_target_check.get('hard_fail_tolerance_m')}m hard tolerance"
+            )
+            per_module.append(entry)
+            continue
+        if attachment_target_check["status"] == "warn":
+            warnings.append(
+                f"{module}: offset magnitude {attachment_target_check.get('magnitude_m')}m exceeds "
+                f"{attachment_target_check.get('target_m')}m target"
+            )
+
         entry["ok"] = True
         per_module.append(entry)
+
+    mirror_checks = _mirror_pair_checks(per_module)
+    for check in mirror_checks:
+        if check["status"] == "fail":
+            failures.append(
+                f"{check['pair'][0]}/{check['pair'][1]}: mirror pair dimensions exceed "
+                f"{MIRROR_PAIR_FAIL_TOLERANCE_RATIO * 100:.1f}% "
+                f"(max_delta={check.get('max_delta_pct')}%)"
+            )
+        elif check["status"] == "warn":
+            warnings.append(
+                f"{check['pair'][0]}/{check['pair'][1]}: mirror pair dimensions exceed "
+                f"{MIRROR_PAIR_WARN_TOLERANCE_RATIO * 100:.1f}% "
+                f"(max_delta={check.get('max_delta_pct')}%)"
+            )
 
     preview_contract = _check_web_preview_contract(repo_root_path)
     warnings.extend(preview_contract.get("warnings", []))
@@ -629,11 +804,13 @@ def smoke_check_web_glb_load(
         "ok": fallback_used == 0 and not failures,
         "failures": failures,
         "warnings": warnings,
+        "mirror_pair_checks": mirror_checks,
         "modules": per_module,
         "reference_height_cm": 170,
         "offset_magnitude_tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
         "sidecar_glb_bbox_tolerance_m": SIDECAR_GLB_BBOX_TOLERANCE_M,
         "target_bbox_tolerance_ratio": TARGET_BBOX_TOLERANCE_RATIO,
+        "target_bbox_pass_ratio": TARGET_BBOX_PASS_RATIO,
     }
     return summary
 

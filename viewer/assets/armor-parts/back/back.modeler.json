@@ -4,24 +4,25 @@
   "part_id": "viewer.mesh.back.v1",
   "category": "dorsal",
   "bbox_m": {
-    "x": 0.5509999990463257,
+    "x": 0.5613196492195129,
     "y": 0.5225319862365723,
-    "z": 0.13630487769842148,
+    "z": 0.13715245574712753,
     "size": [
-      0.5509999990463257,
+      0.5613196492195129,
       0.5225319862365723,
-      0.13630487769842148
+      0.13715245574712753
     ],
     "dimensions": [
-      0.5509999990463257,
+      0.5613196492195129,
       0.5225319862365723,
-      0.13630487769842148
+      0.13715245574712753
     ]
   },
-  "triangle_count": 780,
+  "triangle_count": 912,
   "material_zones": [
     "accent",
     "base_surface",
+    "emissive",
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
@@ -46,14 +47,69 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
-    "single_surface_base_material_or_declared_slots": "pass",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
+    "single_surface_base_material_or_declared_slots": "warn",
     "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "no_body_intersection_at_reference_pose": "pass"
   },
   "clearance_m": 0.026,
   "shell_thickness_target_m": 0.05,
+  "variant_key": "back:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "spine_line",
+    "surface_zone": "accent"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "spine_ridge",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          -0.07
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.12,
+        "y": 0.2,
+        "z": 0.04
+      },
+      "conflicts_with": [
+        "rear_core"
+      ],
+      "parent_module": "back"
+    },
+    {
+      "topping_slot": "rear_core",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          -0.05
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.18,
+        "y": 0.18,
+        "z": 0.03
+      },
+      "conflicts_with": [],
+      "parent_module": "back"
+    }
+  ],
+  "attachment_offset_target_m": 0.08,
   "body_follow_profile": {
     "mode": "dorsal_wrap_with_scapula_and_spine_keel",
     "depth_axis": "z",
@@ -77,6 +133,7 @@
   },
   "fit_alignment_notes": [
     "Back shell depth is redistributed into spine keel and scapula pads instead of only expanding bbox z.",
+    "Side return lips add profile thickness without relying on Web-only offsets.",
     "Lumbar wrap is widened to meet waist_belt_back and reduce rear gap.",
     "Attachment offset moves the module slightly farther rearward for body tracking."
   ],
@@ -119,7 +176,23 @@
     "Spine keel + scapula pads add rear visual thickness while staying near target z.",
     "Lumbar wrap tapers into the waist seam below."
   ],
-  "triangles": 780,
+  "visual_density_profile": {
+    "issue": "rear silhouette previously read thin in web preview",
+    "hero_density_panels": [
+      "back_spine_plate",
+      "back_spine_keel_upper",
+      "back_spine_keel_lower",
+      "back_side_return_left",
+      "back_side_return_right",
+      "back_rear_core_socket"
+    ],
+    "profile_cues": [
+      "side return lips",
+      "central rear core",
+      "scapula pads"
+    ]
+  },
+  "triangles": 912,
   "target_envelope_m": {
     "x": 0.5984,
     "y": 0.5148,

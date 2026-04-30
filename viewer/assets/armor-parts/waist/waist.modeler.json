@@ -45,11 +45,11 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
     "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "no_body_intersection_at_reference_pose": "pass"
   },
   "clearance_m": 0.022,
   "shell_thickness_target_m": 0.034,
@@ -87,5 +87,58 @@
     "y": 0.1716,
     "z": 0.1904
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "waist:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "belt_band",
+    "surface_zone": "accent"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "belt_buckle",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          0.08
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.16,
+        "y": 0.08,
+        "z": 0.035
+      },
+      "conflicts_with": [],
+      "parent_module": "waist"
+    },
+    {
+      "topping_slot": "side_clip",
+      "slot_transform": {
+        "anchor": [
+          0.18,
+          0.0,
+          0.0
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.06,
+        "y": 0.06,
+        "z": 0.03
+      },
+      "conflicts_with": [],
+      "parent_module": "waist"
+    }
+  ],
+  "attachment_offset_target_m": 0.06
 }

@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.left_boot.v1",
   "category": "foot",
   "bbox_m": {
-    "x": 0.11500000208616257,
-    "y": 0.08900000154972076,
+    "x": 0.11926399916410446,
+    "y": 0.08999999985098839,
     "z": 0.2900000065565109,
     "size": [
-      0.11500000208616257,
-      0.08900000154972076,
+      0.11926399916410446,
+      0.08999999985098839,
       0.2900000065565109
     ],
     "dimensions": [
-      0.11500000208616257,
-      0.08900000154972076,
+      0.11926399916410446,
+      0.08999999985098839,
       0.2900000065565109
     ]
   },
-  "triangle_count": 532,
+  "triangle_count": 620,
   "material_zones": [
     "accent",
     "base_surface",
@@ -26,7 +26,7 @@
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_boot",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftFoot",
     "offset_m": [
@@ -46,13 +46,118 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
-    "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
+    "single_surface_base_material_or_declared_slots": "warn",
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 532,
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.032,
+  "variant_key": "left_boot:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "boot_instep_glow",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "toe_fin",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          0.13
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.075,
+        "y": 0.035,
+        "z": 0.045
+      },
+      "conflicts_with": [
+        "heel_spur"
+      ],
+      "parent_module": "left_boot"
+    },
+    {
+      "topping_slot": "heel_spur",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          -0.13
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.075,
+        "y": 0.035,
+        "z": 0.045
+      },
+      "conflicts_with": [],
+      "parent_module": "left_boot"
+    }
+  ],
+  "attachment_offset_target_m": 0.06,
+  "body_follow_profile": {
+    "mode": "grounded_boot_with_ankle_cuff",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "leftFoot",
+      "leftLowerLeg"
+    ],
+    "follow_panels": [
+      "boot_toe_cap",
+      "boot_heel_cap",
+      "boot_ankle_wrap",
+      "boot_sole_flat"
+    ],
+    "target_contact": "sole and side rails define contact in source geometry, not Web-only correction"
+  },
+  "fit_alignment_notes": [
+    "Sole rails widen the visual footprint while keeping the attachment offset inside target.",
+    "Topping slots reserve toe fin and heel spur anchors for later boot silhouette upgrades."
+  ],
+  "silhouette_review_notes": [
+    "Toe cap + heel cap + ankle wrap + flat sole keeps foot articulated.",
+    "Ankle wrap (arc 300\u00b0) gives true ground-up boot silhouette.",
+    "Sole plate anchors silver above to ground in profile views."
+  ],
+  "visual_density_profile": {
+    "issue": "boot silhouette needed more planted footprint and add-on anchors",
+    "hero_density_panels": [
+      "boot_ankle_wrap",
+      "boot_sole_flat",
+      "boot_sole_outrigger_left",
+      "boot_sole_outrigger_right",
+      "boot_instep_accent"
+    ],
+    "profile_cues": [
+      "flat sole",
+      "side rails",
+      "instep glow"
+    ]
+  },
+  "ground_contact_profile": {
+    "sole_panel": "boot_sole_flat",
+    "side_rails": [
+      "boot_sole_outrigger_left",
+      "boot_sole_outrigger_right"
+    ],
+    "local_bottom_y_m": -0.045,
+    "stance_note": "Use the sole bottom as the foot contact reference in preview and fit QA."
+  },
+  "triangles": 620,
   "target_envelope_m": {
     "x": 0.1224,
     "y": 0.0884,

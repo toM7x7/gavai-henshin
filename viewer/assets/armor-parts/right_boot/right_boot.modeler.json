@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.right_boot.v1",
   "category": "foot",
   "bbox_m": {
-    "x": 0.11500000208616257,
-    "y": 0.08900001272559166,
+    "x": 0.11926399916410446,
+    "y": 0.09000000730156898,
     "z": 0.2900000065565109,
     "size": [
-      0.11500000208616257,
-      0.08900001272559166,
+      0.11926399916410446,
+      0.09000000730156898,
       0.2900000065565109
     ],
     "dimensions": [
-      0.11500000208616257,
-      0.08900001272559166,
+      0.11926399916410446,
+      0.09000000730156898,
       0.2900000065565109
     ]
   },
-  "triangle_count": 532,
+  "triangle_count": 620,
   "material_zones": [
     "accent",
     "base_surface",
@@ -26,7 +26,7 @@
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_boot_v001",
+  "mirror_of": "left_boot",
   "vrm_attachment": {
     "primary_bone": "rightFoot",
     "offset_m": [
@@ -46,13 +46,94 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
-    "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
+    "single_surface_base_material_or_declared_slots": "warn",
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 532,
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.032,
+  "variant_key": "right_boot:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "boot_instep_glow",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "toe_fin",
+      "slot_transform": {
+        "anchor": [
+          -0.0,
+          0.0,
+          0.13
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.075,
+        "y": 0.035,
+        "z": 0.045
+      },
+      "conflicts_with": [
+        "heel_spur"
+      ],
+      "parent_module": "right_boot"
+    },
+    {
+      "topping_slot": "heel_spur",
+      "slot_transform": {
+        "anchor": [
+          -0.0,
+          0.0,
+          -0.13
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.075,
+        "y": 0.035,
+        "z": 0.045
+      },
+      "conflicts_with": [],
+      "parent_module": "right_boot"
+    }
+  ],
+  "attachment_offset_target_m": 0.06,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_boot",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_boot body-follow geometry and attachment intent across X."
+  ],
+  "silhouette_review_notes": [
+    "Right-side mirror of left_boot; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_boot",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
+  "ground_contact_profile": {
+    "derive_from": "left_boot",
+    "mirror_axis": "x",
+    "stance_note": "Mirror uses the source sole bottom as the foot contact reference."
+  },
+  "triangles": 620,
   "target_envelope_m": {
     "x": 0.1224,
     "y": 0.0884,

@@ -15,16 +15,45 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, MAJOR_ARMOR_SLOTS, normalize_slot_id  # noqa: E402
+from henshin.armor_fit_contract import (  # noqa: E402
+    ARMOR_SLOT_SPECS,
+    MAJOR_ARMOR_SLOTS,
+    MIRROR_SLOT_PAIRS,
+    normalize_slot_id,
+)
 from henshin import modeler_blueprints as blueprints  # noqa: E402
 
 
 DEFAULT_ARMOR_PARTS_DIR = Path("viewer/assets/armor-parts")
 AUDIT_CONTRACT_VERSION = "armor-part-fit-handoff-audit.v1"
 DEFAULT_BBOX_TOLERANCE = 0.15
+BBOX_PASS_TOLERANCE = 0.10
+BBOX_FAIL_TOLERANCE = 0.15
+MIRROR_PAIR_WARN_TOLERANCE = 0.03
+MIRROR_PAIR_FAIL_TOLERANCE = 0.05
 SIDECAR_GLB_BBOX_TOLERANCE_M = 0.002
 MIN_RENDERABLE_MESH_SIZE_M = 0.002
 AXES = ("x", "y", "z")
+P0_METADATA_MODULES = (
+    "helmet",
+    "chest",
+    "back",
+    "waist",
+    "left_shoulder",
+    "right_shoulder",
+    "left_shin",
+    "right_shin",
+)
+P0_REQUIRED_TOPPING_SLOTS = {
+    "helmet": ("crest", "visor_trim"),
+    "chest": ("chest_core", "rib_trim"),
+    "back": ("spine_ridge", "rear_core"),
+    "waist": ("belt_buckle", "side_clip"),
+    "left_shoulder": ("shoulder_fin", "edge_trim"),
+    "right_shoulder": ("shoulder_fin", "edge_trim"),
+    "left_shin": ("shin_spike", "ankle_cuff_trim"),
+    "right_shin": ("shin_spike", "ankle_cuff_trim"),
+}
 
 WAVE1_VISUAL_FIT_GUIDANCE = {
     "helmet": (
@@ -99,14 +128,16 @@ def collect_fit_handoff_audit(
         _audit_part(armor_root, module, bbox_tolerance=bbox_tolerance)
         for module in expected_modules
     ]
+    mirror_pair_checks = _apply_mirror_pair_checks(parts)
     material_zone_counts: dict[str, int] = {}
     for part in parts:
         for zone in part.get("material_zones", []):
             material_zone_counts[zone] = material_zone_counts.get(zone, 0) + 1
 
     missing_modules = [part["module"] for part in parts if part["status"] == "missing"]
-    request_parts = [part for part in parts if part.get("modeler_requests")]
-    status = "fail" if missing_modules else "warn" if request_parts else "pass"
+    failed_parts = [part for part in parts if part["status"] in {"fail", "missing"}]
+    warned_parts = [part for part in parts if part["status"] == "warn"]
+    status = "fail" if missing_modules or failed_parts else "warn" if warned_parts else "pass"
     return {
         "contract_version": AUDIT_CONTRACT_VERSION,
         "source_contracts": {
@@ -117,18 +148,102 @@ def collect_fit_handoff_audit(
         "root": str(armor_root),
         "bbox_tolerance_pct": round(bbox_tolerance * 100, 3),
         "status": status,
-        "ok": not missing_modules,
+        "ok": status != "fail",
         "part_count": len([part for part in parts if part["status"] != "missing"]),
         "expected_part_count": len(expected_modules),
         "missing_modules": missing_modules,
+        "failed_modules": [part["module"] for part in failed_parts if part["status"] != "missing"],
+        "warn_modules": [part["module"] for part in warned_parts],
         "total_triangles": sum(part.get("triangle_count") or 0 for part in parts),
         "material_zone_counts": dict(sorted(material_zone_counts.items())),
+        "mirror_pair_checks": mirror_pair_checks,
         "parts": parts,
     }
 
 
 def expected_runtime_modules() -> list[str]:
     return [ARMOR_SLOT_SPECS[slot].runtime_part_id for slot in MAJOR_ARMOR_SLOTS]
+
+
+def _status_rank(status: str) -> int:
+    return {"pass": 0, "warn": 1, "fail": 2, "missing": 2}.get(status, 0)
+
+
+def _merge_status(current: str, incoming: str) -> str:
+    return incoming if _status_rank(incoming) > _status_rank(current) else current
+
+
+def _apply_mirror_pair_checks(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_module = {part["module"]: part for part in parts}
+    checks = []
+    for left_slot, right_slot in MIRROR_SLOT_PAIRS:
+        left_module = ARMOR_SLOT_SPECS[left_slot].runtime_part_id
+        right_module = ARMOR_SLOT_SPECS[right_slot].runtime_part_id
+        left = by_module.get(left_module)
+        right = by_module.get(right_module)
+        if (left is None or left.get("status") == "missing") and (right is None or right.get("status") == "missing"):
+            continue
+        check = _mirror_pair_check(left_module, left, right_module, right)
+        checks.append(check)
+        for module, part in ((left_module, left), (right_module, right)):
+            if part is None:
+                continue
+            part["mirror_pair_check"] = check
+            if check["status"] != "pass":
+                part["status"] = _merge_status(part.get("status", "pass"), check["status"])
+                part.setdefault("modeler_requests", []).append(
+                    "Mirror pair dimensions must stay within 3%: "
+                    f"{left_module} vs {right_module} max_delta={check.get('max_delta_pct')}%."
+                )
+    return checks
+
+
+def _mirror_pair_check(
+    left_module: str,
+    left: dict[str, Any] | None,
+    right_module: str,
+    right: dict[str, Any] | None,
+) -> dict[str, Any]:
+    left_bbox = _part_comparison_bbox(left)
+    right_bbox = _part_comparison_bbox(right)
+    base = {
+        "pair": [left_module, right_module],
+        "warn_tolerance_pct": MIRROR_PAIR_WARN_TOLERANCE * 100,
+        "fail_tolerance_pct": MIRROR_PAIR_FAIL_TOLERANCE * 100,
+        "left_bbox_m": left_bbox,
+        "right_bbox_m": right_bbox,
+    }
+    if left_bbox is None or right_bbox is None:
+        return {**base, "status": "fail", "reason": "missing bbox for mirror comparison"}
+    deltas = {}
+    max_delta = 0.0
+    for axis in AXES:
+        denom = max(abs(left_bbox[axis]), abs(right_bbox[axis]), 1e-9)
+        delta = abs(left_bbox[axis] - right_bbox[axis]) / denom
+        deltas[axis] = round(delta * 100, 2)
+        max_delta = max(max_delta, delta)
+    if max_delta > MIRROR_PAIR_FAIL_TOLERANCE:
+        status = "fail"
+    elif max_delta > MIRROR_PAIR_WARN_TOLERANCE:
+        status = "warn"
+    else:
+        status = "pass"
+    return {
+        **base,
+        "status": status,
+        "axis_delta_pct": deltas,
+        "max_delta_pct": round(max_delta * 100, 2),
+    }
+
+
+def _part_comparison_bbox(part: dict[str, Any] | None) -> dict[str, float] | None:
+    if not isinstance(part, dict) or part.get("status") == "missing":
+        return None
+    glb_bbox = part.get("glb_bbox_m")
+    if isinstance(glb_bbox, dict):
+        return glb_bbox
+    bbox = part.get("bbox_m")
+    return bbox if isinstance(bbox, dict) else None
 
 
 def render_modeler_fix_requests_markdown(audit: dict[str, Any]) -> str:
@@ -235,12 +350,12 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
     bbox_axes = [
         axis
         for axis, delta in (bbox_delta or {}).items()
-        if abs(delta) > bbox_tolerance * 100
+        if abs(delta) > BBOX_PASS_TOLERANCE * 100
     ]
     glb_bbox_axes = [
         axis
         for axis, delta in (glb_bbox_delta or {}).items()
-        if abs(delta) > bbox_tolerance * 100
+        if abs(delta) > BBOX_PASS_TOLERANCE * 100
     ]
     sidecar_glb_axes = [
         axis
@@ -249,6 +364,9 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
     ]
     qa_warnings = _qa_flags(payload.get("qa_self_report"), flag="warn")
     qa_failures = _qa_flags(payload.get("qa_self_report"), flag="fail")
+    bbox_status = _bbox_target_status(bbox_delta)
+    glb_bbox_status = _bbox_target_status(glb_bbox_delta)
+    p0_metadata_check = _p0_metadata_check(module, payload)
 
     requests = _modeler_requests(
         module=module,
@@ -268,6 +386,9 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         expected_bone=body_fit_spec.body_anchor,
         qa_warnings=qa_warnings,
         qa_failures=qa_failures,
+        bbox_status=bbox_status,
+        glb_bbox_status=glb_bbox_status,
+        p0_metadata_check=p0_metadata_check,
         glb_reasons=glb_metrics.get("reasons") or [],
     )
     has_blocking_metadata_gap = (
@@ -278,8 +399,18 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         or triangle_count <= 0
         or not material_zones
         or primary_bone != body_fit_spec.body_anchor
+        or p0_metadata_check["status"] == "fail"
+        or bbox_status == "fail"
+        or glb_bbox_status == "fail"
     )
-    status = "fail" if qa_failures or has_blocking_metadata_gap else "warn" if requests else "pass"
+    has_warning = (
+        bool(qa_warnings)
+        or bbox_status == "warn"
+        or glb_bbox_status == "warn"
+        or p0_metadata_check["status"] == "warn"
+        or bool(sidecar_glb_axes)
+    )
+    status = "fail" if qa_failures or has_blocking_metadata_gap else "warn" if has_warning else "pass"
     return {
         **base,
         "status": status,
@@ -291,6 +422,8 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         "target_bbox_m": target_bbox,
         "bbox_delta_pct": bbox_delta,
         "glb_bbox_delta_pct": glb_bbox_delta,
+        "bbox_target_status": bbox_status,
+        "glb_bbox_target_status": glb_bbox_status,
         "sidecar_glb_bbox_delta_m": sidecar_glb_delta,
         "bbox_outside_tolerance_axes": bbox_axes,
         "glb_bbox_outside_tolerance_axes": glb_bbox_axes,
@@ -302,6 +435,7 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         "material_zones": material_zones,
         "qa_warnings": qa_warnings,
         "qa_failures": qa_failures,
+        "p0_metadata_check": p0_metadata_check,
         "modeler_requests": requests,
     }
 
@@ -325,6 +459,9 @@ def _modeler_requests(
     expected_bone: str,
     qa_warnings: list[str],
     qa_failures: list[str],
+    bbox_status: str,
+    glb_bbox_status: str,
+    p0_metadata_check: dict[str, Any],
     glb_reasons: list[str],
 ) -> list[str]:
     requests: list[str] = []
@@ -385,6 +522,13 @@ def _modeler_requests(
     if primary_bone != expected_bone:
         requests.append(f"`vrm_attachment.primary_bone` を body-fit anchor `{expected_bone}` に合わせてください。")
 
+    if p0_metadata_check["status"] != "pass":
+        requests.append(
+            "P0 topping metadata missing or incomplete: "
+            + "; ".join(p0_metadata_check.get("reasons") or [])
+            + "."
+        )
+
     visual_guidance = WAVE1_VISUAL_FIT_GUIDANCE.get(module)
     if visual_guidance is not None:
         priority, guidance = visual_guidance
@@ -394,6 +538,12 @@ def _modeler_requests(
         requests.append("sidecar QAのfailを直してください: " + ", ".join(qa_failures) + ".")
     elif qa_warnings:
         requests.append("QA warnは修正するか、問題なしと判断できる確認画像/根拠を添えてください: " + ", ".join(qa_warnings) + ".")
+    if bbox_delta and bbox_axes:
+        severity = "FAIL" if bbox_status == "fail" else "WARN"
+        requests.append(
+            f"{severity}: bbox is outside target envelope on {bbox_axes}; "
+            f"delta_pct={ {axis: bbox_delta[axis] for axis in bbox_axes} }"
+        )
     return requests
 
 
@@ -547,6 +697,116 @@ def _bbox_delta_pct(bbox: dict[str, float] | None, target: dict[str, float]) -> 
         target_value = target[axis]
         result[axis] = round(((bbox[axis] - target_value) / target_value) * 100, 1) if target_value else 0.0
     return result
+
+
+def _bbox_target_status(delta_pct: dict[str, float] | None) -> str:
+    if delta_pct is None:
+        return "fail"
+    max_abs = max(abs(value) for value in delta_pct.values())
+    if max_abs > BBOX_FAIL_TOLERANCE * 100:
+        return "fail"
+    if max_abs > BBOX_PASS_TOLERANCE * 100:
+        return "warn"
+    return "pass"
+
+
+def _p0_metadata_check(module: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if module not in P0_METADATA_MODULES:
+        return {"status": "pass", "required": False, "reasons": []}
+    reasons = []
+    variant_key = payload.get("variant_key")
+    if not isinstance(variant_key, str) or not variant_key.strip():
+        reasons.append("`variant_key` missing")
+
+    motif_link = payload.get("base_motif_link")
+    if not isinstance(motif_link, dict):
+        reasons.append("`base_motif_link` must be an object with name and surface_zone")
+        motif_summary = None
+    else:
+        motif_summary = {
+            "name": motif_link.get("name"),
+            "surface_zone": motif_link.get("surface_zone"),
+        }
+        if not isinstance(motif_summary["name"], str) or not motif_summary["name"].strip():
+            reasons.append("`base_motif_link.name` missing")
+        if not isinstance(motif_summary["surface_zone"], str) or not motif_summary["surface_zone"].strip():
+            reasons.append("`base_motif_link.surface_zone` missing")
+
+    required_slots = P0_REQUIRED_TOPPING_SLOTS.get(module, ())
+    present_slots, slot_summaries, slot_reasons = _topping_slot_metadata(payload.get("topping_slots"), module)
+    reasons.extend(slot_reasons)
+    if not slot_reasons and len(present_slots) < 2:
+        reasons.append("`topping_slots` must declare at least 2 slots")
+    missing_slots = [slot for slot in required_slots if slot not in present_slots]
+    if missing_slots:
+        reasons.append(f"required topping slots missing: {missing_slots}")
+    return {
+        "status": "fail" if reasons else "pass",
+        "required": True,
+        "variant_key": variant_key if isinstance(variant_key, str) else None,
+        "base_motif_link": motif_summary,
+        "required_topping_slots": list(required_slots),
+        "declared_topping_slots": sorted(present_slots),
+        "topping_slot_count": len(present_slots),
+        "topping_slots": slot_summaries,
+        "reasons": reasons,
+    }
+
+
+def _topping_slot_metadata(value: Any, module: str) -> tuple[set[str], list[dict[str, Any]], list[str]]:
+    if not isinstance(value, list):
+        return set(), [], ["`topping_slots` must be an object list"]
+
+    present: set[str] = set()
+    summaries: list[dict[str, Any]] = []
+    reasons: list[str] = []
+    for index, slot in enumerate(value):
+        label = f"`topping_slots[{index}]`"
+        if not isinstance(slot, dict):
+            reasons.append(f"{label} must be an object")
+            continue
+
+        slot_name = slot.get("topping_slot")
+        if not isinstance(slot_name, str) or not slot_name.strip():
+            reasons.append(f"{label}.topping_slot missing")
+            continue
+        slot_name = slot_name.strip()
+        present.add(slot_name)
+
+        slot_transform = slot.get("slot_transform")
+        if not isinstance(slot_transform, dict):
+            reasons.append(f"{label}.slot_transform missing")
+        else:
+            if not _number_list(slot_transform.get("anchor"), expected_len=3):
+                reasons.append(f"{label}.slot_transform.anchor must be a 3-number list")
+            if not _number_list(slot_transform.get("rotation_deg"), expected_len=3):
+                reasons.append(f"{label}.slot_transform.rotation_deg must be a 3-number list")
+
+        max_bbox = slot.get("max_bbox_m")
+        if not isinstance(max_bbox, dict):
+            reasons.append(f"{label}.max_bbox_m missing")
+        else:
+            dims = [max_bbox.get(axis) for axis in AXES]
+            if not _number_list(dims, expected_len=3) or not all(float(dim) > 0 for dim in dims):
+                reasons.append(f"{label}.max_bbox_m must provide positive x/y/z")
+
+        conflicts_with = slot.get("conflicts_with", [])
+        if not isinstance(conflicts_with, list) or not all(isinstance(item, str) for item in conflicts_with):
+            reasons.append(f"{label}.conflicts_with must be a string list")
+
+        parent_module = slot.get("parent_module")
+        if parent_module != module:
+            reasons.append(f"{label}.parent_module must be {module}")
+
+        summaries.append(
+            {
+                "topping_slot": slot_name,
+                "parent_module": parent_module,
+                "max_bbox_m": max_bbox if isinstance(max_bbox, dict) else None,
+                "conflicts_with": conflicts_with if isinstance(conflicts_with, list) else [],
+            }
+        )
+    return present, summaries, reasons
 
 
 def _bbox_abs_delta_m(a: dict[str, float] | None, b: dict[str, float] | None) -> dict[str, float] | None:

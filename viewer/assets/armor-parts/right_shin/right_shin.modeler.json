@@ -5,20 +5,20 @@
   "category": "leg",
   "bbox_m": {
     "x": 0.10779999941587448,
-    "y": 0.39668799936771393,
+    "y": 0.4105119854211807,
     "z": 0.11390001326799393,
     "size": [
       0.10779999941587448,
-      0.39668799936771393,
+      0.4105119854211807,
       0.11390001326799393
     ],
     "dimensions": [
       0.10779999941587448,
-      0.39668799936771393,
+      0.4105119854211807,
       0.11390001326799393
     ]
   },
-  "triangle_count": 396,
+  "triangle_count": 440,
   "material_zones": [
     "accent",
     "base_surface",
@@ -26,7 +26,7 @@
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_shin_v001",
+  "mirror_of": "left_shin",
   "vrm_attachment": {
     "primary_bone": "rightLowerLeg",
     "offset_m": [
@@ -47,13 +47,89 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "warn",
-    "non_overlapping_uv0": "warn",
-    "single_surface_base_material_or_declared_slots": "pass",
-    "mirror_pair_dimension_delta_below_3_percent": "skip",
-    "no_body_intersection_at_reference_pose": "warn"
+    "bbox_within_target_envelope": "pass",
+    "non_overlapping_uv0": "pass",
+    "single_surface_base_material_or_declared_slots": "warn",
+    "mirror_pair_dimension_delta_below_3_percent": "pass",
+    "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 396,
+  "clearance_m": 0.02,
+  "shell_thickness_target_m": 0.03,
+  "variant_key": "right_shin:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "shin_v",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "shin_spike",
+      "slot_transform": {
+        "anchor": [
+          -0.0,
+          0.04,
+          0.06
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.06,
+        "y": 0.12,
+        "z": 0.04
+      },
+      "conflicts_with": [
+        "ankle_cuff_trim"
+      ],
+      "parent_module": "right_shin"
+    },
+    {
+      "topping_slot": "ankle_cuff_trim",
+      "slot_transform": {
+        "anchor": [
+          -0.0,
+          -0.16,
+          0.0
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.1,
+        "y": 0.04,
+        "z": 0.02
+      },
+      "conflicts_with": [],
+      "parent_module": "right_shin"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_shin",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_shin body-follow geometry and attachment intent across X."
+  ],
+  "silhouette_review_notes": [
+    "Right-side mirror of left_shin; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_shin",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
+  "triangles": 440,
   "target_envelope_m": {
     "x": 0.1156,
     "y": 0.3956,

@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.waist.v1",
   "category": "waist",
   "bbox_m": {
-    "x": 0.44999998807907104,
-    "y": 0.16554523259401321,
-    "z": 0.1928858682513237,
+    "x": 0.44415706396102905,
+    "y": 0.15000000596046448,
+    "z": 0.17450852692127228,
     "size": [
-      0.44999998807907104,
-      0.16554523259401321,
-      0.1928858682513237
+      0.44415706396102905,
+      0.15000000596046448,
+      0.17450852692127228
     ],
     "dimensions": [
-      0.44999998807907104,
-      0.16554523259401321,
-      0.1928858682513237
+      0.44415706396102905,
+      0.15000000596046448,
+      0.17450852692127228
     ]
   },
-  "triangle_count": 464,
+  "triangle_count": 648,
   "material_zones": [
     "accent",
     "base_surface",
@@ -29,14 +29,14 @@
   "vrm_attachment": {
     "primary_bone": "hips",
     "offset_m": [
-      0,
-      0,
-      0.06
+      0.0,
+      0.01,
+      0.035
     ],
     "rotation_deg": [
-      0,
-      0,
-      0
+      0.0,
+      0.0,
+      0.0
     ],
     "fallback_bones": [
       "hips",
@@ -51,7 +51,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 464,
+  "triangles": 648,
   "target_envelope_m": {
     "x": 0.4896,
     "y": 0.1716,

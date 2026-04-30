@@ -29,14 +29,14 @@
   "vrm_attachment": {
     "primary_bone": "upperChest",
     "offset_m": [
-      0,
-      0.03,
-      0.1
+      0.0,
+      0.01,
+      0.06
     ],
     "rotation_deg": [
-      0,
-      0,
-      0
+      0.0,
+      0.0,
+      0.0
     ],
     "fallback_bones": [
       "upperChest",

@@ -57,6 +57,20 @@ def _base_style_text(suitspec: dict[str, Any], style_variation: dict[str, Any] |
     return base
 
 
+def _base_suit_surface_text(suitspec: dict[str, Any]) -> str:
+    palette = suitspec.get("palette") or {}
+    primary = palette.get("primary", "#1E2A3A")
+    secondary = palette.get("secondary", "#A8B3C6")
+    emissive = palette.get("emissive", "#3AC7FF")
+    return (
+        "Base suit substrate continuity:\n"
+        f"- Treat primary={primary} and secondary={secondary} as outer armor colors; the fitted body suit beneath them should be a darker harmonized substrate, not a flat single-color fill.\n"
+        "- The base suit language is tokusatsu-style technical fabric: restrained symmetric panel lines, controlled diagonal motifs, flexible joint zones, and narrow emissive piping.\n"
+        f"- Emissive routing uses {emissive} sparingly as thin line masks that visually connect the base suit to the armor overlay.\n"
+        "- Generate armor surfaces as part of this full suit system: hard plates sit above the patterned body suit, while color blocking stays compatible instead of fighting the substrate.\n"
+    )
+
+
 def _lore_design_text() -> str:
     return (
         "Treat this armor as belonging to an established sci-fi canon. "
@@ -286,6 +300,7 @@ def build_part_prompt(
 
     hint = PART_PROMPT_HINTS.get(part, f"{part} armor part")
     style_text = _base_style_text(suitspec, style_variation=style_variation)
+    base_suit_surface_text = _base_suit_surface_text(suitspec)
     design_dna_text = _design_dna_text(suitspec)
     lore_text = _lore_design_text()
     user_profile_text = _user_armor_profile_text(user_armor_profile)
@@ -301,6 +316,7 @@ def build_part_prompt(
             "Generate a UV-ready texture atlas for one armor module.\n"
             f"Target module: {part} ({hint}).\n"
             f"{style_text}\n"
+            f"{base_suit_surface_text}"
             f"{design_dna_text}"
             f"{lore_text}\n"
             f"{user_profile_text}"
@@ -329,6 +345,7 @@ def build_part_prompt(
         "Generate a single isolated armor part image.\n"
         f"Part: {part} ({hint}).\n"
         f"{style_text}\n"
+        f"{base_suit_surface_text}"
         f"{design_dna_text}"
         f"{lore_text}\n"
         f"{user_profile_text}"
@@ -358,6 +375,7 @@ def build_uv_refine_prompt(
 ) -> str:
     hint = PART_PROMPT_HINTS.get(part, f"{part} armor part")
     style_text = _base_style_text(suitspec, style_variation=style_variation)
+    base_suit_surface_text = _base_suit_surface_text(suitspec)
     design_dna_text = _design_dna_text(suitspec)
     lore_text = _lore_design_text()
     uv_hint = _uv_layout_hint(part)
@@ -372,6 +390,7 @@ def build_uv_refine_prompt(
         "You are given a reference concept image for one armor module.\n"
         f"Target module: {part} ({hint}).\n"
         f"{style_text}\n"
+        f"{base_suit_surface_text}"
         f"{design_dna_text}"
         f"{lore_text}\n"
         f"{user_profile_text}"

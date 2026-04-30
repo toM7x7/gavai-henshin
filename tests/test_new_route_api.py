@@ -342,6 +342,22 @@ class TestNewRouteApi(unittest.TestCase):
                 "hero_body_suit_surface",
             )
             self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["unified_design"]["generation_unit"],
+                "whole_body_hero_suit_before_layer_split",
+            )
+            self.assertIn(
+                "plain single-color undersuit",
+                response.body["asset_pipeline"]["surface_plan"]["unified_design"]["avoid"],
+            )
+            self.assertIn(
+                "rubber/fabric grain",
+                response.body["asset_pipeline"]["surface_plan"]["base_suit"]["generation_target"],
+            )
+            self.assertIn(
+                "continue the same base motif",
+                response.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["generation_target"],
+            )
+            self.assertEqual(
                 response.body["asset_pipeline"]["surface_plan"]["emissive"]["texture_role"],
                 "emissive_line_mask",
             )
@@ -399,6 +415,14 @@ class TestNewRouteApi(unittest.TestCase):
                 ["base_suit_surface", "armor_overlay_parts"],
             )
             self.assertEqual(response.body["asset_pipeline"]["job_defaults"]["minimum_visible_overlay_parts"], 3)
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_defaults"]["surface_design_contract"],
+                "unified_design -> base_suit_surface + armor_overlay_parts",
+            )
+            self.assertIn(
+                "patterned rubber/fabric",
+                response.body["asset_pipeline"]["job_defaults"]["generation_brief"],
+            )
             self.assertIn("server_resolved_suitspec_path", response.body["asset_pipeline"]["job_defaults"]["requires"])
             self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["suitspec"], response.body["preview"]["asset_pipeline"]["job_payload_template"]["suitspec"])
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["suitspec"].endswith("/suitspec.json"))

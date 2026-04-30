@@ -332,9 +332,15 @@ function renderPartGrid() {
 
 function syncPreviewLegendPalette() {
   const root = document.documentElement;
-  root.style.setProperty("--legend-primary", UI.primaryColor?.value || "#F4F1E8");
-  root.style.setProperty("--legend-secondary", UI.secondaryColor?.value || "#8C96A3");
-  root.style.setProperty("--legend-emissive", UI.emissiveColor?.value || "#43D8FF");
+  const palette = {
+    primary: UI.primaryColor?.value || "#F4F1E8",
+    secondary: UI.secondaryColor?.value || "#8C96A3",
+    emissive: UI.emissiveColor?.value || "#43D8FF",
+  };
+  root.style.setProperty("--base-suit", colorToCss(resolveBaseSuitPalette(palette).base));
+  root.style.setProperty("--legend-primary", palette.primary);
+  root.style.setProperty("--legend-secondary", palette.secondary);
+  root.style.setProperty("--legend-emissive", palette.emissive);
 }
 
 function renderPreviewLegend() {
@@ -994,48 +1000,116 @@ async function mapWithConcurrency(items, limit, worker, onProgress = null) {
   return results;
 }
 
+function colorFrom(value, fallback) {
+  try {
+    return new THREE.Color(value || fallback);
+  } catch {
+    return new THREE.Color(fallback);
+  }
+}
+
+function colorToCss(color, alpha = 1) {
+  const display = color.clone();
+  if (THREE.ColorManagement?.enabled) display.convertLinearToSRGB?.();
+  const r = Math.round(clamp(display.r, 0, 1) * 255);
+  const g = Math.round(clamp(display.g, 0, 1) * 255);
+  const b = Math.round(clamp(display.b, 0, 1) * 255);
+  return alpha >= 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function resolveBaseSuitPalette(palette = {}) {
+  const primary = colorFrom(palette.primary, "#F4F1E8");
+  const secondary = colorFrom(palette.secondary, "#52777E");
+  const emissive = colorFrom(palette.emissive, "#43D8FF");
+  const ink = new THREE.Color(0x071214);
+  const coolShadow = new THREE.Color(0x10292c);
+  return {
+    base: secondary.clone().lerp(primary, 0.18).lerp(ink, 0.34),
+    panel: secondary.clone().lerp(primary, 0.4).lerp(coolShadow, 0.2),
+    shadow: secondary.clone().lerp(ink, 0.58),
+    seam: secondary.clone().lerp(ink, 0.72),
+    armorEcho: primary.clone().lerp(secondary, 0.44).lerp(ink, 0.08),
+    glow: emissive.clone().lerp(new THREE.Color(0xffffff), 0.1),
+  };
+}
+
 function createBaseSuitTexture(palette = {}) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext("2d");
-  const primary = palette.primary || "#F4F1E8";
-  const secondary = palette.secondary || "#52777E";
-  const emissive = palette.emissive || "#43D8FF";
-  ctx.fillStyle = primary;
+  const suit = resolveBaseSuitPalette(palette);
+  ctx.fillStyle = colorToCss(suit.base);
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 0.36;
-  ctx.fillStyle = secondary;
-  for (let x = -512; x < 1024; x += 72) {
+
+  const fillPanel = (points, color, alpha) => {
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + 34, 0);
-    ctx.lineTo(x + 546, 512);
-    ctx.lineTo(x + 512, 512);
+    points.forEach(([x, y], index) => {
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
     ctx.closePath();
+    ctx.fillStyle = colorToCss(color, alpha);
     ctx.fill();
-  }
-  ctx.globalAlpha = 0.9;
-  ctx.strokeStyle = emissive;
-  ctx.lineWidth = 5;
-  for (const x of [128, 256, 384]) {
+  };
+
+  const strokePanel = (points, color, width, alpha) => {
+    ctx.beginPath();
+    points.forEach(([x, y], index) => {
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = colorToCss(color, alpha);
+    ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+  };
+
+  const mirrorX = (points) => points.map(([x, y]) => [512 - x, y]);
+
+  fillPanel([[0, 0], [122, 0], [190, 512], [0, 512]], suit.shadow, 0.42);
+  fillPanel(mirrorX([[0, 0], [122, 0], [190, 512], [0, 512]]), suit.shadow, 0.42);
+  fillPanel([[214, 0], [298, 0], [282, 512], [230, 512]], suit.panel, 0.28);
+  fillPanel([[156, 48], [224, 160], [206, 354], [126, 464], [98, 426], [168, 326], [184, 178], [126, 84]], suit.armorEcho, 0.16);
+  fillPanel(mirrorX([[156, 48], [224, 160], [206, 354], [126, 464], [98, 426], [168, 326], [184, 178], [126, 84]]), suit.armorEcho, 0.16);
+
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.strokeStyle = colorToCss(suit.armorEcho);
+  ctx.lineWidth = 1;
+  for (let x = -96; x < 640; x += 24) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, 512);
+    ctx.lineTo(x + 180, 512);
     ctx.stroke();
   }
-  ctx.lineWidth = 3;
-  for (const y of [92, 256, 420]) {
+  ctx.globalAlpha = 0.11;
+  ctx.strokeStyle = colorToCss(suit.seam);
+  for (let y = 16; y < 512; y += 32) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(512, y);
+    ctx.lineTo(512, y + ((y / 32) % 2 ? 4 : -4));
     ctx.stroke();
   }
+  ctx.restore();
+
+  strokePanel([[256, 0], [256, 512]], suit.seam, 3, 0.5);
+  strokePanel([[144, 0], [210, 140], [190, 326], [126, 512]], suit.seam, 3, 0.46);
+  strokePanel(mirrorX([[144, 0], [210, 140], [190, 326], [126, 512]]), suit.seam, 3, 0.46);
+  strokePanel([[88, 114], [178, 210], [166, 300], [74, 398]], suit.seam, 2, 0.4);
+  strokePanel(mirrorX([[88, 114], [178, 210], [166, 300], [74, 398]]), suit.seam, 2, 0.4);
+
+  strokePanel([[258, 52], [286, 150], [278, 272], [304, 436]], suit.glow, 2.4, 0.78);
+  strokePanel(mirrorX([[258, 52], [286, 150], [278, 272], [304, 436]]), suit.glow, 2.4, 0.78);
+  strokePanel([[102, 172], [170, 236], [160, 326]], suit.glow, 1.8, 0.5);
+  strokePanel(mirrorX([[102, 172], [170, 236], [160, 326]]), suit.glow, 1.8, 0.5);
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1.6, 2.4);
+  texture.repeat.set(1.15, 2.05);
   texture.anisotropy = 4;
   texture.name = "vrm-body-suit-surface-texture";
   return texture;
@@ -1043,14 +1117,15 @@ function createBaseSuitTexture(palette = {}) {
 
 function createBaseSuitMaterial(palette = {}, options = {}) {
   const opacity = numberOr(options.opacity, 0.94);
+  const suit = resolveBaseSuitPalette(palette);
   return new THREE.MeshStandardMaterial({
     name: "vrm-body-suit-surface-material",
-    color: new THREE.Color(palette.primary || BASE_SUIT_COLOR),
+    color: suit.base,
     map: createBaseSuitTexture(palette),
-    emissive: new THREE.Color(palette.emissive || BASE_SUIT_EMISSIVE),
-    emissiveIntensity: numberOr(options.emissiveIntensity, 0.18),
-    metalness: 0.08,
-    roughness: 0.54,
+    emissive: suit.glow.clone().lerp(new THREE.Color(BASE_SUIT_EMISSIVE), 0.55),
+    emissiveIntensity: numberOr(options.emissiveIntensity, 0.16),
+    metalness: 0.14,
+    roughness: 0.48,
     transparent: opacity < 1,
     opacity,
     depthWrite: false,

@@ -29,14 +29,14 @@
   "vrm_attachment": {
     "primary_bone": "rightLowerArm",
     "offset_m": [
-      0,
+      0.0,
       -0.01,
-      0.02
+      0.005
     ],
     "rotation_deg": [
-      0,
-      0,
-      0
+      0.0,
+      0.0,
+      0.0
     ],
     "fallback_bones": [
       "rightLowerArm",

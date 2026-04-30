@@ -30,14 +30,14 @@
   "vrm_attachment": {
     "primary_bone": "leftLowerLeg",
     "offset_m": [
-      0,
-      -0.02,
-      0.02
+      0.0,
+      -0.015,
+      0.005
     ],
     "rotation_deg": [
-      0,
-      0,
-      0
+      0.0,
+      0.0,
+      0.0
     ],
     "fallback_bones": [
       "leftLowerLeg",

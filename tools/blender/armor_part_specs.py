@@ -133,10 +133,12 @@ def _helmet_spec() -> dict[str, Any]:
     ex, ey, ez = _ENVELOPE["helmet"]["x"], _ENVELOPE["helmet"]["y"], _ENVELOPE["helmet"]["z"]
     panels = [
         _panel("helmet_dome", "rounded_box",
-            anchor=(0.0, 0.02, 0.0),
-            size=(ex * 0.96, ey * 0.94, ez * 0.94),
-            bevel_m=0.020, material_zone="base_surface",
-            comment="Main dome volume; bevelled cube produces the broad hero head silhouette."),
+            anchor=(0.0, 0.025, 0.0),
+            size=(ex * 0.98, ey * 0.92, ez * 0.98),
+            bevel_m=0.000, material_zone="base_surface",
+            organic_rounding=True,
+            segments=28, rings=14,
+            comment="Main dome volume; ellipsoid removes the cube-box read while keeping target depth."),
         _panel("helmet_visor_band", "trim_ridge",
             anchor=(0.0, ey * 0.06, ez * 0.42),
             size=(ex * 0.84, ey * 0.16, 0.022),
@@ -168,10 +170,10 @@ def _helmet_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.45, ez * 0.36), (0.0, -ey * 0.05, ez * 0.5),
                 width_m=0.008, depth_m=0.003),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "Head",
-        "offset_m": [0.0, 0.05, 0.0], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "head",
+        "offset_m": [0.0, 0.02, 0.04], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
-        "Bevelled dome cube reaches target depth z (no flat plate read).",
+        "Ellipsoid dome reaches target depth z without a box silhouette.",
         "Crest + visor + jaw form clear hero silhouette without antenna assets.",
         "Ear vents stay dark to anchor silver dome.",
     ]
@@ -214,8 +216,8 @@ def _chest_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.4, ez * 0.5), (0.0, -ey * 0.5, ez * 0.5),
                 width_m=0.014, depth_m=0.005),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "UpperChest",
-        "offset_m": [0.0, 0.04, 0.04], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "upperChest",
+        "offset_m": [0.0, 0.01, 0.06], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Single body_wrap_arc (chord 0.62, arc 80°) gives true ribcage curvature.",
         "Sagitta + bulge reach z ~ 0.16m, matching authoring target envelope.",
@@ -268,8 +270,8 @@ def _back_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.46, -ez * 0.5), (0.0, -ey * 0.46, -ez * 0.5),
                 width_m=0.010, depth_m=0.004),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "UpperChest",
-        "offset_m": [0.0, 0.02, -0.05], "rotation_deg": [0.0, 180.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "upperChest",
+        "offset_m": [0.0, 0.0, -0.06], "rotation_deg": [0.0, 180.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "body_wrap_arc with Y=180 rotation -> apex at rear, wraps the back cylinder.",
         "Sagitta now reaches z ~ 0.13m; spine accent + scapula trims complete the silhouette.",
@@ -283,12 +285,24 @@ def _waist_spec() -> dict[str, Any]:
     spec = _base("waist", "waist", "wave_1_core")
     ex, ey, ez = _ENVELOPE["waist"]["x"], _ENVELOPE["waist"]["y"], _ENVELOPE["waist"]["z"]
     panels = [
-        _panel("waist_main_wrap", "body_wrap_arc",
+        _panel("waist_front_wrap", "body_wrap_arc",
             anchor=(0.0, 0.0, 0.0),
-            size=(0.45, 0.16, 0.052),
+            size=(0.38, 0.15, 0.044),
             bevel_m=0.005, material_zone="base_surface",
-            arc_deg=135.0, front_bulge=0.032, segments=18,
-            comment="Main hip wrap arc; arc=135 hugs front+sides of pelvis."),
+            arc_deg=105.0, front_bulge=0.022, segments=14,
+            comment="Front belt wrap, narrowed so the waist stops reading as one large plate."),
+        _panel("waist_side_plate_left", "rounded_box",
+            anchor=(ex * 0.36, 0.0, 0.018),
+            size=(ex * 0.18, ey * 0.82, 0.032),
+            rotation_deg=(0.0, -18.0, 0.0),
+            bevel_m=0.005, material_zone="base_surface",
+            comment="Left hip side plate closes the belt without a flat front slab."),
+        _panel("waist_side_plate_right", "rounded_box",
+            anchor=(-ex * 0.36, 0.0, 0.018),
+            size=(ex * 0.18, ey * 0.82, 0.032),
+            rotation_deg=(0.0, 18.0, 0.0),
+            bevel_m=0.005, material_zone="base_surface",
+            comment="Right hip side plate mirrors the segmented belt read."),
         _panel("waist_buckle", "rounded_box",
             anchor=(0.0, 0.0, 0.080),
             size=(ex * 0.22, ey * 0.78, 0.024),
@@ -312,8 +326,8 @@ def _waist_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.5, ez * 0.5), (0.0, -ey * 0.5, ez * 0.5),
                 width_m=0.012, depth_m=0.004),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "Hips",
-        "offset_m": [0.0, 0.0, 0.04], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "hips",
+        "offset_m": [0.0, 0.01, 0.035], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Single body_wrap_arc (arc 120°) wraps the pelvis front+sides.",
         "Rear wrap mirrors the front to close the belt loop without rear gap.",
@@ -352,8 +366,8 @@ def _left_shoulder_spec() -> dict[str, Any]:
         _groove((-ex * 0.18, ey * 0.30, ez * 0.45), (ex * 0.32, -ey * 0.18, ez * 0.45),
                 width_m=0.006, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftShoulder",
-        "offset_m": [0.04, 0.02, 0.0], "rotation_deg": [0.0, 0.0, -8.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftShoulder",
+        "offset_m": [0.015, 0.005, 0.005], "rotation_deg": [0.0, 0.0, -8.0]}
     spec["silhouette_review_notes"] = [
         "body_wrap_arc cap (arc 140°) sits over the deltoid, no flat slab read.",
         "Insertion lip extends inward to bridge into chest_clavicle_trim.",
@@ -401,8 +415,8 @@ def _left_upperarm_spec() -> dict[str, Any]:
         _groove((ex * 0.18, ey * 0.4, ez * 0.5), (ex * 0.18, -ey * 0.4, ez * 0.5),
                 width_m=0.005, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftUpperArm",
-        "offset_m": [0.0, -0.02, 0.0], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftUpperArm",
+        "offset_m": [0.0, -0.015, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Two body_wrap_arc segments (top/bottom) with a deliberate gap preserve elbow bend.",
         "arc_deg=180 wraps the outer half-circumference; rear stays open for animation.",
@@ -452,8 +466,8 @@ def _left_forearm_spec() -> dict[str, Any]:
         _groove((ex * 0.32, ey * 0.4, ez * 0.5), (ex * 0.32, -ey * 0.4, ez * 0.5),
                 width_m=0.005, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftLowerArm",
-        "offset_m": [0.0, -0.02, 0.0], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftLowerArm",
+        "offset_m": [0.0, -0.01, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Split wrap arcs (top/bottom) tapered toward wrist preserve rotation.",
         "Rear vent slat sells mecha detail without competing with chest emissive.",
@@ -495,8 +509,8 @@ def _left_hand_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.32, ez * 0.5), (0.0, -ey * 0.32, ez * 0.5),
                 width_m=0.005, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftHand",
-        "offset_m": [0.0, 0.0, 0.02], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftHand",
+        "offset_m": [0.0, 0.0, 0.01], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "body_wrap_arc covers back of hand like a hero gauntlet, fingers stay free.",
         "Cuff trim helps the wrist seam read clearly.",
@@ -548,8 +562,8 @@ def _left_thigh_spec() -> dict[str, Any]:
         _groove((ex * 0.32, ey * 0.42, ez * 0.5), (ex * 0.32, -ey * 0.4, ez * 0.5),
                 width_m=0.006, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftUpperLeg",
-        "offset_m": [0.02, -0.02, 0.02], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftUpperLeg",
+        "offset_m": [0.005, -0.01, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Front wrap + rear wrap with side gap reads as armored thigh, not a tube.",
         "Hip accent links visually into the waist hip-side line.",
@@ -600,8 +614,8 @@ def _left_shin_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.4, ez * 0.5), (0.0, -ey * 0.42, ez * 0.5),
                 width_m=0.008, depth_m=0.003),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftLowerLeg",
-        "offset_m": [0.0, -0.02, 0.02], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftLowerLeg",
+        "offset_m": [0.0, -0.015, 0.005], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Front wrap + rear wrap split mirrors thigh construction.",
         "Knee dome adds a clear visual hinge between thigh and shin.",
@@ -648,8 +662,8 @@ def _left_boot_spec() -> dict[str, Any]:
         _groove((0.0, ey * 0.18, ez * 0.5), (0.0, ey * 0.18, -ez * 0.05),
                 width_m=0.006, depth_m=0.002),
     ]
-    spec["vrm_attachment_hint"] = {"primary_bone": "LeftFoot",
-        "offset_m": [0.0, 0.02, 0.04], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["vrm_attachment_hint"] = {"primary_bone": "leftFoot",
+        "offset_m": [0.0, 0.0, 0.035], "rotation_deg": [0.0, 0.0, 0.0]}
     spec["silhouette_review_notes"] = [
         "Toe cap + heel cap + ankle wrap + flat sole keeps foot articulated.",
         "Ankle wrap (arc 300°) gives true ground-up boot silhouette.",
@@ -658,15 +672,22 @@ def _left_boot_spec() -> dict[str, Any]:
     return spec
 
 
-def _mirror_spec(module: str, mirror_of: str, *, primary_bone: str) -> dict[str, Any]:
+def _mirror_spec(
+    module: str,
+    mirror_of: str,
+    *,
+    primary_bone: str,
+    offset_m: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    rotation_deg: tuple[float, float, float] = (0.0, 0.0, 0.0),
+) -> dict[str, Any]:
     spec = _base(module, _category_for(module), _wave_for(module),
                  mirror_of=mirror_of, side="right")
     spec["silhouette"] = {"mirror": True, "source": mirror_of, "axis": "x"}
     spec["emissive_lines"] = []
     spec["vrm_attachment_hint"] = {
         "primary_bone": primary_bone,
-        "offset_m": [0.0, 0.0, 0.0],
-        "rotation_deg": [0.0, 0.0, 0.0],
+        "offset_m": list(offset_m),
+        "rotation_deg": list(rotation_deg),
         "derive_from": mirror_of,
     }
     spec["silhouette_review_notes"] = [
@@ -708,25 +729,33 @@ def _build_part_specs() -> dict[str, dict[str, Any]]:
     specs["waist"] = _waist_spec()
     specs["left_shoulder"] = _left_shoulder_spec()
     specs["right_shoulder"] = _mirror_spec("right_shoulder", "left_shoulder",
-                                           primary_bone="RightShoulder")
+                                           primary_bone="rightShoulder",
+                                           offset_m=(-0.015, 0.005, 0.005),
+                                           rotation_deg=(0.0, 0.0, 8.0))
     specs["left_upperarm"] = _left_upperarm_spec()
     specs["right_upperarm"] = _mirror_spec("right_upperarm", "left_upperarm",
-                                           primary_bone="RightUpperArm")
+                                           primary_bone="rightUpperArm",
+                                           offset_m=(0.0, -0.015, 0.005))
     specs["left_forearm"] = _left_forearm_spec()
     specs["right_forearm"] = _mirror_spec("right_forearm", "left_forearm",
-                                          primary_bone="RightLowerArm")
+                                          primary_bone="rightLowerArm",
+                                          offset_m=(0.0, -0.01, 0.005))
     specs["left_hand"] = _left_hand_spec()
     specs["right_hand"] = _mirror_spec("right_hand", "left_hand",
-                                       primary_bone="RightHand")
+                                       primary_bone="rightHand",
+                                       offset_m=(0.0, 0.0, 0.01))
     specs["left_thigh"] = _left_thigh_spec()
     specs["right_thigh"] = _mirror_spec("right_thigh", "left_thigh",
-                                        primary_bone="RightUpperLeg")
+                                        primary_bone="rightUpperLeg",
+                                        offset_m=(-0.005, -0.01, 0.005))
     specs["left_shin"] = _left_shin_spec()
     specs["right_shin"] = _mirror_spec("right_shin", "left_shin",
-                                       primary_bone="RightLowerLeg")
+                                       primary_bone="rightLowerLeg",
+                                       offset_m=(0.0, -0.015, 0.005))
     specs["left_boot"] = _left_boot_spec()
     specs["right_boot"] = _mirror_spec("right_boot", "left_boot",
-                                       primary_bone="RightFoot")
+                                       primary_bone="rightFoot",
+                                       offset_m=(0.0, 0.0, 0.035))
     return specs
 
 

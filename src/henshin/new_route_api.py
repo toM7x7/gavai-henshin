@@ -1149,12 +1149,29 @@ class NewRouteApi:
             "target_resolution": str(texture_plan.get("target_resolution") or "2K"),
             "source_layers": [_FORGE_BASE_SURFACE_LAYER_ID, _FORGE_ARMOR_OVERLAY_LAYER_ID],
             "style_tags": list(style_tags),
+            "unified_design": {
+                "generation_unit": "whole_body_hero_suit_before_layer_split",
+                "design_goal": (
+                    "one cohesive tokusatsu hero suit where the VRM base-suit surface "
+                    "and GLB armor overlays share motif, palette, emissive routing, and material language"
+                ),
+                "avoid": [
+                    "plain single-color undersuit",
+                    "unrelated armor toppings",
+                    "floating box proxy parts",
+                    "random color conflict between body surface and armor",
+                ],
+            },
             "base_suit": {
                 "target_layer": _FORGE_BASE_SURFACE_LAYER_ID,
                 "texture_role": "hero_body_suit_surface",
                 "surface_target": "VRM humanoid body material",
                 "uv_scope": "body_uv_or_generated_body_surface_shell",
-                "generation_target": "continuous bright tokusatsu body suit texture on the VRM surface",
+                "generation_target": (
+                    "continuous bright tokusatsu body suit texture on the VRM surface, "
+                    "with rubber/fabric grain, body-following panel seams, geometric linework, "
+                    "subtle color blocking, and glow guides visible through armor gaps"
+                ),
                 "must_remain_body_conforming": True,
             },
             "armor_overlay": {
@@ -1162,7 +1179,10 @@ class NewRouteApi:
                 "texture_role": "armor_part_materials",
                 "parts": list(enabled_parts),
                 "part_count": len(enabled_parts),
-                "generation_target": "separate hard-surface armor materials that sit above the base suit",
+                "generation_target": (
+                    "hard-surface armor materials that sit above the base suit, continue the same base motif, "
+                    "hide proxy boxiness, minimize visual gaps, and preserve joint readability"
+                ),
                 "requires_model_quality_gate": MODEL_QUALITY_BLOCKING_GATE,
             },
             "emissive": {
@@ -1217,10 +1237,19 @@ class NewRouteApi:
     ) -> dict[str, Any]:
         brief = str(payload.get("brief") or "Generate a fitted base suit with selected armor overlays.").strip()
         enabled_parts = sorted(self._forge_enabled_parts(payload))
+        unified_design_brief = (
+            "Generate one unified tokusatsu hero suit, not a plain base body plus unrelated toppings. "
+            "The base_suit_surface is the VRM body texture: patterned rubber/fabric, body-following panel seams, "
+            "geometric linework, subtle color blocking, and glow guides that still look intentional in armor gaps. "
+            "The armor_overlay_parts are fitted hard-surface GLB parts: they must share the same motif, palette family, "
+            "emissive routing, and material language as the base suit while avoiding floating boxes, toy-like proxy shapes, "
+            "oversized gaps, and random color conflict. "
+        )
         prompt = (
             f"{brief} "
             f"Declared wearer height: {body_profile['height_cm']}cm. "
             f"Style tags: {', '.join(style_tags)}. "
+            f"{unified_design_brief}"
             "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
         )
         texture_plan = self._forge_texture_plan()
@@ -1296,10 +1325,15 @@ class NewRouteApi:
                 "must_render_layers": render_contract["required_layers"],
                 "minimum_visible_overlay_parts": render_contract["minimum_visible_overlay_parts"],
                 "generation_brief": prompt[:1200],
+                "surface_design_contract": "unified_design -> base_suit_surface + armor_overlay_parts",
                 "requires": ["server_resolved_suitspec_path"],
             },
             "part_prompts": {
-                part: f"{part} armor overlay, compatible with a fitted base suit and mesh-UV texture atlas"
+                part: (
+                    f"{part} armor overlay, compatible with a patterned VRM base_suit_surface and mesh-UV texture atlas; "
+                    "continue the unified tokusatsu motif, align trims/emissive routes with neighboring base-suit lines, "
+                    "avoid standalone prop decoration and proxy-box color blocking"
+                )
                 for part in enabled_parts
             },
         }
@@ -1494,7 +1528,7 @@ class NewRouteApi:
         quality_policy = generation.get("quality_policy") if isinstance(generation.get("quality_policy"), dict) else {}
         job_payload_template = self._clone_json(job_defaults)
         job_payload_template.pop("requires", None)
-        for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts"):
+        for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts", "surface_design_contract"):
             job_payload_template.pop(render_only_key, None)
         job_payload_template.pop("surface_plan", None)
         job_payload_template["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE

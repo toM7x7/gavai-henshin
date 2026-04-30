@@ -12,7 +12,7 @@
   --stage: #eef5f3;
   --ink: #101817;
   --body-reference: #e6c7a6;
-  --base-suit: #52777e;
+  --base-suit: #27474c;
   --legend-primary: #f4f1e8;
   --legend-secondary: #8c96a3;
   --legend-emissive: #43d8ff;
@@ -700,7 +700,11 @@ a:focus-visible {
 }
 
 .legend-suit {
-  background: var(--base-suit);
+  border: 1px solid rgba(67, 216, 255, 0.5);
+  background:
+    linear-gradient(135deg, transparent 0 38%, rgba(67, 216, 255, 0.8) 39% 44%, transparent 45% 100%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 22%, transparent 23% 76%, rgba(0, 0, 0, 0.18) 77% 100%),
+    var(--base-suit);
 }
 
 .legend-armor {

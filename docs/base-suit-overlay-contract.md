@@ -36,6 +36,8 @@ The base suit is the body-conforming layer. It should absorb fit-sensitive eleme
 
 This layer belongs to VRM/body-fit and future surface shell work. It should not be rebuilt as many rigid mesh parts unless there is a clear hard-surface silhouette reason.
 
+2026-04-30 clarification: the base suit is the VRM surface texture, not a plain single-color underlayer. It should carry the toku-suit surface design: rubber/fabric grain, panel seams, fine geometric linework, color blocking, and glow guides. It must look intentional in the gaps between overlay parts.
+
 ### Armor Overlay
 
 The overlay is the replaceable outer armor. It should carry:
@@ -49,6 +51,20 @@ The overlay is the replaceable outer armor. It should carry:
 - hand back plates or knuckle plates
 
 These parts may remain rigid, mounted, and visually expressive. They should be generated, audited, and stored as parts.
+
+2026-04-30 clarification: overlay parts are additional parts on top of the base suit, not the entire suit. Nanobanana should be prompted with a whole-suit `unified_design` first, then split the motif across `base_suit_surface` and `armor_overlay_parts` so the generated result does not look like unrelated toppings on a plain body.
+
+### Variant And Topping Minimal Metadata
+
+To prepare for branching parts and add-on toppings without changing the canonical 18 module keys yet, modeler handoff notes and future sidecars may record:
+
+- `part_family`: broad category such as `helmet`, `chest`, `shoulder`, `arm`, `waist`, `leg`, or `boot`.
+- `variant_key`: replacement style within a family, such as `sleek`, `heavy`, `tech`, `organic`, or `heroic`.
+- `base_motif_link`: the base-suit line, panel, or color motif the overlay must continue.
+- `topping_slots`: named add-on mount points such as `crest`, `visor_trim`, `chest_core`, `shoulder_fin`, `belt_buckle`, or `shin_spike`.
+- `conflicts_with`: variants or toppings that should not be combined because they collide or overfill the silhouette.
+
+This keeps current runtime compatibility while giving the generation prompt a path toward branchable armor choices.
 
 ## Canonical Part Split
 

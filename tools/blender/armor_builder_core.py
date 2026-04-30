@@ -6,7 +6,7 @@ Public functions are idempotent and never block on UI. Geometry is built with
 authored Z-up (Blender) and converted Y-up only on glTF / mesh.v1 export.
 """
 from __future__ import annotations
-import json, math, os
+import importlib.util, json, math, os, sys
 import bmesh  # type: ignore
 import bpy  # type: ignore
 from mathutils import Vector  # type: ignore
@@ -102,6 +102,8 @@ def reset_scene():
 
 # ---- panel primitives -----------------------------------------------------
 def _p_rounded_box(bm, spec):
+    if spec.get("organic_rounding"):
+        return _p_ellipsoid(bm, spec)
     sx, sy, sz = spec.get("size", (0.2, 0.2, 0.04))
     bmesh.ops.create_cube(bm, size=1.0)
     _scale_cube(bm, sx, sy, sz); bm.normal_update()
@@ -153,6 +155,46 @@ def _p_trim_ridge(bm, spec):
     bmesh.ops.create_cube(bm, size=1.0)
     _scale_cube(bm, sx, sy, sz); bm.normal_update()
     _bevel(bm, list(bm.edges), float(spec.get("bevel_m", 0.002)), segments=1)
+
+def _p_ellipsoid(bm, spec):
+    """Low-poly ellipsoid for organic shells such as helmet domes."""
+    sx, sy, sz = spec.get("size", (0.2, 0.2, 0.2))
+    u_segments = max(8, int(spec.get("segments", 24)))
+    v_segments = max(4, int(spec.get("rings", 12)))
+    hx, hy, hz = float(sx) * 0.5, float(sy) * 0.5, float(sz) * 0.5
+    verts = []
+    top = bm.verts.new((0.0, hy, 0.0))
+    bottom = bm.verts.new((0.0, -hy, 0.0))
+    for r in range(1, v_segments):
+        phi = math.pi * r / v_segments
+        y = math.cos(phi) * hy
+        ring_radius = math.sin(phi)
+        ring = []
+        for c in range(u_segments):
+            theta = 2.0 * math.pi * c / u_segments
+            ring.append(bm.verts.new((math.cos(theta) * ring_radius * hx, y, math.sin(theta) * ring_radius * hz)))
+        verts.append(ring)
+    if verts:
+        first = verts[0]
+        last = verts[-1]
+        for c in range(u_segments):
+            try:
+                bm.faces.new((top, first[c], first[(c + 1) % u_segments]))
+            except ValueError:
+                pass
+            try:
+                bm.faces.new((bottom, last[(c + 1) % u_segments], last[c]))
+            except ValueError:
+                pass
+        for r in range(len(verts) - 1):
+            a, b = verts[r], verts[r + 1]
+            for c in range(u_segments):
+                try:
+                    bm.faces.new((a[c], b[c], b[(c + 1) % u_segments], a[(c + 1) % u_segments]))
+                except ValueError:
+                    pass
+    bm.verts.index_update(); bm.normal_update()
+    _bevel(bm, list(bm.edges), float(spec.get("bevel_m", 0.0)), segments=1)
 
 def _p_body_wrap_arc(bm, spec):
     """Curved body-wrapping shell with real thickness.
@@ -382,7 +424,7 @@ def _p_solid_shell(bm, spec):
 
 _PRIMS = {"rounded_box": _p_rounded_box, "wedge": _p_wedge,
           "shell_quad": _p_shell_quad, "fillet_cylinder": _p_fillet_cylinder,
-          "trim_ridge": _p_trim_ridge, "body_wrap_arc": _p_body_wrap_arc,
+          "trim_ridge": _p_trim_ridge, "ellipsoid": _p_ellipsoid, "body_wrap_arc": _p_body_wrap_arc,
           "solid_shell": _p_solid_shell}
 
 def build_panel(spec, parent_collection):
@@ -645,6 +687,38 @@ def measure_module(obj):
             "triangle_count": tris, "material_count": len(mesh.materials),
             "vertex_count": len(mesh.vertices)}
 
+_PART_SPEC_CACHE = None
+
+def _part_spec_attachment(module):
+    global _PART_SPEC_CACHE
+    if _PART_SPEC_CACHE is None:
+        _PART_SPEC_CACHE = {}
+        spec_path = os.path.join(os.path.dirname(__file__), "armor_part_specs.py") if "__file__" in globals() else ""
+        if spec_path and os.path.isfile(spec_path):
+            try:
+                spec = importlib.util.spec_from_file_location("_armor_part_specs_for_sidecar", spec_path)
+                if spec is not None and spec.loader is not None:
+                    mod = importlib.util.module_from_spec(spec)
+                    sys.modules.setdefault("_armor_part_specs_for_sidecar", mod)
+                    spec.loader.exec_module(mod)
+                    _PART_SPEC_CACHE = getattr(mod, "PART_SPECS", {}) or {}
+            except Exception:
+                _PART_SPEC_CACHE = {}
+    part_spec = _PART_SPEC_CACHE.get(module) if isinstance(_PART_SPEC_CACHE, dict) else None
+    hint = part_spec.get("vrm_attachment_hint") if isinstance(part_spec, dict) else None
+    return hint if isinstance(hint, dict) else None
+
+def _sidecar_attachment(blueprint_part):
+    module = str(blueprint_part.get("module", ""))
+    fallback = blueprint_part.get("vrm_attachment") if isinstance(blueprint_part.get("vrm_attachment"), dict) else {}
+    hint = _part_spec_attachment(module) or {}
+    return {
+        "primary_bone": str(hint.get("primary_bone") or fallback.get("primary_bone") or ""),
+        "offset_m": list(hint.get("offset_m") or fallback.get("offset_m") or [0, 0, 0]),
+        "rotation_deg": list(hint.get("rotation_deg") or fallback.get("rotation_deg") or [0, 0, 0]),
+        "fallback_bones": list(fallback.get("fallback_bones") or []),
+    }
+
 def write_modeler_sidecar(obj, sidecar_path, blueprint_part, panel_zones):
     """Emit the modeler-part-sidecar.v1 JSON next to the GLB; returns payload."""
     measure = measure_module(obj)
@@ -667,7 +741,7 @@ def write_modeler_sidecar(obj, sidecar_path, blueprint_part, panel_zones):
         "material_zones": zones_used,
         "texture_provider_profile": "nano_banana",
         "mirror_of": obj.get("__mirror_of") or blueprint_part.get("mirror_of"),
-        "vrm_attachment": blueprint_part.get("vrm_attachment"),
+        "vrm_attachment": _sidecar_attachment(blueprint_part),
         "qa_self_report": qa,
     }
     os.makedirs(os.path.dirname(sidecar_path) or ".", exist_ok=True)

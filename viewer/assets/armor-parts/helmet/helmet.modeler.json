@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.helmet.v1",
   "category": "head",
   "bbox_m": {
-    "x": 0.2741760015487671,
+    "x": 0.27988800406455994,
     "y": 0.34960000216960907,
-    "z": 0.24289600551128387,
+    "z": 0.25399109721183777,
     "size": [
-      0.2741760015487671,
+      0.27988800406455994,
       0.34960000216960907,
-      0.24289600551128387
+      0.25399109721183777
     ],
     "dimensions": [
-      0.2741760015487671,
+      0.27988800406455994,
       0.34960000216960907,
-      0.24289600551128387
+      0.25399109721183777
     ]
   },
-  "triangle_count": 392,
+  "triangle_count": 1012,
   "material_zones": [
     "accent",
     "base_surface",
@@ -30,14 +30,14 @@
   "vrm_attachment": {
     "primary_bone": "head",
     "offset_m": [
-      0,
-      0.08,
-      0.12
+      0.0,
+      0.02,
+      0.04
     ],
     "rotation_deg": [
-      0,
-      0,
-      0
+      0.0,
+      0.0,
+      0.0
     ],
     "fallback_bones": [
       "head",
@@ -54,7 +54,7 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 392,
+  "triangles": 1012,
   "target_envelope_m": {
     "x": 0.2856,
     "y": 0.34,

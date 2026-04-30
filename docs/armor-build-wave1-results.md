@@ -11,6 +11,28 @@ The numeric gates now line up with the modeler response: intake pass, full-suit 
 Visual review still reads as procedural white proxy armor in several places, especially torso/shoulder/limb silhouette.
 Next visual work should therefore focus on authored hero-suit silhouette, final materials, and Nanobanana texture integration rather than only bbox compliance.
 
+## 2026-04-30 generation brief update
+
+The next modeling/texture pass should treat the visual stack as three explicit layers:
+
+- `base_suit_surface`: the VRM surface texture. This is not a flat single-color undersuit. It should carry toku-style rubber/fabric texture, panel seams, fine geometric lines, glow guides, and color accents that still read when armor gaps are visible.
+- `armor_overlay_parts`: the additional GLB parts mounted on top of the VRM surface. These parts create the hard silhouette: helmet, chest/back, shoulders, waist, forearms, shins, boots, and optional plates.
+- `unified_design`: the Nanobanana generation target. Nanobanana should generate a coherent whole-body hero design first, then distribute the motif across the base suit and overlay parts. It should not produce a plain base suit plus unrelated decorative parts.
+
+Current non-final items remain visible and should not be hidden in reports:
+
+- Gaps between armor modules and between armor and body surface.
+- Box-like silhouettes, especially chest/waist/shoulder reads.
+- Part placement issues at shoulder, waist, shin/boot, and foot contact.
+- Texture mismatch where the base suit reads as plain/placeholder while armor reads as a separate object set.
+
+Minimal branching/topping direction for the next pass:
+
+- Keep canonical modules as the compatibility keys.
+- Add or record `part_family`, `variant_key`, `base_motif_link`, `topping_slots`, and `conflicts_with` in sidecar notes or modeler handoff text before adding runtime complexity.
+- Treat variant as part replacement, and topping as an add-on mounted on a named slot such as `crest`, `visor_trim`, `chest_core`, `shoulder_fin`, `belt_buckle`, or `shin_spike`.
+- P0 for naming: `helmet`, `chest`, `back`, `waist`, `left_shoulder`, `right_shoulder`.
+
 | Metric | Baseline (prior session) | After Wave 1 overhaul |
 |---|---:|---:|
 | Intake validator | warn (18 backup files) | **pass** (0 reasons / 0 warnings) |
@@ -181,3 +203,12 @@ Agent M added `ensure_vrm_master_blend(repo_root)` to import `viewer/assets/vrm/
 - **Body proxy used in renders is a rough cylinder/sphere stand-in**, not a real VRM. Final Web Forge integration uses the actual `viewer/assets/vrm/default.vrm` per `docs/armor-runtime-pipeline.md`.
 - **Render lighting is a 3-point area light setup** for silhouette legibility; the production Web preview will swap for the final scene lighting.
 - **z-axis on helmet still slightly under target (-6%)** because the dome bevel of 0.020m chamfers the corners. Acceptable for Wave 1 review; if needed, raise dome size_z by 6%.
+
+## Worker note: attachment-fit pass after Wave 1+
+
+Date: 2026-04-30
+
+- Investigation: Web Forge loads delivered GLBs, centers their bbox at local origin, then places/scales them from runtime `vrm_anchor` and VRM bone metrics. The viewer path does not currently consume `viewer/assets/armor-parts/*/*.modeler.json` offsets for placement; sidecars are intake/handoff metadata and smoke-test inputs.
+- Immediate sidecar pass: reduced outward/up offsets in all 18 sidecars so future consumers and handoff checks describe parts closer to the base suit. Priority reductions: helmet `z 0.12 -> 0.04`, chest/back `|z| 0.10 -> 0.06`, waist `z 0.06 -> 0.035`, shoulders/arms/legs mostly `z 0.02 -> 0.005`, boots `z 0.08 -> 0.035`.
+- Regeneration spec pass: `helmet_dome` is now an `ellipsoid` primitive instead of a bevelled rounded box, and waist is split into a narrower front wrap plus left/right hip side plates to reduce the large-plate read. `armor_builder_core.write_modeler_sidecar` now prefers `armor_part_specs.py` attachment hints when regenerating sidecars.
+- Required Blender regeneration: rerun `build_all(REPO)` for at least `helmet` and `waist` to bake the shape changes into GLB. Rebuilding all 18 is recommended so generated sidecars inherit the new spec attachment hints uniformly.

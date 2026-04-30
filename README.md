@@ -58,7 +58,11 @@ http://localhost:8010/viewer/armor-forge/
 Modeler handoff:
 
 ```text
+docs/modeler-context-and-actions-2026-04-30.md
 docs/modeler-armor-brief.md
+docs/modeler-wave1-checklist.md
+docs/armor-part-fit-modeler-requests.md
+docs/armor-build-wave1-results.md
 GET /v1/catalog/part-blueprints
 viewer/assets/armor-parts/<module>/<module>.glb
 viewer/assets/armor-parts/<module>/<module>.modeler.json

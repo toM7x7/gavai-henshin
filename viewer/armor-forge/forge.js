@@ -15,18 +15,18 @@ const PARTS = [
   ["waist", "ベルト", true],
   ["left_shoulder", "左肩", true],
   ["right_shoulder", "右肩", true],
+  ["left_upperarm", "左上腕", true],
+  ["right_upperarm", "右上腕", true],
   ["left_forearm", "左腕甲", true],
   ["right_forearm", "右腕甲", true],
+  ["left_hand", "左手甲", true],
+  ["right_hand", "右手甲", true],
+  ["left_thigh", "左太腿", true],
+  ["right_thigh", "右太腿", true],
   ["left_shin", "左すね", true],
   ["right_shin", "右すね", true],
   ["left_boot", "左ブーツ", true],
   ["right_boot", "右ブーツ", true],
-  ["left_upperarm", "左上腕", false],
-  ["right_upperarm", "右上腕", false],
-  ["left_thigh", "左太腿", false],
-  ["right_thigh", "右太腿", false],
-  ["left_hand", "左手甲", false],
-  ["right_hand", "右手甲", false],
 ];
 
 const DEFAULT_HEIGHT_CM = 170;
@@ -84,6 +84,16 @@ const FIT_SHAPE_BASELINES = {
   box: [0.52, 0.5, 0.46],
   cylinder: [0.9, 1.0, 0.9],
 };
+const EXPECTED_ARMOR_PARTS = PARTS.map(([id]) => id);
+const PART_LABELS = new Map(PARTS.map(([id, label]) => [id, label]));
+const PREVIEW_QA_GAP_WARN_M = 0.08;
+const PREVIEW_QA_THIN_RATIO_WARN = 0.18;
+const PREVIEW_VIEW_PRESETS = Object.freeze({
+  front: { label: "正面", yaw: 0, pitch: 0, zoom: 1 },
+  left: { label: "左側", yaw: -Math.PI / 2, pitch: 0.02, zoom: 1.06 },
+  back: { label: "背面", yaw: Math.PI, pitch: 0.02, zoom: 1.05 },
+  right: { label: "右側", yaw: Math.PI / 2, pitch: 0.02, zoom: 1.06 },
+});
 
 const UI = {
   form: document.getElementById("forgeForm"),
@@ -317,6 +327,185 @@ function selectedParts() {
   return Array.from(UI.partGrid.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
 }
 
+function partLabel(part) {
+  return PART_LABELS.get(part) || part;
+}
+
+function compactPartList(parts, limit = 4) {
+  const labels = parts.map(partLabel);
+  if (labels.length <= limit) return labels.join(" / ") || "なし";
+  return `${labels.slice(0, limit).join(" / ")} +${labels.length - limit}`;
+}
+
+function qaSourcePartIds(data, records) {
+  const recordIds = records.map(([part]) => part);
+  if (recordIds.length) return recordIds;
+  if (data?.preview?.modules || data?.suitspec?.modules || data?.modules) return recordIds;
+  return selectedParts();
+}
+
+function coverageQaFor(data = latestForgeData, records = previewRecordsFromData(data)) {
+  const sourceIds = qaSourcePartIds(data, records);
+  const selected = new Set(sourceIds);
+  const selectedCount = selected.size;
+  const missingParts = EXPECTED_ARMOR_PARTS.filter((part) => !selected.has(part));
+  const selectedUiCount = selectedParts().length;
+  const unresolvedSelected = data && selectedUiCount > records.length ? selectedUiCount - records.length : 0;
+  const state = unresolvedSelected > 0 ? "error" : missingParts.length ? "planned" : "ready";
+  const title = missingParts.length
+    ? `${selectedCount}/${EXPECTED_ARMOR_PARTS.length}パーツ`
+    : `全${EXPECTED_ARMOR_PARTS.length}パーツ`;
+  const detail = unresolvedSelected > 0
+    ? `生成欠落候補: UI選択${selectedUiCount} / preview ${records.length}`
+    : missingParts.length
+    ? `不足候補: ${compactPartList(missingParts)}`
+    : "上腕/太腿/手甲まで全身カバー対象です。";
+  return {
+    state,
+    title,
+    detail,
+    selectedCount,
+    expectedCount: EXPECTED_ARMOR_PARTS.length,
+    missingParts,
+    unresolvedSelected,
+  };
+}
+
+function vectorFromArray(value) {
+  return Array.isArray(value) && value.length >= 3
+    ? new THREE.Vector3(numberOr(value[0], 0), numberOr(value[1], 0), numberOr(value[2], 0))
+    : null;
+}
+
+function scaledPreviewSize(mesh) {
+  const source = mesh?.userData?.sourceSize;
+  const sourceSize = source?.isVector3 ? source : vectorFromArray(source);
+  if (!sourceSize) return null;
+  return new THREE.Vector3(
+    Math.abs(sourceSize.x * mesh.scale.x),
+    Math.abs(sourceSize.y * mesh.scale.y),
+    Math.abs(sourceSize.z * mesh.scale.z),
+  );
+}
+
+function thinRatioThresholdForPart(part) {
+  if (part === "back") return 0.22;
+  if (part === "chest" || part === "waist") return 0.18;
+  if (part.includes("boot") || part.includes("hand")) return 0.16;
+  return PREVIEW_QA_THIN_RATIO_WARN;
+}
+
+function fitQaForMesh(part, mesh) {
+  const actualSize = scaledPreviewSize(mesh);
+  const targetSize = vectorFromArray(mesh?.userData?.fitTargetSize);
+  const gapM = Math.max(0, numberOr(mesh?.userData?.fitGapM, 0));
+  const sideProfileRatio = actualSize
+    ? actualSize.z / Math.max(actualSize.x, actualSize.y, 0.001)
+    : 1;
+  const thicknessRatio = actualSize && targetSize
+    ? actualSize.z / Math.max(targetSize.z, 0.001)
+    : 1;
+  const warnings = [];
+  if (gapM > PREVIEW_QA_GAP_WARN_M) warnings.push("gap");
+  if (sideProfileRatio < thinRatioThresholdForPart(part)) warnings.push("thin");
+  if (mesh?.userData?.fitPreview !== "vrm_bone_metrics") warnings.push("fallback_pose");
+  return {
+    part,
+    label: partLabel(part),
+    state: warnings.length ? "planned" : "ready",
+    warnings,
+    gapM,
+    sideProfileRatio,
+    thicknessRatio,
+    meshSource: mesh?.userData?.meshSource || "unknown",
+    fitPreview: mesh?.userData?.fitPreview || "unknown",
+  };
+}
+
+function summarizePreviewFitQa(records, meshes) {
+  const entries = records.map(([part], index) => fitQaForMesh(part, meshes[index])).filter(Boolean);
+  const byPart = Object.fromEntries(entries.map((entry) => [entry.part, entry]));
+  const gapParts = entries.filter((entry) => entry.warnings.includes("gap")).map((entry) => entry.part);
+  const thinParts = entries.filter((entry) => entry.warnings.includes("thin")).map((entry) => entry.part);
+  const fallbackPoseParts = entries.filter((entry) => entry.warnings.includes("fallback_pose")).map((entry) => entry.part);
+  const warningParts = Array.from(new Set([...gapParts, ...thinParts, ...fallbackPoseParts]));
+  return {
+    state: warningParts.length ? "planned" : "ready",
+    totalParts: entries.length,
+    warningCount: warningParts.length,
+    gapParts,
+    thinParts,
+    fallbackPoseParts,
+    parts: byPart,
+  };
+}
+
+function fitQaSummaryFor(stand = armorStand) {
+  const summary = stand?.previewStats?.fitQa || null;
+  if (!summary?.totalParts) {
+    return {
+      state: "planned",
+      title: "生成後に評価",
+      detail: "背面/側面ビューでギャップ・薄さを採寸します。",
+      gapParts: [],
+      thinParts: [],
+      fallbackPoseParts: [],
+    };
+  }
+  if (summary.warningCount) {
+    const details = [];
+    if (summary.gapParts.length) details.push(`gap: ${compactPartList(summary.gapParts, 3)}`);
+    if (summary.thinParts.length) details.push(`thin: ${compactPartList(summary.thinParts, 3)}`);
+    if (summary.fallbackPoseParts.length) details.push(`fallback pose: ${compactPartList(summary.fallbackPoseParts, 2)}`);
+    return {
+      state: summary.state,
+      title: `要確認 ${summary.warningCount}/${summary.totalParts}`,
+      detail: details.join(" / "),
+      gapParts: summary.gapParts,
+      thinParts: summary.thinParts,
+      fallbackPoseParts: summary.fallbackPoseParts,
+    };
+  }
+  return {
+    state: "ready",
+    title: `OK ${summary.totalParts}/${summary.totalParts}`,
+    detail: "装着ギャップ・厚み比は警告なし。",
+    gapParts: [],
+    thinParts: [],
+    fallbackPoseParts: [],
+  };
+}
+
+function previewViewQaFor(stand = armorStand) {
+  const label = stand?.previewStats?.viewLabel || PREVIEW_VIEW_PRESETS.front.label;
+  const preset = stand?.previewStats?.viewPreset || "front";
+  const detail = preset === "back"
+    ? "背面ユニットと背骨側の浮きを確認中。"
+    : preset === "left" || preset === "right"
+    ? "側面厚みと体表からの距離を確認中。"
+    : preset === "spin"
+    ? "自動回転中。固定ビューでQAできます。"
+    : "固定ビュー: 左側 / 背面 / 右側を追加済み。";
+  return {
+    state: preset === "spin" ? "queued" : "ready",
+    title: label,
+    detail,
+  };
+}
+
+function publishQaDatasets(stand, coverage, fitQa) {
+  const canvas = stand?.canvas;
+  if (!canvas) return;
+  const qaReady = coverage.state === "ready" && fitQa.state === "ready";
+  canvas.dataset.previewQaState = qaReady ? "ready" : "planned";
+  canvas.dataset.previewCoverageParts = String(coverage.selectedCount);
+  canvas.dataset.previewExpectedParts = String(coverage.expectedCount);
+  canvas.dataset.previewMissingParts = coverage.missingParts.join(",");
+  canvas.dataset.previewFitGapParts = fitQa.gapParts.join(",");
+  canvas.dataset.previewThinParts = fitQa.thinParts.join(",");
+  canvas.dataset.previewFallbackPoseParts = fitQa.fallbackPoseParts.join(",");
+}
+
 function renderPartGrid() {
   UI.partGrid.innerHTML = "";
   for (const [id, label, checked] of PARTS) {
@@ -545,6 +734,9 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const heightScale = height / DEFAULT_HEIGHT_CM;
   const surface = layerStateForSurface(data, records);
   const modelGate = modelGateStateForPipeline(pipeline);
+  const viewQa = previewViewQaFor(stand);
+  const coverage = coverageQaFor(data, records);
+  const fitQa = fitQaSummaryFor(stand);
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
   const armorDetail = glbParts > 0
@@ -552,7 +744,11 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
     : fallbackParts > 0
     ? `仮形状 ${fallbackParts}パーツを表示。`
     : "人体基準で分割表示中。";
+  publishQaDatasets(stand, coverage, fitQa);
 
+  setPreviewLayerRow(panel, "view", "ビュー", viewQa.title, viewQa.detail, viewQa.state);
+  setPreviewLayerRow(panel, "coverage", "構成QA", coverage.title, coverage.detail, coverage.state);
+  setPreviewLayerRow(panel, "fit", "装着QA", fitQa.title, fitQa.detail, fitQa.state);
   setPreviewLayerRow(
     panel,
     "height",
@@ -667,6 +863,8 @@ function renderAssetPipeline(data = null) {
   const meshStatus = modelPlan.mesh_source_status || "seed/proxy";
   const modelStatus = modelJob.status || modelPlan.status || "requires_rebuild";
   const probeStatus = textureProbe.status || "probe_only";
+  const coverage = coverageQaFor(data, records);
+  const fitQa = fitQaSummaryFor(armorStand);
   UI.assetPipeline.dataset.pipelineContract = `model ${modelStatus} / ${fitStatus} / ${provider} / ${mode} / ${status} / ${meshStatus} / ${probeStatus}`;
   if (UI.proxyWarning) {
     UI.proxyWarning.dataset.previewRole = "proxy_envelope_only";
@@ -688,7 +886,7 @@ function renderAssetPipeline(data = null) {
   if (!hasGeneratedPreview) {
     UI.assetPipeline.classList.add("pending");
     UI.assetPipelineTitle.textContent = "レイヤー待機中";
-    UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 仮プロキシ / 表面: ${provider}`;
+    UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 構成QA: ${coverage.title} / 仮プロキシ / 表面: ${provider}`;
     updatePreviewLayerPanel(data);
     return;
   }
@@ -699,6 +897,8 @@ function renderAssetPipeline(data = null) {
     `外装GLB/実体層: ${glbParts > 0 ? `納品GLB主表示 ${glbParts}パーツ${fallbackParts > 0 ? ` / 補助プロキシ${fallbackParts}` : ""}` : fallbackParts > 0 ? `仮プロキシ${fallbackParts}パーツ` : "分割配置済み"}`,
     `モデルGate: ${modelGate.title}`,
     `プレビュー表面: ${surface.title} / ${provider}`,
+    `構成QA: ${coverage.title}`,
+    `装着QA: ${fitQa.title}`,
   ].join(" / ");
   updatePreviewLayerPanel(data);
 }
@@ -1465,7 +1665,7 @@ function createFallbackArmorGeometry(part) {
       geometry = new THREE.BoxGeometry(0.72, 0.76, 0.2, 2, 3, 1);
       break;
     case "back":
-      geometry = new THREE.BoxGeometry(0.68, 0.72, 0.16, 2, 3, 1);
+      geometry = new THREE.BoxGeometry(0.7, 0.74, 0.24, 2, 3, 2);
       break;
     case "waist":
       geometry = new THREE.BoxGeometry(0.58, 0.22, 0.24, 2, 1, 1);
@@ -1696,6 +1896,9 @@ class ArmorStand {
       heightCm: DEFAULT_HEIGHT_CM,
       displayPoseChains: 0,
       displayPoseMode: "pending",
+      viewPreset: "front",
+      viewLabel: PREVIEW_VIEW_PRESETS.front.label,
+      fitQa: null,
     };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
@@ -1713,6 +1916,7 @@ class ArmorStand {
     this.group.add(this.avatarGroup);
     this.vrmReady = this.loadBaselineVrm(DEFAULT_VRM_PATH);
     this.installPreviewControls();
+    this.installViewPresetControls();
     this.publishPreviewStats();
     this.animate();
     window.addEventListener("resize", () => this.resize());
@@ -1733,6 +1937,8 @@ class ArmorStand {
     this.canvas.dataset.previewHeightScale = (this.heightCm / DEFAULT_HEIGHT_CM).toFixed(3);
     this.canvas.dataset.previewDisplayPoseChains = String(this.previewStats.displayPoseChains || 0);
     this.canvas.dataset.previewDisplayPoseMode = this.previewStats.displayPoseMode || "pending";
+    this.canvas.dataset.previewView = this.previewStats.viewPreset || "front";
+    this.canvas.dataset.previewViewLabel = this.previewStats.viewLabel || PREVIEW_VIEW_PRESETS.front.label;
     updatePreviewLayerPanel(latestForgeData, this);
   }
 
@@ -1847,7 +2053,11 @@ class ArmorStand {
       canvas.setPointerCapture?.(event.pointerId);
       canvas.classList.add("dragging");
       this.autoSpin = false;
+      this.previewStats.viewPreset = "manual";
+      this.previewStats.viewLabel = "手動";
       this.updateSpinToggle();
+      this.updateViewPresetButtons();
+      this.publishPreviewStats();
       this.dragState = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -1875,17 +2085,59 @@ class ArmorStand {
     }, { passive: false });
   }
 
+  installViewPresetControls() {
+    const controls = UI.standControls;
+    if (!controls || controls.dataset.viewPresetsInstalled === "true") return;
+    controls.dataset.viewPresetsInstalled = "true";
+    UI.resetViewButton?.classList.add("view-preset-button");
+    if (UI.resetViewButton) UI.resetViewButton.dataset.viewPreset = "front";
+    const buttons = [
+      ["left", "左側"],
+      ["back", "背面"],
+      ["right", "右側"],
+    ].map(([preset, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "view-preset-button";
+      button.dataset.viewPreset = preset;
+      button.title = `${label}を固定表示`;
+      button.setAttribute("aria-label", `${label}を固定表示`);
+      button.textContent = label;
+      button.addEventListener("click", () => this.setViewPreset(preset));
+      return button;
+    });
+    UI.resetViewButton?.after(...buttons);
+    this.updateViewPresetButtons();
+  }
+
   updateSpinToggle() {
     if (UI.spinToggle) UI.spinToggle.setAttribute("aria-pressed", this.autoSpin ? "true" : "false");
   }
 
-  resetView() {
-    this.viewYaw = 0;
-    this.viewPitch = 0;
-    this.viewZoom = 1;
+  updateViewPresetButtons() {
+    UI.standControls?.querySelectorAll("[data-view-preset]").forEach((button) => {
+      const active = button.dataset.viewPreset === this.previewStats.viewPreset;
+      button.dataset.viewActive = active ? "true" : "false";
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  setViewPreset(name, options = {}) {
+    const preset = PREVIEW_VIEW_PRESETS[name] || PREVIEW_VIEW_PRESETS.front;
+    this.viewYaw = preset.yaw;
+    this.viewPitch = preset.pitch;
+    this.viewZoom = numberOr(options.zoom, preset.zoom);
     this.autoSpin = false;
+    this.previewStats.viewPreset = PREVIEW_VIEW_PRESETS[name] ? name : "front";
+    this.previewStats.viewLabel = preset.label;
     this.updateSpinToggle();
+    this.updateViewPresetButtons();
     this.updateCameraDistance();
+    this.publishPreviewStats();
+  }
+
+  resetView() {
+    this.setViewPreset("front", { zoom: 1 });
   }
 
   zoomBy(factor) {
@@ -1895,7 +2147,11 @@ class ArmorStand {
 
   toggleSpin() {
     this.autoSpin = !this.autoSpin;
+    this.previewStats.viewPreset = this.autoSpin ? "spin" : "manual";
+    this.previewStats.viewLabel = this.autoSpin ? "自動回転" : "手動";
     this.updateSpinToggle();
+    this.updateViewPresetButtons();
+    this.publishPreviewStats();
   }
 
   async loadBaselineVrm(path) {
@@ -2093,6 +2349,44 @@ class ArmorStand {
     return [null, null];
   }
 
+  fitReferenceCenterForPart(part, metrics) {
+    switch (part) {
+      case "helmet":
+        return metrics.head;
+      case "chest":
+      case "back":
+        return midpoint(metrics.shouldersCenter, metrics.torsoCenter);
+      case "waist":
+        return metrics.hips;
+      case "left_shoulder":
+        return metrics.leftShoulder;
+      case "right_shoulder":
+        return metrics.rightShoulder;
+      case "left_hand":
+        return metrics.leftHand;
+      case "right_hand":
+        return metrics.rightHand;
+      case "left_boot":
+        return metrics.leftFoot;
+      case "right_boot":
+        return metrics.rightFoot;
+      default: {
+        const [start, end] = this.segmentForPart(part, metrics);
+        return midpoint(start, end);
+      }
+    }
+  }
+
+  fitClearanceForPart(part, center, targetSize, metrics) {
+    const reference = this.fitReferenceCenterForPart(part, metrics);
+    if (!reference || !center || !targetSize) return 0;
+    const expectedDepth = Math.max(targetSize.z * 0.5, 0.001);
+    const depthDistance = Math.abs(center.z - reference.z);
+    const exposedGap = Math.max(0, depthDistance - expectedDepth);
+    if (part === "chest" || part === "back" || part === "waist") return exposedGap;
+    return exposedGap > 0.04 ? exposedGap : 0;
+  }
+
   targetSizeForPart(part, module, metrics) {
     const shoulder = metrics.shoulderWidth;
     const torso = metrics.torsoHeight;
@@ -2109,7 +2403,7 @@ class ArmorStand {
         size = new THREE.Vector3(shoulder * 0.94, torso * 0.64, shoulder * 0.24);
         break;
       case "back":
-        size = new THREE.Vector3(shoulder * 0.88, torso * 0.66, shoulder * 0.2);
+        size = new THREE.Vector3(shoulder * 0.9, torso * 0.68, shoulder * 0.28);
         break;
       case "waist":
         size = new THREE.Vector3(shoulder * 0.72, torso * 0.22, shoulder * 0.28);
@@ -2163,7 +2457,7 @@ class ArmorStand {
         center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, metrics.shoulderWidth * 0.13));
         break;
       case "back":
-        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, -metrics.shoulderWidth * 0.13));
+        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.07, -metrics.shoulderWidth * 0.18));
         break;
       case "waist":
         center = metrics.hips?.clone().add(new THREE.Vector3(0, metrics.torsoHeight * 0.05, metrics.shoulderWidth * 0.08));
@@ -2228,6 +2522,8 @@ class ArmorStand {
       r: rotation,
       q: quaternion ? quaternion.toArray() : null,
       source: "vrm_bone_metrics",
+      targetSize: targetSize.toArray(),
+      fitGapM: this.fitClearanceForPart(part, center, targetSize, metrics),
     };
   }
 
@@ -2238,12 +2534,16 @@ class ArmorStand {
       s: fallbackPose.s,
       r: [0, 0, 0],
       source: "fallback_pose",
+      targetSize: fallbackPose.s,
+      fitGapM: 0,
     };
     mesh.position.set(...pose.p);
     if (pose.q) mesh.quaternion.set(...pose.q);
     else mesh.rotation.set(...pose.r);
     mesh.scale.set(...pose.s);
     mesh.userData.fitPreview = pose.source;
+    mesh.userData.fitTargetSize = pose.targetSize || fallbackPose.s;
+    mesh.userData.fitGapM = numberOr(pose.fitGapM, 0);
   }
 
   getBaseSuitMaterial(palette = this.currentPalette, options = {}) {
@@ -2331,6 +2631,7 @@ class ArmorStand {
       child.geometry?.dispose?.();
       disposeMaterial(child.material);
     }
+    this.previewStats.fitQa = null;
   }
 
   async renderSuit(suitspec) {
@@ -2381,6 +2682,7 @@ class ArmorStand {
     this.previewStats.texturedParts = meshes.filter((mesh) => mesh.userData.textureLoaded).length;
     this.previewStats.textureFailedParts = meshes.filter((mesh) => mesh.userData.textureLoadFailed).length;
     this.previewStats.mockTexturedParts = meshes.filter((mesh) => mesh.userData.textureMockPreview).length;
+    this.previewStats.fitQa = summarizePreviewFitQa(records, meshes);
     this.publishPreviewStats();
   }
 

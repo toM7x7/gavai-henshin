@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import shutil
+import struct
 import unittest
 from pathlib import Path
 
@@ -10,6 +11,47 @@ SPEC = importlib.util.spec_from_file_location("audit_armor_part_fit_handoff", TO
 fit_handoff = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(fit_handoff)
+
+
+def _pack_glb(json_obj: dict) -> bytes:
+    json_bytes = json.dumps(json_obj, separators=(",", ":")).encode("utf-8")
+    json_bytes += b" " * ((4 - (len(json_bytes) % 4)) % 4)
+    chunks = struct.pack("<II", len(json_bytes), 0x4E4F534A) + json_bytes
+    total_length = 12 + len(chunks)
+    return struct.pack("<III", 0x46546C67, 2, total_length) + chunks
+
+
+def _write_synthetic_glb(path: Path, bbox: dict[str, float]) -> None:
+    half = [float(bbox[axis]) / 2.0 for axis in ("x", "y", "z")]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(
+        _pack_glb(
+            {
+                "asset": {"version": "2.0"},
+                "scene": 0,
+                "scenes": [{"nodes": [0]}],
+                "nodes": [{"mesh": 0, "name": "synthetic_armor_part"}],
+                "meshes": [
+                    {
+                        "name": "synthetic_armor_mesh",
+                        "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}],
+                    }
+                ],
+                "accessors": [
+                    {
+                        "componentType": 5126,
+                        "count": 8,
+                        "max": [half[0], half[1], half[2]],
+                        "min": [-half[0], -half[1], -half[2]],
+                        "type": "VEC3",
+                    },
+                    {"componentType": 5123, "count": 12, "type": "SCALAR"},
+                ],
+                "bufferViews": [],
+                "buffers": [{"byteLength": 0}],
+            }
+        )
+    )
 
 
 class TestArmorPartFitHandoffAudit(unittest.TestCase):
@@ -37,7 +79,10 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
 
         for part in audit["parts"]:
             self.assertIn("bbox_m", part)
+            self.assertIn("glb_bbox_m", part)
             self.assertIn("target_bbox_m", part)
+            self.assertIn("sidecar_glb_bbox_delta_m", part)
+            self.assertIn("glb_geometry", part)
             self.assertIn("triangle_count", part)
             self.assertIn("material_zones", part)
             self.assertIn("primary_bone", part)
@@ -95,6 +140,32 @@ class TestArmorPartFitHandoffAudit(unittest.TestCase):
         self.assertTrue(any("base_surface" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("body-fit anchor" in item for item in helmet["modeler_requests"]))
         self.assertTrue(any("見た目優先度/Wave 1" in item for item in helmet["modeler_requests"]))
+
+    def test_glb_bounds_mismatch_and_back_thinness_generate_requests(self) -> None:
+        target = fit_handoff._reference_target_dimensions("back")
+        thin_glb = {**target, "z": target["z"] * 0.40}
+        self._write_sidecar(
+            "back",
+            {
+                "bbox_m": {
+                    "x": target["x"],
+                    "y": target["y"],
+                    "z": target["z"],
+                    "size": [target["x"], target["y"], target["z"]],
+                },
+                "vrm_attachment": {"primary_bone": "upperChest"},
+            },
+        )
+        _write_synthetic_glb(self.tmp_root / "back" / "back.glb", thin_glb)
+
+        audit = fit_handoff.collect_fit_handoff_audit(self.tmp_root)
+        back = audit["parts"][2]
+
+        self.assertEqual(back["module"], "back")
+        self.assertEqual(back["glb_bbox_outside_tolerance_axes"], ["z"])
+        self.assertEqual(back["sidecar_glb_bbox_outside_tolerance_axes"], ["z"])
+        self.assertTrue(any("Sync sidecar `bbox_m`" in item for item in back["modeler_requests"]))
+        self.assertTrue(any("Back GLB z-thickness is too thin" in item for item in back["modeler_requests"]))
 
     def _write_sidecar(self, module: str, overrides: dict) -> None:
         module_dir = self.tmp_root / module

@@ -4,33 +4,34 @@
   "part_id": "viewer.mesh.right_shoulder.v1",
   "category": "shoulder",
   "bbox_m": {
-    "x": 0.17716799676418304,
-    "y": 0.11800000444054604,
-    "z": 0.16820000112056732,
+    "x": 0.18841355293989182,
+    "y": 0.12200000509619713,
+    "z": 0.1670999974012375,
     "size": [
-      0.17716799676418304,
-      0.11800000444054604,
-      0.16820000112056732
+      0.18841355293989182,
+      0.12200000509619713,
+      0.1670999974012375
     ],
     "dimensions": [
-      0.17716799676418304,
-      0.11800000444054604,
-      0.16820000112056732
+      0.18841355293989182,
+      0.12200000509619713,
+      0.1670999974012375
     ]
   },
-  "triangle_count": 204,
+  "triangle_count": 308,
   "material_zones": [
     "accent",
-    "base_surface"
+    "base_surface",
+    "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_shoulder_v001",
+  "mirror_of": "left_shoulder",
   "vrm_attachment": {
     "primary_bone": "rightShoulder",
     "offset_m": [
-      -0.015,
-      0.005,
-      0.005
+      -0.035,
+      0.006,
+      0.022
     ],
     "rotation_deg": [
       0.0,
@@ -52,7 +53,21 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 204,
+  "clearance_m": 0.028,
+  "shell_thickness_target_m": 0.038,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_shoulder",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_shoulder body-follow geometry and attachment intent across X."
+  ],
+  "silhouette_review_notes": [
+    "Right-side mirror of left_shoulder; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "triangles": 308,
   "target_envelope_m": {
     "x": 0.1904,
     "y": 0.1224,

@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.chest.v1",
   "category": "torso",
   "bbox_m": {
-    "x": 0.5889999866485596,
-    "y": 0.4599999934434891,
-    "z": 0.1607472002506256,
+    "x": 0.6144000291824341,
+    "y": 0.5049999952316284,
+    "z": 0.1640281230211258,
     "size": [
-      0.5889999866485596,
-      0.4599999934434891,
-      0.1607472002506256
+      0.6144000291824341,
+      0.5049999952316284,
+      0.1640281230211258
     ],
     "dimensions": [
-      0.5889999866485596,
-      0.4599999934434891,
-      0.1607472002506256
+      0.6144000291824341,
+      0.5049999952316284,
+      0.1640281230211258
     ]
   },
-  "triangle_count": 352,
+  "triangle_count": 520,
   "material_zones": [
     "accent",
     "base_surface",
@@ -30,8 +30,8 @@
     "primary_bone": "upperChest",
     "offset_m": [
       0.0,
-      0.01,
-      0.06
+      0.012,
+      0.064
     ],
     "rotation_deg": [
       0.0,
@@ -53,7 +53,35 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 352,
+  "clearance_m": 0.024,
+  "shell_thickness_target_m": 0.045,
+  "body_follow_profile": {
+    "mode": "ribcage_wrap_with_side_returns",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ],
+    "follow_panels": [
+      "chest_pectoral_shell",
+      "chest_abdomen_wrap",
+      "chest_left_rib_follow",
+      "chest_right_rib_follow"
+    ],
+    "target_contact": "front shell and side ribs keep visible clearance from the body proxy"
+  },
+  "fit_alignment_notes": [
+    "Pectoral shell is widened and raised to track the upperChest volume.",
+    "Side rib followers reduce the flat tile read without expanding the global bbox.",
+    "Lower abdomen wrap is dropped to meet the waist module cleanly."
+  ],
+  "silhouette_review_notes": [
+    "Single body_wrap_arc (chord 0.62, arc 80\u00b0) gives true ribcage curvature.",
+    "Sagitta + bulge reach z ~ 0.16m, matching authoring target envelope.",
+    "Central V hosts the cyan power-line emissive groove."
+  ],
+  "triangles": 520,
   "target_envelope_m": {
     "x": 0.6392,
     "y": 0.4992,

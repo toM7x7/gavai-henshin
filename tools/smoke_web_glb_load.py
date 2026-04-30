@@ -30,6 +30,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
+import struct
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -76,6 +78,13 @@ REFERENCE_BONE_POSITIONS_170CM: dict[str, tuple[float, float, float]] = {
 # offsets in meters (typically below 0.15m). 0.30m is a generous envelope that
 # still catches accidental cross-bone authoring.
 OFFSET_MAGNITUDE_TOLERANCE_M = 0.30
+SIDECAR_GLB_BBOX_TOLERANCE_M = 0.002
+TARGET_BBOX_TOLERANCE_RATIO = 0.15
+MIN_RENDERABLE_MESH_SIZE_M = 0.002
+
+_WEB_FORGE_PART_RE = re.compile(
+    r'\[\s*"(?P<module>[^"]+)"\s*,\s*"(?P<label>[^"]*)"\s*,\s*(?P<checked>true|false)\s*\]'
+)
 
 
 def expected_modules() -> tuple[str, ...]:
@@ -120,6 +129,161 @@ def _bbox_center(bbox: Any) -> tuple[float, float, float] | None:
     if all(isinstance(v, (int, float)) for v in xyz):
         return (float(xyz[0]) / 2.0, float(xyz[1]) / 2.0, float(xyz[2]) / 2.0)
     return None
+
+
+def _bbox_size_dict(bbox: Any) -> dict[str, float] | None:
+    if not isinstance(bbox, dict):
+        return None
+    size = bbox.get("size") or bbox.get("dimensions")
+    if isinstance(size, list) and len(size) == 3 and all(isinstance(v, (int, float)) for v in size):
+        return {axis: float(size[index]) for index, axis in enumerate(("x", "y", "z"))}
+    xyz = [bbox.get(axis) for axis in ("x", "y", "z")]
+    if all(isinstance(v, (int, float)) for v in xyz):
+        return {axis: float(xyz[index]) for index, axis in enumerate(("x", "y", "z"))}
+    return None
+
+
+def _reference_target_dimensions(module: str) -> dict[str, float]:
+    target = getattr(modeler_blueprints, "_reference_target_dimensions")(module)
+    return {axis: float(target[axis]) for axis in ("x", "y", "z")}
+
+
+def _bbox_delta_pct(bbox: dict[str, float], target: dict[str, float]) -> dict[str, float]:
+    result = {}
+    for axis in ("x", "y", "z"):
+        target_value = target[axis]
+        result[axis] = round(((bbox[axis] - target_value) / target_value) * 100, 1) if target_value else 0.0
+    return result
+
+
+def _bbox_abs_delta_m(a: dict[str, float], b: dict[str, float]) -> dict[str, float]:
+    return {axis: round(a[axis] - b[axis], 5) for axis in ("x", "y", "z")}
+
+
+def _bbox_axes_outside_target(
+    bbox: dict[str, float],
+    target: dict[str, float],
+    *,
+    tolerance_ratio: float = TARGET_BBOX_TOLERANCE_RATIO,
+) -> list[str]:
+    delta = _bbox_delta_pct(bbox, target)
+    return [axis for axis, value in delta.items() if abs(value) > tolerance_ratio * 100]
+
+
+def _bbox_axes_outside_abs_delta(
+    a: dict[str, float],
+    b: dict[str, float],
+    *,
+    tolerance_m: float = SIDECAR_GLB_BBOX_TOLERANCE_M,
+) -> list[str]:
+    return [axis for axis in ("x", "y", "z") if abs(a[axis] - b[axis]) > tolerance_m]
+
+
+def _read_glb_json(path: Path) -> dict[str, Any]:
+    data = path.read_bytes()
+    if len(data) < 20:
+        raise ValueError("GLB too small for JSON chunk")
+    magic, version, declared_length = struct.unpack_from("<4sII", data, 0)
+    if magic != b"glTF" or version != 2 or declared_length != len(data):
+        raise ValueError("GLB header is not a valid glTF 2.0 binary")
+    chunk_length, chunk_type = struct.unpack_from("<II", data, 12)
+    if chunk_type != 0x4E4F534A or chunk_length <= 0 or 20 + chunk_length > len(data):
+        raise ValueError("GLB first chunk is not a valid JSON chunk")
+    return json.loads(data[20 : 20 + chunk_length].decode("utf-8").strip(" \t\r\n\0"))
+
+
+def _number_vec3(value: Any) -> list[float] | None:
+    if (
+        isinstance(value, list)
+        and len(value) == 3
+        and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value)
+    ):
+        return [float(item) for item in value]
+    return None
+
+
+def _extract_glb_geometry_metrics(path: str | Path) -> dict[str, Any]:
+    glb_path = Path(path)
+    reasons: list[str] = []
+    warnings: list[str] = []
+    try:
+        gltf = _read_glb_json(glb_path)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "path": str(glb_path),
+            "reasons": [f"GLB JSON unreadable for geometry audit: {glb_path.as_posix()}: {exc}"],
+            "warnings": [],
+        }
+
+    meshes = gltf.get("meshes") if isinstance(gltf.get("meshes"), list) else []
+    accessors = gltf.get("accessors") if isinstance(gltf.get("accessors"), list) else []
+    position_accessor_indices: set[int] = set()
+    primitive_count = 0
+    triangle_count_estimated = 0
+    mins: list[list[float]] = []
+    maxes: list[list[float]] = []
+
+    for mesh in meshes:
+        primitives = mesh.get("primitives") if isinstance(mesh, dict) and isinstance(mesh.get("primitives"), list) else []
+        primitive_count += len(primitives)
+        for primitive in primitives:
+            if not isinstance(primitive, dict):
+                continue
+            attributes = primitive.get("attributes") if isinstance(primitive.get("attributes"), dict) else {}
+            pos_index = attributes.get("POSITION")
+            if isinstance(pos_index, int) and 0 <= pos_index < len(accessors):
+                position_accessor_indices.add(pos_index)
+                position_accessor = accessors[pos_index]
+                if isinstance(position_accessor, dict):
+                    min_vec = _number_vec3(position_accessor.get("min"))
+                    max_vec = _number_vec3(position_accessor.get("max"))
+                    if min_vec and max_vec:
+                        mins.append(min_vec)
+                        maxes.append(max_vec)
+            if primitive.get("mode", 4) == 4:
+                index_accessor = None
+                if isinstance(primitive.get("indices"), int) and 0 <= primitive["indices"] < len(accessors):
+                    index_accessor = accessors[primitive["indices"]]
+                elif isinstance(pos_index, int) and 0 <= pos_index < len(accessors):
+                    index_accessor = accessors[pos_index]
+                if isinstance(index_accessor, dict) and isinstance(index_accessor.get("count"), int):
+                    triangle_count_estimated += index_accessor["count"] // 3
+
+    if not meshes:
+        reasons.append(f"GLB asset has no meshes: {glb_path.as_posix()}")
+    if primitive_count <= 0:
+        reasons.append(f"GLB asset has no mesh primitives: {glb_path.as_posix()}")
+    if not position_accessor_indices:
+        reasons.append(f"GLB asset has no POSITION accessors: {glb_path.as_posix()}")
+    if not mins or not maxes:
+        reasons.append(f"GLB asset has no POSITION accessor min/max bounds: {glb_path.as_posix()}")
+
+    bbox_min = [min(vec[index] for vec in mins) for index in range(3)] if mins else None
+    bbox_max = [max(vec[index] for vec in maxes) for index in range(3)] if maxes else None
+    bbox_m = None
+    if bbox_min and bbox_max:
+        bbox_m = {
+            "x": bbox_max[0] - bbox_min[0],
+            "y": bbox_max[1] - bbox_min[1],
+            "z": bbox_max[2] - bbox_min[2],
+        }
+        if max(bbox_m.values()) < MIN_RENDERABLE_MESH_SIZE_M:
+            reasons.append(f"GLB asset bounds are below renderable size: {glb_path.as_posix()}")
+
+    return {
+        "ok": not reasons,
+        "path": str(glb_path),
+        "reasons": reasons,
+        "warnings": warnings,
+        "mesh_count": len(meshes),
+        "primitive_count": primitive_count,
+        "position_accessor_count": len(position_accessor_indices),
+        "triangle_count_estimated": triangle_count_estimated,
+        "bbox_min": bbox_min,
+        "bbox_max": bbox_max,
+        "bbox_m": bbox_m,
+    }
 
 
 def _vec_distance(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
@@ -181,6 +345,90 @@ def _check_offset_reachable(
             f"offset magnitude {magnitude:.4f}m exceeds {OFFSET_MAGNITUDE_TOLERANCE_M}m tolerance"
         )
     return detail
+
+
+def _parse_web_forge_parts(js_text: str) -> list[dict[str, Any]]:
+    start = js_text.find("const PARTS = [")
+    if start < 0:
+        return []
+    end = js_text.find("];", start)
+    if end < 0:
+        return []
+    block = js_text[start:end]
+    parts = []
+    for match in _WEB_FORGE_PART_RE.finditer(block):
+        parts.append(
+            {
+                "module": match.group("module"),
+                "label": match.group("label"),
+                "default_checked": match.group("checked") == "true",
+            }
+        )
+    return parts
+
+
+def _check_web_preview_contract(repo_root: str | Path) -> dict[str, Any]:
+    repo_root_path = Path(repo_root)
+    expected = list(expected_modules())
+    forge_path = repo_root_path / "viewer" / "armor-forge" / "forge.js"
+    if not forge_path.exists():
+        return {
+            "ok": True,
+            "path": forge_path.as_posix(),
+            "skipped": True,
+            "reason": "viewer/armor-forge/forge.js not present in this repo_root; preview contract check skipped",
+            "expected_parts": expected,
+            "parts": [],
+            "default_selected_parts": [],
+            "default_unselected_parts": [],
+            "missing_parts": [],
+            "extra_parts": [],
+            "duplicate_parts": [],
+            "warnings": [],
+            "reasons": [],
+        }
+
+    parts = _parse_web_forge_parts(forge_path.read_text(encoding="utf-8"))
+    names = [part["module"] for part in parts]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    missing = [name for name in expected if name not in names]
+    extra = [name for name in names if name not in expected]
+    default_selected = [part["module"] for part in parts if part["default_checked"]]
+    default_unselected = [part["module"] for part in parts if not part["default_checked"]]
+    reasons = []
+    warnings = []
+    if not parts:
+        reasons.append("Web Forge PARTS list could not be parsed")
+    if missing:
+        reasons.append(f"Web Forge PARTS missing expected modules: {missing}")
+    if extra:
+        reasons.append(f"Web Forge PARTS includes unknown modules: {extra}")
+    if duplicates:
+        reasons.append(f"Web Forge PARTS includes duplicate modules: {duplicates}")
+    if names and names != expected:
+        warnings.append(
+            "Web Forge PARTS order differs from blueprint order; this is usually OK, but can hide preview count drift"
+        )
+    if default_unselected:
+        warnings.append(
+            f"Web Forge defaults select {len(default_selected)}/{len(expected)} parts; unselected by default: {default_unselected}"
+        )
+    return {
+        "ok": not reasons,
+        "path": forge_path.as_posix(),
+        "skipped": False,
+        "expected_parts": expected,
+        "parts": parts,
+        "part_count": len(names),
+        "expected_part_count": len(expected),
+        "default_selected_parts": default_selected,
+        "default_unselected_parts": default_unselected,
+        "missing_parts": missing,
+        "extra_parts": extra,
+        "duplicate_parts": duplicates,
+        "warnings": warnings,
+        "reasons": reasons,
+    }
 
 
 def smoke_check_web_glb_load(
@@ -245,6 +493,14 @@ def smoke_check_web_glb_load(
             continue
         warnings.extend(f"{module}: {warn}" for warn in glb_result.get("warnings", []))
 
+        glb_geometry = _extract_glb_geometry_metrics(glb_path)
+        entry["glb_geometry"] = glb_geometry
+        if not glb_geometry.get("ok", False):
+            failures.extend(f"{module}: {reason}" for reason in glb_geometry.get("reasons", []))
+            entry["ok"] = False
+            per_module.append(entry)
+            continue
+
         # 3. Sidecar contract check.
         sidecar_path = glb_path.with_name(f"{module}.modeler.json")
         sidecar_result = intake.validate_modeler_sidecar(sidecar_path, expected_module=module)
@@ -266,10 +522,61 @@ def smoke_check_web_glb_load(
         attachment = sidecar_payload.get("vrm_attachment") or {}
         primary_bone = attachment.get("primary_bone")
         offset_m = attachment.get("offset_m")
+        sidecar_bbox = _bbox_size_dict(sidecar_payload.get("bbox_m"))
+        glb_bbox = glb_geometry.get("bbox_m")
+        target_bbox = _reference_target_dimensions(module)
         bbox_center = _bbox_center(sidecar_payload.get("bbox_m"))
         entry["primary_bone"] = primary_bone
         entry["offset_m"] = offset_m
+        entry["sidecar_bbox_m"] = sidecar_bbox
+        entry["glb_bbox_m"] = glb_bbox
+        entry["target_bbox_m"] = target_bbox
         entry["bbox_center_local_m"] = list(bbox_center) if bbox_center is not None else None
+
+        if not isinstance(sidecar_bbox, dict):
+            entry["ok"] = False
+            failures.append(f"{module}: sidecar bbox_m is not readable for GLB/preview comparison")
+            per_module.append(entry)
+            continue
+        if not isinstance(glb_bbox, dict):
+            entry["ok"] = False
+            failures.append(f"{module}: GLB bbox is not readable for preview comparison")
+            per_module.append(entry)
+            continue
+
+        sidecar_glb_delta = _bbox_abs_delta_m(sidecar_bbox, glb_bbox)
+        sidecar_glb_axes = _bbox_axes_outside_abs_delta(sidecar_bbox, glb_bbox)
+        entry["sidecar_glb_bbox_delta_m"] = sidecar_glb_delta
+        entry["sidecar_glb_bbox_outside_tolerance_axes"] = sidecar_glb_axes
+        if sidecar_glb_axes:
+            entry["ok"] = False
+            failures.append(
+                f"{module}: sidecar bbox_m differs from GLB bounds on {sidecar_glb_axes} "
+                f"(delta_m={sidecar_glb_delta}, tolerance_m={SIDECAR_GLB_BBOX_TOLERANCE_M})"
+            )
+            per_module.append(entry)
+            continue
+
+        glb_target_delta = _bbox_delta_pct(glb_bbox, target_bbox)
+        glb_target_axes = _bbox_axes_outside_target(glb_bbox, target_bbox)
+        entry["glb_target_bbox_delta_pct"] = glb_target_delta
+        entry["glb_target_bbox_outside_tolerance_axes"] = glb_target_axes
+        if module == "back" and glb_bbox["z"] < target_bbox["z"] * (1.0 - TARGET_BBOX_TOLERANCE_RATIO):
+            entry["ok"] = False
+            failures.append(
+                f"{module}: back GLB z thickness too thin "
+                f"({glb_bbox['z']:.4f}m < {target_bbox['z'] * (1.0 - TARGET_BBOX_TOLERANCE_RATIO):.4f}m)"
+            )
+            per_module.append(entry)
+            continue
+        if glb_target_axes:
+            entry["ok"] = False
+            failures.append(
+                f"{module}: GLB bbox outside target envelope on {glb_target_axes} "
+                f"(delta_pct={glb_target_delta}, tolerance_pct={TARGET_BBOX_TOLERANCE_RATIO * 100:.1f})"
+            )
+            per_module.append(entry)
+            continue
 
         # 4. body-fit anchor cross-check.
         try:
@@ -306,11 +613,17 @@ def smoke_check_web_glb_load(
         entry["ok"] = True
         per_module.append(entry)
 
+    preview_contract = _check_web_preview_contract(repo_root_path)
+    warnings.extend(preview_contract.get("warnings", []))
+    if not preview_contract.get("ok", False):
+        failures.extend(str(reason) for reason in preview_contract.get("reasons", []))
+
     # The "preview" counters intentionally mirror the canvas dataset names used
     # by the browser viewer (see docs/armor-runtime-pipeline.md).
     summary = {
         "preview_glb_parts": glb_resolved,
         "preview_fallback_parts": fallback_used,
+        "web_preview_contract": preview_contract,
         "module_count": len(selected_modules),
         "expected_modules": list(selected_modules),
         "ok": fallback_used == 0 and not failures,
@@ -319,6 +632,8 @@ def smoke_check_web_glb_load(
         "modules": per_module,
         "reference_height_cm": 170,
         "offset_magnitude_tolerance_m": OFFSET_MAGNITUDE_TOLERANCE_M,
+        "sidecar_glb_bbox_tolerance_m": SIDECAR_GLB_BBOX_TOLERANCE_M,
+        "target_bbox_tolerance_ratio": TARGET_BBOX_TOLERANCE_RATIO,
     }
     return summary
 

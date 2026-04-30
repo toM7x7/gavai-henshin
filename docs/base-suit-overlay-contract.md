@@ -1,6 +1,6 @@
 # Base Suit + Armor Overlay Contract
 
-Updated: 2026-04-27
+Updated: 2026-04-30
 
 ## Purpose
 
@@ -66,6 +66,13 @@ To prepare for branching parts and add-on toppings without changing the canonica
 
 This keeps current runtime compatibility while giving the generation prompt a path toward branchable armor choices.
 
+Acceptance expectation for the next modeler pass:
+
+- P0 modules `helmet`, `chest`, `back`, `waist`, `left_shoulder`, and `right_shoulder` must declare at least `part_family`, `variant_key`, `base_motif_link`, and two `topping_slots` in modeler notes or sidecar-equivalent handoff data.
+- A variant is a replacement for a canonical module on the same attachment slot. It must stay inside the module's `authoring_target_m` fail envelope, which is ±15% per axis.
+- A topping is an add-on mounted on a named local slot of a parent module. It must not be required for the parent to pass silhouette, fit, or texture review.
+- Toppings must declare `parent_module`, `topping_slot`, `slot_transform`, `max_bbox_m`, and `conflicts_with` before they are counted as supported future growth.
+
 ## Canonical Part Split
 
 Keep the current 18 canonical module keys as the compatibility surface:
@@ -92,6 +99,18 @@ Current `mesh.v1` files are seed/proxy assets, not the final authoring ceiling. 
 - optional `surface_attachment` expectation with region and mount name
 
 Future GLB/glTF assets should preserve those fields through metadata or sidecar JSON.
+
+### Quantitative Handoff Gates
+
+`docs/modeler-new-route-acceptance-spec.md` is the modeler-facing source for exact thresholds. The contract-level summary is:
+
+- Full modeler delivery is 18/18 canonical GLB modules with matching `.modeler.json`, source `.blend`, preview mesh, and review images.
+- Required runtime core remains `helmet`, `chest`, and `back`; however, Web Forge hero preview should target `previewGlbParts=18` and `previewFallbackParts=0`.
+- `authoring_target_m` axis delta should be within ±10% for acceptance, with ±15% as the fail boundary.
+- Mirror-pair dimensions should differ by no more than 3% unless the handoff explicitly marks intentional asymmetry.
+- Sidecar `vrm_attachment.offset_m` should be small enough to describe a fitted part, not compensate for a distant mesh: target 0.08m for helmet/chest/back, 0.06m for waist/boot, and 0.04m for shoulder/limb modules.
+- Back armor is a specific blocker: `back.target_envelope.z = 0.1360m`, acceptance target is 0.122m to 0.150m, and the part must read as a wrapped dorsal shell rather than a thin plate.
+- `base_suit_surface` must remain visually complete in exposed gaps; `armor_overlay_parts` must continue its motif through material zones and `base_motif_link`.
 
 ## Dashboard Flow
 

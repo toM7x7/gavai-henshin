@@ -186,19 +186,35 @@ def _chest_spec() -> dict[str, Any]:
     ex, ey, ez = _ENVELOPE["chest"]["x"], _ENVELOPE["chest"]["y"], _ENVELOPE["chest"]["z"]
     panels = [
         _panel("chest_pectoral_shell", "body_wrap_arc",
-            anchor=(0.0, 0.04, 0.0),
-            size=(0.62, 0.36, 0.024),
+            anchor=(0.0, 0.055, 0.0),
+            size=(0.64, 0.38, 0.026),
             bevel_m=0.006, material_zone="base_surface",
-            arc_deg=85.0, front_bulge=0.028, segments=14,
-            y_taper_top=0.05, y_taper_bottom=0.10,
-            comment="Main pectoral wrap arc; arc=85 + bulge fills target z=0.163."),
+            arc_deg=82.0, front_bulge=0.020, segments=16,
+            y_taper_top=0.04, y_taper_bottom=0.11,
+            comment="Main pectoral wrap arc; wider/taller ribcage shell while staying within target depth."),
         _panel("chest_abdomen_wrap", "body_wrap_arc",
-            anchor=(0.0, -0.16, 0.0),
-            size=(0.54, 0.16, 0.022),
+            anchor=(0.0, -0.17, 0.0),
+            size=(0.54, 0.18, 0.020),
             bevel_m=0.005, material_zone="base_surface",
-            arc_deg=80.0, front_bulge=0.018, segments=10,
-            y_taper_top=0.04, y_taper_bottom=0.18,
-            comment="Lower abdomen wrap, slightly tucked at waist seam."),
+            arc_deg=70.0, front_bulge=0.010, segments=12,
+            y_taper_top=0.04, y_taper_bottom=0.20,
+            comment="Lower abdomen wrap, dropped to meet the belt without a floating gap."),
+        _panel("chest_left_rib_follow", "body_wrap_arc",
+            anchor=(ex * 0.30, -0.005, 0.004),
+            size=(0.10, 0.34, 0.018),
+            rotation_deg=(0.0, -26.0, 0.0),
+            bevel_m=0.004, material_zone="base_surface",
+            arc_deg=58.0, front_bulge=0.012, segments=8,
+            y_taper_top=0.06, y_taper_bottom=0.12,
+            comment="Left rib side follower; gives the chest a torso-hugging side return."),
+        _panel("chest_right_rib_follow", "body_wrap_arc",
+            anchor=(-ex * 0.30, -0.005, 0.004),
+            size=(0.10, 0.34, 0.018),
+            rotation_deg=(0.0, 26.0, 0.0),
+            bevel_m=0.004, material_zone="base_surface",
+            arc_deg=58.0, front_bulge=0.012, segments=8,
+            y_taper_top=0.06, y_taper_bottom=0.12,
+            comment="Right rib side follower; mirrors the torso-hugging side return."),
         _panel("chest_central_v", "rounded_box",
             anchor=(0.0, ey * 0.05, 0.060),
             size=(ex * 0.06, ey * 0.34, 0.012),
@@ -217,7 +233,22 @@ def _chest_spec() -> dict[str, Any]:
                 width_m=0.014, depth_m=0.005),
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "upperChest",
-        "offset_m": [0.0, 0.01, 0.06], "rotation_deg": [0.0, 0.0, 0.0]}
+        "offset_m": [0.0, 0.012, 0.064], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "ribcage_wrap_with_side_returns",
+        "depth_axis": "z",
+        "anchor_bones": ["upperChest", "chest", "spine"],
+        "follow_panels": [
+            "chest_pectoral_shell", "chest_abdomen_wrap",
+            "chest_left_rib_follow", "chest_right_rib_follow",
+        ],
+        "target_contact": "front shell and side ribs keep visible clearance from the body proxy",
+    }
+    spec["fit_alignment_notes"] = [
+        "Pectoral shell is widened and raised to track the upperChest volume.",
+        "Side rib followers reduce the flat tile read without expanding the global bbox.",
+        "Lower abdomen wrap is dropped to meet the waist module cleanly.",
+    ]
     spec["silhouette_review_notes"] = [
         "Single body_wrap_arc (chord 0.62, arc 80°) gives true ribcage curvature.",
         "Sagitta + bulge reach z ~ 0.16m, matching authoring target envelope.",
@@ -233,33 +264,59 @@ def _back_spec() -> dict[str, Any]:
     panels = [
         _panel("back_main_shell", "body_wrap_arc",
             anchor=(0.0, 0.0, 0.0),
-            size=(0.58, 0.50, 0.030),
+            size=(0.58, 0.505, 0.030),
             rotation_deg=(0.0, 180.0, 0.0),
             bevel_m=0.006, material_zone="base_surface",
-            arc_deg=70.0, front_bulge=0.022, segments=14,
-            y_taper_top=0.06, y_taper_bottom=0.10,
-            comment="Main back wrap arc; rotation Y=180 puts apex at -Z (rear)."),
+            arc_deg=64.0, front_bulge=0.016, segments=16,
+            y_taper_top=0.05, y_taper_bottom=0.12,
+            comment="Main back wrap arc; tuned under target cap while keeping rear shell curvature."),
         _panel("back_spine_plate", "rounded_box",
-            anchor=(0.0, 0.0, -0.060),
-            size=(ex * 0.12, ey * 0.46, 0.010),
+            anchor=(0.0, 0.0, -0.055),
+            size=(ex * 0.13, ey * 0.54, 0.010),
             bevel_m=0.004, material_zone="accent",
-            comment="Central spine plate accent on rear apex; width/height match main back wrap."),
+            comment="Central raised spine plate; gives the rear apex readable thickness."),
+        _panel("back_spine_keel_upper", "rounded_box",
+            anchor=(0.0, ey * 0.21, -0.058),
+            size=(ex * 0.075, ey * 0.19, 0.008),
+            bevel_m=0.003, material_zone="accent",
+            comment="Upper segmented spine keel for vertebra-like rear depth."),
+        _panel("back_spine_keel_lower", "rounded_box",
+            anchor=(0.0, -ey * 0.20, -0.058),
+            size=(ex * 0.070, ey * 0.20, 0.008),
+            bevel_m=0.003, material_zone="accent",
+            comment="Lower segmented spine keel continuing into lumbar wrap."),
         _panel("back_lumbar_wrap", "body_wrap_arc",
             anchor=(0.0, -ey * 0.34, 0.0),
-            size=(0.50, 0.18, 0.030),
+            size=(0.50, 0.19, 0.026),
             rotation_deg=(0.0, 180.0, 0.0),
             bevel_m=0.004, material_zone="base_surface",
-            arc_deg=70.0, front_bulge=0.020, segments=10,
+            arc_deg=60.0, front_bulge=0.006, segments=12,
             y_taper_top=0.06, y_taper_bottom=0.18,
-            comment="Lumbar wrap; tucks at waist seam."),
+            comment="Lumbar wrap; wider rear tuck to align with the waist back belt."),
+        _panel("back_scapula_pad_left", "body_wrap_arc",
+            anchor=(ex * 0.22, ey * 0.16, -0.020),
+            size=(0.18, 0.24, 0.022),
+            rotation_deg=(0.0, 180.0, 0.0),
+            bevel_m=0.004, material_zone="base_surface",
+            arc_deg=54.0, front_bulge=0.010, segments=8,
+            y_taper_top=0.04, y_taper_bottom=0.08,
+            comment="Left scapula fill pad; adds rear part density without exceeding depth cap."),
+        _panel("back_scapula_pad_right", "body_wrap_arc",
+            anchor=(-ex * 0.22, ey * 0.16, -0.020),
+            size=(0.18, 0.24, 0.022),
+            rotation_deg=(0.0, 180.0, 0.0),
+            bevel_m=0.004, material_zone="base_surface",
+            arc_deg=54.0, front_bulge=0.010, segments=8,
+            y_taper_top=0.04, y_taper_bottom=0.08,
+            comment="Right scapula fill pad; mirrors rear part density."),
         _panel("back_wing_left", "trim_ridge",
-            anchor=(ex * 0.30, ey * 0.32, -0.040),
+            anchor=(ex * 0.30, ey * 0.32, -0.030),
             size=(ex * 0.22, 0.020, 0.022),
             rotation_deg=(0.0, -16.0, 0.0),
             bevel_m=0.003, material_zone="trim",
             comment="Upper-left scapula trim."),
         _panel("back_wing_right", "trim_ridge",
-            anchor=(-ex * 0.30, ey * 0.32, -0.040),
+            anchor=(-ex * 0.30, ey * 0.32, -0.030),
             size=(ex * 0.22, 0.020, 0.022),
             rotation_deg=(0.0, 16.0, 0.0),
             bevel_m=0.003, material_zone="trim",
@@ -267,14 +324,50 @@ def _back_spec() -> dict[str, Any]:
     ]
     spec["silhouette"] = {"panels": panels, "wrap_arc_deg": 75.0}
     spec["emissive_lines"] = [
-        _groove((0.0, ey * 0.46, -ez * 0.5), (0.0, -ey * 0.46, -ez * 0.5),
+        _groove((0.0, ey * 0.46, -0.060), (0.0, -ey * 0.46, -0.060),
                 width_m=0.010, depth_m=0.004),
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "upperChest",
-        "offset_m": [0.0, 0.0, -0.06], "rotation_deg": [0.0, 180.0, 0.0]}
+        "offset_m": [0.0, 0.002, -0.070], "rotation_deg": [0.0, 180.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "dorsal_wrap_with_scapula_and_spine_keel",
+        "depth_axis": "z",
+        "anchor_bones": ["upperChest", "chest", "spine"],
+        "follow_panels": [
+            "back_main_shell", "back_lumbar_wrap",
+            "back_scapula_pad_left", "back_scapula_pad_right",
+        ],
+        "rear_apex_panels": [
+            "back_spine_plate", "back_spine_keel_upper", "back_spine_keel_lower",
+        ],
+        "target_contact": "rear shell follows shoulder blade and lumbar zones, not a single flat slab",
+    }
+    spec["auxiliary_part_suggestions"] = [
+        {
+            "proposal_id": "back_scapula_aux_left",
+            "parent_module": "back",
+            "suggested_bone": "upperChest",
+            "anchor_m": [round(ex * 0.24, 4), round(ey * 0.14, 4), -0.052],
+            "size_m": [0.16, 0.22, 0.018],
+            "reason": "Optional separate scapula plate if reviewers still see a thin rear shell.",
+        },
+        {
+            "proposal_id": "back_scapula_aux_right",
+            "parent_module": "back",
+            "suggested_bone": "upperChest",
+            "anchor_m": [round(-ex * 0.24, 4), round(ey * 0.14, 4), -0.052],
+            "size_m": [0.16, 0.22, 0.018],
+            "reason": "Mirror of the left optional scapula auxiliary plate.",
+        },
+    ]
+    spec["fit_alignment_notes"] = [
+        "Back shell depth is redistributed into spine keel and scapula pads instead of only expanding bbox z.",
+        "Lumbar wrap is widened to meet waist_belt_back and reduce rear gap.",
+        "Attachment offset moves the module slightly farther rearward for body tracking.",
+    ]
     spec["silhouette_review_notes"] = [
         "body_wrap_arc with Y=180 rotation -> apex at rear, wraps the back cylinder.",
-        "Sagitta now reaches z ~ 0.13m; spine accent + scapula trims complete the silhouette.",
+        "Spine keel + scapula pads add rear visual thickness while staying near target z.",
         "Lumbar wrap tapers into the waist seam below.",
     ]
     return spec
@@ -286,40 +379,57 @@ def _waist_spec() -> dict[str, Any]:
     ex, ey, ez = _ENVELOPE["waist"]["x"], _ENVELOPE["waist"]["y"], _ENVELOPE["waist"]["z"]
     panels = [
         _panel("waist_front_wrap", "body_wrap_arc",
-            anchor=(0.0, 0.0, 0.0),
-            size=(0.38, 0.15, 0.044),
+            anchor=(0.0, 0.0, 0.006),
+            size=(0.43, 0.165, 0.046),
             bevel_m=0.005, material_zone="base_surface",
-            arc_deg=105.0, front_bulge=0.022, segments=14,
-            comment="Front belt wrap, narrowed so the waist stops reading as one large plate."),
+            arc_deg=112.0, front_bulge=0.022, segments=16,
+            comment="Front belt wrap with more pelvis-following width and depth."),
         _panel("waist_side_plate_left", "rounded_box",
-            anchor=(ex * 0.36, 0.0, 0.018),
-            size=(ex * 0.18, ey * 0.82, 0.032),
+            anchor=(ex * 0.39, 0.0, 0.018),
+            size=(ex * 0.22, ey * 0.90, 0.036),
             rotation_deg=(0.0, -18.0, 0.0),
             bevel_m=0.005, material_zone="base_surface",
             comment="Left hip side plate closes the belt without a flat front slab."),
         _panel("waist_side_plate_right", "rounded_box",
-            anchor=(-ex * 0.36, 0.0, 0.018),
-            size=(ex * 0.18, ey * 0.82, 0.032),
+            anchor=(-ex * 0.39, 0.0, 0.018),
+            size=(ex * 0.22, ey * 0.90, 0.036),
             rotation_deg=(0.0, 18.0, 0.0),
             bevel_m=0.005, material_zone="base_surface",
             comment="Right hip side plate mirrors the segmented belt read."),
         _panel("waist_buckle", "rounded_box",
-            anchor=(0.0, 0.0, 0.080),
-            size=(ex * 0.22, ey * 0.78, 0.024),
+            anchor=(0.0, 0.0, 0.084),
+            size=(ex * 0.23, ey * 0.82, 0.026),
             bevel_m=0.005, material_zone="accent",
             comment="Front buckle; sits on wrap apex."),
         _panel("waist_buckle_emissive", "rounded_box",
-            anchor=(0.0, 0.0, 0.090),
-            size=(ex * 0.06, ey * 0.62, 0.012),
+            anchor=(0.0, 0.0, 0.094),
+            size=(ex * 0.06, ey * 0.64, 0.010),
             bevel_m=0.002, material_zone="emissive",
             comment="Buckle inner cyan insert (continues chest V)."),
         _panel("waist_belt_back", "body_wrap_arc",
-            anchor=(0.0, 0.0, 0.0),
-            size=(0.44, 0.13, 0.040),
+            anchor=(0.0, 0.0, -0.004),
+            size=(0.46, 0.15, 0.042),
             rotation_deg=(0.0, 180.0, 0.0),
             bevel_m=0.004, material_zone="base_surface",
-            arc_deg=120.0, front_bulge=0.020, segments=12,
-            comment="Rear belt wrap; thinner so seated/animation comfort preserved."),
+            arc_deg=128.0, front_bulge=0.016, segments=14,
+            comment="Rear belt wrap; closes the loop and follows the lumbar module."),
+        _panel("waist_rear_spine_clasp", "rounded_box",
+            anchor=(0.0, -0.004, -0.082),
+            size=(ex * 0.32, ey * 0.72, 0.018),
+            bevel_m=0.003, material_zone="accent",
+            comment="Rear clasp visually receives the back spine keel."),
+        _panel("waist_oblique_lip_left", "trim_ridge",
+            anchor=(ex * 0.30, 0.0, 0.045),
+            size=(0.040, ey * 0.80, 0.016),
+            rotation_deg=(0.0, -22.0, 0.0),
+            bevel_m=0.002, material_zone="accent",
+            comment="Left oblique lip aligns side plate to chest/hip flow."),
+        _panel("waist_oblique_lip_right", "trim_ridge",
+            anchor=(-ex * 0.30, 0.0, 0.045),
+            size=(0.040, ey * 0.80, 0.016),
+            rotation_deg=(0.0, 22.0, 0.0),
+            bevel_m=0.002, material_zone="accent",
+            comment="Right oblique lip aligns side plate to chest/hip flow."),
     ]
     spec["silhouette"] = {"panels": panels, "wrap_arc_deg": 135.0}
     spec["emissive_lines"] = [
@@ -327,7 +437,23 @@ def _waist_spec() -> dict[str, Any]:
                 width_m=0.012, depth_m=0.004),
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "hips",
-        "offset_m": [0.0, 0.01, 0.035], "rotation_deg": [0.0, 0.0, 0.0]}
+        "offset_m": [0.0, 0.006, 0.040], "rotation_deg": [0.0, 0.0, 0.0]}
+    spec["body_follow_profile"] = {
+        "mode": "pelvis_belt_loop_with_front_and_rear_clasps",
+        "depth_axis": "z",
+        "anchor_bones": ["hips", "spine"],
+        "follow_panels": [
+            "waist_front_wrap", "waist_belt_back",
+            "waist_side_plate_left", "waist_side_plate_right",
+        ],
+        "rear_apex_panels": ["waist_rear_spine_clasp"],
+        "target_contact": "front, side, and rear plates read as one belt loop around the pelvis",
+    }
+    spec["fit_alignment_notes"] = [
+        "Side plates now reach closer to the target lateral width.",
+        "Rear clasp lines up with the back spine keel to reduce the rear waist gap.",
+        "Buckle and rear wrap redistribute depth instead of making only the front protrude.",
+    ]
     spec["silhouette_review_notes"] = [
         "Single body_wrap_arc (arc 120°) wraps the pelvis front+sides.",
         "Rear wrap mirrors the front to close the belt loop without rear gap.",
@@ -344,14 +470,14 @@ def _left_shoulder_spec() -> dict[str, Any]:
     panels = [
         _panel("shoulder_pauldron_cap", "body_wrap_arc",
             anchor=(0.0, 0.01, 0.0),
-            size=(0.18, 0.118, 0.040),
+            size=(0.190, 0.122, 0.036),
             bevel_m=0.006, material_zone="base_surface",
-            arc_deg=180.0, front_bulge=0.080, segments=14,
+            arc_deg=180.0, front_bulge=0.074, segments=16,
             y_taper_top=0.02, y_taper_bottom=0.06,
-            comment="Pauldron cap wrap; arc=180 + bulge=0.08 caps the deltoid."),
+            comment="Pauldron cap wrap; wider shoulder cup with controlled depth."),
         _panel("shoulder_insertion_lip", "trim_ridge",
-            anchor=(-ex * 0.32, ey * 0.05, 0.030),
-            size=(0.024, ey * 0.66, 0.040),
+            anchor=(-ex * 0.40, ey * 0.05, 0.030),
+            size=(0.032, ey * 0.74, 0.036),
             rotation_deg=(0.0, 14.0, 0.0),
             bevel_m=0.003, material_zone="accent",
             comment="Insertion lip extending toward chest line."),
@@ -360,6 +486,18 @@ def _left_shoulder_spec() -> dict[str, Any]:
             size=(0.018, ey * 0.62, ez * 0.46),
             bevel_m=0.003, material_zone="accent",
             comment="Outer trim ridge defining pauldron edge."),
+        _panel("shoulder_rear_scapula_lip", "trim_ridge",
+            anchor=(-ex * 0.10, 0.0, -0.056),
+            size=(0.100, ey * 0.54, 0.016),
+            rotation_deg=(0.0, -18.0, 0.0),
+            bevel_m=0.002, material_zone="trim",
+            comment="Rear lip tucks shoulder into the back/scapula line."),
+        _panel("shoulder_under_socket_shadow", "trim_ridge",
+            anchor=(ex * 0.08, -ey * 0.35, -0.018),
+            size=(0.100, 0.014, 0.025),
+            rotation_deg=(0.0, -8.0, 0.0),
+            bevel_m=0.002, material_zone="trim",
+            comment="Lower socket shadow keeps the pauldron seated on the deltoid."),
     ]
     spec["silhouette"] = {"panels": panels, "wrap_arc_deg": 170.0}
     spec["emissive_lines"] = [
@@ -367,7 +505,22 @@ def _left_shoulder_spec() -> dict[str, Any]:
                 width_m=0.006, depth_m=0.002),
     ]
     spec["vrm_attachment_hint"] = {"primary_bone": "leftShoulder",
-        "offset_m": [0.015, 0.005, 0.005], "rotation_deg": [0.0, 0.0, -8.0]}
+        "offset_m": [0.035, 0.006, 0.022], "rotation_deg": [0.0, 0.0, -8.0]}
+    spec["body_follow_profile"] = {
+        "mode": "deltoid_cup_with_chest_and_scapula_lips",
+        "depth_axis": "z",
+        "anchor_bones": ["leftShoulder", "leftUpperArm", "upperChest"],
+        "follow_panels": [
+            "shoulder_pauldron_cap", "shoulder_insertion_lip",
+            "shoulder_rear_scapula_lip", "shoulder_under_socket_shadow",
+        ],
+        "target_contact": "cap follows the deltoid while lips bridge to chest/back seams",
+    }
+    spec["fit_alignment_notes"] = [
+        "Shoulder cup is widened to the target lateral envelope.",
+        "Rear scapula lip improves continuity into the back module.",
+        "Lower socket shadow makes the part read as attached to the arm, not floating.",
+    ]
     spec["silhouette_review_notes"] = [
         "body_wrap_arc cap (arc 140°) sits over the deltoid, no flat slab read.",
         "Insertion lip extends inward to bridge into chest_clavicle_trim.",
@@ -690,6 +843,14 @@ def _mirror_spec(
         "rotation_deg": list(rotation_deg),
         "derive_from": mirror_of,
     }
+    spec["body_follow_profile"] = {
+        "mode": "mirror_source_body_follow",
+        "derive_from": mirror_of,
+        "mirror_axis": "x",
+    }
+    spec["fit_alignment_notes"] = [
+        f"Mirrors {mirror_of} body-follow geometry and attachment intent across X.",
+    ]
     spec["silhouette_review_notes"] = [
         f"Right-side mirror of {mirror_of}; pipeline negates x to derive geometry.",
         "No independent panel data; keeps mirror pair dimension delta within QA tolerance.",
@@ -730,7 +891,7 @@ def _build_part_specs() -> dict[str, dict[str, Any]]:
     specs["left_shoulder"] = _left_shoulder_spec()
     specs["right_shoulder"] = _mirror_spec("right_shoulder", "left_shoulder",
                                            primary_bone="rightShoulder",
-                                           offset_m=(-0.015, 0.005, 0.005),
+                                           offset_m=(-0.035, 0.006, 0.022),
                                            rotation_deg=(0.0, 0.0, 8.0))
     specs["left_upperarm"] = _left_upperarm_spec()
     specs["right_upperarm"] = _mirror_spec("right_upperarm", "left_upperarm",

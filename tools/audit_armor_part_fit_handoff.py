@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import struct
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -21,6 +22,8 @@ from henshin import modeler_blueprints as blueprints  # noqa: E402
 DEFAULT_ARMOR_PARTS_DIR = Path("viewer/assets/armor-parts")
 AUDIT_CONTRACT_VERSION = "armor-part-fit-handoff-audit.v1"
 DEFAULT_BBOX_TOLERANCE = 0.15
+SIDECAR_GLB_BBOX_TOLERANCE_M = 0.002
+MIN_RENDERABLE_MESH_SIZE_M = 0.002
 AXES = ("x", "y", "z")
 
 WAVE1_VISUAL_FIT_GUIDANCE = {
@@ -191,6 +194,7 @@ def render_modeler_fix_requests_markdown(audit: dict[str, Any]) -> str:
 
 def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, Any]:
     sidecar_path = root / module / f"{module}.modeler.json"
+    glb_path = root / module / f"{module}.glb"
     body_fit_slot_id = normalize_slot_id(module)
     body_fit_spec = ARMOR_SLOT_SPECS[body_fit_slot_id]
     category = getattr(blueprints, "_CATEGORY_BY_MODULE").get(module, "armor")
@@ -204,6 +208,7 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         "triangle_budget": triangle_budget,
         "target_bbox_m": target_bbox,
         "sidecar_path": sidecar_path.as_posix(),
+        "glb_path": glb_path.as_posix(),
         "visual_priority_wave1": _visual_priority_payload(module),
     }
     if not sidecar_path.exists():
@@ -215,6 +220,8 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
 
     payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
     bbox = _bbox_size(payload.get("bbox_m"))
+    glb_metrics = _glb_geometry_metrics(glb_path)
+    glb_bbox = glb_metrics.get("bbox_m") if isinstance(glb_metrics.get("bbox_m"), dict) else None
     sidecar_target = _target_bbox(payload.get("target_envelope_m"))
     if sidecar_target is not None:
         target_bbox = sidecar_target
@@ -223,10 +230,22 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
     attachment = payload.get("vrm_attachment") if isinstance(payload.get("vrm_attachment"), dict) else {}
     primary_bone = attachment.get("primary_bone")
     bbox_delta = _bbox_delta_pct(bbox, target_bbox)
+    glb_bbox_delta = _bbox_delta_pct(glb_bbox, target_bbox)
+    sidecar_glb_delta = _bbox_abs_delta_m(bbox, glb_bbox)
     bbox_axes = [
         axis
         for axis, delta in (bbox_delta or {}).items()
         if abs(delta) > bbox_tolerance * 100
+    ]
+    glb_bbox_axes = [
+        axis
+        for axis, delta in (glb_bbox_delta or {}).items()
+        if abs(delta) > bbox_tolerance * 100
+    ]
+    sidecar_glb_axes = [
+        axis
+        for axis in AXES
+        if sidecar_glb_delta is not None and abs(sidecar_glb_delta[axis]) > SIDECAR_GLB_BBOX_TOLERANCE_M
     ]
     qa_warnings = _qa_flags(payload.get("qa_self_report"), flag="warn")
     qa_failures = _qa_flags(payload.get("qa_self_report"), flag="fail")
@@ -234,9 +253,14 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
     requests = _modeler_requests(
         module=module,
         bbox=bbox,
+        glb_bbox=glb_bbox,
         target_bbox=target_bbox,
         bbox_delta=bbox_delta,
+        glb_bbox_delta=glb_bbox_delta,
+        sidecar_glb_delta=sidecar_glb_delta,
         bbox_axes=bbox_axes,
+        glb_bbox_axes=glb_bbox_axes,
+        sidecar_glb_axes=sidecar_glb_axes,
         triangle_count=triangle_count,
         triangle_budget=triangle_budget,
         material_zones=material_zones,
@@ -244,9 +268,12 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         expected_bone=body_fit_spec.body_anchor,
         qa_warnings=qa_warnings,
         qa_failures=qa_failures,
+        glb_reasons=glb_metrics.get("reasons") or [],
     )
     has_blocking_metadata_gap = (
         bbox is None
+        or not glb_metrics.get("ok", False)
+        or sidecar_glb_axes
         or not isinstance(triangle_count, int)
         or triangle_count <= 0
         or not material_zones
@@ -260,11 +287,18 @@ def _audit_part(root: Path, module: str, *, bbox_tolerance: float) -> dict[str, 
         "primary_bone": primary_bone,
         "anchor_matches_body_fit": primary_bone == body_fit_spec.body_anchor,
         "bbox_m": bbox,
+        "glb_bbox_m": glb_bbox,
         "target_bbox_m": target_bbox,
         "bbox_delta_pct": bbox_delta,
+        "glb_bbox_delta_pct": glb_bbox_delta,
+        "sidecar_glb_bbox_delta_m": sidecar_glb_delta,
         "bbox_outside_tolerance_axes": bbox_axes,
+        "glb_bbox_outside_tolerance_axes": glb_bbox_axes,
+        "sidecar_glb_bbox_outside_tolerance_axes": sidecar_glb_axes,
         "triangle_count": triangle_count,
+        "glb_triangle_count_estimated": glb_metrics.get("triangle_count_estimated"),
         "triangle_budget": triangle_budget,
+        "glb_geometry": glb_metrics,
         "material_zones": material_zones,
         "qa_warnings": qa_warnings,
         "qa_failures": qa_failures,
@@ -276,9 +310,14 @@ def _modeler_requests(
     *,
     module: str,
     bbox: dict[str, float] | None,
+    glb_bbox: dict[str, float] | None,
     target_bbox: dict[str, float],
     bbox_delta: dict[str, float] | None,
+    glb_bbox_delta: dict[str, float] | None,
+    sidecar_glb_delta: dict[str, float] | None,
     bbox_axes: list[str],
+    glb_bbox_axes: list[str],
+    sidecar_glb_axes: list[str],
     triangle_count: Any,
     triangle_budget: int,
     material_zones: list[Any],
@@ -286,6 +325,7 @@ def _modeler_requests(
     expected_bone: str,
     qa_warnings: list[str],
     qa_failures: list[str],
+    glb_reasons: list[str],
 ) -> list[str]:
     requests: list[str] = []
     if bbox is None:
@@ -299,6 +339,38 @@ def _modeler_requests(
             )
             + "."
         )
+
+    if glb_reasons:
+        requests.append("Fix GLB renderability metadata: " + "; ".join(str(reason) for reason in glb_reasons) + ".")
+    elif glb_bbox is None:
+        requests.append("GLB POSITION bounds could not be read; export mesh primitives with accessor min/max.")
+    else:
+        if sidecar_glb_delta and sidecar_glb_axes:
+            requests.append(
+                "Sync sidecar `bbox_m` with actual GLB bounds: "
+                + "; ".join(
+                    f"{axis} {sidecar_glb_delta[axis]:+.5f}m "
+                    f"(sidecar {bbox[axis]:.4f} vs GLB {glb_bbox[axis]:.4f}m)"
+                    for axis in sidecar_glb_axes
+                    if bbox is not None
+                )
+                + "."
+            )
+        if glb_bbox_delta and glb_bbox_axes:
+            requests.append(
+                "Resize actual GLB bbox toward `target_envelope_m`: "
+                + "; ".join(
+                    f"{axis} {_signed_pct(glb_bbox_delta[axis])} "
+                    f"({glb_bbox[axis]:.4f} -> {target_bbox[axis]:.4f}m)"
+                    for axis in glb_bbox_axes
+                )
+                + "."
+            )
+        if module == "back" and glb_bbox["z"] < target_bbox["z"] * (1.0 - DEFAULT_BBOX_TOLERANCE):
+            requests.append(
+                "Back GLB z-thickness is too thin for the dorsal shell: "
+                f"{glb_bbox['z']:.4f}m < {target_bbox['z'] * (1.0 - DEFAULT_BBOX_TOLERANCE):.4f}m."
+            )
 
     if not isinstance(triangle_count, int) or triangle_count <= 0:
         requests.append("`triangle_count` を正の整数で記録してください。")
@@ -366,6 +438,107 @@ def _target_bbox(value: Any) -> dict[str, float] | None:
     return None
 
 
+def _read_glb_json(path: Path) -> dict[str, Any]:
+    data = path.read_bytes()
+    if len(data) < 20:
+        raise ValueError("GLB too small for JSON chunk")
+    magic, version, declared_length = struct.unpack_from("<4sII", data, 0)
+    if magic != b"glTF" or version != 2 or declared_length != len(data):
+        raise ValueError("GLB header is not a valid glTF 2.0 binary")
+    chunk_length, chunk_type = struct.unpack_from("<II", data, 12)
+    if chunk_type != 0x4E4F534A or chunk_length <= 0 or 20 + chunk_length > len(data):
+        raise ValueError("GLB first chunk is not a valid JSON chunk")
+    return json.loads(data[20 : 20 + chunk_length].decode("utf-8").strip(" \t\r\n\0"))
+
+
+def _number_vec3(value: Any) -> list[float] | None:
+    if _number_list(value, expected_len=3):
+        return [float(item) for item in value]
+    return None
+
+
+def _glb_geometry_metrics(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "ok": False,
+            "path": path.as_posix(),
+            "reasons": [f"GLB missing: {path.as_posix()}"],
+        }
+    try:
+        gltf = _read_glb_json(path)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "path": path.as_posix(),
+            "reasons": [f"GLB geometry JSON unreadable: {path.as_posix()}: {exc}"],
+        }
+
+    meshes = gltf.get("meshes") if isinstance(gltf.get("meshes"), list) else []
+    accessors = gltf.get("accessors") if isinstance(gltf.get("accessors"), list) else []
+    position_accessor_indices: set[int] = set()
+    primitive_count = 0
+    triangle_count_estimated = 0
+    mins: list[list[float]] = []
+    maxes: list[list[float]] = []
+    reasons: list[str] = []
+
+    for mesh in meshes:
+        primitives = mesh.get("primitives") if isinstance(mesh, dict) and isinstance(mesh.get("primitives"), list) else []
+        primitive_count += len(primitives)
+        for primitive in primitives:
+            if not isinstance(primitive, dict):
+                continue
+            attributes = primitive.get("attributes") if isinstance(primitive.get("attributes"), dict) else {}
+            pos_index = attributes.get("POSITION")
+            if isinstance(pos_index, int) and 0 <= pos_index < len(accessors):
+                position_accessor_indices.add(pos_index)
+                position_accessor = accessors[pos_index]
+                if isinstance(position_accessor, dict):
+                    min_vec = _number_vec3(position_accessor.get("min"))
+                    max_vec = _number_vec3(position_accessor.get("max"))
+                    if min_vec and max_vec:
+                        mins.append(min_vec)
+                        maxes.append(max_vec)
+            if primitive.get("mode", 4) == 4:
+                index_accessor = None
+                if isinstance(primitive.get("indices"), int) and 0 <= primitive["indices"] < len(accessors):
+                    index_accessor = accessors[primitive["indices"]]
+                elif isinstance(pos_index, int) and 0 <= pos_index < len(accessors):
+                    index_accessor = accessors[pos_index]
+                if isinstance(index_accessor, dict) and isinstance(index_accessor.get("count"), int):
+                    triangle_count_estimated += index_accessor["count"] // 3
+
+    if not meshes:
+        reasons.append(f"GLB asset has no meshes: {path.as_posix()}")
+    if primitive_count <= 0:
+        reasons.append(f"GLB asset has no mesh primitives: {path.as_posix()}")
+    if not position_accessor_indices:
+        reasons.append(f"GLB asset has no POSITION accessors: {path.as_posix()}")
+    if not mins or not maxes:
+        reasons.append(f"GLB asset has no POSITION accessor min/max bounds: {path.as_posix()}")
+
+    bbox_min = [min(vec[index] for vec in mins) for index in range(3)] if mins else None
+    bbox_max = [max(vec[index] for vec in maxes) for index in range(3)] if maxes else None
+    bbox_m = None
+    if bbox_min and bbox_max:
+        bbox_m = {axis: bbox_max[index] - bbox_min[index] for index, axis in enumerate(AXES)}
+        if max(bbox_m.values()) < MIN_RENDERABLE_MESH_SIZE_M:
+            reasons.append(f"GLB asset bounds are below renderable size: {path.as_posix()}")
+
+    return {
+        "ok": not reasons,
+        "path": path.as_posix(),
+        "reasons": reasons,
+        "mesh_count": len(meshes),
+        "primitive_count": primitive_count,
+        "position_accessor_count": len(position_accessor_indices),
+        "triangle_count_estimated": triangle_count_estimated,
+        "bbox_min": bbox_min,
+        "bbox_max": bbox_max,
+        "bbox_m": bbox_m,
+    }
+
+
 def _bbox_delta_pct(bbox: dict[str, float] | None, target: dict[str, float]) -> dict[str, float] | None:
     if bbox is None:
         return None
@@ -374,6 +547,12 @@ def _bbox_delta_pct(bbox: dict[str, float] | None, target: dict[str, float]) -> 
         target_value = target[axis]
         result[axis] = round(((bbox[axis] - target_value) / target_value) * 100, 1) if target_value else 0.0
     return result
+
+
+def _bbox_abs_delta_m(a: dict[str, float] | None, b: dict[str, float] | None) -> dict[str, float] | None:
+    if a is None or b is None:
+        return None
+    return {axis: round(a[axis] - b[axis], 5) for axis in AXES}
 
 
 def _qa_flags(value: Any, *, flag: str) -> list[str]:

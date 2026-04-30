@@ -249,10 +249,10 @@ a:focus-visible {
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.92), transparent 28%),
-    radial-gradient(circle at 52% 74%, rgba(10, 143, 176, 0.055), transparent 38%),
-    linear-gradient(rgba(22, 42, 40, 0.024) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 42, 40, 0.024) 1px, transparent 1px),
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.95), transparent 28%),
+    radial-gradient(circle at 52% 74%, rgba(10, 143, 176, 0.085), transparent 38%),
+    linear-gradient(rgba(22, 42, 40, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 42, 40, 0.04) 1px, transparent 1px),
     var(--stage);
   background-size: 42px 42px;
 }
@@ -277,7 +277,10 @@ a:focus-visible {
   bottom: 14px;
   z-index: 4;
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+  max-width: min(520px, calc(100% - 28px));
   padding: 6px;
   border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
@@ -297,6 +300,7 @@ a:focus-visible {
 .stand-controls button {
   min-width: 38px;
   height: 36px;
+  padding: 0 10px;
   border: 1px solid rgba(16, 24, 23, 0.18);
   border-radius: 6px;
   background: #ffffff;
@@ -304,6 +308,7 @@ a:focus-visible {
   font-size: 13px;
   font-weight: 900;
   line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -317,6 +322,12 @@ a:focus-visible {
 .stand-controls button[aria-pressed="true"] {
   border-color: rgba(200, 135, 29, 0.5);
   background: #fff6de;
+}
+
+.stand-controls .view-preset-button[data-view-active="true"] {
+  border-color: rgba(10, 143, 176, 0.62);
+  background: #dff8ff;
+  color: #064858;
 }
 
 .empty-stand {
@@ -722,21 +733,22 @@ a:focus-visible {
   z-index: 3;
   display: grid;
   gap: 2px;
-  width: min(260px, calc(100% - 28px));
+  width: min(320px, calc(100% - 28px));
   max-height: calc(100% - 96px);
-  overflow: hidden;
+  overflow: auto;
   padding: 9px 10px;
   border: 1px solid rgba(39, 58, 55, 0.16);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.84);
   box-shadow: 0 10px 24px rgba(31, 45, 43, 0.08);
   color: #172420;
-  pointer-events: none;
+  pointer-events: auto;
   backdrop-filter: blur(10px);
+  scrollbar-gutter: stable;
 }
 
 .stand-stage.has-layer-panel .preview-legend {
-  max-width: min(420px, calc(100% - 310px));
+  max-width: min(420px, calc(100% - 360px));
 }
 
 .preview-layer-row {
@@ -781,6 +793,11 @@ a:focus-visible {
   background: #6e7a76;
 }
 
+.preview-layer-row[data-state="error"] .preview-layer-dot {
+  background: var(--red);
+  box-shadow: 0 0 0 3px rgba(255, 117, 109, 0.2);
+}
+
 .preview-layer-label,
 .preview-layer-detail {
   display: block;
@@ -808,6 +825,11 @@ a:focus-visible {
   font-size: 15px;
 }
 
+.preview-layer-row[data-layer="coverage"] .preview-layer-title,
+.preview-layer-row[data-layer="fit"] .preview-layer-title {
+  color: #0b5968;
+}
+
 .preview-layer-detail {
   margin-top: 2px;
   color: var(--muted);
@@ -817,6 +839,12 @@ a:focus-visible {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+}
+
+.preview-layer-row[data-layer="coverage"] .preview-layer-detail,
+.preview-layer-row[data-layer="fit"] .preview-layer-detail,
+.preview-layer-row[data-layer="view"] .preview-layer-detail {
+  -webkit-line-clamp: 2;
 }
 
 @media (max-width: 1180px) {
@@ -937,7 +965,7 @@ a:focus-visible {
     top: 82px;
     left: 12px;
     width: calc(100% - 24px);
-    max-height: 170px;
+    max-height: 210px;
     padding: 10px;
   }
 

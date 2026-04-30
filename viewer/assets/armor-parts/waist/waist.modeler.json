@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.waist.v1",
   "category": "waist",
   "bbox_m": {
-    "x": 0.44415706396102905,
-    "y": 0.15000000596046448,
-    "z": 0.17450852692127228,
+    "x": 0.4933946132659912,
+    "y": 0.16500000655651093,
+    "z": 0.1900000050663948,
     "size": [
-      0.44415706396102905,
-      0.15000000596046448,
-      0.17450852692127228
+      0.4933946132659912,
+      0.16500000655651093,
+      0.1900000050663948
     ],
     "dimensions": [
-      0.44415706396102905,
-      0.15000000596046448,
-      0.17450852692127228
+      0.4933946132659912,
+      0.16500000655651093,
+      0.1900000050663948
     ]
   },
-  "triangle_count": 648,
+  "triangle_count": 876,
   "material_zones": [
     "accent",
     "base_surface",
@@ -30,8 +30,8 @@
     "primary_bone": "hips",
     "offset_m": [
       0.0,
-      0.01,
-      0.035
+      0.006,
+      0.04
     ],
     "rotation_deg": [
       0.0,
@@ -51,7 +51,37 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 648,
+  "clearance_m": 0.022,
+  "shell_thickness_target_m": 0.034,
+  "body_follow_profile": {
+    "mode": "pelvis_belt_loop_with_front_and_rear_clasps",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "hips",
+      "spine"
+    ],
+    "follow_panels": [
+      "waist_front_wrap",
+      "waist_belt_back",
+      "waist_side_plate_left",
+      "waist_side_plate_right"
+    ],
+    "rear_apex_panels": [
+      "waist_rear_spine_clasp"
+    ],
+    "target_contact": "front, side, and rear plates read as one belt loop around the pelvis"
+  },
+  "fit_alignment_notes": [
+    "Side plates now reach closer to the target lateral width.",
+    "Rear clasp lines up with the back spine keel to reduce the rear waist gap.",
+    "Buckle and rear wrap redistribute depth instead of making only the front protrude."
+  ],
+  "silhouette_review_notes": [
+    "Single body_wrap_arc (arc 120\u00b0) wraps the pelvis front+sides.",
+    "Rear wrap mirrors the front to close the belt loop without rear gap.",
+    "Buckle is the cyan focal point bridging chest-V to thigh stripe."
+  ],
+  "triangles": 876,
   "target_envelope_m": {
     "x": 0.4896,
     "y": 0.1716,

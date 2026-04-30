@@ -4,33 +4,34 @@
   "part_id": "viewer.mesh.left_shoulder.v1",
   "category": "shoulder",
   "bbox_m": {
-    "x": 0.17716799676418304,
-    "y": 0.11800000071525574,
-    "z": 0.16820000112056732,
+    "x": 0.18841355293989182,
+    "y": 0.12200000137090683,
+    "z": 0.1670999974012375,
     "size": [
-      0.17716799676418304,
-      0.11800000071525574,
-      0.16820000112056732
+      0.18841355293989182,
+      0.12200000137090683,
+      0.1670999974012375
     ],
     "dimensions": [
-      0.17716799676418304,
-      0.11800000071525574,
-      0.16820000112056732
+      0.18841355293989182,
+      0.12200000137090683,
+      0.1670999974012375
     ]
   },
-  "triangle_count": 204,
+  "triangle_count": 308,
   "material_zones": [
     "accent",
-    "base_surface"
+    "base_surface",
+    "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_shoulder",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftShoulder",
     "offset_m": [
-      0.015,
-      0.005,
-      0.005
+      0.035,
+      0.006,
+      0.022
     ],
     "rotation_deg": [
       0.0,
@@ -52,7 +53,35 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 204,
+  "clearance_m": 0.028,
+  "shell_thickness_target_m": 0.038,
+  "body_follow_profile": {
+    "mode": "deltoid_cup_with_chest_and_scapula_lips",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "leftShoulder",
+      "leftUpperArm",
+      "upperChest"
+    ],
+    "follow_panels": [
+      "shoulder_pauldron_cap",
+      "shoulder_insertion_lip",
+      "shoulder_rear_scapula_lip",
+      "shoulder_under_socket_shadow"
+    ],
+    "target_contact": "cap follows the deltoid while lips bridge to chest/back seams"
+  },
+  "fit_alignment_notes": [
+    "Shoulder cup is widened to the target lateral envelope.",
+    "Rear scapula lip improves continuity into the back module.",
+    "Lower socket shadow makes the part read as attached to the arm, not floating."
+  ],
+  "silhouette_review_notes": [
+    "body_wrap_arc cap (arc 140\u00b0) sits over the deltoid, no flat slab read.",
+    "Insertion lip extends inward to bridge into chest_clavicle_trim.",
+    "Outer trim adds a bright cobalt edge on profile views."
+  ],
+  "triangles": 308,
   "target_envelope_m": {
     "x": 0.1904,
     "y": 0.1224,

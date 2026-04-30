@@ -56,23 +56,50 @@ def _pack_glb(json_obj: dict[str, Any]) -> bytes:
     return bytes(header + chunks)
 
 
-def _build_minimal_glb() -> bytes:
+def _build_minimal_glb(
+    *,
+    bbox_m: dict[str, float] | None = None,
+) -> bytes:
+    bbox = bbox_m or {"x": 0.20, "y": 0.20, "z": 0.20}
+    half = [float(bbox[axis]) / 2.0 for axis in ("x", "y", "z")]
     return _pack_glb(
         {
             "asset": {"version": "2.0"},
             "scene": 0,
-            "scenes": [{"nodes": []}],
-            "nodes": [],
-            "meshes": [],
+            "scenes": [{"nodes": [0]}],
+            "nodes": [{"mesh": 0, "name": "synthetic_armor_part"}],
+            "meshes": [
+                {
+                    "name": "synthetic_armor_mesh",
+                    "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}],
+                }
+            ],
+            "accessors": [
+                {
+                    "componentType": 5126,
+                    "count": 8,
+                    "max": [half[0], half[1], half[2]],
+                    "min": [-half[0], -half[1], -half[2]],
+                    "type": "VEC3",
+                },
+                {"componentType": 5123, "count": 12, "type": "SCALAR"},
+            ],
+            "bufferViews": [],
+            "buffers": [{"byteLength": 0}],
         }
     )
 
 
-def _write_glb_for_module(repo_root: Path, module: str) -> Path:
+def _write_glb_for_module(
+    repo_root: Path,
+    module: str,
+    *,
+    bbox_m: dict[str, float] | None = None,
+) -> Path:
     base = repo_root / "viewer" / "assets" / "armor-parts" / module
     base.mkdir(parents=True, exist_ok=True)
     glb_path = base / f"{module}.glb"
-    glb_path.write_bytes(_build_minimal_glb())
+    glb_path.write_bytes(_build_minimal_glb(bbox_m=bbox_m))
     return glb_path
 
 
@@ -81,17 +108,24 @@ def _write_sidecar_for_module(
     module: str,
     *,
     primary_bone: str,
+    bbox_m: dict[str, float] | None = None,
     offset_m: tuple[float, float, float] = (0.0, 0.0, 0.0),
     drop_attachment: bool = False,
 ) -> Path:
     base = repo_root / "viewer" / "assets" / "armor-parts" / module
     base.mkdir(parents=True, exist_ok=True)
+    bbox = bbox_m or {"x": 0.20, "y": 0.20, "z": 0.20}
     payload: dict[str, Any] = {
         "contract_version": "modeler-part-sidecar.v1",
         "module": module,
         "part_id": f"viewer.mesh.{module}.v1",
         "category": "armor",
-        "bbox_m": {"x": 0.20, "y": 0.20, "z": 0.20, "size": [0.20, 0.20, 0.20]},
+        "bbox_m": {
+            "x": bbox["x"],
+            "y": bbox["y"],
+            "z": bbox["z"],
+            "size": [bbox["x"], bbox["y"], bbox["z"]],
+        },
         "triangle_count": 8,
         "material_zones": ["base_surface"],
         "texture_provider_profile": "nano_banana",
@@ -153,12 +187,14 @@ def test_malformed_sidecar_fails_gracefully_without_crash(tmp_path: Path, capsys
     from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, normalize_slot_id
 
     for module in modules:
-        _write_glb_for_module(tmp_path, module)
+        target_bbox = smoke._reference_target_dimensions(module)
+        _write_glb_for_module(tmp_path, module, bbox_m=target_bbox)
         spec = ARMOR_SLOT_SPECS[normalize_slot_id(module)]
         _write_sidecar_for_module(
             tmp_path,
             module,
             primary_bone=spec.body_anchor,
+            bbox_m=target_bbox,
         )
 
     # Now corrupt one sidecar by dropping vrm_attachment entirely.
@@ -166,6 +202,7 @@ def test_malformed_sidecar_fails_gracefully_without_crash(tmp_path: Path, capsys
         tmp_path,
         target,
         primary_bone=primary_bone,
+        bbox_m=smoke._reference_target_dimensions(target),
         drop_attachment=True,
     )
 
@@ -187,3 +224,64 @@ def test_malformed_sidecar_fails_gracefully_without_crash(tmp_path: Path, capsys
     assert rc != 0
     assert "previewGlbParts=" in captured.out
     assert "previewFallbackParts=" in captured.out
+
+
+def test_back_glb_too_thin_fails_even_when_sidecar_matches(tmp_path: Path) -> None:
+    from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, normalize_slot_id
+
+    module = "back"
+    target_bbox = smoke._reference_target_dimensions(module)
+    thin_bbox = {**target_bbox, "z": target_bbox["z"] * 0.40}
+    _write_glb_for_module(tmp_path, module, bbox_m=thin_bbox)
+    _write_sidecar_for_module(
+        tmp_path,
+        module,
+        primary_bone=ARMOR_SLOT_SPECS[normalize_slot_id(module)].body_anchor,
+        bbox_m=thin_bbox,
+    )
+
+    report = smoke.smoke_check_web_glb_load(repo_root=tmp_path, modules=[module])
+
+    assert report["preview_glb_parts"] == 1
+    assert report["preview_fallback_parts"] == 0
+    assert report["ok"] is False
+    assert any("back GLB z thickness too thin" in failure for failure in report["failures"])
+
+
+def test_sidecar_glb_bbox_mismatch_is_reported_before_preview_can_drift(tmp_path: Path) -> None:
+    from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, normalize_slot_id
+
+    module = "chest"
+    target_bbox = smoke._reference_target_dimensions(module)
+    stale_sidecar_bbox = {**target_bbox, "z": target_bbox["z"] * 0.50}
+    _write_glb_for_module(tmp_path, module, bbox_m=target_bbox)
+    _write_sidecar_for_module(
+        tmp_path,
+        module,
+        primary_bone=ARMOR_SLOT_SPECS[normalize_slot_id(module)].body_anchor,
+        bbox_m=stale_sidecar_bbox,
+    )
+
+    report = smoke.smoke_check_web_glb_load(repo_root=tmp_path, modules=[module])
+
+    assert report["preview_glb_parts"] == 1
+    assert report["preview_fallback_parts"] == 0
+    assert report["ok"] is False
+    assert any("sidecar bbox_m differs from GLB bounds" in failure for failure in report["failures"])
+    chest = report["modules"][0]
+    assert chest["sidecar_glb_bbox_outside_tolerance_axes"] == ["z"]
+
+
+def test_web_preview_parts_contract_detects_missing_module(tmp_path: Path) -> None:
+    forge_dir = tmp_path / "viewer" / "armor-forge"
+    forge_dir.mkdir(parents=True)
+    (forge_dir / "forge.js").write_text(
+        'const PARTS = [["helmet", "Helmet", true], ["chest", "Chest", true]];\n',
+        encoding="utf-8",
+    )
+
+    report = smoke.smoke_check_web_glb_load(repo_root=tmp_path, modules=[])
+
+    assert report["web_preview_contract"]["ok"] is False
+    assert "back" in report["web_preview_contract"]["missing_parts"]
+    assert any("Web Forge PARTS missing expected modules" in failure for failure in report["failures"])

@@ -384,12 +384,40 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["asset_pipeline"]["model_plan"]["asset_contract"],
                 "vrm-base-suit+modeler-glb-overlay+mesh-v1-fallback",
             )
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["placement_source"],
+                "modeler_sidecar_vrm_attachment",
+            )
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["primary_format"], "glb")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["modeler_glb_count"], 5)
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["fallback_count"], 0)
             self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["runtime_asset_parts"]["modeler_sidecar_placement_count"],
+                5,
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["coverage_level"],
+                "core_suit_recallable_but_sparse",
+            )
+            self.assertIn(
+                "waist",
+                response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["sparse_zones"],
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["next_topping_candidates"][0]["slot"],
+                "back_booster",
+            )
+            self.assertEqual(
                 response.body["preview"]["modules"]["helmet"]["asset_ref"],
                 "viewer/assets/armor-parts/helmet/helmet.glb",
+            )
+            self.assertEqual(
+                response.body["preview"]["modules"]["back"]["vrm_anchor"]["offset"],
+                [0.0, 0.002, -0.07],
+            )
+            self.assertEqual(
+                response.body["preview"]["modules"]["back"]["vrm_anchor"]["rotation"],
+                [0.0, 180.0, 0.0],
             )
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 5)
@@ -666,6 +694,14 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertIn("left_upperarm", response.body["model_quality_gate"]["required_parts"])
             self.assertIn("right_upperarm", response.body["model_quality_gate"]["required_parts"])
             self.assertEqual(response.body["render_contract"]["overlay_part_count"], 18)
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["coverage_level"],
+                "canonical_18_ready_for_visual_density_pass",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["sparse_zones"],
+                [],
+            )
 
     def test_forge_suit_issues_default_code_and_rejects_duplicate_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

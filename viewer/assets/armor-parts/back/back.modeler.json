@@ -4,26 +4,25 @@
   "part_id": "viewer.mesh.back.v1",
   "category": "dorsal",
   "bbox_m": {
-    "x": 0.545199990272522,
-    "y": 0.5150319933891296,
-    "z": 0.14395128190517426,
+    "x": 0.5509999990463257,
+    "y": 0.5225319862365723,
+    "z": 0.13630487769842148,
     "size": [
-      0.545199990272522,
-      0.5150319933891296,
-      0.14395128190517426
+      0.5509999990463257,
+      0.5225319862365723,
+      0.13630487769842148
     ],
     "dimensions": [
-      0.545199990272522,
-      0.5150319933891296,
-      0.14395128190517426
+      0.5509999990463257,
+      0.5225319862365723,
+      0.13630487769842148
     ]
   },
-  "triangle_count": 396,
+  "triangle_count": 780,
   "material_zones": [
     "accent",
     "base_surface",
-    "trim",
-    "emissive"
+    "trim"
   ],
   "texture_provider_profile": "nano_banana",
   "mirror_of": null,
@@ -31,8 +30,8 @@
     "primary_bone": "upperChest",
     "offset_m": [
       0.0,
-      0.0,
-      -0.06
+      0.002,
+      -0.07
     ],
     "rotation_deg": [
       0.0,
@@ -53,7 +52,74 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "warn"
   },
-  "triangles": 396,
+  "clearance_m": 0.026,
+  "shell_thickness_target_m": 0.05,
+  "body_follow_profile": {
+    "mode": "dorsal_wrap_with_scapula_and_spine_keel",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ],
+    "follow_panels": [
+      "back_main_shell",
+      "back_lumbar_wrap",
+      "back_scapula_pad_left",
+      "back_scapula_pad_right"
+    ],
+    "rear_apex_panels": [
+      "back_spine_plate",
+      "back_spine_keel_upper",
+      "back_spine_keel_lower"
+    ],
+    "target_contact": "rear shell follows shoulder blade and lumbar zones, not a single flat slab"
+  },
+  "fit_alignment_notes": [
+    "Back shell depth is redistributed into spine keel and scapula pads instead of only expanding bbox z.",
+    "Lumbar wrap is widened to meet waist_belt_back and reduce rear gap.",
+    "Attachment offset moves the module slightly farther rearward for body tracking."
+  ],
+  "auxiliary_part_suggestions": [
+    {
+      "proposal_id": "back_scapula_aux_left",
+      "parent_module": "back",
+      "suggested_bone": "upperChest",
+      "anchor_m": [
+        0.1436,
+        0.0721,
+        -0.052
+      ],
+      "size_m": [
+        0.16,
+        0.22,
+        0.018
+      ],
+      "reason": "Optional separate scapula plate if reviewers still see a thin rear shell."
+    },
+    {
+      "proposal_id": "back_scapula_aux_right",
+      "parent_module": "back",
+      "suggested_bone": "upperChest",
+      "anchor_m": [
+        -0.1436,
+        0.0721,
+        -0.052
+      ],
+      "size_m": [
+        0.16,
+        0.22,
+        0.018
+      ],
+      "reason": "Mirror of the left optional scapula auxiliary plate."
+    }
+  ],
+  "silhouette_review_notes": [
+    "body_wrap_arc with Y=180 rotation -> apex at rear, wraps the back cylinder.",
+    "Spine keel + scapula pads add rear visual thickness while staying near target z.",
+    "Lumbar wrap tapers into the waist seam below."
+  ],
+  "triangles": 780,
   "target_envelope_m": {
     "x": 0.5984,
     "y": 0.5148,

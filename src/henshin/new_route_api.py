@@ -121,6 +121,42 @@ _FORGE_MODEL_REBUILD_PASS_GATES = [
     "heroOverflow == 0",
     "fit_regression.canSave == true",
 ]
+_FORGE_COVERAGE_ZONES = {
+    "head": ["helmet"],
+    "torso_front": ["chest"],
+    "torso_back": ["back"],
+    "waist": ["waist"],
+    "shoulders": ["left_shoulder", "right_shoulder"],
+    "arms": ["left_upperarm", "right_upperarm", "left_forearm", "right_forearm", "left_hand", "right_hand"],
+    "legs": ["left_thigh", "right_thigh", "left_shin", "right_shin"],
+    "feet": ["left_boot", "right_boot"],
+}
+_FORGE_TOPPING_CANDIDATES = [
+    {
+        "slot": "back_booster",
+        "family": "back",
+        "mounts_on": "back",
+        "purpose": "increase rear silhouette thickness and hero profile without replacing the spine unit",
+    },
+    {
+        "slot": "shoulder_fin_pair",
+        "family": "shoulder",
+        "mounts_on": "left_shoulder/right_shoulder",
+        "purpose": "bridge shoulder to chest/back so the suit reads as continuous armor",
+    },
+    {
+        "slot": "belt_side_caps",
+        "family": "waist",
+        "mounts_on": "waist",
+        "purpose": "close torso-to-leg gaps while preserving hip motion",
+    },
+    {
+        "slot": "chest_core_emblem",
+        "family": "chest",
+        "mounts_on": "chest",
+        "purpose": "give the front suit a single transformation focal point tied to the base-suit motif",
+    },
+]
 _RECALL_AMBIGUOUS_TRANSLATION = str.maketrans({"0": "O", "O": "O", "1": "I", "I": "I", "L": "I"})
 _TRANSFORM_EVENT_TYPES = {
     "SESSION_CREATED",
@@ -1019,6 +1055,7 @@ class NewRouteApi:
             modeler_glb_ref = self._forge_modeler_glb_asset_ref(part_name)
             if modeler_glb_ref:
                 module["asset_ref"] = modeler_glb_ref
+                self._apply_forge_modeler_sidecar(part_name, module)
             module.pop("texture_path", None)
         self._annotate_forge_model_plan_with_runtime_assets(suitspec, enabled_parts)
         self._assert_forge_visible_overlay_modules(modules, enabled_parts)
@@ -1032,6 +1069,44 @@ class NewRouteApi:
         if not target.is_file():
             return None
         return self._relative_path(target)
+
+    def _forge_modeler_sidecar_path(self, part_name: str) -> Path:
+        module = str(part_name or "").strip()
+        return self.repo_root / "viewer" / "assets" / "armor-parts" / module / f"{module}.modeler.json"
+
+    def _forge_modeler_sidecar(self, part_name: str) -> dict[str, Any] | None:
+        target = self._forge_modeler_sidecar_path(part_name)
+        if not target.is_file():
+            return None
+        try:
+            data = self._read_json(target)
+        except (OSError, json.JSONDecodeError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    def _apply_forge_modeler_sidecar(self, part_name: str, module: dict[str, Any]) -> None:
+        sidecar = self._forge_modeler_sidecar(part_name)
+        attachment = sidecar.get("vrm_attachment") if isinstance(sidecar, dict) else None
+        if not isinstance(attachment, dict):
+            return
+        bone = str(attachment.get("primary_bone") or module.get("vrm_anchor", {}).get("bone") or "").strip()
+        offset = attachment.get("offset_m")
+        rotation = attachment.get("rotation_deg")
+        existing_anchor = module.get("vrm_anchor") if isinstance(module.get("vrm_anchor"), dict) else {}
+        scale = existing_anchor.get("scale") if isinstance(existing_anchor, dict) else None
+        if not bone or not self._is_vec3(offset) or not self._is_vec3(rotation):
+            return
+        module["vrm_anchor"] = {
+            "bone": bone,
+            "offset": [float(value) for value in offset],
+            "rotation": [float(value) for value in rotation],
+            "scale": [float(value) for value in scale] if self._is_vec3(scale) else [1.0, 1.0, 1.0],
+        }
+
+    def _is_vec3(self, value: Any) -> bool:
+        if not isinstance(value, list) or len(value) != 3:
+            return False
+        return all(isinstance(item, (int, float)) for item in value)
 
     def _annotate_forge_model_plan_with_runtime_assets(
         self,
@@ -1047,7 +1122,9 @@ class NewRouteApi:
         selected = sorted(str(part) for part in enabled_parts if str(part).strip())
         modeler_glb_parts = [part for part in selected if self._forge_modeler_glb_asset_ref(part)]
         mesh_v1_fallback_parts = [part for part in selected if part not in modeler_glb_parts]
+        modeler_sidecar_parts = [part for part in modeler_glb_parts if self._forge_modeler_sidecar(part)]
         model_plan["asset_contract"] = _FORGE_ASSET_CONTRACT
+        model_plan["placement_source"] = "modeler_sidecar_vrm_attachment" if modeler_sidecar_parts else "suitspec_template_vrm_anchor"
         model_plan["runtime_asset_parts"] = {
             "primary_format": "glb" if modeler_glb_parts else "mesh.v1",
             "modeler_glb": modeler_glb_parts,
@@ -1055,6 +1132,8 @@ class NewRouteApi:
             "selected_count": len(selected),
             "modeler_glb_count": len(modeler_glb_parts),
             "fallback_count": len(mesh_v1_fallback_parts),
+            "modeler_sidecar_placement": modeler_sidecar_parts,
+            "modeler_sidecar_placement_count": len(modeler_sidecar_parts),
         }
         if modeler_glb_parts and not mesh_v1_fallback_parts:
             model_plan["mesh_source_status"] = "modeler_glb_available"
@@ -1062,6 +1141,44 @@ class NewRouteApi:
         elif modeler_glb_parts:
             model_plan["mesh_source_status"] = "mixed_modeler_glb_and_seed_proxy"
             model_plan["preview_mesh_role"] = "modeler GLB where delivered; mesh.v1 proxy fallback for missing parts"
+        model_plan["coverage_plan"] = self._forge_coverage_plan(selected)
+
+    def _forge_coverage_plan(self, enabled_parts: list[str]) -> dict[str, Any]:
+        selected = {str(part) for part in enabled_parts if str(part).strip()}
+        zones = {}
+        sparse_zones = []
+        for zone, parts in _FORGE_COVERAGE_ZONES.items():
+            selected_zone_parts = [part for part in parts if part in selected]
+            complete = len(selected_zone_parts) == len(parts)
+            zones[zone] = {
+                "required_parts": list(parts),
+                "selected_parts": selected_zone_parts,
+                "complete": complete,
+            }
+            if not complete:
+                sparse_zones.append(zone)
+        selected_count = len(selected)
+        core_zones_ready = not any(zone in sparse_zones for zone in ("head", "torso_front", "torso_back"))
+        if selected_count >= len(_FORGE_DEFAULT_PARTS) and not sparse_zones:
+            coverage_level = "canonical_18_ready_for_visual_density_pass"
+        elif selected_count >= len(_FORGE_REQUIRED_PARTS) and core_zones_ready:
+            coverage_level = "core_suit_recallable_but_sparse"
+        else:
+            coverage_level = "insufficient_visible_armor"
+        return {
+            "contract_version": "armor-coverage-plan.v1",
+            "canonical_part_count": len(_FORGE_DEFAULT_PARTS),
+            "selected_part_count": selected_count,
+            "coverage_level": coverage_level,
+            "zones": zones,
+            "sparse_zones": sparse_zones,
+            "visual_density_risks": [
+                "back silhouette may read thin without back_booster or rear depth polish",
+                "torso-to-waist gaps remain visible until belt side caps and abdominal bridges are authored",
+                "18 canonical modules are baseline coverage, not the final topping library",
+            ],
+            "next_topping_candidates": self._clone_json(_FORGE_TOPPING_CANDIDATES),
+        }
 
     def _forge_palette(self, value: Any, fallback: dict[str, Any]) -> dict[str, str]:
         payload = value if isinstance(value, dict) else {}

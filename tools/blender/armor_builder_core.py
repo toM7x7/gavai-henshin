@@ -689,7 +689,7 @@ def measure_module(obj):
 
 _PART_SPEC_CACHE = None
 
-def _part_spec_attachment(module):
+def _part_spec_entry(module):
     global _PART_SPEC_CACHE
     if _PART_SPEC_CACHE is None:
         _PART_SPEC_CACHE = {}
@@ -705,8 +705,40 @@ def _part_spec_attachment(module):
             except Exception:
                 _PART_SPEC_CACHE = {}
     part_spec = _PART_SPEC_CACHE.get(module) if isinstance(_PART_SPEC_CACHE, dict) else None
+    return part_spec if isinstance(part_spec, dict) else None
+
+def _part_spec_attachment(module):
+    part_spec = _part_spec_entry(module)
     hint = part_spec.get("vrm_attachment_hint") if isinstance(part_spec, dict) else None
     return hint if isinstance(hint, dict) else None
+
+def _part_spec_sidecar_metadata(module):
+    part_spec = _part_spec_entry(module)
+    if not isinstance(part_spec, dict):
+        return {}
+    payload = {}
+    if isinstance(part_spec.get("clearance_m"), (int, float)):
+        payload["clearance_m"] = float(part_spec["clearance_m"])
+    if isinstance(part_spec.get("shell_thickness_m"), (int, float)):
+        payload["shell_thickness_target_m"] = float(part_spec["shell_thickness_m"])
+    for key in (
+        "body_follow_profile",
+        "fit_alignment_notes",
+        "auxiliary_part_suggestions",
+        "silhouette_review_notes",
+    ):
+        value = part_spec.get(key)
+        if isinstance(value, (dict, list)):
+            payload[key] = value
+    return payload
+
+def _normalize_mirror_of(value):
+    if not value:
+        return None
+    text = str(value)
+    if text.startswith("armor_") and text.endswith("_v001"):
+        return text[len("armor_"):-len("_v001")]
+    return text
 
 def _sidecar_attachment(blueprint_part):
     module = str(blueprint_part.get("module", ""))
@@ -726,6 +758,13 @@ def write_modeler_sidecar(obj, sidecar_path, blueprint_part, panel_zones):
     if not zones_used: zones_used = ["armor_base"]
     if obj.get("__emissive_face_indices") and "emissive" not in zones_used:
         zones_used.append("emissive")
+    module = str(blueprint_part.get("module", obj.get("__module_name", "unknown")))
+    part_spec = _part_spec_entry(module)
+    mirror_source = obj.get("__mirror_of")
+    if not mirror_source and isinstance(part_spec, dict):
+        mirror_source = part_spec.get("mirror_of")
+    if not mirror_source and not isinstance(part_spec, dict):
+        mirror_source = blueprint_part.get("mirror_of")
     qa = {"stable_part_name": "pass", "bbox_within_target_envelope": "warn",
           "non_overlapping_uv0": "warn",
           "single_surface_base_material_or_declared_slots": "pass",
@@ -733,17 +772,18 @@ def write_modeler_sidecar(obj, sidecar_path, blueprint_part, panel_zones):
           "no_body_intersection_at_reference_pose": "warn"}
     payload = {
         "contract_version": "modeler-part-sidecar.v1",
-        "module": str(blueprint_part.get("module", obj.get("__module_name", "unknown"))),
+        "module": module,
         "part_id": str(blueprint_part.get("part_id", obj.name)),
         "category": str(blueprint_part.get("category", "unknown")),
         "bbox_m": {"min": measure["bbox_min"], "max": measure["bbox_max"], "dims": measure["dims"]},
         "triangle_count": measure["triangle_count"],
         "material_zones": zones_used,
         "texture_provider_profile": "nano_banana",
-        "mirror_of": obj.get("__mirror_of") or blueprint_part.get("mirror_of"),
+        "mirror_of": _normalize_mirror_of(mirror_source),
         "vrm_attachment": _sidecar_attachment(blueprint_part),
         "qa_self_report": qa,
     }
+    payload.update(_part_spec_sidecar_metadata(module))
     os.makedirs(os.path.dirname(sidecar_path) or ".", exist_ok=True)
     with open(sidecar_path, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)

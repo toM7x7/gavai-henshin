@@ -15,10 +15,13 @@
 
 ## Wave 1優先 / Webプレビュー検収観点
 
-- 最新Web Forgeは `modeler_glb_available` で12/12ロード済み。ただし見た目は半透明プロキシが主役で、ヒーロースーツに見えない。
+- 最新Web Forgeは `modeler_glb_available` で18/18ロード済み。ただし見た目はまだ検収用プロキシや白い仮素材の影響が残る。
 - 透明箱・円筒は検査用プロキシ。最終GLBでは胸/背中/腰/肩/足元の外形が人体へ装着されて見えることを優先する。
 - Wave 1は胸、背中、腰、肩、上腕、前腕を主対象にしつつ、Webの第一印象を壊す足元の接地感も同時に確認する。
 - 検収はWebプレビュー正面/側面/回転で行い、箱感、浮き、体からの剥離、左右差、透明ガイドの主張が残らないことを見る。
+- 定量gateの正本は `docs/modeler-new-route-acceptance-spec.md`。bboxは各軸±10%以内を合格目標、±15%超をfail、左右ペア差は3%以内とする。
+- `back` は `target z=0.1360m`、合格目標 `0.122m-0.150m`。側面/3Qで薄い板に見えた場合は、bbox範囲内でも未達として戻す。
+- P0 moduleは `variant_key`, `base_motif_link`, 2個以上の `topping_slots` を確認メモまたはsidecar相当のメタデータに残す。
 
 | module | anchor | bbox actual -> target m | delta | triangles | material_zones | 見た目優先度/Wave 1 | モデラーさんに出す直しポイント |
 |---|---|---|---|---:|---|---|---|

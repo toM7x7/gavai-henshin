@@ -81,18 +81,16 @@ def _next_code() -> str:
     return f"GAVAI-{last + 1:04d}"
 
 
-def _forge_job(job_id: str, text: str, llm: bool = False) -> None:
+def _forge_job(job_id: str, text: str) -> None:
     with _BUILD_LOCK:
         workdir = WORK / job_id
         try:
-            _set(job_id, status="forging", phase="設計図を紡いでいます")
-            # ルートB(Gemini解釈)はオプション: llm指定 + GEMINI_API_KEY がある時だけ。
-            # compile_blueprint_llm は失敗時ルートAへ自動フォールバックする
-            route = "rule"
-            if llm and os.environ.get("GEMINI_API_KEY"):
-                bp, route = compile_blueprint_llm(text)
-            else:
-                bp = compile_blueprint(text)
+            _set(job_id, status="forging", phase="設計局AIが言葉を解釈しています")
+            # 言葉→設計図の解釈はコンセプトの肝 — ルートB(Gemini)が必須本線
+            # (2026-07-11方針)。モデルは GEMINI_TEXT_MODEL で差し替え可能。
+            # Gemini側の障害時のみ compile_blueprint_llm が規範解釈(ルートA)へ
+            # 自動フォールバックし、route にその事実が記録される
+            bp, route = compile_blueprint_llm(text)
             _set(job_id, route=route)
             workdir.mkdir(parents=True, exist_ok=True)
             bp_path = workdir / "blueprint.json"
@@ -203,10 +201,9 @@ class Handler(BaseHTTPRequestHandler):
         if not text:
             self._json({"ok": False, "error": "言葉を入力してください"}, 400)
             return
-        llm = bool(payload.get("llm"))
         job_id = uuid.uuid4().hex[:12]
         _set(job_id, status="queued", phase="鍛造炉の順番待ち", text=text[:80])
-        threading.Thread(target=_forge_job, args=(job_id, text, llm), daemon=True).start()
+        threading.Thread(target=_forge_job, args=(job_id, text), daemon=True).start()
         self._json({"ok": True, "job_id": job_id})
 
 
@@ -218,11 +215,15 @@ def main() -> None:
             os.environ.setdefault(k, v)
     except Exception:  # noqa: BLE001
         pass
-    for req_key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
-        if not os.environ.get(req_key):
+    # GEMINI_API_KEY も必須: 言葉の解釈(ルートB)がコンセプトの肝であるため。
+    # 実行時のGemini障害はフォールバックで凌ぐが、鍵なし運用は契約違反として起動拒否
+    for req_key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "GEMINI_API_KEY"):
+        val = os.environ.get(req_key, "")
+        if not val or val.startswith("YOUR_"):
             raise SystemExit(f"env {req_key} is required")
     port = int(os.environ.get("PORT", "8080"))
-    print(f"FORGE_READY: port={port} blender={find_blender()}")
+    model = os.environ.get("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
+    print(f"FORGE_READY: port={port} blender={find_blender()} interpreter={model}")
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 

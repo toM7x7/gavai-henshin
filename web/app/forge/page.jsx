@@ -12,6 +12,7 @@ const PHASES = {
 
 export default function Forge() {
   const [text, setText] = useState('');
+  const [llm, setLlm] = useState(false);
   const [job, setJob] = useState(null);      // {job_id}
   const [state, setState] = useState(null);  // ジョブの最新状態
   const [elapsed, setElapsed] = useState(0);
@@ -26,7 +27,7 @@ export default function Forge() {
     const r = await fetch('/api/forge', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: t }),
+      body: JSON.stringify({ text: t, llm }),
     });
     const j = await r.json();
     if (!j.ok) { setState({ status: 'error', error: j.error || 'error' }); return; }
@@ -86,6 +87,11 @@ export default function Forge() {
             outline: 'none', lineHeight: 1.7,
           }}
         />
+        <label style={{ fontSize: 12, color: '#8fa7b8', cursor: 'pointer' }}>
+          <input type="checkbox" checked={llm} disabled={!!running}
+            onChange={(e) => setLlm(e.target.checked)} />
+          {' '}設計局AIが解釈(Gemini — 工場にキーが無い時はルール解釈に自動フォールバック)
+        </label>
         <button type="submit" disabled={!!running || !text.trim()} style={{
           background: running ? '#123246' : 'linear-gradient(135deg,#1d5f8a,#2c8fbf)',
           color: '#fff', border: 'none', borderRadius: 8, padding: '12px 22px',
@@ -100,7 +106,10 @@ export default function Forge() {
         }}>
           {state?.status === 'done' ? (
             <>
-              <div style={{ color: '#7ee2a8' }}>■ 鍛造完了 — 適合審査 {state.fit}</div>
+              <div style={{ color: '#7ee2a8' }}>
+                ■ 鍛造完了 — 適合審査 {state.fit}
+                {state.route && state.route !== 'rule' && ` — 設計局AI解釈 (${state.route})`}
+              </div>
               <div>呼出符 <b style={{ fontSize: 20, letterSpacing: '0.15em', color: '#9fdcff' }}>{state.code}</b></div>
               <div style={{ color: '#8fa7b8' }}>蒸着室へ移動します…</div>
             </>

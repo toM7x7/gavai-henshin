@@ -102,6 +102,8 @@ Vercel → Settings → Environment Variables に(**NEXT_PUBLIC_を付けない*
 
 - レンダビュー(PNG)とVRMサムネイルはGPU無し環境でEEVEEが立たない場合スキップ
   (`--render-views soft`)。スーツ本体・GLB・VRMは影響なし
-- ルートB(Gemini解釈)は未接続。`GEMINI_API_KEY` を渡して forge_server を
-  compile_blueprint_llm に切り替えれば有効化できる(コスト方針が決まったら)
+- ルートB(Gemini解釈)は**オプションとして接続済み**: /forge のチェックボックスで
+  リクエストごとに選択。有効化するには Cloud Run の env に `GEMINI_API_KEY` を追加
+  (`--set-env-vars` の1行に足すだけ)。キーが無い/失敗時はルートAへ自動フォールバック。
+  キーの置き場所は**Cloud Runのみ** — Vercel には置かない(Vercelは表示とプロキシだけ)
 - ジョブ状態はメモリのみ(再起動で消える)。完成品はSupabaseにあるので実害は薄い

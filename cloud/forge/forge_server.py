@@ -32,7 +32,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "tools"))
 
-from henshin.armor_blueprint import compile_blueprint  # noqa: E402
+from henshin.armor_blueprint import compile_blueprint, compile_blueprint_llm  # noqa: E402
 from package_suit_for_web import glb_triangles, register_code, upload_supabase  # noqa: E402
 
 ASSEMBLER = REPO / "tools" / "blender" / "armor_fullbody_assembler.py"
@@ -81,12 +81,19 @@ def _next_code() -> str:
     return f"GAVAI-{last + 1:04d}"
 
 
-def _forge_job(job_id: str, text: str) -> None:
+def _forge_job(job_id: str, text: str, llm: bool = False) -> None:
     with _BUILD_LOCK:
         workdir = WORK / job_id
         try:
             _set(job_id, status="forging", phase="設計図を紡いでいます")
-            bp = compile_blueprint(text)
+            # ルートB(Gemini解釈)はオプション: llm指定 + GEMINI_API_KEY がある時だけ。
+            # compile_blueprint_llm は失敗時ルートAへ自動フォールバックする
+            route = "rule"
+            if llm and os.environ.get("GEMINI_API_KEY"):
+                bp, route = compile_blueprint_llm(text)
+            else:
+                bp = compile_blueprint(text)
+            _set(job_id, route=route)
             workdir.mkdir(parents=True, exist_ok=True)
             bp_path = workdir / "blueprint.json"
             bp_path.write_text(json.dumps(bp, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -196,9 +203,10 @@ class Handler(BaseHTTPRequestHandler):
         if not text:
             self._json({"ok": False, "error": "言葉を入力してください"}, 400)
             return
+        llm = bool(payload.get("llm"))
         job_id = uuid.uuid4().hex[:12]
         _set(job_id, status="queued", phase="鍛造炉の順番待ち", text=text[:80])
-        threading.Thread(target=_forge_job, args=(job_id, text), daemon=True).start()
+        threading.Thread(target=_forge_job, args=(job_id, text, llm), daemon=True).start()
         self._json({"ok": True, "job_id": job_id})
 
 

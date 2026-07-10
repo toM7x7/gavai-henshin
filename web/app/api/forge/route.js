@@ -12,7 +12,7 @@ export async function POST(req) {
   const r = await fetch(`${FORGE}/forge`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-forge-token': TOKEN },
-    body: JSON.stringify({ text: String(body.text || '').slice(0, 400) }),
+    body: JSON.stringify({ text: String(body.text || '').slice(0, 400), llm: !!body.llm }),
   });
   return new Response(await r.text(), {
     status: r.status, headers: { 'content-type': 'application/json' },

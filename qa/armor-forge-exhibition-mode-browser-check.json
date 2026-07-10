@@ -1,0 +1,85 @@
+{
+  "checked_at": "2026-05-04T12:25:06.652Z",
+  "target_url": "http://127.0.0.1:8010/viewer/armor-forge/?mode=exhibition",
+  "tool": "playwright.chromium.headless",
+  "pass": true,
+  "screenshots": {
+    "desktop": "C:/dev/codex/gavai-henshin/qa/armor-forge-exhibition-mode-desktop.png",
+    "mobileInitial": "C:/dev/codex/gavai-henshin/qa/armor-forge-exhibition-mode-mobile.png",
+    "mobileSummary": "C:/dev/codex/gavai-henshin/qa/armor-forge-exhibition-mode-mobile-summary.png"
+  },
+  "states": {
+    "desktop_after_generate": {
+      "label": "desktop_after_generate",
+      "viewport": {
+        "width": 1365,
+        "height": 900
+      },
+      "body_exhibition_mode": "true",
+      "generated_code": "9459",
+      "code_is_four_digit": true,
+      "quest_link_enabled": true,
+      "quest_href": "http://192.168.1.4:5173/viewer/quest-iw-demo/?newRoute=1&code=9459",
+      "quest_href_has_code": true,
+      "replay_link_enabled": true,
+      "replay_href": "http://192.168.1.4:5173/viewer/quest-iw-demo/?newRoute=1&code=9459&replayView=mirror",
+      "replay_href_has_code": true,
+      "replay_href_has_replay_view": true,
+      "japanese_ui_checks": {
+        "exhibitionMode": true,
+        "visitorGuide": true,
+        "generatedComplete": true,
+        "questOpenTry": true,
+        "replaySave": true
+      }
+    },
+    "mobile_after_generate": {
+      "label": "mobile_after_generate",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "body_exhibition_mode": "true",
+      "generated_code": "9459",
+      "code_is_four_digit": true,
+      "quest_link_enabled": true,
+      "quest_href": "http://192.168.1.4:5173/viewer/quest-iw-demo/?newRoute=1&code=9459",
+      "quest_href_has_code": true,
+      "replay_link_enabled": true,
+      "replay_href": "http://192.168.1.4:5173/viewer/quest-iw-demo/?newRoute=1&code=9459&replayView=mirror",
+      "replay_href_has_code": true,
+      "replay_href_has_replay_view": true,
+      "japanese_ui_checks": {
+        "exhibitionMode": true,
+        "visitorGuide": true,
+        "generatedComplete": true,
+        "questOpenTry": true,
+        "replaySave": true
+      }
+    }
+  },
+  "console_warnings": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x20e400182c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x20e400182c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x20e400182c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x20e400182c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "notes": [
+    "Mobile first viewport stacks the input panel before the result panel; mobileSummary screenshot verifies the scrolled exhibition summary and action links.",
+    "WebGL GPU stall warnings were observed during screenshots; no page errors or console errors were observed."
+  ]
+}

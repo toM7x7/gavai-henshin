@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "waist",
+  "topping_slot": "belt_buckle",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      0.08187
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.16,
+    "y": 0.1,
+    "z": 0.045
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "waist",
+    "topping_slot": "belt_buckle",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "belt_buckle",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "hips",
+      "parent_surface": "front_center",
+      "placement": "centered at belt front"
+    },
+    "max_bbox_m": {
+      "x": 0.16,
+      "y": 0.1,
+      "z": 0.045
+    },
+    "material_zone": "buckle",
+    "variant_examples": [
+      "hero emblem buckle",
+      "rectangular lock plate",
+      "round energy buckle"
+    ],
+    "conflicts_with": [],
+    "parent_module": "waist"
+  },
+  "bbox_m": {
+    "x": 0.09920000284910202,
+    "y": 0.02789999544620514,
+    "z": 0.06199999898672104
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_accent"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

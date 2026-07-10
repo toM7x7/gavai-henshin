@@ -1,0 +1,65 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "right_shoulder",
+  "part_id": "viewer.mesh.right_shoulder.v1",
+  "category": "shoulder",
+  "bbox_m": {
+    "x": 0.17640000581741333,
+    "y": 0.11800000071525574,
+    "z": 0.11347834765911102,
+    "size": [
+      0.17640000581741333,
+      0.11800000071525574,
+      0.11347834765911102
+    ],
+    "dimensions": [
+      0.17640000581741333,
+      0.11800000071525574,
+      0.11347834765911102
+    ]
+  },
+  "triangle_count": 160,
+  "material_zones": [
+    "accent",
+    "base_surface"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "armor_left_shoulder__sleek_cap_v001",
+  "vrm_attachment": {
+    "primary_bone": "rightShoulder",
+    "offset_m": [
+      -0.02,
+      0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "rightShoulder",
+      "rightUpperArm",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 160,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "right_shoulder:sleek_cap",
+  "is_variant": true,
+  "parent_module": "right_shoulder",
+  "target_envelope_m": {
+    "x": 0.1904,
+    "y": 0.1224,
+    "z": 0.1632
+  }
+}

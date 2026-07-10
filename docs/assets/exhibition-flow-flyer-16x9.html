@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAVAI HENSHIN 展示体験案内</title>
+  <style>
+    @page {
+      size: 16in 9in;
+      margin: 0;
+    }
+
+    :root {
+      --paper: #fff;
+      --ink: #111;
+      --muted: #555;
+      --line: #111;
+      --soft: #f3f3f3;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #ddd;
+      color: var(--ink);
+      font-family:
+        "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", "Meiryo",
+        system-ui, sans-serif;
+    }
+
+    .sheet {
+      width: min(100vw, 1600px);
+      aspect-ratio: 16 / 9;
+      background: var(--paper);
+      padding: 42px 58px 34px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border: 2px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sheet::before,
+    .sheet::after {
+      content: "";
+      position: absolute;
+      border: 2px solid var(--line);
+      pointer-events: none;
+    }
+
+    .sheet::before {
+      inset: 22px;
+    }
+
+    .sheet::after {
+      right: 44px;
+      top: 44px;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 40px;
+      align-items: end;
+      border-bottom: 5px solid var(--line);
+      padding-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .kicker {
+      font-size: 22px;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 8px 0 0;
+      font-size: 64px;
+      line-height: 1.02;
+      letter-spacing: 0;
+      font-weight: 950;
+    }
+
+    .tagline {
+      margin-top: 12px;
+      font-size: 24px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .route {
+      text-align: right;
+      font-size: 17px;
+      line-height: 1.45;
+      max-width: 390px;
+      font-weight: 700;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 0.54fr;
+      gap: 28px;
+      padding: 26px 0 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .step {
+      border: 3px solid var(--line);
+      min-height: 348px;
+      padding: 18px 16px 16px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      position: relative;
+      background: var(--paper);
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -17px;
+      width: 28px;
+      height: 28px;
+      border-top: 4px solid var(--line);
+      border-right: 4px solid var(--line);
+      transform: translateY(-50%) rotate(45deg);
+      background: var(--paper);
+      z-index: 2;
+    }
+
+    .number {
+      width: 42px;
+      height: 42px;
+      border: 3px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 23px;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .step h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.16;
+      font-weight: 950;
+    }
+
+    .step p {
+      margin: 14px 0 0;
+      font-size: 18px;
+      line-height: 1.48;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .symbol {
+      align-self: end;
+      justify-self: center;
+      width: 106px;
+      height: 106px;
+      margin-top: 14px;
+      display: grid;
+      place-items: center;
+    }
+
+    .screen {
+      width: 102px;
+      height: 70px;
+      border: 5px solid var(--line);
+      position: relative;
+    }
+
+    .screen::after {
+      content: "";
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      bottom: -18px;
+      height: 14px;
+      border-left: 5px solid var(--line);
+      border-right: 5px solid var(--line);
+      border-bottom: 5px solid var(--line);
+    }
+
+    .codebox {
+      width: 108px;
+      height: 78px;
+      border: 5px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 31px;
+      font-weight: 950;
+      letter-spacing: 0.16em;
+    }
+
+    .visor {
+      width: 106px;
+      height: 78px;
+      border: 5px solid var(--line);
+      border-radius: 40px 40px 24px 24px;
+      position: relative;
+    }
+
+    .visor::before,
+    .visor::after {
+      content: "";
+      position: absolute;
+      top: 30px;
+      width: 30px;
+      height: 14px;
+      border: 4px solid var(--line);
+      background: var(--paper);
+    }
+
+    .visor::before {
+      left: 16px;
+    }
+
+    .visor::after {
+      right: 16px;
+    }
+
+    .record {
+      width: 96px;
+      height: 96px;
+      border: 5px solid var(--line);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .record::before {
+      content: "";
+      position: absolute;
+      inset: 28px;
+      border: 5px solid var(--line);
+      border-radius: 50%;
+    }
+
+    .record::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--line);
+      transform: translate(-50%, -50%);
+    }
+
+    .mechanism {
+      border: 3px solid var(--line);
+      padding: 22px 24px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      background: var(--soft);
+      min-width: 0;
+    }
+
+    .mechanism h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.15;
+      font-weight: 950;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .node {
+      border: 3px solid var(--line);
+      background: var(--paper);
+      padding: 12px 14px;
+      min-height: 62px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .node strong {
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 950;
+    }
+
+    .node span {
+      font-size: 14px;
+      line-height: 1.3;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .fallback {
+      border-top: 4px solid var(--line);
+      padding-top: 12px;
+      font-size: 16px;
+      line-height: 1.42;
+      font-weight: 850;
+    }
+
+    footer {
+      border-top: 5px solid var(--line);
+      padding-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 28px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .operator {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 850;
+    }
+
+    .pill {
+      border: 2px solid var(--line);
+      padding: 7px 10px;
+      background: var(--paper);
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    @media print {
+      body {
+        background: var(--paper);
+      }
+
+      .sheet {
+        width: 100vw;
+        border: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="sheet" aria-label="GAVAI HENSHIN 展示体験案内">
+    <header>
+      <div>
+        <div class="kicker">Web / Quest / Replay</div>
+        <h1>変身体験の流れ</h1>
+        <div class="tagline">Webでスーツ成立、Questで変身試験、Replayで体験を残す。</div>
+      </div>
+      <div class="route">
+        来場者は4桁コードで自分のスーツを呼び出し、VR内で蒸着・装着・記録再生を体験します。
+      </div>
+    </header>
+
+    <main>
+      <div class="flow">
+        <article class="step">
+          <div class="number">1</div>
+          <h2>Webで<br />スーツ作成</h2>
+          <p>身長とvariantを選び、展示PC上でヒーロースーツを成立させます。</p>
+          <div class="symbol"><div class="screen"></div></div>
+        </article>
+
+        <article class="step">
+          <div class="number">2</div>
+          <h2>4桁コードで<br />呼び出し</h2>
+          <p>Webで発行されたコードをQuestへ入力。同じスーツをVR側で読み込みます。</p>
+          <div class="symbol"><div class="codebox">3601</div></div>
+        </article>
+
+        <article class="step">
+          <div class="number">3</div>
+          <h2>Questで<br />変身試験</h2>
+          <p>音声・トリガー・粒子演出でアーマーを展開。鏡で装着感を確認します。</p>
+          <div class="symbol"><div class="visor"></div></div>
+        </article>
+
+        <article class="step">
+          <div class="number">4</div>
+          <h2>Replayで<br />体験を保存</h2>
+          <p>変身の結果を記録再生し、体験の証跡として残します。</p>
+          <div class="symbol"><div class="record"></div></div>
+        </article>
+      </div>
+
+      <aside class="mechanism">
+        <h2>仕組み</h2>
+        <div class="stack">
+          <div class="node">
+            <strong>展示PCが中心</strong>
+            <span>Web/APIとQuest viewerをローカルで起動。外部ネットが弱くても動作。</span>
+          </div>
+          <div class="node">
+            <strong>同じコードで同期</strong>
+            <span>Web Forgeの4桁コードをQuestが読み、同一スーツ仕様を再現。</span>
+          </div>
+          <div class="node">
+            <strong>QuestはUSB優先</strong>
+            <span>ADB reverseでQuestから展示PCのlocalhostへ接続。LANは予備経路。</span>
+          </div>
+          <div class="node">
+            <strong>mocopiは任意強化</strong>
+            <span>接続できる時だけ動き連動を追加。不調時は通常変身体験へ戻す。</span>
+          </div>
+        </div>
+        <div class="fallback">
+          当日フォールバック: ネット不調でもローカルPCで続行。mocopi不調でもWeb・Quest・Replayの基本体験は止めません。
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="operator">
+        <span class="pill">受付: Webで4桁コード発行</span>
+        <span class="pill">VR: 同じコードをQuestで入力</span>
+        <span class="pill">記録: Replayで確認</span>
+      </div>
+      <div class="brand">GAVAI HENSHIN</div>
+    </footer>
+  </section>
+</body>
+</html>

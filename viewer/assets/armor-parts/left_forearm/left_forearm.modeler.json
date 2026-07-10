@@ -4,28 +4,28 @@
   "part_id": "viewer.mesh.left_forearm.v1",
   "category": "arm",
   "bbox_m": {
-    "x": 0.09995999932289124,
-    "y": 0.25700800120830536,
-    "z": 0.10198000073432922,
+    "x": 0.09475473314523697,
+    "y": 0.26604001224040985,
+    "z": 0.09988934174180031,
     "size": [
-      0.09995999932289124,
-      0.25700800120830536,
-      0.10198000073432922
+      0.09475473314523697,
+      0.26604001224040985,
+      0.09988934174180031
     ],
     "dimensions": [
-      0.09995999932289124,
-      0.25700800120830536,
-      0.10198000073432922
+      0.09475473314523697,
+      0.26604001224040985,
+      0.09988934174180031
     ]
   },
-  "triangle_count": 332,
+  "triangle_count": 596,
   "material_zones": [
     "accent",
     "base_surface",
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_forearm",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftLowerArm",
     "offset_m": [
@@ -52,19 +52,115 @@
     "mirror_pair_dimension_delta_below_3_percent": "pass",
     "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 332,
-  "target_envelope_m": {
-    "x": 0.102,
-    "y": 0.2788,
-    "z": 0.102
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.028,
   "variant_key": "left_forearm:base",
   "part_family": "silver_hero",
   "base_motif_link": {
     "name": "wrist_band",
     "surface_zone": "accent"
   },
-  "topping_slots": [],
-  "attachment_offset_target_m": 0.04
+  "topping_slots": [
+    {
+      "topping_slot": "forearm_cuff",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          -0.12,
+          0.04
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.13,
+        "y": 0.08,
+        "z": 0.045
+      },
+      "conflicts_with": [],
+      "parent_module": "left_forearm"
+    },
+    {
+      "topping_slot": "wrist_module",
+      "slot_transform": {
+        "anchor": [
+          0.035,
+          -0.08,
+          0.055
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.08,
+        "y": 0.1,
+        "z": 0.055
+      },
+      "conflicts_with": [],
+      "parent_module": "left_forearm"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "forearm_vambrace_shell_with_elbow_relief",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "leftLowerArm",
+      "leftHand"
+    ],
+    "follow_panels": [
+      "forearm_vambrace_shell",
+      "forearm_elbow_relief_shell",
+      "forearm_wrist_lip"
+    ],
+    "target_contact": "single tapered shell follows radius/ulna volume while cuff stays close to wrist"
+  },
+  "suit_silhouette_profile": {
+    "read": "tapered_gauntlet_vambrace",
+    "primary_lines": [
+      "long outer accent",
+      "wrist lip",
+      "rear elbow relief"
+    ],
+    "prop_countermeasure": "main shell is continuous and tapered, with only trim sitting proud"
+  },
+  "silhouette_review_notes": [
+    "Continuous vambrace shell with rear elbow relief replaces stacked sleeve blocks.",
+    "Rear vent slat sells mecha detail without competing with chest emissive.",
+    "Wrist lip helps the forearm-to-hand seam read at viewer distance."
+  ],
+  "visual_density_profile": {
+    "issue": "forearm could read as stacked sleeve blocks",
+    "hero_density_panels": [
+      "forearm_accent_stripe",
+      "forearm_rear_vent",
+      "forearm_wrist_lip"
+    ],
+    "profile_cues": [
+      "tapered vambrace",
+      "elbow relief",
+      "wrist cuff"
+    ]
+  },
+  "triangles": 596,
+  "target_envelope_m": {
+    "x": 0.102,
+    "y": 0.2788,
+    "z": 0.102
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Arm texture should preserve bend clearance while carrying a clean outer stripe."
+  }
 }

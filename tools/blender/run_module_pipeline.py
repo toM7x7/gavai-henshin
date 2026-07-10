@@ -481,10 +481,6 @@ def _build_module_inner(module, repo_root, blueprint, core, specs_map):
             ))
         joined = core.join_module(panel_objs, module)
 
-    if hasattr(core, "assign_material_zones"):
-        core.assign_material_zones(joined, panel_zone_map, part)
-    if hasattr(core, "smart_uv_unwrap"):
-        core.smart_uv_unwrap(joined)
     # Skip curve_around_body when the spec already wraps via per-panel rotation
     # OR when this module is a mirror (the source already had curve applied).
     silhouette = (spec.get("silhouette") or {})
@@ -502,6 +498,12 @@ def _build_module_inner(module, repo_root, blueprint, core, specs_map):
     for line in (spec.get("emissive_lines") or []):
         if hasattr(core, "carve_emissive_groove"):
             core.carve_emissive_groove(joined, line)
+    if hasattr(core, "assign_material_zones"):
+        # Grooves tag emissive face indices, so material routing must happen
+        # after carving for the carved suit lines to show up in GLB/render output.
+        core.assign_material_zones(joined, panel_zone_map, part)
+    if hasattr(core, "smart_uv_unwrap"):
+        core.smart_uv_unwrap(joined)
 
     pre_measure = core.measure_module(joined)
     pre_dims = pre_measure.get("dims") or pre_measure.get("bbox") or {}

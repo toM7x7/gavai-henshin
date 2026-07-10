@@ -2,11 +2,23 @@ import * as THREE from "../body-fit/vendor/three/build/three.module.js";
 import { getGLTFLoaderClass, loadVrmScene } from "../body-fit/vrm-loader.js";
 import {
   VRM_BONE_ALIASES,
+  clampSurfaceOffsetForPart,
   effectiveFitFor,
   effectiveVrmAnchorFor,
   normalizeBoneName,
 } from "../shared/armor-canon.js";
 import { applyApproximateVrmTPose } from "../shared/auto-fit-engine.js";
+import {
+  isRuntimeRenderPlacementRecord,
+  resolveRuntimeOffset,
+  resolveRuntimeRotation,
+  resolveRuntimeTargetSize,
+} from "../shared/runtime-placement-resolver.js";
+import {
+  EXHIBITION_OPERATOR_COPY,
+  operatorStateColorGuide,
+  operatorStateLabel,
+} from "../shared/exhibition-copy.js";
 
 const PARTS = [
   ["helmet", "ヘルメット", true],
@@ -29,10 +41,21 @@ const PARTS = [
   ["right_boot", "右ブーツ", true],
 ];
 
+const VARIANT_DISPLAY_LABELS_JA = new Map([
+  ["base", "標準ヒーローフィット"],
+  ["sleek", "ライン重視"],
+  ["bold", "装甲強調"],
+  ["Base hero fit", "標準ヒーローフィット"],
+  ["Sleek line variant", "ライン重視"],
+  ["Bold armored variant", "装甲強調"],
+]);
+
 const DEFAULT_HEIGHT_CM = 170;
 const MIN_HEIGHT_CM = 90;
 const MAX_HEIGHT_CM = 230;
 const DEFAULT_VRM_PATH = "viewer/assets/vrm/default.vrm";
+const DEFAULT_VARIANT_CATALOG_PATH = "viewer/assets/armor-parts/variant_catalog.json";
+const AUTO_VARIANT_VALUE = "__auto__";
 const DEFAULT_QUEST_DEV_PORT = 5173;
 const TEXTURE_PROVIDER_PROFILE = "nano_banana";
 const BODY_REFERENCE_COLOR = 0xe6c7a6;
@@ -86,8 +109,46 @@ const FIT_SHAPE_BASELINES = {
 };
 const EXPECTED_ARMOR_PARTS = PARTS.map(([id]) => id);
 const PART_LABELS = new Map(PARTS.map(([id, label]) => [id, label]));
+const PART_DISPLAY_LABELS = new Map([
+  ["helmet", "ヘルメット"],
+  ["chest", "胸部装甲"],
+  ["back", "背面ユニット"],
+  ["waist", "ベルト"],
+  ["left_shoulder", "左肩"],
+  ["right_shoulder", "右肩"],
+  ["left_upperarm", "左上腕"],
+  ["right_upperarm", "右上腕"],
+  ["left_forearm", "左前腕"],
+  ["right_forearm", "右前腕"],
+  ["left_hand", "左手甲"],
+  ["right_hand", "右手甲"],
+  ["left_thigh", "左太腿"],
+  ["right_thigh", "右太腿"],
+  ["left_shin", "左すね"],
+  ["right_shin", "右すね"],
+  ["left_boot", "左ブーツ"],
+  ["right_boot", "右ブーツ"],
+]);
 const PREVIEW_QA_GAP_WARN_M = 0.08;
 const PREVIEW_QA_THIN_RATIO_WARN = 0.18;
+const PREVIEW_QA_BOOT_FLOAT_WARN_M = 0.035;
+const PREVIEW_QA_WAIST_GAP_WARN_M = 0.055;
+const PREVIEW_QA_CONTINUITY_WARN_M = 0.09;
+const PREVIEW_QA_BACK_THICKNESS_RATIO_WARN = 0.82;
+const VISUAL_DENSITY_P0_PARTS = new Set([
+  "helmet",
+  "chest",
+  "back",
+  "waist",
+  "left_shoulder",
+  "right_shoulder",
+  "left_shin",
+  "right_shin",
+  "left_boot",
+  "right_boot",
+]);
+const VISUAL_DENSITY_MIN_P0_SLOTS = 2;
+const VISUAL_DENSITY_MIN_P0_VARIANTS = 2;
 const PREVIEW_VIEW_PRESETS = Object.freeze({
   front: { label: "正面", yaw: 0, pitch: 0, zoom: 1 },
   left: { label: "左側", yaw: -Math.PI / 2, pitch: 0.02, zoom: 1.06 },
@@ -105,7 +166,15 @@ const UI = {
   emptyStand: document.getElementById("emptyStand"),
   recallCode: document.getElementById("recallCode"),
   status: document.getElementById("forgeStatus"),
+  statusHelp: document.getElementById("forgeStatusHelp"),
   questLink: document.getElementById("questLink"),
+  exhibitionSummary: document.getElementById("exhibitionSummary"),
+  exhibitionCode: document.getElementById("exhibitionCode"),
+  exhibitionHeight: document.getElementById("exhibitionHeight"),
+  exhibitionVariant: document.getElementById("exhibitionVariant"),
+  exhibitionQuestLink: document.getElementById("exhibitionQuestLink"),
+  replaySaveLink: document.getElementById("replaySaveLink"),
+  exhibitionHint: document.getElementById("exhibitionHint"),
   questUrl: document.getElementById("questUrl"),
   questUrlHint: document.getElementById("questUrlHint"),
   assetPipeline: document.getElementById("assetPipeline"),
@@ -117,10 +186,18 @@ const UI = {
   modelerHandoffDetail: document.getElementById("modelerHandoffDetail"),
   modelerBlueprintUrl: document.getElementById("modelerBlueprintUrl"),
   textureJobPanel: document.getElementById("textureJobPanel"),
+  textureQuickAction: document.getElementById("textureQuickAction"),
+  textureQuickButton: document.getElementById("textureQuickButton"),
+  textureQuickDetail: document.getElementById("textureQuickDetail"),
   textureJobButton: document.getElementById("textureJobButton"),
   textureJobTitle: document.getElementById("textureJobTitle"),
   textureJobDetail: document.getElementById("textureJobDetail"),
   textureJobMeter: document.getElementById("textureJobMeter"),
+  serviceConfigPanel: document.getElementById("serviceConfigPanel"),
+  serviceConfigTitle: document.getElementById("serviceConfigTitle"),
+  serviceConfigDetail: document.getElementById("serviceConfigDetail"),
+  resultDetails: document.querySelector(".result-details"),
+  supportDetails: Array.from(document.querySelectorAll(".support-details")),
   standControls: document.getElementById("standControls"),
   resetViewButton: document.getElementById("resetViewButton"),
   zoomOutButton: document.getElementById("zoomOutButton"),
@@ -141,20 +218,69 @@ const UI = {
 let runtimeInfo = null;
 let runtimeInfoPromise = null;
 let latestForgeData = null;
+let localVariantCatalog = null;
+let localVariantCatalogStatus = "pending";
 let textureJobPollTimer = null;
 let textureJobStartedAt = 0;
 let armorStand = null;
 let previewLayerPanel = null;
+const manualVariantOverrides = new Set();
 const textureLoader = new THREE.TextureLoader();
+
+function localConfigValue(key) {
+  try {
+    return window.localStorage?.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+function cleanBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    if (raw.startsWith("/") && !raw.startsWith("//")) return url.pathname.replace(/\/+$/, "");
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function serviceConfigValue(queryName, metaName, storageKey) {
+  const query = new URLSearchParams(window.location.search).get(queryName) || "";
+  const meta = document.querySelector(`meta[name="${metaName}"]`)?.content || "";
+  return cleanBaseUrl(query || meta || localConfigValue(storageKey));
+}
+
+const SERVICE_CONFIG = Object.freeze({
+  apiBase: serviceConfigValue("apiBase", "gavai-api-base", "gavai.apiBase"),
+  assetBase: serviceConfigValue("assetBase", "gavai-asset-base", "gavai.assetBase"),
+});
+
+function useExhibitionMode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mode") === "exhibition" || params.get("exhibition") === "1";
+}
+
+const EXHIBITION_MODE = useExhibitionMode();
+
+function resolveServicePath(path, base) {
+  const raw = String(path || "").replace(/\\/g, "/");
+  if (!base || /^(https?:|data:|blob:)/i.test(raw)) return raw;
+  const suffix = raw.startsWith("/") ? raw : `/${raw}`;
+  return `${base}${suffix}`;
+}
 
 function normalizePath(path) {
   const raw = String(path || "").replace(/\\/g, "/");
-  if (/^(https?:|data:|blob:)/i.test(raw) || raw.startsWith("/")) return raw;
-  return `/${raw}`;
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  return resolveServicePath(raw.startsWith("/") ? raw : `/${raw}`, SERVICE_CONFIG.assetBase);
 }
 
 async function fetchJson(path, options = {}) {
-  const response = await fetch(path, options);
+  const response = await fetch(resolveServicePath(path, SERVICE_CONFIG.apiBase), options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.ok === false) {
     throw new Error(data.error || `${path} failed with ${response.status}`);
@@ -162,17 +288,29 @@ async function fetchJson(path, options = {}) {
   return data;
 }
 
+function renderServiceConfig() {
+  if (!UI.serviceConfigTitle || !UI.serviceConfigDetail) return;
+  const api = SERVICE_CONFIG.apiBase || "同一オリジン";
+  const assets = SERVICE_CONFIG.assetBase || "同一オリジン";
+  UI.serviceConfigTitle.textContent = SERVICE_CONFIG.apiBase || SERVICE_CONFIG.assetBase
+    ? "外部接続設定を使用中"
+    : "ローカル同一オリジン";
+  UI.serviceConfigDetail.textContent = `API: ${api} / アセット: ${assets}`;
+}
+
 function isLocalHost(hostname) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 async function loadRuntimeInfo() {
+  if (!latestForgeData) setStatus("ローカル実行環境を確認中...", "pending");
   try {
     runtimeInfo = await fetchJson("/api/runtime-info");
   } catch (error) {
     console.warn(`runtime-info unavailable: ${error?.message || error}`);
     runtimeInfo = null;
   }
+  if (!latestForgeData) setStatus(EXHIBITION_OPERATOR_COPY.forge.statusIdle, "pending");
   return runtimeInfo;
 }
 
@@ -186,6 +324,14 @@ function setStatus(text, state = "pending") {
   UI.status.classList.remove("pending", "complete", "error");
   UI.status.classList.add(state);
   UI.status.textContent = text;
+  const stateLabel = operatorStateLabel(state);
+  const colorGuide = operatorStateColorGuide(state);
+  UI.status.dataset.operatorStateLabel = stateLabel;
+  UI.status.setAttribute("aria-label", `${stateLabel}: ${text}`);
+  UI.status.title = colorGuide;
+  if (UI.statusHelp) {
+    UI.statusHelp.textContent = `${stateLabel} / ${colorGuide}`;
+  }
 }
 
 function clamp(value, min, max) {
@@ -217,6 +363,22 @@ function optionalVector(value) {
   }
   if (value && typeof value === "object") {
     return [numberOr(value.x, 0), numberOr(value.y, 0), numberOr(value.z, 0)];
+  }
+  return null;
+}
+
+function firstVector(...values) {
+  for (const value of values) {
+    const vector = optionalVector(value);
+    if (vector) return vector;
+  }
+  return null;
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
   }
   return null;
 }
@@ -260,16 +422,23 @@ function sidecarMetadataForModule(part, module = {}) {
     || module?.toppings
     || auxiliarySlots,
   );
-  const offsetTarget = optionalVector(
-    module?.attachment_offset_target_m
-    || module?.attachment_offset_m
-    || attachment?.offset_m
-    || sidecar?.attachment_offset_target_m
-    || sidecar?.attachment_offset_m
-    || anchor?.offset,
+  const placementOffset = firstVector(
+    module?.attachment_offset_m,
+    attachment?.offset_m,
+    sidecar?.attachment_offset_m,
+    sidecar?.vrm_attachment?.offset_m,
+    module?.attachment_offset_target_m,
+    sidecar?.attachment_offset_target_m,
+    anchor?.offset,
+  );
+  const offsetLimitM = firstNumber(
+    module?.attachment_offset_target_m,
+    sidecar?.attachment_offset_target_m,
+    sidecar?.offset_limit_m,
   );
   const hasExplicitSidecarOffset = Boolean(
-    module?.attachment_offset_target_m
+    placementOffset
+    || module?.attachment_offset_target_m
     || module?.attachment_offset_m
     || attachment?.offset_m
     || sidecar?.attachment_offset_target_m
@@ -278,15 +447,184 @@ function sidecarMetadataForModule(part, module = {}) {
   );
   return {
     part,
-    offsetTarget,
+    offsetTarget: placementOffset,
+    placementOffset,
+    offsetLimitM,
     toppingSlots,
     variantKey: firstString(module?.variant_key, module?.asset_variant_key, module?.variant?.key, sidecar?.variant_key),
-    source: offsetTarget
+    bodyFollowMode: firstString(sidecar?.body_follow_profile?.mode, module?.body_follow_profile?.mode),
+    groundContactProfile: sidecar?.ground_contact_profile || module?.ground_contact_profile || null,
+    source: placementOffset
       ? hasExplicitSidecarOffset || String(module?.asset_ref || "").includes("/armor-parts/")
         ? "modeler_sidecar"
         : "module_vrm_anchor"
       : "none",
   };
+}
+
+function variantCatalogCandidatesFromData(data = latestForgeData) {
+  return [
+    localVariantCatalog,
+    data?.preview?.variant_catalog,
+    data?.preview?.asset_pipeline?.variant_catalog,
+    data?.asset_pipeline?.variant_catalog,
+    data?.variant_catalog,
+    data?.suitspec?.asset_pipeline?.variant_catalog,
+  ];
+}
+
+function variantCatalogFromData(data = latestForgeData) {
+  return variantCatalogCandidatesFromData(data).find((candidate) => candidate && typeof candidate === "object") || null;
+}
+
+async function loadLocalVariantCatalog() {
+  localVariantCatalogStatus = "loading";
+  try {
+    const catalog = await fetchJson(normalizePath(DEFAULT_VARIANT_CATALOG_PATH));
+    localVariantCatalog = {
+      ...catalog,
+      path: catalog.path || DEFAULT_VARIANT_CATALOG_PATH,
+      status: catalog.status || "ready",
+    };
+    localVariantCatalogStatus = "ready";
+  } catch (error) {
+    console.warn(`variant catalog unavailable: ${error?.message || error}`);
+    localVariantCatalog = null;
+    localVariantCatalogStatus = "error";
+  }
+  renderPartGrid();
+  renderAssetPipeline(latestForgeData);
+  updatePreviewLayerPanel(latestForgeData);
+  return localVariantCatalog;
+}
+
+function variantCatalogModulesFromData(data = latestForgeData) {
+  const catalog = variantCatalogFromData(data);
+  return catalog?.selected_modules || catalog?.modules || {};
+}
+
+function variantCatalogModuleForPart(part, data = latestForgeData) {
+  const modules = variantCatalogModulesFromData(data);
+  return modules?.[part] || null;
+}
+
+function catalogToppingSlotsForPart(part, data = latestForgeData) {
+  return catalogToppingSlotEntriesForPart(part, data).map((entry) => entry.slot);
+}
+
+function catalogVariantKeysForPart(part, data = latestForgeData) {
+  const variants = variantCatalogModuleForPart(part, data)?.variants;
+  if (!Array.isArray(variants)) return [];
+  return variants
+    .map((variant) => firstString(variant?.variant_key, variant?.key))
+    .filter(Boolean);
+}
+
+function catalogVariantRecordsForPart(part, data = latestForgeData) {
+  const variants = variantCatalogModuleForPart(part, data)?.variants;
+  return Array.isArray(variants) ? variants.filter((variant) => variant && typeof variant === "object") : [];
+}
+
+function catalogVariantRecordForPart(part, variantKey, data = latestForgeData) {
+  const key = firstString(variantKey);
+  if (!key) return null;
+  return catalogVariantRecordsForPart(part, data)
+    .find((variant) => firstString(variant?.variant_key, variant?.key) === key) || null;
+}
+
+function variantSlugForPart(part, variantKey) {
+  const key = firstString(variantKey);
+  if (!key) return "";
+  if (key.includes(":")) {
+    const [module, slug] = key.split(":", 2);
+    return module === part ? firstString(slug) : "";
+  }
+  return key;
+}
+
+function variantAssetRefForPart(part, variantKey, data = latestForgeData) {
+  const key = firstString(variantKey);
+  if (!key || key === AUTO_VARIANT_VALUE) return "";
+  const record = catalogVariantRecordForPart(part, key, data);
+  const declaredRef = firstString(record?.asset_ref, record?.assetRef);
+  if (declaredRef) return declaredRef;
+  const slug = variantSlugForPart(part, key);
+  if (!slug || slug === "base") return `viewer/assets/armor-parts/${part}/${part}.glb`;
+  return `viewer/assets/armor-parts/${part}/variants/${slug}/${part}__${slug}.glb`;
+}
+
+function catalogToppingSlotEntriesForPart(part, data = latestForgeData) {
+  const slots = variantCatalogModuleForPart(part, data)?.topping_slots;
+  if (!Array.isArray(slots)) return [];
+  return slots
+    .map((slot) => {
+      const name = typeof slot === "string"
+        ? slot.trim()
+        : firstString(slot?.topping_slot, slot?.slot, slot?.name, slot?.proposal_id);
+      if (!name) return null;
+      return {
+        part,
+        slot: name,
+        label: `${part}:${name}`,
+        conflictsWith: stringArray(slot?.conflicts_with),
+      };
+    })
+    .filter(Boolean);
+}
+
+function catalogConflictLabel(part, conflict) {
+  const value = firstString(conflict);
+  if (!value) return "";
+  return value.includes(":") ? value : `${part}:${value}`;
+}
+
+function shortCatalogPath(path) {
+  const value = firstString(path);
+  if (!value) return "catalog pending";
+  const marker = "armor-parts/";
+  const index = value.indexOf(marker);
+  return index >= 0 ? value.slice(index) : value;
+}
+
+function variantCatalogStatsForRecords(records = previewRecordsFromData(), data = latestForgeData) {
+  const catalog = variantCatalogFromData(data);
+  const modules = variantCatalogModulesFromData(data);
+  const slotEntries = records.flatMap(([part]) => catalogToppingSlotEntriesForPart(part, data));
+  const variantKeys = records.flatMap(([part]) => catalogVariantKeysForPart(part, data));
+  const conflictPairs = slotEntries.flatMap((entry) => entry.conflictsWith
+    .map((conflict) => `${entry.label}->${catalogConflictLabel(entry.part, conflict)}`)
+    .filter((label) => !label.endsWith("->")));
+  const conflictSlots = Array.from(new Set(slotEntries
+    .filter((entry) => entry.conflictsWith.length)
+    .map((entry) => entry.label)));
+  const path = firstString(catalog?.path, catalog?.catalog_path, catalog?.source_path, catalog ? DEFAULT_VARIANT_CATALOG_PATH : "");
+  return {
+    status: firstString(catalog?.status, catalog ? "ready" : "pending"),
+    path,
+    shortPath: shortCatalogPath(path),
+    selectedPartCount: Number(catalog?.selected_part_count || records.length || 0),
+    selectedModuleCount: Number(catalog?.selected_module_count || Object.keys(modules || {}).length || 0),
+    selectedSlotCount: Number(catalog?.selected_slot_count || slotEntries.length || 0),
+    selectedVariantCount: Number(catalog?.selected_variant_count || variantKeys.length || 0),
+    conflictCount: conflictPairs.length,
+    conflictPairs,
+    conflictSlots,
+  };
+}
+
+function catalogDetailFeatureCountForPart(part, data = latestForgeData) {
+  const variants = variantCatalogModuleForPart(part, data)?.variants;
+  if (!Array.isArray(variants)) return 0;
+  return variants.reduce((count, variant) => {
+    const features = Array.isArray(variant?.detail_features) ? variant.detail_features : [];
+    return count + features.filter((feature) => typeof feature === "string" && feature.trim()).length;
+  }, 0);
+}
+
+function labeledVariantKey(part, key) {
+  const value = firstString(key);
+  if (!value) return "";
+  return value.startsWith(`${part}:`) ? value : `${part}:${value}`;
 }
 
 function offsetTargetLabel(metadata) {
@@ -365,6 +703,21 @@ function addOrientedOffset(vector, offset = [0, 0, 0], quaternion = null) {
   return vector.clone().add(localOffset);
 }
 
+function wornPlacementOffsetForPart(part, offset) {
+  const vector = optionalVector(offset);
+  if (!vector) return null;
+  return clampSurfaceOffsetForPart(part, vector, "vrm");
+}
+
+function wornDepthClamp(part, deltaZ, shoulderWidth) {
+  const shoulder = Math.max(numberOr(shoulderWidth, 0.68), 0.3);
+  if (part === "chest") return clamp(deltaZ, shoulder * 0.070, shoulder * 0.145);
+  if (part === "back") return clamp(deltaZ, -shoulder * 0.205, -shoulder * 0.085);
+  if (part === "waist") return clamp(deltaZ, -shoulder * 0.030, shoulder * 0.055);
+  if (part.includes("boot")) return clamp(deltaZ, -shoulder * 0.025, shoulder * 0.045);
+  return deltaZ;
+}
+
 function rotationZFromSegment(start, end, fallback = 0) {
   if (!start || !end) return fallback;
   const dx = end.x - start.x;
@@ -379,6 +732,199 @@ function scaleForTarget(sourceSize, targetSize) {
     clamp(targetSize.y / Math.max(sourceSize.y, 0.001), 0.04, 2.4),
     clamp(targetSize.z / Math.max(sourceSize.z, 0.001), 0.04, 2.4),
   );
+}
+
+function comparableVariantKeyForPart(part, value) {
+  const key = firstString(value);
+  if (!key || key === AUTO_VARIANT_VALUE) return "";
+  return key.includes(":") ? key : `${part}:${key}`;
+}
+
+function comparableAssetRef(value) {
+  const ref = firstString(value);
+  if (!ref) return "";
+  return ref.replace(/\\/g, "/").replace(/[?#].*$/, "").replace(/^\/+/, "");
+}
+
+function variantDisplayNameJa(part, variantKey, displayName = "") {
+  const rawDisplay = firstString(displayName);
+  const key = comparableVariantKeyForPart(part, variantKey || rawDisplay);
+  const slug = variantSlugForPart(part, key);
+  return VARIANT_DISPLAY_LABELS_JA.get(key)
+    || VARIANT_DISPLAY_LABELS_JA.get(slug)
+    || VARIANT_DISPLAY_LABELS_JA.get(rawDisplay)
+    || rawDisplay
+    || slug
+    || firstString(variantKey).split(":").pop()
+    || "自動選定";
+}
+
+function isRuntimePlacementRecord(value) {
+  return isRuntimeRenderPlacementRecord(value);
+}
+
+function runtimePlacementMatchesPreviewVariant(part, placement, variantKey = "", assetRef = "") {
+  if (!isRuntimePlacementRecord(placement)) return false;
+  const placementPart = firstString(placement.part);
+  if (placementPart && placementPart !== part) return false;
+  const key = comparableVariantKeyForPart(part, variantKey);
+  const placementKey = comparableVariantKeyForPart(
+    part,
+    firstString(placement.selected_variant_key, placement.variant_key, placement.modeler_sidecar_variant_key),
+  );
+  if (placementKey && key && placementKey !== key) return false;
+  const asset = comparableAssetRef(assetRef);
+  const placementAsset = comparableAssetRef(placement.asset_ref);
+  if (asset && placementAsset && placementAsset !== asset) return false;
+  return true;
+}
+
+function placementFromVariantPlacementTable(table, part, variantKey, assetRef = "") {
+  if (!table || typeof table !== "object") return null;
+  const scoped = table[part] && typeof table[part] === "object" && table[part] !== table
+    ? placementFromVariantPlacementTable(table[part], part, variantKey, assetRef)
+    : null;
+  if (scoped) return scoped;
+  if (runtimePlacementMatchesPreviewVariant(part, table, variantKey, assetRef)) return table;
+  const key = comparableVariantKeyForPart(part, variantKey);
+  const slug = variantSlugForPart(part, key);
+  const asset = comparableAssetRef(assetRef);
+  const directCandidates = [
+    table[key],
+    table[slug],
+    table[assetRef],
+    table[asset],
+  ];
+  for (const placement of directCandidates) {
+    if (runtimePlacementMatchesPreviewVariant(part, placement, variantKey, assetRef)) return placement;
+  }
+  const values = Array.isArray(table) ? table : Object.values(table);
+  return values.find((placement) => runtimePlacementMatchesPreviewVariant(part, placement, variantKey, assetRef)) || null;
+}
+
+function variantRuntimePlacementForPreviewPart(part, variantKey, assetRef = "", module = {}) {
+  const key = comparableVariantKeyForPart(part, variantKey);
+  if (!key) return null;
+  const tables = [
+    module?.variant_render_placements,
+    module?.runtime_placements_by_variant,
+    latestForgeData?.preview?.modules?.[part]?.variant_render_placements,
+    latestForgeData?.preview?.variant_render_placements,
+    latestForgeData?.preview?.asset_pipeline?.variant_render_placements,
+    latestForgeData?.asset_pipeline?.variant_render_placements,
+    latestForgeData?.preview?.visual_layers?.armor_overlay?.variant_render_placements,
+    latestForgeData?.visual_layers?.armor_overlay?.variant_render_placements,
+  ];
+  for (const table of tables) {
+    const placement = placementFromVariantPlacementTable(table, part, key, assetRef);
+    if (placement) return placement;
+  }
+  return null;
+}
+
+function previewVariantKeyForRuntimePlacement(part, module = {}) {
+  return comparableVariantKeyForPart(
+    part,
+    firstString(
+      module?.selected_variant_key,
+      module?.variant_key,
+      latestForgeData?.preview?.modules?.[part]?.selected_variant_key,
+      latestForgeData?.preview?.modules?.[part]?.variant_key,
+      latestForgeData?.visual_layers?.armor_overlay?.selected_variant_keys?.[part],
+      latestForgeData?.preview?.visual_layers?.armor_overlay?.selected_variant_keys?.[part],
+      latestSelectedVariantKeyForPart(part),
+    ),
+  );
+}
+
+function previewAssetRefForRuntimePlacement(part, variantKey, module = {}) {
+  return firstString(
+    module?.asset_ref,
+    latestForgeData?.preview?.modules?.[part]?.asset_ref,
+    latestForgeData?.visual_layers?.armor_overlay?.asset_refs?.[part],
+    latestForgeData?.preview?.visual_layers?.armor_overlay?.asset_refs?.[part],
+    variantAssetRefForPart(part, variantKey, latestForgeData),
+  );
+}
+
+function runtimePlacementForPreviewPart(part, module = {}) {
+  const selectedKey = previewVariantKeyForRuntimePlacement(part, module);
+  const selectedAssetRef = previewAssetRefForRuntimePlacement(part, selectedKey, module);
+  const variantPlacement = variantRuntimePlacementForPreviewPart(part, selectedKey, selectedAssetRef, module);
+  if (variantPlacement) return variantPlacement;
+  const candidates = [
+    module?.runtime_placement,
+    module?.render_placement,
+    latestForgeData?.preview?.modules?.[part]?.runtime_placement,
+    latestForgeData?.preview?.render_placements?.[part],
+    latestForgeData?.preview?.asset_pipeline?.render_placements?.[part],
+    latestForgeData?.asset_pipeline?.render_placements?.[part],
+    latestForgeData?.preview?.visual_layers?.armor_overlay?.render_placements?.[part],
+    latestForgeData?.visual_layers?.armor_overlay?.render_placements?.[part],
+  ];
+  return candidates.find((placement) => (
+    runtimePlacementMatchesPreviewVariant(part, placement, selectedKey, selectedAssetRef)
+  )) || null;
+}
+
+function writeRuntimePlacementForPart(map, part, placement) {
+  if (!map || typeof map !== "object") return;
+  if (placement) {
+    map[part] = { ...placement };
+  } else {
+    delete map[part];
+  }
+}
+
+function setRuntimePlacementForPreviewPart(part, placement) {
+  const module = latestForgeData?.preview?.modules?.[part];
+  if (module && typeof module === "object") {
+    if (placement) {
+      module.runtime_placement = { ...placement };
+    } else {
+      delete module.runtime_placement;
+    }
+  }
+  writeRuntimePlacementForPart(latestForgeData?.preview?.render_placements, part, placement);
+  writeRuntimePlacementForPart(latestForgeData?.preview?.asset_pipeline?.render_placements, part, placement);
+  writeRuntimePlacementForPart(latestForgeData?.asset_pipeline?.render_placements, part, placement);
+  writeRuntimePlacementForPart(latestForgeData?.preview?.visual_layers?.armor_overlay?.render_placements, part, placement);
+  writeRuntimePlacementForPart(latestForgeData?.visual_layers?.armor_overlay?.render_placements, part, placement);
+}
+
+function vector3FromRuntimeVector(value) {
+  const vector = optionalVector(value);
+  if (!vector) return null;
+  return new THREE.Vector3(vector[0], vector[1], vector[2]);
+}
+
+function runtimeTargetSizeForPreviewPart(part, module = {}) {
+  const placement = runtimePlacementForPreviewPart(part, module);
+  const targetArray = resolveRuntimeTargetSize({
+    placement,
+    fallback: [0, 0, 0],
+    mode: "web_preview_parity",
+  });
+  const target = vector3FromRuntimeVector(targetArray);
+  if (!target) return null;
+  return target.x > 0 && target.y > 0 && target.z > 0 ? target : null;
+}
+
+function runtimeOffsetForPreviewPart(part, module = {}) {
+  const placement = runtimePlacementForPreviewPart(part, module);
+  return resolveRuntimeOffset({
+    part,
+    placement,
+    mode: "web_preview_parity",
+  });
+}
+
+function runtimeRotationForPreviewPart(part, module = {}) {
+  const placement = runtimePlacementForPreviewPart(part, module);
+  return resolveRuntimeRotation({
+    placement,
+    mode: "web_preview_parity",
+  });
 }
 
 function armorStandPoseFor(part, module) {
@@ -410,6 +956,7 @@ function syncHeightControls(sourceValue) {
   if (UI.heightValue) UI.heightValue.textContent = `${height}cm`;
   armorStand?.setHeightCm(height);
   updatePreviewLayerPanel(latestForgeData);
+  renderExhibitionSummary(latestForgeData);
   return height;
 }
 
@@ -417,8 +964,76 @@ function selectedParts() {
   return Array.from(UI.partGrid.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value);
 }
 
+function partVariantSelect(part) {
+  return UI.partGrid?.querySelector(`select[data-part-variant="${part}"]`) || null;
+}
+
+function latestSelectedVariantKeyForPart(part) {
+  return firstString(
+    latestForgeData?.preview?.modules?.[part]?.selected_variant_key,
+    latestForgeData?.asset_pipeline?.variant_catalog?.selected_modules?.[part]?.selected_variant_key,
+    latestForgeData?.visual_layers?.armor_overlay?.selected_variant_keys?.[part],
+  );
+}
+
+function selectedVariantKeyForPart(part, options = {}) {
+  const value = firstString(partVariantSelect(part)?.value);
+  const explicit = value && value !== AUTO_VARIANT_VALUE && manualVariantOverrides.has(part);
+  if (options.explicitOnly) return explicit ? value : "";
+  if (value && value !== AUTO_VARIANT_VALUE) return value;
+  return latestSelectedVariantKeyForPart(part) || firstString(catalogVariantKeysForPart(part)[0]) || `${part}:base`;
+}
+
+function selectedVariantMetaForPart(part, options = {}) {
+  const selectedKey = selectedVariantKeyForPart(part, options);
+  if (!selectedKey) return null;
+  const selectedVariant = catalogVariantRecordForPart(part, selectedKey);
+  return {
+    part,
+    selected_variant_key: selectedKey,
+    display_name: firstString(selectedVariant?.display_name, selectedKey),
+    display_name_ja: variantDisplayNameJa(part, selectedKey, selectedVariant?.display_name),
+    selection_mode: manualVariantOverrides.has(part) ? "manual_override" : "auto",
+  };
+}
+
+function selectedVariantMap(options = {}) {
+  return Object.fromEntries(
+    selectedParts()
+      .map((part) => [part, selectedVariantKeyForPart(part, options)])
+      .filter(([, key]) => key),
+  );
+}
+
+function selectedVariantRecords(options = {}) {
+  return selectedParts().map((part) => selectedVariantMetaForPart(part, options)).filter(Boolean);
+}
+
+function selectedVariantSummary(limit = 4) {
+  const records = selectedVariantRecords();
+  if (!records.length) return "none";
+  return compactDataList(
+    records.map((record) => `${record.part}:${record.selected_variant_key.split(":").pop()}`),
+    limit,
+    "none",
+  );
+}
+
+function selectedVariantSummaryJa(limit = 4) {
+  const records = selectedVariantRecords();
+  if (!records.length) return "自動選定";
+  return compactDataList(
+    records.map((record) => {
+      const variantName = firstString(record.display_name_ja, record.display_name, record.selected_variant_key).split(":").pop();
+      return `${partLabel(record.part)}:${variantName}`;
+    }),
+    limit,
+    "自動選定",
+  );
+}
+
 function partLabel(part) {
-  return PART_LABELS.get(part) || part;
+  return PART_DISPLAY_LABELS.get(part) || PART_LABELS.get(part) || part;
 }
 
 function compactPartList(parts, limit = 4) {
@@ -490,6 +1105,16 @@ function fitQaForMesh(part, mesh, module = {}) {
   const targetSize = vectorFromArray(mesh?.userData?.fitTargetSize);
   const gapM = Math.max(0, numberOr(mesh?.userData?.fitGapM, 0));
   const sidecar = sidecarMetadataForModule(part, module);
+  const referencePoint = vectorFromArray(mesh?.userData?.fitReferencePoint);
+  const centerY = numberOr(mesh?.position?.y, 0);
+  const bottomY = actualSize ? centerY - actualSize.y * 0.5 : centerY;
+  const topY = actualSize ? centerY + actualSize.y * 0.5 : centerY;
+  const bootContactDeltaM = part.includes("boot") && referencePoint
+    ? Math.max(0, bottomY - referencePoint.y)
+    : 0;
+  const floorLiftM = part.includes("boot")
+    ? Math.max(0, bottomY - PREVIEW_FLOOR_Y)
+    : 0;
   const sideProfileRatio = actualSize
     ? actualSize.z / Math.max(actualSize.x, actualSize.y, 0.001)
     : 1;
@@ -499,6 +1124,7 @@ function fitQaForMesh(part, mesh, module = {}) {
   const warnings = [];
   if (gapM > PREVIEW_QA_GAP_WARN_M) warnings.push("gap");
   if (sideProfileRatio < thinRatioThresholdForPart(part)) warnings.push("thin");
+  if (part.includes("boot") && Math.max(bootContactDeltaM, floorLiftM) > PREVIEW_QA_BOOT_FLOAT_WARN_M) warnings.push("boot_float");
   if (mesh?.userData?.fitPreview !== "vrm_bone_metrics") warnings.push("fallback_pose");
   return {
     part,
@@ -506,6 +1132,11 @@ function fitQaForMesh(part, mesh, module = {}) {
     state: warnings.length ? "planned" : "ready",
     warnings,
     gapM,
+    bootContactDeltaM,
+    floorLiftM,
+    bottomY,
+    topY,
+    centerY,
     sideProfileRatio,
     thicknessRatio,
     offsetAllowanceM: Math.max(0, numberOr(mesh?.userData?.fitOffsetAllowanceM, 0)),
@@ -522,51 +1153,152 @@ function summarizePreviewFitQa(records, meshes) {
   const byPart = Object.fromEntries(entries.map((entry) => [entry.part, entry]));
   const gapParts = entries.filter((entry) => entry.warnings.includes("gap")).map((entry) => entry.part);
   const thinParts = entries.filter((entry) => entry.warnings.includes("thin")).map((entry) => entry.part);
+  const bootFloatParts = entries.filter((entry) => entry.warnings.includes("boot_float")).map((entry) => entry.part);
   const fallbackPoseParts = entries.filter((entry) => entry.warnings.includes("fallback_pose")).map((entry) => entry.part);
-  const warningParts = Array.from(new Set([...gapParts, ...thinParts, ...fallbackPoseParts]));
+  const warningParts = Array.from(new Set([...gapParts, ...thinParts, ...bootFloatParts, ...fallbackPoseParts]));
   return {
     state: warningParts.length ? "planned" : "ready",
     totalParts: entries.length,
     warningCount: warningParts.length,
     gapParts,
     thinParts,
+    bootFloatParts,
     fallbackPoseParts,
     parts: byPart,
   };
 }
 
-function sidecarQaFor(records = previewRecordsFromData()) {
+function verticalSeamGap(upper, lower) {
+  if (!upper || !lower) return null;
+  return Math.max(0, upper.bottomY - lower.topY);
+}
+
+function continuityPairsForQa(parts) {
+  return [
+    ["chest", "waist", "chest-waist"],
+    ["back", "waist", "back-waist"],
+    ["waist", "left_thigh", "waist-left_thigh"],
+    ["left_thigh", "left_shin", "left_thigh-left_shin"],
+    ["left_shin", "left_boot", "left_shin-left_boot"],
+    ["waist", "right_thigh", "waist-right_thigh"],
+    ["right_thigh", "right_shin", "right_thigh-right_shin"],
+    ["right_shin", "right_boot", "right_shin-right_boot"],
+  ]
+    .map(([upperPart, lowerPart, label]) => {
+      const gapM = verticalSeamGap(parts?.[upperPart], parts?.[lowerPart]);
+      return gapM === null ? null : { label, upperPart, lowerPart, gapM };
+    })
+    .filter(Boolean);
+}
+
+function structuralQaForFit(summary) {
+  const parts = summary?.parts || {};
+  const gapParts = summary?.gapParts || [];
+  const bootFloatParts = summary?.bootFloatParts || [];
+  const back = parts.back;
+  const waist = parts.waist;
+  const backThicknessRatio = numberOr(back?.thicknessRatio, 1);
+  const waistGapM = Math.max(0, numberOr(waist?.gapM, 0));
+  const continuityPairs = continuityPairsForQa(parts);
+  const continuityBreaks = continuityPairs
+    .filter((entry) => entry.gapM > PREVIEW_QA_CONTINUITY_WARN_M);
+  const backThinParts = back && backThicknessRatio < PREVIEW_QA_BACK_THICKNESS_RATIO_WARN ? ["back"] : [];
+  const waistGapParts = waistGapM > PREVIEW_QA_WAIST_GAP_WARN_M ? ["waist"] : [];
+  const warningParts = Array.from(new Set([
+    ...gapParts,
+    ...bootFloatParts,
+    ...backThinParts,
+    ...waistGapParts,
+    ...continuityBreaks.flatMap((entry) => [entry.upperPart, entry.lowerPart]),
+  ]));
+  return {
+    state: warningParts.length ? "planned" : "ready",
+    warningCount: warningParts.length,
+    floatingParts: gapParts,
+    bootFloatParts,
+    backThinParts,
+    waistGapParts,
+    continuityBreaks,
+    warningParts,
+    backThicknessRatio,
+    waistGapM,
+    maxContinuityGapM: continuityPairs.reduce((max, entry) => Math.max(max, entry.gapM), 0),
+  };
+}
+
+function sidecarQaFor(records = previewRecordsFromData(), data = latestForgeData) {
   const entries = records.map(([part, module]) => sidecarMetadataForModule(part, module));
   const offsetEntries = entries.filter((entry) => entry.offsetTarget);
   const focusEntries = offsetEntries.filter((entry) => entry.part === "back" || entry.part.includes("boot"));
   const detailEntries = focusEntries.length ? focusEntries : offsetEntries.slice(0, 4);
   const offsetTargets = offsetEntries.map(offsetTargetLabel).filter(Boolean);
-  const toppingSlots = entries.flatMap((entry) => entry.toppingSlots.map((slot) => `${entry.part}:${slot}`));
-  const variantKeys = entries.filter((entry) => entry.variantKey).map((entry) => `${entry.part}:${entry.variantKey}`);
-  const offsetTitle = `${offsetEntries.length}/${records.length || 0} targets`;
-  const toppingTitle = toppingSlots.length ? `${toppingSlots.length} slots` : "no slots";
-  const variantTitle = variantKeys.length ? `${variantKeys.length} variants` : "default variants";
+  const sidecarToppingSlots = entries.flatMap((entry) => entry.toppingSlots.map((slot) => `${entry.part}:${slot}`));
+  const catalogStats = variantCatalogStatsForRecords(records, data);
+  const catalogToppingSlots = records.flatMap(([part]) => catalogToppingSlotEntriesForPart(part, data).map((entry) => entry.label));
+  const toppingSlots = Array.from(new Set([...sidecarToppingSlots, ...catalogToppingSlots]));
+  const sidecarVariantKeys = entries
+    .map((entry) => labeledVariantKey(entry.part, entry.variantKey))
+    .filter(Boolean);
+  const catalogVariantKeys = records
+    .flatMap(([part]) => catalogVariantKeysForPart(part, data).map((key) => labeledVariantKey(part, key)))
+    .filter(Boolean);
+  const variantKeys = Array.from(new Set([...sidecarVariantKeys, ...catalogVariantKeys]));
+  const p0Records = records.filter(([part]) => VISUAL_DENSITY_P0_PARTS.has(part));
+  const densityWarnings = p0Records
+    .map(([part]) => {
+      const slotCount = catalogToppingSlotsForPart(part, data).length;
+      const variantCount = catalogVariantKeysForPart(part, data).length;
+      const featureCount = catalogDetailFeatureCountForPart(part, data);
+      if (slotCount < VISUAL_DENSITY_MIN_P0_SLOTS) return `${part}:slot`;
+      if (variantCount < VISUAL_DENSITY_MIN_P0_VARIANTS) return `${part}:variant`;
+      if (featureCount < variantCount * 2) return `${part}:detail`;
+      return "";
+    })
+    .filter(Boolean);
+  const offsetTitle = `位置 ${offsetEntries.length}/${records.length || 0}`;
+  const toppingTitle = toppingSlots.length ? `枠 ${toppingSlots.length} / 衝突 ${catalogStats.conflictCount}` : "枠なし";
+  const variantTitle = variantKeys.length ? `型 ${variantKeys.length}` : "型 既定";
+  const densityTitle = densityWarnings.length
+    ? `要設計 ${densityWarnings.length}`
+    : `カタログ ${catalogStats.selectedModuleCount}部位`;
   return {
     state: offsetEntries.length ? "ready" : "planned",
-    title: `${offsetEntries.length}/${records.length || 0} offset targets`,
+    title: `位置基準 ${offsetEntries.length}/${records.length || 0}`,
     detail: detailEntries.length
       ? detailEntries.map(offsetTargetLabel).join(" / ")
-      : "attachment_offset_target_m pending",
+      : "装着位置基準は未設定",
     offsetTitle,
     offsetDetail: detailEntries.length
       ? compactDataList(detailEntries.map(offsetTargetLabel), 3)
-      : "back/boots offset target pending",
+      : "背中/ブーツの位置基準は未設定",
     offsetState: offsetEntries.length ? "ready" : "planned",
     toppingTitle,
-    toppingDetail: compactDataList(toppingSlots, 3, "topping_slots pending"),
+    toppingDetail: catalogStats.conflictCount
+      ? `衝突 ${compactDataList(catalogStats.conflictPairs, 2)}`
+      : `catalog枠 ${catalogToppingSlots.length} / sidecar ${sidecarToppingSlots.length} / 衝突なし`,
     toppingState: toppingSlots.length ? "ready" : "planned",
     variantTitle,
-    variantDetail: compactDataList(variantKeys, 3, "variant_key pending"),
+    variantDetail: `catalog型 ${catalogVariantKeys.length} / sidecar ${sidecarVariantKeys.length} / ${compactDataList(variantKeys, 2, "型キー未設定")}`,
     variantState: variantKeys.length ? "ready" : "planned",
+    densityTitle,
+    densityDetail: densityWarnings.length
+      ? compactDataList(densityWarnings, 4, "細部パーツ契約は未設定")
+      : `枠 ${catalogStats.selectedSlotCount} / 型 ${catalogStats.selectedVariantCount} / ${catalogStats.shortPath}`,
+    densityState: densityWarnings.length ? "planned" : "ready",
     offsetParts: offsetEntries.map((entry) => entry.part),
     offsetTargets,
     toppingSlots,
     variantKeys,
+    densityWarnings,
+    catalogPath: catalogStats.path,
+    catalogStatus: catalogStats.status,
+    catalogSelectedPartCount: catalogStats.selectedPartCount,
+    catalogSelectedModuleCount: catalogStats.selectedModuleCount,
+    catalogSlotCount: catalogStats.selectedSlotCount,
+    catalogVariantCount: catalogStats.selectedVariantCount,
+    conflictCount: catalogStats.conflictCount,
+    conflictPairs: catalogStats.conflictPairs,
+    conflictSlots: catalogStats.conflictSlots,
   };
 }
 
@@ -580,19 +1312,19 @@ function layerReadabilityFor(stand, records, surface) {
   const lineState = texturedParts > 0 || mockTexturedParts > 0 || surface?.state === "ready" ? "ready" : "planned";
   const state = baseVisible && armorParts > 0 && lineState === "ready" ? "ready" : armorParts > 0 ? "planned" : "queued";
   const armorText = glbParts > 0
-    ? `armor GLB ${glbParts}${fallbackParts > 0 ? ` + proxy ${fallbackParts}` : ""}`
+    ? `外装GLB ${glbParts}${fallbackParts > 0 ? ` + 代替形状 ${fallbackParts}` : ""}`
     : armorParts > 0
-    ? `armor proxy ${armorParts}`
-    : "armor pending";
+    ? `外装代替形状 ${armorParts}`
+    : "外装待機";
   const lineText = texturedParts > 0
-    ? `surface texture ${texturedParts}`
+    ? `表面テクスチャ ${texturedParts}`
     : mockTexturedParts > 0
-    ? `surface mock ${mockTexturedParts}`
-    : surface?.title || "surface pending";
+    ? `仮表面 ${mockTexturedParts}`
+    : surface?.title || "表面待機";
   return {
     state,
-    title: `${baseVisible ? "base visible" : "base pending"} / ${armorText}`,
-    detail: `${lineText} / parts ${records.length || armorParts}`,
+    title: `${baseVisible ? "基礎スーツ表示中" : "基礎スーツ待機"} / ${armorText}`,
+    detail: `${lineText} / パーツ ${records.length || armorParts}`,
   };
 }
 
@@ -605,20 +1337,23 @@ function fitQaSummaryFor(stand = armorStand) {
       detail: "背面/側面ビューでギャップ・薄さを採寸します。",
       gapParts: [],
       thinParts: [],
+      bootFloatParts: [],
       fallbackPoseParts: [],
     };
   }
   if (summary.warningCount) {
     const details = [];
-    if (summary.gapParts.length) details.push(`gap: ${compactPartList(summary.gapParts, 3)}`);
-    if (summary.thinParts.length) details.push(`thin: ${compactPartList(summary.thinParts, 3)}`);
-    if (summary.fallbackPoseParts.length) details.push(`fallback pose: ${compactPartList(summary.fallbackPoseParts, 2)}`);
+    if (summary.gapParts.length) details.push(`すき間: ${compactPartList(summary.gapParts, 3)}`);
+    if (summary.thinParts.length) details.push(`薄すぎ: ${compactPartList(summary.thinParts, 3)}`);
+    if (summary.bootFloatParts.length) details.push(`ブーツ浮き: ${compactPartList(summary.bootFloatParts, 2)}`);
+    if (summary.fallbackPoseParts.length) details.push(`基準姿勢補正: ${compactPartList(summary.fallbackPoseParts, 2)}`);
     return {
       state: summary.state,
       title: `要確認 ${summary.warningCount}/${summary.totalParts}`,
       detail: details.join(" / "),
       gapParts: summary.gapParts,
       thinParts: summary.thinParts,
+      bootFloatParts: summary.bootFloatParts,
       fallbackPoseParts: summary.fallbackPoseParts,
     };
   }
@@ -628,7 +1363,48 @@ function fitQaSummaryFor(stand = armorStand) {
     detail: "装着ギャップ・厚み比は警告なし。",
     gapParts: [],
     thinParts: [],
+    bootFloatParts: [],
     fallbackPoseParts: [],
+  };
+}
+
+function structureQaSummaryFor(stand = armorStand) {
+  const summary = stand?.previewStats?.structureQa || null;
+  if (!summary) {
+    return {
+      state: "planned",
+      title: "生成後に評価",
+      detail: "浮き・接触・背面・腰・ブーツ・連続性は生成後に採寸します。",
+      floatingParts: [],
+      bootFloatParts: [],
+      continuityBreaks: [],
+    };
+  }
+  if (summary.warningCount) {
+    const details = [];
+    if (summary.floatingParts.length) details.push(`浮き: ${compactPartList(summary.floatingParts, 3)}`);
+    if (summary.bootFloatParts.length) details.push(`ブーツ: ${compactPartList(summary.bootFloatParts, 2)}`);
+    if (summary.backThinParts.length) details.push(`背面厚み ${(summary.backThicknessRatio * 100).toFixed(0)}%`);
+    if (summary.waistGapParts.length) details.push(`腰すき間 ${summary.waistGapM.toFixed(3)}m`);
+    if (summary.continuityBreaks.length) {
+      details.push(`連続性: ${summary.continuityBreaks.slice(0, 2).map((entry) => entry.label).join(" / ")}`);
+    }
+    return {
+      state: summary.state,
+      title: `要確認 ${summary.warningCount}`,
+      detail: details.join(" / "),
+      floatingParts: summary.floatingParts,
+      bootFloatParts: summary.bootFloatParts,
+      continuityBreaks: summary.continuityBreaks,
+    };
+  }
+  return {
+    state: "ready",
+    title: "OK",
+    detail: `背面 ${(summary.backThicknessRatio * 100).toFixed(0)}% / 腰 ${summary.waistGapM.toFixed(3)}m / 連続性OK`,
+    floatingParts: [],
+    bootFloatParts: [],
+    continuityBreaks: [],
   };
 }
 
@@ -649,17 +1425,25 @@ function previewViewQaFor(stand = armorStand) {
   };
 }
 
-function publishQaDatasets(stand, coverage, fitQa, sidecarQa) {
+function publishQaDatasets(stand, coverage, fitQa, sidecarQa, structureQa) {
   const canvas = stand?.canvas;
   if (!canvas) return;
-  const qaReady = coverage.state === "ready" && fitQa.state === "ready";
+  const qaReady = coverage.state === "ready" && fitQa.state === "ready" && structureQa.state === "ready";
   canvas.dataset.previewQaState = qaReady ? "ready" : "planned";
   canvas.dataset.previewCoverageParts = String(coverage.selectedCount);
   canvas.dataset.previewExpectedParts = String(coverage.expectedCount);
   canvas.dataset.previewMissingParts = coverage.missingParts.join(",");
   canvas.dataset.previewFitGapParts = fitQa.gapParts.join(",");
   canvas.dataset.previewThinParts = fitQa.thinParts.join(",");
+  canvas.dataset.previewBootFloatParts = (fitQa.bootFloatParts || []).join(",");
   canvas.dataset.previewFallbackPoseParts = fitQa.fallbackPoseParts.join(",");
+  canvas.dataset.previewStructureQaState = structureQa.state;
+  canvas.dataset.previewFloatingParts = (structureQa.floatingParts || []).join(",");
+  canvas.dataset.previewGroundLiftParts = (structureQa.bootFloatParts || []).join(",");
+  canvas.dataset.previewContinuityBreaks = (structureQa.continuityBreaks || []).map((entry) => entry.label).join(",");
+  canvas.dataset.previewBackThicknessRatio = numberOr(stand?.previewStats?.structureQa?.backThicknessRatio, 1).toFixed(3);
+  canvas.dataset.previewWaistGapM = numberOr(stand?.previewStats?.structureQa?.waistGapM, 0).toFixed(3);
+  canvas.dataset.previewMaxContinuityGapM = numberOr(stand?.previewStats?.structureQa?.maxContinuityGapM, 0).toFixed(3);
   canvas.dataset.previewAttachmentOffsetParts = (sidecarQa?.offsetParts || []).join(",");
   canvas.dataset.previewAttachmentOffsetTargets = (sidecarQa?.offsetTargets || []).join("|");
   canvas.dataset.previewToppingSlots = (sidecarQa?.toppingSlots || []).join("|");
@@ -667,19 +1451,166 @@ function publishQaDatasets(stand, coverage, fitQa, sidecarQa) {
   canvas.dataset.previewAttachmentOffsetCount = String(sidecarQa?.offsetTargets?.length || 0);
   canvas.dataset.previewToppingSlotCount = String(sidecarQa?.toppingSlots?.length || 0);
   canvas.dataset.previewVariantKeyCount = String(sidecarQa?.variantKeys?.length || 0);
+  canvas.dataset.previewConflictCount = String(sidecarQa?.conflictCount || 0);
+  canvas.dataset.previewConflictSlots = (sidecarQa?.conflictSlots || []).join("|");
+  canvas.dataset.previewConflictsWith = (sidecarQa?.conflictPairs || []).join("|");
+  canvas.dataset.previewCatalogPath = sidecarQa?.catalogPath || "";
+  canvas.dataset.previewCatalogStatus = sidecarQa?.catalogStatus || "pending";
+  canvas.dataset.previewCatalogSelectedPartCount = String(sidecarQa?.catalogSelectedPartCount || 0);
+  canvas.dataset.previewSelectedModuleCount = String(sidecarQa?.catalogSelectedModuleCount || 0);
+  canvas.dataset.previewCatalogSlotCount = String(sidecarQa?.catalogSlotCount || 0);
+  canvas.dataset.previewCatalogVariantCount = String(sidecarQa?.catalogVariantCount || 0);
+  canvas.dataset.previewVisualDensityState = sidecarQa?.densityState || "planned";
+  canvas.dataset.previewVisualDensityWarnings = (sidecarQa?.densityWarnings || []).join("|");
+}
+
+function setPreviewModuleVariant(part, variantKey) {
+  if (!latestForgeData?.preview?.modules?.[part]) return false;
+  const key = firstString(variantKey);
+  if (!key || key === AUTO_VARIANT_VALUE) return false;
+  const assetRef = variantAssetRefForPart(part, key, latestForgeData);
+  if (!assetRef) return false;
+  const module = latestForgeData.preview.modules[part];
+  module.selected_variant_key = key;
+  module.variant_key = key;
+  module.asset_ref = assetRef;
+  const catalogModule = latestForgeData.asset_pipeline?.variant_catalog?.selected_modules?.[part]
+    || latestForgeData.preview?.variant_catalog?.selected_modules?.[part];
+  if (catalogModule && typeof catalogModule === "object") {
+    catalogModule.selected_variant_key = key;
+    catalogModule.asset_ref = assetRef;
+  }
+  const overlay = latestForgeData.visual_layers?.armor_overlay
+    || latestForgeData.preview?.visual_layers?.armor_overlay;
+  if (overlay && typeof overlay === "object") {
+    overlay.selected_variant_keys = { ...(overlay.selected_variant_keys || {}), [part]: key };
+    overlay.asset_refs = { ...(overlay.asset_refs || {}), [part]: assetRef };
+    const assets = overlay.assets && typeof overlay.assets === "object" ? overlay.assets : {};
+    overlay.assets = {
+      ...assets,
+      [part]: {
+        ...(assets[part] || {}),
+        module: part,
+        selected_variant_key: key,
+        asset_ref: assetRef,
+        asset_kind: assetRef.includes("/variants/") ? "variant_glb" : "canonical_glb",
+      },
+    };
+  }
+  const placement = variantRuntimePlacementForPreviewPart(part, key, assetRef, module);
+  setRuntimePlacementForPreviewPart(part, placement);
+  return true;
+}
+
+async function applyVariantOverrideToPreview(part, variantKey) {
+  if (!latestForgeData?.preview?.modules?.[part]) {
+    renderAssetPipeline(latestForgeData);
+    updatePreviewLayerPanel(latestForgeData);
+    return;
+  }
+  const changed = setPreviewModuleVariant(part, variantKey);
+  if (changed) {
+    setStatus(`${partLabel(part)}の型プレビューを読み込み中...`, "pending");
+    await armorStand.renderSuit(latestForgeData.preview);
+  }
+  renderAssetPipeline(latestForgeData);
+  updatePreviewLayerPanel(latestForgeData);
+  renderExhibitionSummary(latestForgeData);
+  if (changed) {
+    markQuestLinkStaleForPreview(`${partLabel(part)}の見た目だけ更新しました。Questへ反映するには再生成してください。`);
+  }
+}
+
+function syncVariantSelectsFromForgeData(data = latestForgeData) {
+  if (!data?.preview?.modules) return;
+  for (const [part, module] of Object.entries(data.preview.modules)) {
+    if (manualVariantOverrides.has(part)) continue;
+    const select = partVariantSelect(part);
+    const key = firstString(module?.selected_variant_key);
+    if (!select || !key) continue;
+    select.value = Array.from(select.options).some((option) => option.value === key)
+      ? key
+      : AUTO_VARIANT_VALUE;
+    const summary = select.parentElement?.querySelector(".part-variant-summary");
+    if (summary) summary.textContent = key ? `自動: ${variantDisplayNameJa(part, key)}` : summary.textContent;
+  }
+  renderExhibitionSummary(data);
 }
 
 function renderPartGrid() {
+  const previousSelections = Object.fromEntries(
+    Array.from(UI.partGrid.querySelectorAll("select[data-part-variant]"))
+      .map((select) => [select.dataset.partVariant, select.value]),
+  );
+  const checkedParts = new Set(selectedParts());
   UI.partGrid.innerHTML = "";
-  for (const [id, label, checked] of PARTS) {
-    const item = document.createElement("label");
+  for (const [id, rawLabel, checked] of PARTS) {
+    const label = partLabel(id) || rawLabel;
+    const item = document.createElement("div");
+    item.className = "part-option";
+    item.dataset.part = id;
+    const checkLabel = document.createElement("label");
+    checkLabel.className = "part-toggle";
     const input = document.createElement("input");
     input.type = "checkbox";
     input.value = id;
-    input.checked = checked;
-    item.append(input, document.createTextNode(label));
+    input.checked = checkedParts.size ? checkedParts.has(id) : checked;
+    const labelText = document.createElement("span");
+    labelText.textContent = label;
+    checkLabel.append(input, labelText);
+    item.append(checkLabel);
+
+    const variants = catalogVariantKeysForPart(id);
+    const variantSelect = document.createElement("select");
+    variantSelect.dataset.partVariant = id;
+    variantSelect.name = `variant_${id}`;
+    variantSelect.disabled = !input.checked || !variants.length;
+    variantSelect.setAttribute("aria-label", `${label}の型選択`);
+    if (!variants.length) {
+      const option = document.createElement("option");
+      option.value = AUTO_VARIANT_VALUE;
+      option.textContent = localVariantCatalogStatus === "error" ? "カタログ未読込" : "自動選定";
+      variantSelect.append(option);
+    } else {
+      const autoOption = document.createElement("option");
+      autoOption.value = AUTO_VARIANT_VALUE;
+      autoOption.textContent = "自動選定";
+      variantSelect.append(autoOption);
+      for (const variantKey of variants) {
+        const option = document.createElement("option");
+        option.value = variantKey;
+        const record = catalogVariantRecordForPart(id, variantKey);
+        const assetRef = variantAssetRefForPart(id, variantKey);
+        option.textContent = variantDisplayNameJa(id, variantKey, record?.display_name);
+        option.dataset.assetRef = assetRef;
+        variantSelect.append(option);
+      }
+      const preferred = previousSelections[id] || latestSelectedVariantKeyForPart(id) || AUTO_VARIANT_VALUE;
+      variantSelect.value = variants.includes(preferred) ? preferred : AUTO_VARIANT_VALUE;
+    }
+    const summary = document.createElement("small");
+    summary.className = "part-variant-summary";
+    summary.textContent = variants.length ? `自動 / ${variants.length}案` : localVariantCatalogStatus;
+    item.append(variantSelect, summary);
+    input.addEventListener("change", () => {
+      variantSelect.disabled = !input.checked || !variants.length;
+      renderAssetPipeline(latestForgeData);
+      updatePreviewLayerPanel(latestForgeData);
+      markQuestLinkStaleForPreview("外装パーツの選択を変更しました。Questへ反映するには再生成してください。");
+    });
+    variantSelect.addEventListener("change", () => {
+      if (variantSelect.value && variantSelect.value !== AUTO_VARIANT_VALUE) {
+        manualVariantOverrides.add(id);
+      } else {
+        manualVariantOverrides.delete(id);
+      }
+      applyVariantOverrideToPreview(id, variantSelect.value).catch((error) => {
+        console.warn(`variant preview update failed for ${id}: ${error?.message || error}`);
+      });
+    });
     UI.partGrid.append(item);
   }
+  renderExhibitionSummary(latestForgeData);
 }
 
 function syncPreviewLegendPalette() {
@@ -697,6 +1628,7 @@ function syncPreviewLegendPalette() {
 
 function renderPreviewLegend() {
   if (!UI.previewLegend) return;
+  // Static contract labels retained for tests: "Body reference" / "Base suit" / "Armor parts" / "Surface lines".
   const stats = armorStand?.previewStats || {};
   const armorParts = Number(stats.armorParts || 0);
   const glbParts = Number(stats.glbParts || 0);
@@ -704,21 +1636,49 @@ function renderPreviewLegend() {
   const texturedParts = Number(stats.texturedParts || 0);
   const mockTexturedParts = Number(stats.mockTexturedParts || 0);
   const readableItems = [
-    ["legend-skin", "Body reference", stats.vrmVisible === false ? "fallback" : "VRM"],
-    ["legend-suit", "Base suit", stats.baseSuitVisible === false ? "pending" : "visible"],
+    ["legend-skin", "人体基準", stats.vrmVisible === false ? "代替" : "VRM"],
+    ["legend-suit", "基礎スーツ", stats.baseSuitVisible === false ? "待機" : "表示中"],
     [
       "legend-armor",
-      "Armor parts",
-      glbParts > 0 ? `${glbParts} GLB${fallbackParts > 0 ? ` + ${fallbackParts} proxy` : ""}` : armorParts > 0 ? `${armorParts} proxy` : "pending",
+      "外装",
+      glbParts > 0 ? `${glbParts} GLB${fallbackParts > 0 ? ` + 補助${fallbackParts}` : ""}` : armorParts > 0 ? `補助${armorParts}` : "待機",
     ],
     [
       "legend-glow",
-      "Surface lines",
-      texturedParts > 0 ? `${texturedParts} texture` : mockTexturedParts > 0 ? `${mockTexturedParts} mock` : "planned",
+      "表面ライン",
+      texturedParts > 0 ? `${texturedParts}実体` : mockTexturedParts > 0 ? `${mockTexturedParts}仮` : "計画",
     ],
   ];
   UI.previewLegend.replaceChildren(
     ...readableItems.map(([className, label, status]) => {
+      const item = document.createElement("span");
+      item.dataset.previewLegend = className.replace("legend-", "");
+      const swatch = document.createElement("i");
+      swatch.className = className;
+      const labelNode = document.createElement("b");
+      labelNode.textContent = label;
+      const statusNode = document.createElement("small");
+      statusNode.textContent = status;
+      item.append(swatch, labelNode, statusNode);
+      return item;
+    }),
+  );
+  const publicLegendItems = [
+    ["legend-skin", "身体基準", stats.vrmVisible === false ? "代替" : "VRM"],
+    ["legend-suit", "基礎スーツ", stats.baseSuitVisible === false ? "待機" : "表示中"],
+    [
+      "legend-armor",
+      "外装パーツ",
+      glbParts > 0 ? `${glbParts} GLB${fallbackParts > 0 ? ` + 補助${fallbackParts}` : ""}` : armorParts > 0 ? `補助${armorParts}` : "待機",
+    ],
+    [
+      "legend-glow",
+      "表面ライン",
+      texturedParts > 0 ? `${texturedParts}読込` : mockTexturedParts > 0 ? `${mockTexturedParts}仮表示` : "計画中",
+    ],
+  ];
+  UI.previewLegend.replaceChildren(
+    ...publicLegendItems.map(([className, label, status]) => {
       const item = document.createElement("span");
       item.dataset.previewLegend = className.replace("legend-", "");
       const swatch = document.createElement("i");
@@ -788,8 +1748,8 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
   if (textureFailedCount > 0) {
     return {
       state: "planned",
-      title: `${textureFailedCount}/${declaredTextureCount} texture failed`,
-      detail: "SuitSpec texture_path exists, but the Web preview could not load it. Mock maps are not used here.",
+      title: `${textureFailedCount}/${declaredTextureCount} 表面読込要確認`,
+      detail: "SuitSpecにtexture_pathがありますが、Webプレビューで読み込めません。ここでは仮マップへ差し替えていません。",
     };
   }
   if (mockTexturedCount > 0) {
@@ -816,7 +1776,7 @@ function layerStateForSurface(data = latestForgeData, records = previewRecordsFr
   if (canRun) {
     return {
       state: "queued",
-      title: writesFinal ? "生成準備OK" : "Probe待機",
+      title: writesFinal ? "生成準備OK" : "表面確認待機",
       detail: writesFinal
         ? "表面を追加生成できます。"
         : "速度確認用の仮生成です。",
@@ -833,9 +1793,13 @@ function ensurePreviewLayerPanel() {
   if (previewLayerPanel?.isConnected) return previewLayerPanel;
   if (!UI.standStage) return null;
 
-  previewLayerPanel = document.createElement("div");
+  previewLayerPanel = document.createElement("details");
   previewLayerPanel.className = "preview-layer-panel";
+  previewLayerPanel.dataset.supportDiagnostics = "preview";
   previewLayerPanel.setAttribute("aria-live", "polite");
+  const summary = document.createElement("summary");
+  summary.textContent = "プレビュー診断";
+  previewLayerPanel.append(summary);
   UI.standStage.classList.add("has-layer-panel");
   UI.standStage.append(previewLayerPanel);
   return previewLayerPanel;
@@ -935,7 +1899,8 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
   const viewQa = previewViewQaFor(stand);
   const coverage = coverageQaFor(data, records);
   const fitQa = fitQaSummaryFor(stand);
-  const sidecarQa = sidecarQaFor(records);
+  const structureQa = structureQaSummaryFor(stand);
+  const sidecarQa = sidecarQaFor(records, data);
   const layerReadability = layerReadabilityFor(stand, records, surface);
   const baseState = stand?.previewStats?.baseSuitVisible === false ? "planned" : "ready";
   const armorState = armorParts > 0 ? "ready" : "planned";
@@ -945,19 +1910,21 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
     ? `仮形状 ${fallbackParts}パーツを表示。`
     : "人体基準で分割表示中。";
   renderPreviewLegend();
-  publishQaDatasets(stand, coverage, fitQa, sidecarQa);
+  publishQaDatasets(stand, coverage, fitQa, sidecarQa, structureQa);
   if (stand?.canvas) {
     stand.canvas.dataset.previewLayerReadability = layerReadability.state;
   }
-  setPreviewLayerRow(panel, "readability", "Layers", layerReadability.title, layerReadability.detail, layerReadability.state);
-  setPreviewLayerRow(panel, "sidecar", "Sidecar", sidecarQa.title, sidecarQa.detail, sidecarQa.state);
-  setPreviewLayerRow(panel, "offset", "Offset", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);
-  setPreviewLayerRow(panel, "topping", "Topping", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);
-  setPreviewLayerRow(panel, "variant", "Variant", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);
+  setPreviewLayerRow(panel, "readability", "表示層", layerReadability.title, layerReadability.detail, layerReadability.state);
+  setPreviewLayerRow(panel, "sidecar", "設計メタ", sidecarQa.title, sidecarQa.detail, sidecarQa.state);
+  setPreviewLayerRow(panel, "offset", "装着位置", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);
+  setPreviewLayerRow(panel, "topping", "追加意匠", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);
+  setPreviewLayerRow(panel, "variant", "型選択", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);
+  setPreviewLayerRow(panel, "density", "意匠QA", sidecarQa.densityTitle, sidecarQa.densityDetail, sidecarQa.densityState);
 
   setPreviewLayerRow(panel, "view", "ビュー", viewQa.title, viewQa.detail, viewQa.state);
   setPreviewLayerRow(panel, "coverage", "構成QA", coverage.title, coverage.detail, coverage.state);
   setPreviewLayerRow(panel, "fit", "装着QA", fitQa.title, fitQa.detail, fitQa.state);
+  setPreviewLayerRow(panel, "structure", "構造QA", structureQa.title, structureQa.detail, structureQa.state);
   setPreviewLayerRow(
     panel,
     "height",
@@ -988,6 +1955,7 @@ function updatePreviewLayerPanel(data = latestForgeData, stand = armorStand) {
 
 function formPayload() {
   const heightCm = declaredHeightCm();
+  const selected_variant_keys = selectedVariantMap({ explicitOnly: true });
   return {
     display_name: UI.displayName.value.trim(),
     archetype: UI.archetype.value,
@@ -1005,6 +1973,11 @@ function formPayload() {
     },
     brief: UI.brief.value.trim(),
     parts: selectedParts(),
+    variant_selection_mode: "auto",
+    variant_selection_provider: "sakura_ai",
+    selected_variant_keys,
+    selected_variants: selectedVariantRecords({ explicitOnly: true }),
+    variant_catalog_path: DEFAULT_VARIANT_CATALOG_PATH,
   };
 }
 
@@ -1025,19 +1998,100 @@ function questLinkOptions(code) {
   if (isLocalHost(currentHost) && lanUrl) {
     return {
       url: lanUrl,
-      hint: "Questでlocalhostが404になる場合はこのLAN URLを使うか、ADB reverse後にlocalhost:5173を開いてください。VR内では4桁コード入力でも呼び出せます。",
+      hint: "Quest BrowserでこのURLを開くとcode付きで起動します。表示されない場合は、VR内で同じ4桁コードを入力してください。",
     };
   }
   if (isLocalHost(currentHost)) {
     return {
       url: localhostUrl,
-      hint: "Questでlocalhostを使うにはADB reverseが必要です。VR内では左手メニューから4桁コードを入力できます。",
+      hint: "Questで開くにはADB reverseが必要です。VR内のコード入力でも同じ4桁コードを呼び出せます。",
     };
   }
   return {
     url: questViewerUrl(currentHost, code),
-    hint: "同じネットワークのQuest Browserで開き、VR内の4桁コード入力から呼び出せます。",
+    hint: "同じネットワークのQuest Browserで開けます。URLにも4桁コードを付けています。",
   };
+}
+
+function replaySaveUrlFromQuestUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl, window.location.href);
+    url.searchParams.set("replayView", "mirror");
+    return url.toString();
+  } catch {
+    return rawUrl || "#";
+  }
+}
+
+function setExhibitionLinkState(link, { href = "#", text, enabled = false, ariaLabel = "" } = {}) {
+  if (!link) return;
+  link.href = enabled ? href : "#";
+  link.textContent = text;
+  link.classList.toggle("disabled", !enabled);
+  link.setAttribute("aria-disabled", enabled ? "false" : "true");
+  if (enabled && ariaLabel) {
+    link.setAttribute("aria-label", ariaLabel);
+  } else {
+    link.removeAttribute("aria-label");
+  }
+}
+
+function renderExhibitionSummary(data = latestForgeData) {
+  if (!EXHIBITION_MODE || !UI.exhibitionSummary) return;
+  const code = data?.recall_code || "";
+  const stale = UI.questLink?.dataset.stalePreview === "true";
+  const enabled = Boolean(code) && !stale;
+  const quest = enabled ? questLinkOptions(code) : { url: "#", hint: "" };
+  UI.exhibitionSummary.hidden = false;
+  if (UI.exhibitionCode) UI.exhibitionCode.textContent = code || "----";
+  if (UI.exhibitionHeight) UI.exhibitionHeight.textContent = `${declaredHeightCm()}cm`;
+  if (UI.exhibitionVariant) UI.exhibitionVariant.textContent = selectedVariantSummaryJa();
+  setExhibitionLinkState(UI.exhibitionQuestLink, {
+    href: quest.url,
+    text: enabled ? "Questで開く/試す" : "生成後にQuestで試す",
+    enabled,
+    ariaLabel: enabled ? `Questで開く/試す。コード ${code}` : "",
+  });
+  setExhibitionLinkState(UI.replaySaveLink, {
+    href: replaySaveUrlFromQuestUrl(quest.url),
+    text: enabled ? "Questで試してReplay保存" : "生成後にReplay保存へ",
+    enabled,
+    ariaLabel: enabled ? `Questで試してReplay保存へ進む。コード ${code}` : "",
+  });
+  if (UI.exhibitionHint) {
+    UI.exhibitionHint.textContent = enabled
+      ? `${quest.hint} 体験後はQuest側の記録再生でReplayを保存・確認します。`
+      : "生成すると4桁コード、Questで開く/試す導線、Replay保存導線をここにまとめます。";
+  }
+}
+
+function applyExhibitionModePreference() {
+  document.body.dataset.exhibitionMode = EXHIBITION_MODE ? "true" : "false";
+  document.documentElement.dataset.exhibitionMode = EXHIBITION_MODE ? "true" : "false";
+  if (UI.exhibitionSummary) UI.exhibitionSummary.hidden = !EXHIBITION_MODE;
+  if (!EXHIBITION_MODE) return;
+  UI.resultDetails?.removeAttribute("open");
+  UI.supportDetails.forEach((details) => {
+    details.dataset.exhibitionPriority = "low";
+    details.removeAttribute("open");
+  });
+  renderExhibitionSummary();
+}
+
+function markQuestLinkStaleForPreview(message = "入力内容を変更しました。Questへ反映するには再生成してください。") {
+  if (!latestForgeData?.recall_code) return;
+  UI.questLink.href = "#";
+  UI.questLink.textContent = "再生成してQuestへ";
+  UI.questLink.classList.add("disabled");
+  UI.questLink.dataset.stalePreview = "true";
+  UI.questLink.setAttribute("aria-disabled", "true");
+  UI.questLink.removeAttribute("aria-label");
+  if (UI.questUrl) UI.questUrl.value = "再生成後に表示";
+  if (UI.questUrlHint) {
+    UI.questUrlHint.textContent = "表示中の4桁コードは変更前の結果です。Questで同じスーツを見るには、もう一度「生成してコード発行」を押してください。";
+  }
+  renderExhibitionSummary(latestForgeData);
+  setStatus(message, "pending");
 }
 
 function assertForgeReadiness(data) {
@@ -1067,6 +2121,7 @@ function renderAssetPipeline(data = null) {
   const textureProbe = pipeline?.texture_probe_job || {};
   const provider = TEXTURE_PROVIDER_PROFILE;
   const mode = texturePlan.texture_mode || "mesh_uv";
+  const variantSummary = selectedVariantSummary();
   const status = texturePlan.status || pipeline?.surface_generation_status || "planned_not_generated";
   const fitStatus = pipeline?.fit_status || modelPlan.fit_solver || "preview_vrm_bone_metrics";
   const meshStatus = modelPlan.mesh_source_status || "seed/proxy";
@@ -1091,11 +2146,23 @@ function renderAssetPipeline(data = null) {
     }
   }
 
+  if (UI.proxyWarning) {
+    const supportTitle = UI.proxyWarning.querySelector("strong");
+    const supportDetail = UI.proxyWarning.querySelector("span");
+    if (supportTitle) supportTitle.textContent = hasGeneratedPreview && glbParts > 0 ? "納品GLBを主表示" : "プレビュー補足";
+    if (supportDetail) {
+      supportDetail.textContent = hasGeneratedPreview && glbParts > 0
+        ? `納品GLB ${glbParts}パーツを表示中${fallbackParts > 0 ? `。補助仮形状 ${fallbackParts}パーツあり` : ""}。`
+        : "納品GLBが読み込まれるまで仮形状が出る場合があります。設営時はサポート診断を確認してください。";
+    }
+  }
+
   UI.assetPipeline.classList.remove("pending", "planned", "complete", "error");
   if (!hasGeneratedPreview) {
     UI.assetPipeline.classList.add("pending");
     UI.assetPipelineTitle.textContent = "レイヤー待機中";
     UI.assetPipelineDetail.textContent = `基礎スーツ層: ${baseReady ? "表示中" : "待機中"} / 装甲パーツ層: ${selectedCount}パーツ選択中 / 構成QA: ${coverage.title} / 仮プロキシ / 表面: ${provider}`;
+    UI.assetPipelineDetail.textContent += ` / Variant: ${variantSummary}`;
     updatePreviewLayerPanel(data);
     return;
   }
@@ -1109,6 +2176,7 @@ function renderAssetPipeline(data = null) {
     `構成QA: ${coverage.title}`,
     `装着QA: ${fitQa.title}`,
   ].join(" / ");
+  UI.assetPipelineDetail.textContent += ` / Variant: ${variantSummary}`;
   updatePreviewLayerPanel(data);
 }
 
@@ -1127,6 +2195,32 @@ function friendlyTextureStage(stage) {
   return "生成中";
 }
 
+function textureJobButtons() {
+  return [UI.textureJobButton, UI.textureQuickButton].filter(Boolean);
+}
+
+function setTextureJobButtonsDisabled(disabled) {
+  for (const button of textureJobButtons()) {
+    button.disabled = disabled;
+  }
+}
+
+function setTextureJobButtonsText(text) {
+  for (const button of textureJobButtons()) {
+    button.textContent = text;
+  }
+}
+
+function setTextureQuickState(state, title, detail) {
+  if (!UI.textureQuickAction) return;
+  UI.textureQuickAction.classList.remove("pending", "running", "complete", "error");
+  UI.textureQuickAction.classList.add(state);
+  UI.textureQuickAction.dataset.textureState = state;
+  if (UI.textureQuickDetail) {
+    UI.textureQuickDetail.textContent = title ? `${title} / ${detail}` : detail;
+  }
+}
+
 function setTextureJobState(state, title, detail, progress = 0) {
   if (!UI.textureJobPanel || !UI.textureJobTitle || !UI.textureJobDetail || !UI.textureJobMeter) return;
   UI.textureJobPanel.classList.remove("pending", "running", "complete", "error");
@@ -1134,6 +2228,7 @@ function setTextureJobState(state, title, detail, progress = 0) {
   UI.textureJobTitle.textContent = title;
   UI.textureJobDetail.textContent = detail;
   UI.textureJobMeter.style.width = `${clamp(progress, 0, 1) * 100}%`;
+  setTextureQuickState(state, title, detail);
   updatePreviewLayerPanel(latestForgeData);
 }
 
@@ -1148,20 +2243,20 @@ function textureJobWritesFinal(data = latestForgeData) {
 }
 
 function updateTextureJobAvailability(data = latestForgeData) {
-  if (!UI.textureJobButton) return;
+  if (!textureJobButtons().length) return;
   const pipeline = data?.asset_pipeline || data?.preview?.asset_pipeline || null;
   const job = textureJobContract(data);
   const template = job?.payload || pipeline?.job_payload_template;
   const canRun = Boolean(template?.suitspec);
   const writesFinal = textureJobWritesFinal(data);
-  UI.textureJobButton.disabled = !canRun;
+  setTextureJobButtonsDisabled(!canRun);
   if (!canRun) {
     setTextureJobState("pending", "未開始", "鎧を生成すると、表面/テクスチャ層を追加できます。", 0);
   } else if (!UI.textureJobPanel?.classList.contains("running") && !UI.textureJobPanel?.classList.contains("complete")) {
-    UI.textureJobButton.textContent = writesFinal ? "本番表面生成" : "表面Probeを試す";
+    setTextureJobButtonsText(writesFinal ? "本番表面生成" : "表面確認を試す");
     setTextureJobState(
       "pending",
-      writesFinal ? "本番表面生成待機" : "表面Probe待機",
+      writesFinal ? "本番表面生成待機" : "表面確認待機",
       writesFinal
         ? "モデル品質Gate通過。生成結果をSuitSpecへ反映します。"
         : "モデル品質Gate前は速度確認と仮貼り用途です。",
@@ -1264,10 +2359,8 @@ function updateTextureJobFromSnapshot(snapshot) {
   const result = snapshot.result || {};
   const textureSummaryText = textureGenerationSummaryText(textureGenerationSummaryFromSnapshot(snapshot));
   if (snapshot.status === "completed") {
-    if (UI.textureJobButton) {
-      UI.textureJobButton.disabled = false;
-      UI.textureJobButton.textContent = textureJobWritesFinal() ? "本番表面再生成" : "表面Probe再試行";
-    }
+    setTextureJobButtonsDisabled(false);
+    setTextureJobButtonsText(textureJobWritesFinal() ? "本番表面再生成" : "表面確認を再試行");
     setTextureJobState(
       "complete",
       `表面生成完了 ${result.generated_count ?? done}/${total || result.generated_count || done}`,
@@ -1276,11 +2369,12 @@ function updateTextureJobFromSnapshot(snapshot) {
     );
     if (textureSummaryText && UI.textureJobDetail) {
       UI.textureJobDetail.textContent = `${UI.textureJobDetail.textContent} / ${textureSummaryText}`;
+      if (UI.textureQuickDetail) UI.textureQuickDetail.textContent = UI.textureJobDetail.textContent;
     }
     return;
   }
   if (snapshot.status === "failed" || snapshot.status === "cancelled") {
-    if (UI.textureJobButton) UI.textureJobButton.disabled = false;
+    setTextureJobButtonsDisabled(false);
     setTextureJobState("error", "表面生成に失敗", snapshot.error || "表面テクスチャを生成できませんでした。", progress);
     return;
   }
@@ -1327,12 +2421,12 @@ async function startTextureGeneration() {
   const payload = textureJobPayload(latestForgeData);
   const links = textureJobLinks(latestForgeData);
   const createUrl = links.create_generation_job || "/api/generation-jobs";
-  UI.textureJobButton.disabled = true;
-  UI.textureJobButton.textContent = "生成中...";
+  setTextureJobButtonsDisabled(true);
+  setTextureJobButtonsText("生成中...");
   textureJobStartedAt = performance.now();
   setTextureJobState(
     "running",
-    textureJobWritesFinal() ? "本番表面生成を開始" : "表面Probeを開始",
+    textureJobWritesFinal() ? "本番表面生成を開始" : "表面確認を開始",
     textureJobWritesFinal()
       ? "装甲パーツの表面テクスチャを生成し、SuitSpecへ反映します。"
       : "装甲パーツの表面テクスチャを速度確認用に準備しています。",
@@ -1525,19 +2619,19 @@ function createBaseSuitTexture(palette = {}) {
 }
 
 function createBaseSuitMaterial(palette = {}, options = {}) {
-  const opacity = numberOr(options.opacity, 0.94);
+  const opacity = clamp(numberOr(options.opacity, 1), 0.5, 1);
   const suit = resolveBaseSuitPalette(palette);
   return new THREE.MeshStandardMaterial({
     name: "vrm-body-suit-surface-material",
     color: suit.base,
     map: createBaseSuitTexture(palette),
     emissive: suit.glow.clone().lerp(new THREE.Color(BASE_SUIT_EMISSIVE), 0.55),
-    emissiveIntensity: numberOr(options.emissiveIntensity, 0.16),
+    emissiveIntensity: numberOr(options.emissiveIntensity, 0.22),
     metalness: 0.14,
     roughness: 0.48,
-    transparent: opacity < 1,
+    transparent: opacity < 0.995,
     opacity,
-    depthWrite: false,
+    depthWrite: opacity >= 0.98,
     side: THREE.DoubleSide,
   });
 }
@@ -1547,8 +2641,8 @@ function baseSuitMaterialKey(palette = {}, options = {}) {
     primary: palette.primary || BASE_SUIT_COLOR,
     secondary: palette.secondary || "#52777E",
     emissive: palette.emissive || BASE_SUIT_EMISSIVE,
-    opacity: numberOr(options.opacity, 0.94),
-    emissiveIntensity: numberOr(options.emissiveIntensity, 0.18),
+    opacity: numberOr(options.opacity, 1),
+    emissiveIntensity: numberOr(options.emissiveIntensity, 0.22),
   });
 }
 
@@ -2108,6 +3202,7 @@ class ArmorStand {
       viewPreset: "front",
       viewLabel: PREVIEW_VIEW_PRESETS.front.label,
       fitQa: null,
+      structureQa: null,
     };
     this.scene.add(this.group);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8ca5a1, 1.55));
@@ -2587,7 +3682,12 @@ class ArmorStand {
   }
 
   fitOffsetAllowanceForPart(part, module, segmentQuat = null) {
-    const offsetTarget = sidecarMetadataForModule(part, module).offsetTarget;
+    const sidecar = sidecarMetadataForModule(part, module);
+    if (Number.isFinite(sidecar.offsetLimitM)) {
+      return clamp(Math.abs(sidecar.offsetLimitM), 0, 0.18);
+    }
+    const offsetTarget = runtimeOffsetForPreviewPart(part, module)
+      || wornPlacementOffsetForPart(part, sidecar.offsetTarget);
     if (!offsetTarget) return 0;
     const offset = new THREE.Vector3(offsetTarget[0], offsetTarget[1], offsetTarget[2]);
     if (segmentQuat) offset.applyQuaternion(segmentQuat);
@@ -2606,6 +3706,8 @@ class ArmorStand {
   }
 
   targetSizeForPart(part, module, metrics) {
+    const runtimeTarget = runtimeTargetSizeForPreviewPart(part, module);
+    if (runtimeTarget) return runtimeTarget;
     const shoulder = metrics.shoulderWidth;
     const torso = metrics.torsoHeight;
     const arm = Math.max(metrics.upperArmLength, 0.24);
@@ -2652,7 +3754,7 @@ class ArmorStand {
         break;
       case "left_boot":
       case "right_boot":
-        size = new THREE.Vector3(shoulder * 0.18, shoulder * 0.13, shoulder * 0.42);
+        size = new THREE.Vector3(shoulder * 0.21, shoulder * 0.26, shoulder * 0.39);
         break;
       default:
         size = new THREE.Vector3(0.24, 0.24, 0.24);
@@ -2673,13 +3775,13 @@ class ArmorStand {
         center = metrics.head?.clone().add(new THREE.Vector3(0, 0.04, metrics.shoulderWidth * 0.04));
         break;
       case "chest":
-        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, metrics.shoulderWidth * 0.13));
+        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.08, metrics.shoulderWidth * 0.10));
         break;
       case "back":
-        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.07, -metrics.shoulderWidth * 0.18));
+        center = midpoint(metrics.shouldersCenter, metrics.torsoCenter)?.add(new THREE.Vector3(0, -metrics.torsoHeight * 0.07, -metrics.shoulderWidth * 0.115));
         break;
       case "waist":
-        center = metrics.hips?.clone().add(new THREE.Vector3(0, metrics.torsoHeight * 0.05, metrics.shoulderWidth * 0.08));
+        center = metrics.hips?.clone().add(new THREE.Vector3(0, metrics.torsoHeight * 0.045, metrics.shoulderWidth * 0.018));
         break;
       case "left_shoulder":
         center = metrics.leftShoulder?.clone().add(new THREE.Vector3(-metrics.shoulderWidth * 0.08, 0, metrics.shoulderWidth * 0.04));
@@ -2694,10 +3796,10 @@ class ArmorStand {
         center = metrics.rightHand?.clone().add(new THREE.Vector3(0, 0, metrics.shoulderWidth * 0.05));
         break;
       case "left_boot":
-        center = metrics.leftFoot?.clone().add(new THREE.Vector3(0, 0.02, metrics.shoulderWidth * 0.1));
+        center = metrics.leftFoot?.clone().add(new THREE.Vector3(0, 0.0, metrics.shoulderWidth * 0.018));
         break;
       case "right_boot":
-        center = metrics.rightFoot?.clone().add(new THREE.Vector3(0, 0.02, metrics.shoulderWidth * 0.1));
+        center = metrics.rightFoot?.clone().add(new THREE.Vector3(0, 0.0, metrics.shoulderWidth * 0.018));
         break;
       default: {
         const [start, end] = this.segmentForPart(part, metrics);
@@ -2709,23 +3811,48 @@ class ArmorStand {
       if (anchorBone) center = anchorBone;
     }
     if (!center) return null;
-    center = addOrientedOffset(center, sidecar.offsetTarget || anchor.offset, segmentQuat);
+    const placementOffset = runtimeOffsetForPreviewPart(part, module)
+      || wornPlacementOffsetForPart(part, sidecar.placementOffset || sidecar.offsetTarget || anchor.offset);
+    center = addOrientedOffset(center, placementOffset || [0, 0, 0], segmentQuat);
     center.y += clamp(numberOr(fit.offsetY, 0), -0.42, 0.42) * 0.12;
     center.z += clamp(numberOr(fit.zOffset, 0), -0.25, 0.25) * 0.55 * front;
     return center;
   }
 
+  enforceWornCenterForPart(part, center, targetSize, metrics) {
+    if (!center || !targetSize) return center;
+    const next = center.clone();
+    const reference = this.fitReferenceCenterForPart(part, metrics);
+    if (reference && (part === "chest" || part === "back" || part === "waist")) {
+      next.z = reference.z + wornDepthClamp(part, next.z - reference.z, metrics.shoulderWidth);
+    }
+    if (part.includes("boot")) {
+      const foot = part.startsWith("left_") ? metrics.leftFoot : metrics.rightFoot;
+      const floorCenterY = PREVIEW_FLOOR_Y + targetSize.y * 0.5 + 0.004;
+      next.y = floorCenterY;
+      if (foot) {
+        next.x = foot.x;
+        next.z = foot.z + wornDepthClamp(part, next.z - foot.z, metrics.shoulderWidth);
+      }
+    }
+    return next;
+  }
+
   vrmPoseFor(part, module, mesh) {
     if (!this.vrmModel || !this.boneMap.size) return null;
     const metrics = this.measureVrmMetrics();
-    const center = this.targetCenterForPart(part, module, metrics);
-    if (!center) return null;
+    const rawCenter = this.targetCenterForPart(part, module, metrics);
     const targetSize = this.targetSizeForPart(part, module, metrics);
+    const center = this.enforceWornCenterForPart(part, rawCenter, targetSize, metrics);
+    if (!center) return null;
     const sourceSize = mesh.userData?.sourceSize || new THREE.Vector3(1, 1, 1);
     const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);
     const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);
+    const referenceCenter = this.fitReferenceCenterForPart(part, metrics);
     const anchor = effectiveVrmAnchorFor(part, module);
-    const rotation = fitVector(anchor.rotation, [0, 0, 0]).map((degrees) => THREE.MathUtils.degToRad(degrees));
+    const runtimeRotation = runtimeRotationForPreviewPart(part, module);
+    const rotation = runtimeRotation
+      || fitVector(anchor.rotation, [0, 0, 0]).map((degrees) => THREE.MathUtils.degToRad(degrees));
     const anchorQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "XYZ"));
     const quaternion = segmentQuat ? segmentQuat.clone().multiply(anchorQuat).normalize() : null;
     const anchorScale = fitVector(anchor.scale, [1, 1, 1]);
@@ -2744,7 +3871,9 @@ class ArmorStand {
       targetSize: targetSize.toArray(),
       fitGapM: this.fitClearanceForPart(part, center, targetSize, metrics, module, segmentQuat),
       fitOffsetAllowanceM: this.fitOffsetAllowanceForPart(part, module, segmentQuat),
+      fitReferencePoint: referenceCenter?.toArray() || null,
       attachmentOffsetTargetM: sidecarMetadataForModule(part, module).offsetTarget,
+      runtimePlacementSource: runtimePlacementForPreviewPart(part, module)?.target_size_source || null,
     };
   }
 
@@ -2758,7 +3887,9 @@ class ArmorStand {
       targetSize: fallbackPose.s,
       fitGapM: 0,
       fitOffsetAllowanceM: 0,
+      fitReferencePoint: null,
       attachmentOffsetTargetM: sidecarMetadataForModule(part, module).offsetTarget,
+      runtimePlacementSource: null,
     };
     mesh.position.set(...pose.p);
     if (pose.q) mesh.quaternion.set(...pose.q);
@@ -2768,7 +3899,9 @@ class ArmorStand {
     mesh.userData.fitTargetSize = pose.targetSize || fallbackPose.s;
     mesh.userData.fitGapM = numberOr(pose.fitGapM, 0);
     mesh.userData.fitOffsetAllowanceM = numberOr(pose.fitOffsetAllowanceM, 0);
+    mesh.userData.fitReferencePoint = pose.fitReferencePoint || null;
     mesh.userData.attachmentOffsetTargetM = pose.attachmentOffsetTargetM || null;
+    mesh.userData.runtimePlacementSource = pose.runtimePlacementSource || null;
   }
 
   getBaseSuitMaterial(palette = this.currentPalette, options = {}) {
@@ -2784,7 +3917,7 @@ class ArmorStand {
   refreshBaseSuitSurface(palette = this.currentPalette) {
     this.currentPalette = palette || {};
     if (!this.vrmModel) return;
-    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 1, emissiveIntensity: 0.22 });
     this.vrmModel.traverse((obj) => {
       if (!obj.isMesh) return;
       if (obj.material !== material && obj.userData.baseSuitSurface !== "vrm_surface_texture") {
@@ -2797,7 +3930,7 @@ class ArmorStand {
   }
 
   prepareVrmMannequin(model) {
-    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 0.88, emissiveIntensity: 0.18 });
+    const material = this.getBaseSuitMaterial(this.currentPalette, { opacity: 1, emissiveIntensity: 0.22 });
     const originalMaterials = new Set();
     model.traverse((obj) => {
       if (!obj.isMesh) return;
@@ -2857,6 +3990,7 @@ class ArmorStand {
       disposeMaterial(child.material);
     }
     this.previewStats.fitQa = null;
+    this.previewStats.structureQa = null;
   }
 
   async renderSuit(suitspec) {
@@ -2908,6 +4042,7 @@ class ArmorStand {
     this.previewStats.textureFailedParts = meshes.filter((mesh) => mesh.userData.textureLoadFailed).length;
     this.previewStats.mockTexturedParts = meshes.filter((mesh) => mesh.userData.textureMockPreview).length;
     this.previewStats.fitQa = summarizePreviewFitQa(records, meshes);
+    this.previewStats.structureQa = structuralQaForFit(this.previewStats.fitQa);
     this.publishPreviewStats();
   }
 
@@ -2934,11 +4069,20 @@ class ArmorStand {
 armorStand = new ArmorStand(UI.canvas);
 
 if (UI.heightCm) {
-  UI.heightCm.addEventListener("input", () => syncHeightControls(UI.heightCm.value));
-  UI.heightCm.addEventListener("change", () => syncHeightControls(UI.heightCm.value));
+  UI.heightCm.addEventListener("input", () => {
+    syncHeightControls(UI.heightCm.value);
+    markQuestLinkStaleForPreview("身長を変更しました。Questへ反映するには再生成してください。");
+  });
+  UI.heightCm.addEventListener("change", () => {
+    syncHeightControls(UI.heightCm.value);
+    markQuestLinkStaleForPreview("身長を変更しました。Questへ反映するには再生成してください。");
+  });
 }
 if (UI.heightRange) {
-  UI.heightRange.addEventListener("input", () => syncHeightControls(UI.heightRange.value));
+  UI.heightRange.addEventListener("input", () => {
+    syncHeightControls(UI.heightRange.value);
+    markQuestLinkStaleForPreview("身長を変更しました。Questへ反映するには再生成してください。");
+  });
 }
 UI.resetViewButton?.addEventListener("click", () => armorStand?.resetView());
 UI.zoomOutButton?.addEventListener("click", () => armorStand?.zoomBy(1.1));
@@ -2948,40 +4092,47 @@ syncHeightControls(UI.heightCm?.value || DEFAULT_HEIGHT_CM);
 
 function applyResult(data) {
   latestForgeData = data;
+  syncVariantSelectsFromForgeData(data);
   const quest = questLinkOptions(data.recall_code || "");
-  UI.recallCode.textContent = data.recall_code || "----";
+  const recallCode = data.recall_code || "----";
+  UI.recallCode.textContent = recallCode;
+  UI.recallCode.setAttribute("aria-label", `Quest入力コード ${recallCode}`);
   UI.questLink.href = quest.url;
+  UI.questLink.textContent = "Quest入力ページを開く";
   UI.questLink.classList.remove("disabled");
+  delete UI.questLink.dataset.stalePreview;
   UI.questLink.setAttribute("aria-disabled", "false");
+  UI.questLink.setAttribute("aria-label", `Quest入力ページを開く。コード ${recallCode}`);
   if (UI.questUrl) UI.questUrl.value = quest.url;
   if (UI.questUrlHint) UI.questUrlHint.textContent = quest.hint;
   renderAssetPipeline(data);
   updateModelerHandoff(data);
   updateTextureJobAvailability(data);
+  renderExhibitionSummary(data);
   UI.emptyStand.classList.add("hidden");
 }
 
 async function submitForge(event) {
   event.preventDefault();
   latestForgeData = null;
-  if (UI.textureJobButton) UI.textureJobButton.textContent = "表面生成を試す";
+  setTextureJobButtonsText("表面生成を試す");
   updateTextureJobAvailability(null);
   UI.button.disabled = true;
   syncHeightControls(UI.heightCm?.value);
-  setStatus("生成条件を送信中...", "pending");
+  setStatus(EXHIBITION_OPERATOR_COPY.forge.submitting, "pending");
   try {
     const data = await fetchJson("/v1/suits/forge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formPayload()),
     });
-    setStatus("人体基準の鎧立てを構築中...", "pending");
+    setStatus(EXHIBITION_OPERATOR_COPY.forge.assembling, "pending");
     await armorStand.renderSuit(data.preview);
-    setStatus("Quest接続情報を確認中...", "pending");
+    setStatus(EXHIBITION_OPERATOR_COPY.forge.questPreparing, "pending");
     await ensureRuntimeInfo();
     assertForgeReadiness(data);
     applyResult(data);
-    setStatus("生成完了 / Quest入力準備OK", "complete");
+    setStatus(EXHIBITION_OPERATOR_COPY.forge.complete, "complete");
   } catch (error) {
     setStatus(String(error?.message || error), "error");
   } finally {
@@ -2989,21 +4140,34 @@ async function submitForge(event) {
   }
 }
 
+applyExhibitionModePreference();
 renderPartGrid();
+loadLocalVariantCatalog();
 renderPreviewLegend();
 renderAssetPipeline();
 syncPreviewLegendPalette();
+renderServiceConfig();
 updateTextureJobAvailability();
 updateModelerHandoff();
 updatePreviewLayerPanel(latestForgeData);
 runtimeInfoPromise = loadRuntimeInfo();
 UI.form.addEventListener("submit", submitForge);
-for (const colorInput of [UI.primaryColor, UI.secondaryColor, UI.emissiveColor]) {
-  colorInput?.addEventListener("input", syncPreviewLegendPalette);
+for (const input of [UI.displayName, UI.archetype, UI.temperament, UI.brief]) {
+  input?.addEventListener("input", () => markQuestLinkStaleForPreview("入力内容を変更しました。Questへ反映するには再生成してください。"));
+  input?.addEventListener("change", () => markQuestLinkStaleForPreview("入力内容を変更しました。Questへ反映するには再生成してください。"));
 }
-UI.textureJobButton?.addEventListener("click", () => {
+for (const colorInput of [UI.primaryColor, UI.secondaryColor, UI.emissiveColor]) {
+  colorInput?.addEventListener("input", () => {
+    syncPreviewLegendPalette();
+    markQuestLinkStaleForPreview("配色を変更しました。Questへ反映するには再生成してください。");
+  });
+}
+function runTextureGenerationFromUi() {
   startTextureGeneration().catch((error) => {
     setTextureJobState("error", "表面生成エラー", String(error?.message || error), 0);
     updateTextureJobAvailability(latestForgeData);
   });
-});
+}
+
+UI.textureJobButton?.addEventListener("click", runTextureGenerationFromUi);
+UI.textureQuickButton?.addEventListener("click", runTextureGenerationFromUi);

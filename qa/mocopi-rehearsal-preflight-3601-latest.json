@@ -1,0 +1,115 @@
+{
+  "contract_version": "mocopi-rehearsal-preflight.v1",
+  "code": "3601",
+  "api_url": "http://127.0.0.1:8010/api/quest-debug/latest",
+  "current_gate_label": "mocopi-DEMO-ONLY",
+  "ready_to_start_physical_rehearsal": true,
+  "ready_for_public_mocopi": false,
+  "static_checks": {
+    "ok": true,
+    "missing_files": [],
+    "viewer_tokens_ok": true,
+    "missing_viewer_tokens": [],
+    "doc_tokens_ok": true,
+    "missing_doc_tokens": [],
+    "known_reception_points": [
+      "probe_mocopi_udp.py confirms phone-to-PC UDP reachability without storing raw motion payloads",
+      "Quest archive/replay diagnostic can display MOCOPI/BODY/STATIC",
+      "capture_quest_debug_snapshot.ps1 records ADB, Quest debug API, centerline, and optional screencap",
+      "evaluate_mocopi_evidence_pack.py judges BODY baseline, MOCOPI candidate, and fallback recovery packs",
+      "export_mocopi_rehearsal_plan.py turns evaluation into stage/fallback plan"
+    ]
+  },
+  "command_checks": {
+    "skipped": false,
+    "commands": {
+      "python": {
+        "present": true
+      },
+      "node": {
+        "present": true
+      },
+      "npm": {
+        "present": true
+      },
+      "adb": {
+        "present": true
+      }
+    },
+    "ok": true
+  },
+  "port_checks": {
+    "skipped": false,
+    "ports": {
+      "8010": true,
+      "5173": true
+    },
+    "ok": true
+  },
+  "adb_checks": {
+    "skipped": false,
+    "adb_present": true,
+    "device_authorized": true,
+    "unauthorized": false,
+    "reverse_5173": true,
+    "reverse_8010": true,
+    "raw_devices": "List of devices attached\n2G0YC5ZF9P05Z2         device product:eureka model:Quest_3 device:eureka transport_id:2",
+    "raw_reverse": "UsbFfs tcp:5173 tcp:5173\nUsbFfs tcp:8010 tcp:8010"
+  },
+  "quest_debug_api": {
+    "skipped": false,
+    "ok": true,
+    "telemetry_code": "3601",
+    "user_agent_is_quest": true,
+    "ux_state": "armor_stand_observer_idle",
+    "xr_session": true,
+    "motion_token": "MOCOPI 7f",
+    "centerline_verdict": "warn",
+    "centerline_classification": "mixed"
+  },
+  "source_evaluation": {
+    "present": false
+  },
+  "missing_reception_points": [],
+  "blocking_items": [],
+  "warnings": [
+    "No evaluation JSON supplied; physical mocopi evidence packs are not evaluated yet."
+  ],
+  "operator_next_actions": [
+    "Capture BODY baseline pack before mocopi.",
+    "Pair and calibrate mocopi sensors; confirm six sensors stay connected for 60 seconds.",
+    "Capture MOCOPI candidate pack with -QaCenterline -Screencap.",
+    "Disable/bypass mocopi and capture BODY/static fallback recovery within 60 seconds."
+  ],
+  "codex_next_commands": [
+    "python tools/probe_mocopi_udp.py --port 12351 --seconds 20 --out qa\\mocopi-udp-probe-latest.json",
+    ".\\tools\\capture_quest_debug_snapshot.ps1 -Code 3601 -QaCenterline",
+    ".\\tools\\capture_quest_debug_snapshot.ps1 -Code 3601 -QaCenterline -Screencap",
+    "python tools/evaluate_mocopi_evidence_pack.py --body-baseline qa\\logs\\quest-<body> --mocopi-candidate qa\\logs\\quest-<mocopi> --fallback-recovery qa\\logs\\quest-<fallback> --code 3601 --report-json"
+  ],
+  "fallback_procedure": [
+    "Stop claiming mocopi in operator/public wording.",
+    "Disable or bypass the mocopi source.",
+    "Keep the same Quest URL code=3601; return to BODY/static without changing the visitor URL.",
+    "Capture fallback recovery evidence within 60 seconds.",
+    "If recovery fails, label mocopi-NO-GO and continue only with the stable BODY/static route."
+  ],
+  "go_demo_no_go_rules": {
+    "mocopi-GO": [
+      "local stack and Quest USB/reverse are currently reachable",
+      "evaluation JSON label is mocopi-GO",
+      "BODY baseline, MOCOPI candidate, and fallback recovery packs pass",
+      "manual pairing/calibration, latency, freeze/drop, left/right, consent, and retention gates are documented"
+    ],
+    "mocopi-DEMO-ONLY": [
+      "local stack and Quest USB/reverse are reachable",
+      "MOCOPI can be rehearsed with an operator",
+      "one or more manual GO gates or evidence packs are still missing"
+    ],
+    "mocopi-NO-GO": [
+      "required local files or diagnostics are missing",
+      "8010/5173, adb authorization, adb reverse, or Quest debug API is not ready",
+      "BODY/static baseline or fallback recovery is missing/failing"
+    ]
+  }
+}

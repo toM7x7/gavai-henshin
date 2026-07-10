@@ -1,0 +1,51 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "chest",
+  "variant_key": "chest:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "chest_v_stripe",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "chest",
+    "variant_key": "chest:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "chest:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "chest_v_stripe",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "large pector plates and raised abdomen panel create readable front armor anatomy",
+      "deep side ribs make the chest look wrapped around the body instead of floating"
+    ],
+    "recommended_topping_slots": [
+      "chest_core",
+      "rib_trim",
+      "collar_guard",
+      "pector_plate",
+      "abdomen_panel",
+      "side_rib"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.5889999866485596,
+    "y": 0.17531001567840576,
+    "z": 0.4599999934434891
+  },
+  "triangle_count": 568,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_emissive",
+    "armor_accent"
+  ],
+  "source_canonical_module": "chest",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

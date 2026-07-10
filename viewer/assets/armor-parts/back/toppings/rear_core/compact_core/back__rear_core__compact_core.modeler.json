@@ -1,0 +1,77 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "back",
+  "part_id": "viewer.mesh.back.v1",
+  "category": "dorsal",
+  "bbox_m": {
+    "x": 0.14000000059604645,
+    "y": 0.14000000059604645,
+    "z": 0.02199999988079071,
+    "size": [
+      0.14000000059604645,
+      0.14000000059604645,
+      0.02199999988079071
+    ],
+    "dimensions": [
+      0.14000000059604645,
+      0.14000000059604645,
+      0.02199999988079071
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.01,
+      -0.1
+    ],
+    "rotation_deg": [
+      0,
+      180,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "back:rear_core:compact_core",
+  "is_topping": true,
+  "parent_module": "back",
+  "topping_slot": "rear_core",
+  "topping_key": "compact_core",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      -0.05
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.18,
+    "y": 0.18,
+    "z": 0.03
+  }
+}

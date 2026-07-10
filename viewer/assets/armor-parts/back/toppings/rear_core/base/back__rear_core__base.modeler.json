@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "back",
+  "topping_slot": "rear_core",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.18018,
+      -0.05848
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.22,
+    "y": 0.18,
+    "z": 0.065
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "back",
+    "topping_slot": "rear_core",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "rear_core",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "spine_chest",
+      "parent_surface": "rear_center_upper",
+      "placement": "between shoulder blades"
+    },
+    "max_bbox_m": {
+      "x": 0.22,
+      "y": 0.18,
+      "z": 0.065
+    },
+    "material_zone": "rear_core_panel",
+    "variant_examples": [
+      "round rear reactor",
+      "shield battery pack",
+      "flat command module"
+    ],
+    "conflicts_with": [],
+    "parent_module": "back"
+  },
+  "bbox_m": {
+    "x": 0.1363999992609024,
+    "y": 0.04030000790953636,
+    "z": 0.11160000413656235
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_accent"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

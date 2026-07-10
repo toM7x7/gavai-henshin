@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "chest",
+  "topping_slot": "rib_trim",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.23011,
+      0.0,
+      0.07018
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.18,
+    "y": 0.035,
+    "z": 0.03
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "chest",
+    "topping_slot": "rib_trim",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "rib_trim",
+    "slot_kind": "micro",
+    "allowed_count": {
+      "min": 0,
+      "max": 8
+    },
+    "anchor_hint": {
+      "body_anchor": "spine_chest",
+      "parent_surface": "front_sides",
+      "placement": "paired ribs following torso curve"
+    },
+    "max_bbox_m": {
+      "x": 0.18,
+      "y": 0.035,
+      "z": 0.03
+    },
+    "material_zone": "rib_trim",
+    "variant_examples": [
+      "stepped rib slats",
+      "glowing rib channels",
+      "smooth contour ribs"
+    ],
+    "conflicts_with": [],
+    "parent_module": "chest"
+  },
+  "bbox_m": {
+    "x": 0.11160001158714294,
+    "y": 0.016499996185302734,
+    "z": 0.021700001321732998
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

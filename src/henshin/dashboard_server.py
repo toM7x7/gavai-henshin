@@ -15,7 +15,7 @@ from http.server import SimpleHTTPRequestHandler
 from pathlib import Path
 from socketserver import TCPServer, ThreadingMixIn
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .iw_henshin import (
     DEFAULT_EXPLANATION,
@@ -32,6 +32,28 @@ from .part_generation import (
     run_generate_parts,
 )
 
+QUEST_DEBUG_MAX_BYTES = 64 * 1024
+QUEST_DEBUG_HISTORY_MAX_BYTES = 1024 * 1024
+_QUEST_DEBUG_LOCK = threading.Lock()
+
+
+# The static handler serves the repo root for viewer/session assets, so paths
+# holding secrets or key material must never leave the process.
+_SENSITIVE_STATIC_SUFFIXES = (".pfx", ".pem", ".key", ".cer")
+_SENSITIVE_TOP_LEVEL_DIRS = ("config",)
+
+
+def _is_sensitive_url_path(url_path: str) -> bool:
+    decoded = unquote(urlparse(url_path).path).replace("\\", "/")
+    segments = [segment for segment in decoded.split("/") if segment]
+    if any(segment.startswith(".") for segment in segments):
+        return True
+    if segments and segments[0] in _SENSITIVE_TOP_LEVEL_DIRS:
+        return True
+    if segments and segments[-1].lower().endswith(_SENSITIVE_STATIC_SUFFIXES):
+        return True
+    return False
+
 
 def _is_within_root(path: Path, root: Path) -> bool:
     try:
@@ -44,6 +66,8 @@ def _is_within_root(path: Path, root: Path) -> bool:
 def _resolve_repo_path(root: Path, raw: str) -> Path:
     if not raw:
         raise ValueError("Path is required.")
+    if _is_sensitive_url_path(raw):
+        raise ValueError(f"Path is not allowed: {raw}")
     candidate = (root / raw).resolve()
     if not _is_within_root(candidate, root):
         raise ValueError(f"Path is outside repository root: {raw}")
@@ -73,6 +97,11 @@ class GeneratePartsPayload:
     model_id: str | None = None
     api_key: str | None = None
     generation_brief: str | None = None
+    texture_prompt_contract: str | None = None
+    variant_prompt_summary: list[str] | None = None
+    selected_variant_keys: dict[str, str] | None = None
+    variant_selection: dict[str, Any] | None = None
+    surface_design_hints: dict[str, Any] | None = None
     emotion_profile: dict[str, Any] | None = None
     operator_profile_override: dict[str, Any] | None = None
     timeout: int = 90
@@ -397,6 +426,68 @@ def _normalize_replay_paths(root: Path, replay: dict[str, Any]) -> dict[str, Any
     return replay
 
 
+def _quest_debug_dir(root: Path) -> Path:
+    target = (root / "sessions" / "quest-debug").resolve()
+    if not _is_within_root(target, root):
+        raise ValueError("Quest debug path is outside repository root.")
+    return target
+
+
+def run_save_quest_debug(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Quest debug payload must be a JSON object.")
+    received_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    record = {
+        "received_at": received_at,
+        "payload": payload,
+    }
+    line = json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
+    encoded = line.encode("utf-8")
+    if len(encoded) > QUEST_DEBUG_MAX_BYTES:
+        raise ValueError(f"Quest debug payload exceeds {QUEST_DEBUG_MAX_BYTES} bytes.")
+
+    target_dir = _quest_debug_dir(root)
+    with _QUEST_DEBUG_LOCK:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        _append_quest_debug_history(target_dir / "latest.jsonl", encoded)
+        (target_dir / "latest.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {
+        "ok": True,
+        "received_at": received_at,
+        "latest_url": "/api/quest-debug/latest",
+    }
+
+
+def _append_quest_debug_history(path: Path, encoded_record: bytes) -> None:
+    with path.open("ab") as stream:
+        stream.write(encoded_record)
+
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return
+    if size <= QUEST_DEBUG_HISTORY_MAX_BYTES:
+        return
+
+    with path.open("rb") as stream:
+        stream.seek(max(0, size - QUEST_DEBUG_HISTORY_MAX_BYTES))
+        retained = stream.read()
+
+    first_newline = retained.find(b"\n")
+    if 0 <= first_newline < len(retained) - 1:
+        retained = retained[first_newline + 1 :]
+
+    path.write_bytes(retained)
+
+
+def run_load_quest_debug_latest(root: Path) -> dict[str, Any]:
+    target = _quest_debug_dir(root) / "latest.json"
+    if not target.is_file():
+        raise FileNotFoundError("No Quest debug snapshot has been received.")
+    record = json.loads(target.read_text(encoding="utf-8"))
+    return {"ok": True, "record": record}
+
+
 def run_iw_henshin_voice(root: Path, payload: IWHenshinVoicePayload) -> dict[str, Any]:
     session_id = payload.session_id or f"S-IW-QUEST-{int(time.time() * 1000):x}"
     if not session_id.replace("-", "").isalnum():
@@ -517,6 +608,14 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             payload["debug"] = {"repo_root": str(root), "lan_hosts": lan_hosts}
         return payload
 
+    def send_head(self):
+        # Guards every static file response (GET and HEAD) against serving
+        # dotfiles, config/ certificates, and key material such as .env.
+        if _is_sensitive_url_path(self.path):
+            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+            return None
+        return super().send_head()
+
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -571,6 +670,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/runtime-info":
             host = self.headers.get("Host", f"localhost:{self.server.server_address[1]}")
             self._write_json(self._runtime_info(self.repo_root, host=host, port=int(self.server.server_address[1])))
+            return
+        if parsed.path == "/api/quest-debug/latest":
+            try:
+                self._write_json(run_load_quest_debug_latest(self.repo_root))
+            except (FileNotFoundError, json.JSONDecodeError) as exc:
+                self._write_json({"ok": False, "error": str(exc)}, status=HTTPStatus.NOT_FOUND)
             return
         if parsed.path == "/api/suitspecs":
             self._write_json({"ok": True, "items": discover_suitspec_paths(self.repo_root)})
@@ -636,12 +741,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             "/api/generate-parts",
             "/api/suitspec-save",
             "/api/iw-henshin/voice",
+            "/api/quest-debug",
         ):
             self._write_json({"ok": False, "error": "Unknown API endpoint."}, status=HTTPStatus.NOT_FOUND)
             return
 
         try:
             content_len = int(self.headers.get("Content-Length", "0"))
+            if parsed.path == "/api/quest-debug" and content_len > QUEST_DEBUG_MAX_BYTES:
+                self._write_json(
+                    {"ok": False, "error": f"Quest debug payload exceeds {QUEST_DEBUG_MAX_BYTES} bytes."},
+                    status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                )
+                return
             raw = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
             payload_dict = json.loads(raw)
             if parsed.path == "/api/iw-henshin/voice":
@@ -654,6 +766,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     self._write_json({"ok": True, **result.snapshot()})
                     return
                 result = run_generate_parts_sync(self.repo_root, payload)
+            elif parsed.path == "/api/quest-debug":
+                result = run_save_quest_debug(self.repo_root, payload_dict)
             else:
                 payload = SaveSuitspecPayload(**payload_dict)
                 result = run_save_suitspec(self.repo_root, payload)

@@ -17,6 +17,7 @@ env/
 .env
 .env.*
 !.env.example
+!.env.demo.example
 
 # Editors / OS
 .idea/
@@ -30,10 +31,45 @@ sessions/*
 !sessions/.gitkeep
 dist/
 build/
+output/
 config/*.pem
 config/*.key
 config/*.pfx
 config/*.cer
 
+# Local browser/smoke evidence and transient QA output.
+# These ignores only prevent new untracked artifacts from entering normal push;
+# files already tracked by git must be unstaged/removed explicitly if unwanted.
+.playwright-cli/
+.playwright-mcp/
+output/playwright/
+tests/.tmp/
+qa/logs/
+qa/*.log
+qa/*.png
+qa/*.jpg
+qa/*.jpeg
+qa/*.webp
+qa/*.yml
+qa/*.yaml
+qa/**/*.log
+qa/**/*.png
+qa/**/*.jpg
+qa/**/*.jpeg
+qa/**/*.webp
+qa/**/*.yml
+qa/**/*.yaml
+/*.log
+/.tmp-*
+/*.png
+armor-forge-japanese-ui-*.png
+docs/archive/evidence-*/
+
+# Local workspaces
+.claude/
+# Root-level Blender workspace only; tools/blender/ pipeline scripts stay tracked.
+/blender/
+
 # Embedded PoC workspace (local reference only, not part of core repo)
 examples/henshin-rightarm-poc/
+webdrop/

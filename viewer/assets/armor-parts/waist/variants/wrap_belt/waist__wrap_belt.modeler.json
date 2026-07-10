@@ -1,0 +1,64 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "waist",
+  "part_id": "viewer.mesh.waist.v1",
+  "category": "waist",
+  "bbox_m": {
+    "x": 0.46000000834465027,
+    "y": 0.1599999964237213,
+    "z": 0.21716046333312988,
+    "size": [
+      0.46000000834465027,
+      0.1599999964237213,
+      0.21716046333312988
+    ],
+    "dimensions": [
+      0.46000000834465027,
+      0.1599999964237213,
+      0.21716046333312988
+    ]
+  },
+  "triangle_count": 504,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "emissive"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "hips",
+    "offset_m": [
+      0,
+      0,
+      0.06
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "hips",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 504,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "waist:wrap_belt",
+  "is_variant": true,
+  "parent_module": "waist",
+  "target_envelope_m": {
+    "x": 0.4896,
+    "y": 0.1716,
+    "z": 0.1904
+  }
+}

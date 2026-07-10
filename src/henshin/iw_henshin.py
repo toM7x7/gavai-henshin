@@ -35,30 +35,19 @@ DEFAULT_EXPLANATION = (
     "装甲を身体表面へ確定させる変身プロトコルである。"
     "いま、追跡骨格を基準に全身アーマーを蒸着する。"
 )
-
-
-DEFAULT_TRIGGER_PHRASE = "\u751f\u6210"
+# Whisper transcriptions of the spoken trigger drift across these readings.
 DEFAULT_TRIGGER_ALIASES: frozenset[str] = frozenset(
     (
-        "\u5148\u751f",  # 先生
-        "\u305b\u3044\u305b\u3044",  # せいせい
-        "\u305b\u3048\u305b\u3048",  # せえせえ
-        "\u305b\u30fc\u305b\u30fc",  # せーせー
-        "\u30bb\u30a4\u30bb\u30a4",  # セイセイ
-        "\u30bb\u30fc\u30bb\u30fc",  # セーセー
-    )
-)
-DEFAULT_EXPLANATION = (
-    "\u751f\u6210\u3068\u306f\u3001\u89b3\u6e2c\u3055\u308c\u305f\u8eab\u4f53\u8f2a\u90ed\u3068\u610f\u5fd7\u4fe1\u53f7\u3092\u540c\u671f\u3057\u3001"
-    "\u88c5\u7532\u3092\u8eab\u4f53\u8868\u9762\u3078\u78ba\u5b9a\u3055\u305b\u308b\u5909\u8eab\u30d7\u30ed\u30c8\u30b3\u30eb\u3067\u3042\u308b\u3002"
-    "\u3044\u307e\u3001\u8ffd\u8de1\u9aa8\u683c\u3092\u57fa\u6e96\u306b\u5168\u8eab\u30a2\u30fc\u30de\u30fc\u3092\u84b8\u7740\u3059\u308b\u3002"
-)
-DEFAULT_TRIGGER_ALIASES = DEFAULT_TRIGGER_ALIASES | frozenset(
-    (
-        "\u305b\u3044\u305c\u3044",
-        "\u305b\u3048\u305c\u3048",
-        "\u30bb\u30a4\u30bc\u30a4",
-        "\u7cbe\u88fd",
+        "先生",
+        "せいせい",
+        "せえせえ",
+        "せーせー",
+        "セイセイ",
+        "セーセー",
+        "せいぜい",
+        "せえぜえ",
+        "セイゼイ",
+        "精製",
     )
 )
 
@@ -307,6 +296,24 @@ def _write_body_sim(path: Path, sim: dict[str, Any]) -> Path:
     return path
 
 
+def _portable_session_asset_path(root: str | Path, path: str | Path | None) -> str | None:
+    if not path:
+        return None
+    asset_path = Path(path)
+    session_root = Path(root)
+    web_root = session_root.parent if session_root.name == "sessions" else session_root
+    try:
+        return asset_path.resolve().relative_to(web_root.resolve()).as_posix()
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
+def _portable_tts_paths(root: str | Path, tts: dict[str, Any]) -> dict[str, Any]:
+    copy = dict(tts)
+    copy["audio_path"] = _portable_session_asset_path(root, copy.get("audio_path"))
+    return copy
+
+
 def _transcribe(
     request: IWSDKHenshinRequest,
     client: SakuraAIEngineClient | None,
@@ -433,6 +440,8 @@ def run_iwsdk_henshin(
         tts = {"status": "not_triggered", "text": config.explanation_text, "audio_path": None}
 
     body_sim_path = _write_body_sim(session_dir / "body-sim.json", body_sim)
+    body_sim_asset_path = _portable_session_asset_path(request.root, body_sim_path)
+    replay_tts = _portable_tts_paths(request.root, tts)
     replay = {
         "schema_version": "0.1",
         "session_id": session_id,
@@ -448,7 +457,7 @@ def run_iwsdk_henshin(
             "detected": triggered,
             "match": trigger_match,
         },
-        "tts": tts,
+        "tts": replay_tts,
         "protocol": {
             "final_state": machine.state,
             "events": [asdict(event) for event in machine.events],
@@ -459,7 +468,7 @@ def run_iwsdk_henshin(
         },
         "deposition": {
             "completed": bool(triggered and body_sim.get("equipped")),
-            "body_sim_path": str(body_sim_path),
+            "body_sim_path": body_sim_asset_path,
             "equip_frame": body_sim.get("equip_frame"),
             "segments": body_sim.get("segments", []),
         },

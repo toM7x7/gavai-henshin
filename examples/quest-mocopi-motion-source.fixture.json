@@ -1,0 +1,95 @@
+{
+  "description": "Quest diagnostic fixture for distinguishing simulated body-sim motion from mocopi-derived motion without changing the active demo playback path.",
+  "quest_viewer_path": "viewer/quest-iw-demo/quest-demo.js",
+  "show_floor_acceptance": {
+    "pairing_required_sensors": [
+      "head",
+      "hip",
+      "left_wrist",
+      "right_wrist",
+      "left_ankle",
+      "right_ankle"
+    ],
+    "calibration_pose": "stand_upright_face_quest_origin_arms_relaxed_or_app_prompt",
+    "latency_thresholds_ms": {
+      "pass_median_max": 120,
+      "pass_p95_max": 250,
+      "warn_p95_max": 350,
+      "fail_freeze_over": 1000
+    },
+    "fallback_order": [
+      "MOCOPI",
+      "BODY",
+      "STATIC"
+    ],
+    "privacy_operator_note": "Operator confirms consent before capture; raw mocopi motion is identifying motion data and is not public display material."
+  },
+  "cases": [
+    {
+      "name": "simulated_body",
+      "mode": "archive_body_sim",
+      "replay": {
+        "schema_version": "0.1",
+        "source": {
+          "tracking": "body_sim"
+        },
+        "playback": {
+          "motion_source": "body_sim"
+        },
+        "deposition": {
+          "body_sim_path": "examples/body_sequence.sample.json"
+        }
+      },
+      "body_sim": {
+        "source": "body_sim",
+        "frames": [
+          {
+            "segments": {}
+          }
+        ]
+      },
+      "expected": {
+        "diagnostic_source": "body_sim",
+        "diagnostic_token": "BODY 1f"
+      }
+    },
+    {
+      "name": "mocopi_body",
+      "mode": "archive_body_sim",
+      "replay": {
+        "schema_version": "0.1",
+        "source": {
+          "tracking": "mocopi"
+        },
+        "tracking": {
+          "source": "mocopi",
+          "frame_count": 1
+        },
+        "playback": {
+          "motion_source": "mocopi"
+        },
+        "motion_provenance": {
+          "primary_source": "mocopi",
+          "capture_system": {
+            "provider": "mocopi"
+          }
+        },
+        "deposition": {
+          "body_sim_path": "examples/mocopi_sequence.sample.json"
+        }
+      },
+      "body_sim": {
+        "source": "mocopi",
+        "frames": [
+          {
+            "segments": {}
+          }
+        ]
+      },
+      "expected": {
+        "diagnostic_source": "mocopi",
+        "diagnostic_token": "MOCOPI 1f"
+      }
+    }
+  ]
+}

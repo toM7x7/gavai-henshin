@@ -1,0 +1,99 @@
+﻿{
+  "api_base": "http://127.0.0.1:8010",
+  "quest_base": "http://127.0.0.1:5173",
+  "code": "3601",
+  "required_preflight": "external_pc_local",
+  "optional_enhancement_lanes": {
+    "gcp_service": "not-included",
+    "playcanvas": "not-included",
+    "mocopi": "not-included"
+  },
+  "optional_lane_reports": {},
+  "adb_reverse_required": true,
+  "api_health": {
+    "ok": true
+  },
+  "quest_http_status": 200,
+  "operator_urls": {
+    "web_forge": "http://127.0.0.1:8010/viewer/armor-forge/",
+    "web_forge_exhibition": "http://127.0.0.1:8010/viewer/armor-forge/?mode=exhibition",
+    "quest_usb_adb": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&code=3601",
+    "quest_manual_entry_usb_adb": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1"
+  },
+  "recall_status": "READY",
+  "suit_id": "VDA-AXIS-WEB-00-0112",
+  "runtime_contract": "runtime-render-placement.v1",
+  "render_placement_count": 18,
+  "missing_selected_variant_key_count": 0,
+  "selected_variant_mismatch_count": 0,
+  "runtime_surface_failure_count": 0,
+  "invalid_overlay_parts": [],
+  "unsafe_public_ref_count": 0,
+  "unsafe_public_refs": [],
+  "adb_reverse": {
+    "requested": true,
+    "adb_path": "adb",
+    "device_count": 1,
+    "ready_device_count": 1,
+    "ready": true,
+    "required_reverse_ports": [
+      5173,
+      8010
+    ],
+    "reverse_ports_present": [
+      5173,
+      8010
+    ],
+    "missing_reverse_ports": [],
+    "errors": [],
+    "devices_stdout": "List of devices attached\n2G0YC5ZF9P05Z2         device product:eureka model:Quest_3 device:eureka transport_id:2\n\n",
+    "devices_stderr": "",
+    "devices": [
+      {
+        "serial": "2G0YC5ZF9P05Z2",
+        "state": "device",
+        "details": "product:eureka model:Quest_3 device:eureka transport_id:2"
+      }
+    ],
+    "reverse_stdout": "UsbFfs tcp:5173 tcp:5173\nUsbFfs tcp:8010 tcp:8010\n\n",
+    "reverse_stderr": "",
+    "reverse_mappings": [
+      {
+        "transport": "UsbFfs",
+        "local": "tcp:5173",
+        "remote": "tcp:5173"
+      },
+      {
+        "transport": "UsbFfs",
+        "local": "tcp:8010",
+        "remote": "tcp:8010"
+      }
+    ]
+  },
+  "preflight_gate": {
+    "contract_version": "exhibition-local-preflight.v1",
+    "required_lane": "external_pc_local",
+    "status": "pass",
+    "operator_label": "local-pass",
+    "checks": {
+      "api_health_ok": true,
+      "quest_page_ok": true,
+      "fresh_or_supplied_code": true,
+      "runtime_contract_ok": true,
+      "render_placement_count_ok": true,
+      "selected_variants_ok": true,
+      "runtime_surface_ok": true,
+      "portable_public_refs_ok": true,
+      "adb_reverse_ok": true
+    },
+    "optional_enhancement_lanes": {
+      "gcp_service": "not-included",
+      "playcanvas": "not-included",
+      "mocopi": "not-included"
+    },
+    "adb_reverse_required": true,
+    "promotion_rule": "GCP service, PlayCanvas, and mocopi may be rehearsed only as optional lanes; none can override local-fail for public visitor operation."
+  },
+  "ok": true,
+  "errors": []
+}

@@ -230,8 +230,35 @@ Quest should not overwrite SuitSpec for a recalled suit. If no manifest is ready
 
 - Mesh quality: valid positions, normals, UVs, indices, bounds, and non-degenerate triangles.
 - Fit quality: base suit follows VRM/body proxy; overlay stays within mount/clearance policy.
+- Waist fit quality: `no_body_intersection_at_reference_pose` warning on `waist` means belt-loop clearance is not proven. The GLB bbox alone is insufficient; the sidecar must declare `belt_loop_inner_diameter_m` or `belt_loop_clearance_m` and must not report `body_wrap_loop` as metadata-only. P1 acceptance is blocked until the waist GLB is exported from the closed-loop mesh.
 - UV quality: base suit is seam-safe and low-frequency; overlay reserves hero motif zones.
 - Runtime quality: `recall_code` lookup works, manifest exists, and Quest can create a trial without rewriting authoring data.
+
+### Waist P1 Acceptance
+
+For P1/exhibition package acceptance, `waist` is not accepted by outer bbox alone.
+The package gate should read `tools/validate_armor_part.py waist --report-json` and treat
+`no_body_intersection_at_reference_pose.detail.p1_acceptance.package_gate_status` as the handoff field:
+
+- `pass_p1`: package can accept the waist fit gate.
+- `warn_now_block_p1`: validator remains warning-only for iteration, but the exhibition package gate must block P1 acceptance until the sidecar is fixed.
+
+The report also exposes `body_wrap_loop_export_status` at the waist module level and inside the waist body-fit gate detail. Web/Quest previews must treat `metadata_only_blocked_until_glb_loop_exported` as "contract exists, GLB loop not exported yet", not as a pass.
+
+Sidecar field meanings:
+
+- `belt_loop_inner_diameter_m`: the actual inner aperture of the belt loop in meters, in GLB local axes. Use `{ "x": side-to-side, "z": front-back }` or `[x, z]`. Both axes must be large enough for the reference pelvis radius plus clearance.
+- `belt_loop_clearance_m`: per-side radial clearance around the reference pelvis. If this is provided instead of `belt_loop_inner_diameter_m`, runtime packaging converts it to `2 * (body_radius_m + belt_loop_clearance_m)` for both x/z inner diameters.
+- `clearance_m` alone is not enough for P1; it states the target fit margin but does not prove that the waist mesh is a pass-through belt loop.
+- `shell_thickness_target_m` must still be present so the validator can verify that the outer bbox can contain the declared inner aperture plus shell thickness.
+- `body_wrap_loop_export_status`: machine-readable export state. `glb_loop_exported` may support P1 pass when the loop dimensions also pass. `metadata_only_blocked_until_glb_loop_exported` means spec/sidecar contract only; Web and Quest must show the waist as P1-blocked until a regenerated GLB loop is delivered.
+
+Web/Quest runtime placement handoff:
+
+- Web packaging copies the accepted values to `modules.waist.runtime_placement.belt_loop_inner_diameter_m`, `belt_loop_clearance_m`, `body_radius_m`, and `shell_thickness_target_m`.
+- Web preview uses those copied values for its waist clearance status instead of inferring a loop from bbox depth.
+- Quest recall consumes the same `runtime_placement` values for armor stand/replay diagnostics and must not silently recompute a separate waist clearance rule.
+- Validator JSON exposes `body_wrap_loop_export_status`, `body_wrap_loop_export_detail`, and the intended copy targets under `runtime_placement_handoff.runtime_fields`; exhibition package validation should compare the packaged values against that handoff.
 
 ## Wave 1++ Policy Update
 
@@ -244,7 +271,7 @@ The remaining `warn` state does not mean the 18 GLBs failed bbox intake. It mean
 | Metadata contract | P0 modules need stable `part_family`, `variant_key`, `base_motif_link`, `topping_slots`, and `conflicts_with` before branching or texture prompt work expands. |
 | Chest read | The chest must read as a curved outer shell wrapping the ribcage, not a box in front of the body. |
 | Back read | The back must read as a dorsal shell that wraps the torso from shoulder blades to waist, not a thin plate. |
-| Waist read | The waist must read as a belt attached to the pelvis, not a floating ring. |
+| Waist read | The waist must read as a belt attached to the pelvis, not a floating ring; sidecar must prove `belt_loop_inner_diameter_m` / `belt_loop_clearance_m` for pelvis pass-through clearance. |
 | Shoulder read | Shoulder parts must integrate into chest/back/arm flow instead of sitting as small items on the shoulder balls. |
 | Grounding read | Shins and boots must preserve foot contact and shin-boot continuity in the Web armor-stand preview. |
 | Texture unity | Base suit and overlay must be generated as one bright hero-suit motif, not a plain undersuit plus unrelated parts. |

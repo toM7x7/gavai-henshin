@@ -101,6 +101,58 @@ def _generation_brief_text(generation_brief: str | None) -> str:
     )
 
 
+def _list_text(values: Any, *, limit: int = 6) -> str:
+    if not isinstance(values, list):
+        return ""
+    cleaned = [str(value).strip() for value in values if str(value).strip()]
+    return ", ".join(cleaned[:limit])
+
+
+def _per_part_texture_target_text(suitspec: dict[str, Any], part: str) -> str:
+    generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
+    hints = generation.get("surface_design_hints") if isinstance(generation.get("surface_design_hints"), dict) else {}
+    contracts = (
+        hints.get("per_part_texture_contracts")
+        if isinstance(hints.get("per_part_texture_contracts"), dict)
+        else generation.get("per_part_texture_contracts")
+    )
+    if not isinstance(contracts, dict):
+        return ""
+    record = contracts.get(part)
+    if not isinstance(record, dict):
+        return ""
+
+    uv_policy = record.get("uv_policy") if isinstance(record.get("uv_policy"), dict) else {}
+    uv_availability = record.get("uv_availability") if isinstance(record.get("uv_availability"), dict) else {}
+    if uv_availability.get("can_generate_mesh_uv_texture") is False:
+        # Without an authoritative UV0 there is no mesh-UV target to describe;
+        # the request-level contract block carries the unavailability case.
+        return ""
+    material_hints = record.get("material_hints") if isinstance(record.get("material_hints"), dict) else {}
+    shape_role = record.get("shape_role") if isinstance(record.get("shape_role"), dict) else {}
+    motif = record.get("base_motif_link") if isinstance(record.get("base_motif_link"), dict) else {}
+    material_zones = _list_text(material_hints.get("material_zones"))
+    details = _list_text(record.get("detail_features"))
+    toppings = _list_text(record.get("topping_slot_names"))
+    coverage = _list_text(shape_role.get("coverage"))
+    extra_prompt = str(record.get("texture_prompt") or "").strip()
+    lines = [
+        "Per-part Web Forge texture target:",
+        f"- Selected variant: {record.get('selected_variant_key') or 'canonical'}",
+        f"- Mesh asset: {record.get('asset_ref') or 'module.asset_ref'}",
+        f"- Shape role: {shape_role.get('surface_role') or 'armor overlay'}; body anchor={shape_role.get('body_anchor') or 'body-fit slot'}; coverage={coverage or 'declared coverage'}; target contact={shape_role.get('target_contact') or 'body-following clearance'}.",
+        f"- UV availability: uv0={uv_availability.get('uv0_status') or 'unknown'}; mesh_uv_allowed={uv_availability.get('can_generate_mesh_uv_texture')}.",
+        f"- UV target: motif zone={uv_policy.get('primary_motif_zone') or 'part primary zone'}; low-frequency zone={uv_policy.get('low_frequency_zone') or 'seam/underside zones'}; panel flow={uv_policy.get('panel_flow_direction') or 'part axis'}; forbidden dense detail={uv_policy.get('forbidden_detail_zone') or 'UV seam borders'}.",
+        f"- Material zones: {material_zones or 'base_surface, accent, emissive, trim'}.",
+        f"- Motif continuity: {motif.get('name') or 'selected base motif'} on {motif.get('surface_zone') or 'declared surface zone'}.",
+        f"- Variant features: {details or 'selected catalog features'}; topping anchors: {toppings or 'none declared'}.",
+        "- The generated atlas must cover the whole visible object, not just a front decal or isolated emblem.",
+    ]
+    if extra_prompt:
+        lines.append(f"- Provider target note: {extra_prompt[:700]}")
+    return "\n".join(lines) + "\n"
+
+
 def _user_armor_profile_text(user_armor_profile: dict[str, Any] | None) -> str:
     if not user_armor_profile:
         return ""
@@ -305,6 +357,7 @@ def build_part_prompt(
     lore_text = _lore_design_text()
     user_profile_text = _user_armor_profile_text(user_armor_profile)
     module_override_text = _module_override_text(module)
+    per_part_texture_target_text = _per_part_texture_target_text(suitspec, part)
     part_role_text = _part_role_text(part)
     three_view_text = _three_view_text(part)
     variation_text = _style_variation_text(style_variation)
@@ -323,6 +376,7 @@ def build_part_prompt(
             f"{part_role_text}"
             f"{three_view_text}"
             f"{module_override_text}"
+            f"{per_part_texture_target_text}"
             f"{variation_text}"
             f"{brief_text}"
             f"{uv_contract_text}"
@@ -352,6 +406,7 @@ def build_part_prompt(
         f"{part_role_text}"
         f"{three_view_text}"
         f"{module_override_text}"
+        f"{per_part_texture_target_text}"
         f"{variation_text}"
         f"{brief_text}"
         "Requirements:\n"
@@ -381,6 +436,7 @@ def build_uv_refine_prompt(
     uv_hint = _uv_layout_hint(part)
     uv_contract_text = _uv_contract_text(suitspec, part)
     module_override_text = _module_override_text(suitspec.get("modules", {}).get(part, {}))
+    per_part_texture_target_text = _per_part_texture_target_text(suitspec, part)
     part_role_text = _part_role_text(part)
     three_view_text = _three_view_text(part)
     user_profile_text = _user_armor_profile_text(user_armor_profile)
@@ -397,6 +453,7 @@ def build_uv_refine_prompt(
         f"{part_role_text}"
         f"{three_view_text}"
         f"{module_override_text}"
+        f"{per_part_texture_target_text}"
         f"{variation_text}"
         f"{brief_text}"
         f"{uv_contract_text}"

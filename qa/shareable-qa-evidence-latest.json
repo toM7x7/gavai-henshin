@@ -1,0 +1,231 @@
+{
+  "contract_version": "shareable-qa-evidence-manifest.v1",
+  "qa_root": "qa",
+  "privacy_gate_status": {
+    "source": "computed",
+    "mode": "share",
+    "status": "fail",
+    "ok": false,
+    "ready_for_curated_share": false,
+    "raw_qa_tree_share_ready": false,
+    "blocker_count": 32,
+    "warning_count": 103,
+    "local_evidence_count": 0
+  },
+  "shareable_files": [
+    {
+      "path": "shareable-qa-evidence-latest.json",
+      "git_stage_path": "qa/shareable-qa-evidence-latest.json",
+      "kind": "curated_json_manifest",
+      "contract_version": "shareable-qa-evidence-manifest.v1",
+      "reason": "privacy validator marked this JSON manifest as share-safe"
+    }
+  ],
+  "local_only_files": [
+    {
+      "path": "armor-forge-exhibition-mode-browser-check.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "json-no-contract-version",
+        "local-path-share-warning",
+        "localhost-url-share-warning"
+      ],
+      "reason": "JSON evidence has no contract_version and may be raw local evidence.; localhost/127.0.0.1 URL is valid local evidence but should not be treated as external-share proof.; Local absolute path may expose usernames, machine layout, or non-portable evidence."
+    },
+    {
+      "path": "armor-forge-exhibition-mode-desktop.png",
+      "kind": "media_or_screenshot",
+      "finding_codes": [
+        "share-exclude-media"
+      ],
+      "reason": "Image/video evidence can expose participants, venue, browser state, or generated visuals."
+    },
+    {
+      "path": "armor-forge-exhibition-mode-mobile-summary.png",
+      "kind": "media_or_screenshot",
+      "finding_codes": [
+        "share-exclude-media"
+      ],
+      "reason": "Image/video evidence can expose participants, venue, browser state, or generated visuals."
+    },
+    {
+      "path": "armor-forge-exhibition-mode-mobile.png",
+      "kind": "media_or_screenshot",
+      "finding_codes": [
+        "share-exclude-media"
+      ],
+      "reason": "Image/video evidence can expose participants, venue, browser state, or generated visuals."
+    },
+    {
+      "path": "exhibition-service-gate-latest.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version exhibition-service-gate.v1 is not in the share-safe allowlist."
+    },
+    {
+      "path": "exhibition_smoke_check_3601_adb_latest.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "json-no-contract-version",
+        "localhost-url-share-warning"
+      ],
+      "reason": "JSON evidence has no contract_version and may be raw local evidence.; localhost/127.0.0.1 URL is valid local evidence but should not be treated as external-share proof."
+    },
+    {
+      "path": "logs/quest-3601-codex-smoke/adb-devices.txt",
+      "kind": "raw_debug_dump",
+      "finding_codes": [
+        "share-exclude-raw-debug"
+      ],
+      "reason": "Raw ADB/Quest/operator dump may contain device identifiers or local runtime state."
+    },
+    {
+      "path": "logs/quest-3601-codex-smoke/adb-reverse.txt",
+      "kind": "raw_debug_dump",
+      "finding_codes": [
+        "share-exclude-raw-debug"
+      ],
+      "reason": "Raw ADB/Quest/operator dump may contain device identifiers or local runtime state."
+    },
+    {
+      "path": "logs/quest-3601-codex-smoke/operator-summary.txt",
+      "kind": "raw_debug_dump",
+      "finding_codes": [
+        "share-exclude-raw-debug"
+      ],
+      "reason": "Raw ADB/Quest/operator dump may contain device identifiers or local runtime state."
+    },
+    {
+      "path": "logs/quest-3601-codex-smoke/quest-debug-latest.json",
+      "kind": "raw_debug_dump",
+      "finding_codes": [
+        "json-no-contract-version",
+        "localhost-url-share-warning",
+        "pii-like-json-key",
+        "share-exclude-raw-debug"
+      ],
+      "reason": "Raw ADB/Quest/operator dump may contain device identifiers or local runtime state.; JSON evidence has no contract_version and may be raw local evidence.; localhost/127.0.0.1 URL is valid local evidence but should not be treated as external-share proof.; JSON key 'realMicrophoneExpected' may contain personal/operator identity.; JSON key 'microphone' may contain personal/operator identity."
+    },
+    {
+      "path": "logs/serve-dashboard-8010.err.log",
+      "kind": "raw_log",
+      "finding_codes": [
+        "share-exclude-raw-log"
+      ],
+      "reason": "Raw log/dump files should not be part of external evidence sharing."
+    },
+    {
+      "path": "logs/serve-dashboard-8010.out.log",
+      "kind": "raw_log",
+      "finding_codes": [
+        "share-exclude-raw-log"
+      ],
+      "reason": "Raw log/dump files should not be part of external evidence sharing."
+    },
+    {
+      "path": "model-quality-acceptance-latest.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "local-path-share-warning",
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version model-quality-acceptance-report.v1 is not in the share-safe allowlist.; Local absolute path may expose usernames, machine layout, or non-portable evidence."
+    },
+    {
+      "path": "release-stage-manifest-latest.json",
+      "kind": "local_evidence",
+      "finding_codes": [
+        "local-path-share-warning"
+      ],
+      "reason": "Local absolute path may expose usernames, machine layout, or non-portable evidence."
+    },
+    {
+      "path": "replay-record-3601.demo.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version replay-record.v0.2 is not in the share-safe allowlist."
+    },
+    {
+      "path": "replay/3601.replay-record.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version replay-record.v0.2 is not in the share-safe allowlist."
+    },
+    {
+      "path": "replay/replay-qa-3601.summary.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version replay-qa-artifact-summary.v1 is not in the share-safe allowlist."
+    },
+    {
+      "path": "runtime-package-3601.snapshot.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "unknown-json-manifest-contract"
+      ],
+      "reason": "JSON contract_version base-suit-overlay.v1 is not in the share-safe allowlist."
+    },
+    {
+      "path": "smoke_web_glb_load_latest.json",
+      "kind": "uncurated_json",
+      "finding_codes": [
+        "json-no-contract-version"
+      ],
+      "reason": "JSON evidence has no contract_version and may be raw local evidence."
+    }
+  ],
+  "blocked_files": [
+    {
+      "path": "exhibition_release_package_latest.json",
+      "kind": "blocked_privacy_finding",
+      "finding_codes": [
+        "secret-like-json-value"
+      ],
+      "reason": "JSON value matches a secret-like token pattern.; JSON string matches a secret-like token pattern.",
+      "recommended_action": "remove or rotate the secret before sharing"
+    },
+    {
+      "path": "gcp-phase0-service-contract-latest.json",
+      "kind": "blocked_privacy_finding",
+      "finding_codes": [
+        "secret-like-json-key"
+      ],
+      "reason": "JSON key 'secret_policy' looks like a secret-bearing field.; JSON key 'secret_value_violation_count' looks like a secret-bearing field.",
+      "recommended_action": "remove, redact, or replace with a non-secret placeholder before sharing"
+    },
+    {
+      "path": "release-stage-validation-latest.json",
+      "kind": "blocked_privacy_finding",
+      "finding_codes": [
+        "secret-like-json-value"
+      ],
+      "reason": "JSON value matches a secret-like token pattern.; JSON string matches a secret-like token pattern.",
+      "recommended_action": "remove or rotate the secret before sharing"
+    },
+    {
+      "path": "service-deployment-contract-local-latest.json",
+      "kind": "blocked_privacy_finding",
+      "finding_codes": [
+        "secret-like-json-key"
+      ],
+      "reason": "JSON key 'secret_value_violation_count' looks like a secret-bearing field.",
+      "recommended_action": "remove, redact, or replace with a non-secret placeholder before sharing"
+    }
+  ],
+  "recommended_git_stage_paths": [
+    "qa/shareable-qa-evidence-latest.json"
+  ],
+  "notes": [
+    "Stage only recommended_git_stage_paths for GitHub/external-PC handoff.",
+    "Do not stage raw qa/logs folders, screenshots, ADB dumps, or unknown JSON evidence.",
+    "Regenerate this manifest after adding or removing QA evidence."
+  ]
+}

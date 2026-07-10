@@ -1,0 +1,77 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "back",
+  "part_id": "viewer.mesh.back.v1",
+  "category": "dorsal",
+  "bbox_m": {
+    "x": 0.04500000178813934,
+    "y": 0.18000000715255737,
+    "z": 0.030000001192092896,
+    "size": [
+      0.04500000178813934,
+      0.18000000715255737,
+      0.030000001192092896
+    ],
+    "dimensions": [
+      0.04500000178813934,
+      0.18000000715255737,
+      0.030000001192092896
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.01,
+      -0.1
+    ],
+    "rotation_deg": [
+      0,
+      180,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "back:spine_ridge:compact_ridge",
+  "is_topping": true,
+  "parent_module": "back",
+  "topping_slot": "spine_ridge",
+  "topping_key": "compact_ridge",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      -0.07
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.12,
+    "y": 0.2,
+    "z": 0.04
+  }
+}

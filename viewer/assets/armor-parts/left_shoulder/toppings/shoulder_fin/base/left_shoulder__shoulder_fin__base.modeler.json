@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "left_shoulder",
+  "topping_slot": "shoulder_fin",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.06854,
+      0.04284,
+      0.0
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.08,
+    "y": 0.16,
+    "z": 0.12
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "left_shoulder",
+    "topping_slot": "shoulder_fin",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "shoulder_fin",
+    "slot_kind": "topping",
+    "allowed_count": {
+      "min": 0,
+      "max": 2
+    },
+    "anchor_hint": {
+      "body_anchor": "left_upper_arm",
+      "parent_surface": "outer_top",
+      "placement": "rises from shoulder cap without wing span"
+    },
+    "max_bbox_m": {
+      "x": 0.08,
+      "y": 0.16,
+      "z": 0.12
+    },
+    "material_zone": "accent_trim",
+    "variant_examples": [
+      "single blade fin",
+      "stacked shark fin",
+      "rounded crest fin"
+    ],
+    "conflicts_with": [],
+    "parent_module": "left_shoulder"
+  },
+  "bbox_m": {
+    "x": 0.024800002574920654,
+    "y": 0.06980212405323982,
+    "z": 0.04959999956190586
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

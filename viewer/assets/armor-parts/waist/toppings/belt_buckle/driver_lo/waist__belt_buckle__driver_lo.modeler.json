@@ -1,0 +1,76 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "waist",
+  "part_id": "viewer.mesh.waist.v1",
+  "category": "waist",
+  "bbox_m": {
+    "x": 0.12999999523162842,
+    "y": 0.05999999865889549,
+    "z": 0.025000005960464478,
+    "size": [
+      0.12999999523162842,
+      0.05999999865889549,
+      0.025000005960464478
+    ],
+    "dimensions": [
+      0.12999999523162842,
+      0.05999999865889549,
+      0.025000005960464478
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "hips",
+    "offset_m": [
+      0,
+      0,
+      0.06
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "hips",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "waist:belt_buckle:driver_lo",
+  "is_topping": true,
+  "parent_module": "waist",
+  "topping_slot": "belt_buckle",
+  "topping_key": "driver_lo",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      0.08
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.16,
+    "y": 0.08,
+    "z": 0.035
+  }
+}

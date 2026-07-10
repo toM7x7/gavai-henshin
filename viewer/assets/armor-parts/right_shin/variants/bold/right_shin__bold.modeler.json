@@ -1,0 +1,49 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "right_shin",
+  "variant_key": "right_shin:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "shin_v",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shin",
+    "variant_key": "right_shin:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "right_shin:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "shin_v",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "knee and ankle clearance remain readable",
+      "larger hero emblem or guard shape creates strong stage readability"
+    ],
+    "recommended_topping_slots": [
+      "shin_spike",
+      "ankle_cuff_trim",
+      "ankle_cuff"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.10779999941587448,
+    "y": 0.13446984812617302,
+    "z": 0.39668799936771393
+  },
+  "triangle_count": 612,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_trim",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "right_shin",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

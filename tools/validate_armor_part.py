@@ -132,7 +132,7 @@ class ModuleReport:
         return self.status != "fail"
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "module": self.module,
             "status": self.status,
             "ok": self.ok,
@@ -143,6 +143,15 @@ class ModuleReport:
             "metrics": self.metrics,
             "gates": [gate.to_dict() for gate in self.gates],
         }
+        for gate in self.gates:
+            export_status = gate.detail.get("body_wrap_loop_export_status")
+            if isinstance(export_status, str):
+                payload["body_wrap_loop_export_status"] = export_status
+                export_detail = gate.detail.get("body_wrap_loop_export_detail")
+                if isinstance(export_detail, dict):
+                    payload["body_wrap_loop_export_detail"] = export_detail
+                break
+        return payload
 
 
 # ---------------------------------------------------------------------------
@@ -671,6 +680,35 @@ def _gate_mirror_pair(module: str, glb: GLBData, repo_root: Path) -> GateResult:
 _WRAP_AROUND_CATEGORIES = {"torso", "dorsal", "waist"}
 _OFFSET_AWARE_CATEGORIES = {"arm", "hand", "leg", "foot", "head", "shoulder"}
 _BODY_INTERSECTION_TOL_M = 0.01
+_BELT_LOOP_INNER_DIAMETER_KEYS = (
+    "belt_loop_inner_diameter_m",
+    "inner_loop_diameter_m",
+    "body_aperture_m",
+)
+_BELT_LOOP_CLEARANCE_KEYS = (
+    "belt_loop_clearance_m",
+    "inner_clearance_m",
+    "body_clearance_m",
+)
+_BELT_LOOP_ACCEPTANCE_PHASE = "P1"
+_BELT_LOOP_RUNTIME_PLACEMENT_FIELDS = {
+    "inner_diameter_m": "modules.waist.runtime_placement.belt_loop_inner_diameter_m",
+    "clearance_m": "modules.waist.runtime_placement.belt_loop_clearance_m",
+    "body_radius_m": "modules.waist.runtime_placement.body_radius_m",
+    "shell_thickness_target_m": "modules.waist.runtime_placement.shell_thickness_target_m",
+}
+_BODY_WRAP_LOOP_METADATA_ONLY_STATUSES = {
+    "contract_metadata_only_glb_not_regenerated",
+    "metadata_only",
+    "spec_metadata_only",
+    "primitive_available_not_applied_until_blender_rebuild",
+}
+_BODY_WRAP_LOOP_EXPORTED_STATUSES = {
+    "glb_loop_exported",
+    "body_wrap_loop_glb_exported",
+    "exported_glb_loop",
+    "applied_to_glb",
+}
 
 
 def _gate_no_body_intersection(
@@ -728,6 +766,16 @@ def _gate_no_body_intersection(
         detail["bbox_extent_x_m"] = size_x
         detail["bbox_extent_z_m"] = size_z
         detail["shell_thickness_target_m"] = shell_thickness
+        if category == "waist":
+            return _gate_waist_belt_loop_clearance(
+                size_x=size_x,
+                size_z=size_z,
+                body_radius=body_radius,
+                clearance=clearance,
+                shell_thickness=shell_thickness,
+                sidecar=sidecar,
+                detail=detail,
+            )
         if (
             size_x >= required_perimeter
             and size_z >= required_perimeter
@@ -811,6 +859,372 @@ def _gate_no_body_intersection(
         f"clearance {gap:.4f}m < required {clearance:.4f}m",
         detail,
     )
+
+
+def _gate_waist_belt_loop_clearance(
+    *,
+    size_x: float,
+    size_z: float,
+    body_radius: float,
+    clearance: float,
+    shell_thickness: float | None,
+    sidecar: dict[str, Any] | None,
+    detail: dict[str, Any],
+) -> GateResult:
+    """Warn clearly when waist cannot be proven as a wearable belt loop."""
+
+    required_inner = 2.0 * (body_radius + clearance)
+    declared_inner = _declared_belt_loop_inner_diameter(sidecar)
+    declared_clearance = _declared_belt_loop_clearance(sidecar)
+    loop_export = _body_wrap_loop_export_status(sidecar)
+    shell = float(shell_thickness or 0.0)
+    detail["body_wrap_loop_export_status"] = loop_export["status"]
+    detail["body_wrap_loop_export_detail"] = loop_export
+    detail["belt_loop_required_inner_diameter_m"] = required_inner
+    detail["belt_loop_declared_inner_diameter_m"] = declared_inner
+    detail["belt_loop_declared_clearance_m"] = declared_clearance
+    detail["belt_loop_required_clearance_m"] = clearance
+
+    if declared_inner is None and declared_clearance is not None:
+        declared_inner = [
+            2.0 * (body_radius + declared_clearance),
+            2.0 * (body_radius + declared_clearance),
+        ]
+        detail["belt_loop_declared_inner_diameter_m"] = declared_inner
+        detail["belt_loop_declared_from_clearance"] = True
+
+    missing: list[str] = []
+    if shell <= 0.0:
+        missing.append("shell_thickness_target_m")
+    if declared_inner is None:
+        missing.append("belt_loop_inner_diameter_m")
+    if size_x < required_inner - _BODY_INTERSECTION_TOL_M:
+        missing.append("bbox.x")
+    if size_z < required_inner - _BODY_INTERSECTION_TOL_M:
+        missing.append("bbox.z")
+    detail["belt_loop_missing_or_short_fields"] = missing
+
+    if declared_inner is None:
+        detail.update(
+            _belt_loop_acceptance_detail(
+                status=(
+                    "blocked_until_glb_loop_exported"
+                    if loop_export["metadata_only"]
+                    else "blocked_until_declared"
+                ),
+                package_gate_status="warn_now_block_p1",
+                body_radius=body_radius,
+                clearance=clearance,
+                required_inner=required_inner,
+                declared_inner=None,
+                declared_clearance=declared_clearance,
+                shell_thickness=shell,
+                loop_export=loop_export,
+            )
+        )
+        if loop_export["metadata_only"]:
+            message = (
+                "waist body_wrap_loop metadata-only: P1 acceptance blocked until "
+                "GLB loop exported; sidecar dimensions alone are not a regenerated GLB pass"
+            )
+        else:
+            message = (
+                "waist belt-loop clearance unresolved: sidecar must declare "
+                "`belt_loop_inner_diameter_m` or `belt_loop_clearance_m`; "
+                f"required inner diameter is {required_inner:.4f}m for pelvis radius "
+                f"{body_radius:.4f}m + clearance {clearance:.4f}m"
+            )
+        return GateResult(
+            "no_body_intersection_at_reference_pose",
+            "warn",
+            message,
+            detail,
+        )
+
+    inner_x, inner_z = declared_inner
+    detail["belt_loop_inner_margin_x_m"] = inner_x - required_inner
+    detail["belt_loop_inner_margin_z_m"] = inner_z - required_inner
+
+    if loop_export["acceptance_blocked"]:
+        required_outer_x = inner_x + shell * 2.0
+        required_outer_z = inner_z + shell * 2.0
+        detail["belt_loop_required_outer_x_m"] = required_outer_x
+        detail["belt_loop_required_outer_z_m"] = required_outer_z
+        detail["belt_loop_outer_margin_x_m"] = size_x - required_outer_x
+        detail["belt_loop_outer_margin_z_m"] = size_z - required_outer_z
+        detail.update(
+            _belt_loop_acceptance_detail(
+                status="blocked_until_glb_loop_exported",
+                package_gate_status="warn_now_block_p1",
+                body_radius=body_radius,
+                clearance=clearance,
+                required_inner=required_inner,
+                declared_inner=declared_inner,
+                declared_clearance=declared_clearance,
+                shell_thickness=shell,
+                loop_export=loop_export,
+            )
+        )
+        if loop_export["metadata_only"]:
+            message = (
+                "waist body_wrap_loop metadata-only: P1 acceptance blocked until "
+                "GLB loop exported; this is not a regenerated GLB loop pass"
+            )
+        else:
+            message = (
+                "waist body_wrap_loop export status is not `glb_loop_exported`: "
+                "P1 acceptance blocked until GLB loop exported"
+            )
+        return GateResult(
+            "no_body_intersection_at_reference_pose",
+            "warn",
+            message,
+            detail,
+        )
+
+    if inner_x < required_inner or inner_z < required_inner:
+        detail.update(
+            _belt_loop_acceptance_detail(
+                status="blocked_inner_aperture_too_small",
+                package_gate_status="warn_now_block_p1",
+                body_radius=body_radius,
+                clearance=clearance,
+                required_inner=required_inner,
+                declared_inner=declared_inner,
+                declared_clearance=declared_clearance,
+                shell_thickness=shell,
+                loop_export=loop_export,
+            )
+        )
+        return GateResult(
+            "no_body_intersection_at_reference_pose",
+            "warn",
+            (
+                "waist belt-loop clearance too small: declared inner "
+                f"{inner_x:.4f}m x {inner_z:.4f}m < required {required_inner:.4f}m"
+            ),
+            detail,
+        )
+
+    required_outer_x = inner_x + shell * 2.0
+    required_outer_z = inner_z + shell * 2.0
+    detail["belt_loop_required_outer_x_m"] = required_outer_x
+    detail["belt_loop_required_outer_z_m"] = required_outer_z
+    detail["belt_loop_outer_margin_x_m"] = size_x - required_outer_x
+    detail["belt_loop_outer_margin_z_m"] = size_z - required_outer_z
+    if shell <= 0.0 or size_x < required_outer_x or size_z < required_outer_z:
+        detail.update(
+            _belt_loop_acceptance_detail(
+                status="blocked_bbox_cannot_hold_loop",
+                package_gate_status="warn_now_block_p1",
+                body_radius=body_radius,
+                clearance=clearance,
+                required_inner=required_inner,
+                declared_inner=declared_inner,
+                declared_clearance=declared_clearance,
+                shell_thickness=shell,
+                loop_export=loop_export,
+            )
+        )
+        return GateResult(
+            "no_body_intersection_at_reference_pose",
+            "warn",
+            (
+                "waist belt-loop sidecar is incomplete or inconsistent: bbox must fit "
+                "declared inner aperture plus shell thickness"
+            ),
+            detail,
+        )
+
+    detail.update(
+        _belt_loop_acceptance_detail(
+            status="accepted",
+            package_gate_status="pass_p1",
+            body_radius=body_radius,
+            clearance=clearance,
+            required_inner=required_inner,
+            declared_inner=declared_inner,
+            declared_clearance=declared_clearance,
+            shell_thickness=shell,
+            loop_export=loop_export,
+        )
+    )
+    return GateResult(
+        "no_body_intersection_at_reference_pose",
+        "pass",
+        (
+            "waist belt-loop clear: declared inner aperture "
+            f"{inner_x:.4f}m x {inner_z:.4f}m fits required {required_inner:.4f}m "
+            f"with shell_thickness_target_m={shell:.4f}m"
+        ),
+        detail,
+    )
+
+
+def _belt_loop_acceptance_detail(
+    *,
+    status: str,
+    package_gate_status: str,
+    body_radius: float,
+    clearance: float,
+    required_inner: float,
+    declared_inner: list[float] | None,
+    declared_clearance: float | None,
+    shell_thickness: float,
+    loop_export: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "p1_acceptance": {
+            "phase": _BELT_LOOP_ACCEPTANCE_PHASE,
+            "status": status,
+            "package_gate_status": package_gate_status,
+            "body_wrap_loop_export_status": loop_export["status"],
+            "body_wrap_loop_export_required": True,
+            "required_for_exhibition_package": True,
+            "meaning": (
+                "waist is accepted only when the sidecar proves a pelvis-sized "
+                "belt-loop aperture and the GLB loop export is not metadata-only"
+            ),
+        },
+        "runtime_placement_handoff": {
+            "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=depth/outward",
+            "source_sidecar_fields": [
+                "target_envelope.belt_loop_inner_diameter_m",
+                "target_envelope.belt_loop_clearance_m",
+                "belt_loop_inner_diameter_m",
+                "belt_loop_clearance_m",
+            ],
+            "runtime_fields": _BELT_LOOP_RUNTIME_PLACEMENT_FIELDS,
+            "values": {
+                "belt_loop_inner_diameter_m": declared_inner,
+                "belt_loop_clearance_m": declared_clearance,
+                "body_radius_m": body_radius,
+                "required_clearance_m": clearance,
+                "required_inner_diameter_m": required_inner,
+                "shell_thickness_target_m": shell_thickness if shell_thickness > 0 else None,
+            },
+            "web_runtime_use": (
+                "Web preview/package checks should copy these values into waist "
+                "runtime_placement and show the same belt clearance status as the validator"
+            ),
+            "quest_runtime_use": (
+                "Quest recall should consume the copied runtime_placement values for "
+                "armor stand/replay diagnostics and must not silently recompute a different waist clearance"
+            ),
+        },
+    }
+
+
+def _body_wrap_loop_export_status(sidecar: dict[str, Any] | None) -> dict[str, Any]:
+    status = "export_status_not_declared"
+    source_fields: dict[str, str] = {}
+    metadata_only = False
+    exported = False
+
+    if not isinstance(sidecar, dict):
+        return {
+            "status": "sidecar_missing",
+            "phase": _BELT_LOOP_ACCEPTANCE_PHASE,
+            "acceptance_blocked": True,
+            "metadata_only": False,
+            "glb_loop_export_required": True,
+            "source_fields": {},
+            "required_action": "Provide waist sidecar and export a GLB body_wrap_loop before P1 acceptance.",
+        }
+
+    containers: list[tuple[str, dict[str, Any]]] = [("sidecar", sidecar)]
+    for key in ("waist_fit", "body_wrap_loop_contract", "body_wrap_coverage_contract"):
+        value = sidecar.get(key)
+        if isinstance(value, dict):
+            containers.append((key, value))
+
+    for prefix, container in containers:
+        for key in ("body_wrap_loop_export_status", "asset_status", "adoption_status"):
+            raw_value = container.get(key)
+            raw_status: str | None = None
+            if isinstance(raw_value, str):
+                raw_status = raw_value
+            elif isinstance(raw_value, dict) and isinstance(raw_value.get("status"), str):
+                raw_status = raw_value["status"]
+            if raw_status is None:
+                continue
+            normalized = raw_status.strip()
+            source_fields[f"{prefix}.{key}"] = normalized
+            if normalized in _BODY_WRAP_LOOP_EXPORTED_STATUSES:
+                exported = True
+            if normalized in _BODY_WRAP_LOOP_METADATA_ONLY_STATUSES:
+                metadata_only = True
+
+    if metadata_only:
+        status = "metadata_only_blocked_until_glb_loop_exported"
+    elif exported:
+        status = "glb_loop_exported"
+
+    return {
+        "status": status,
+        "phase": _BELT_LOOP_ACCEPTANCE_PHASE,
+        "acceptance_blocked": not exported,
+        "metadata_only": metadata_only,
+        "glb_loop_export_required": True,
+        "source_fields": source_fields,
+        "required_action": (
+            "Export/regenerate the waist GLB from body_wrap_loop and mark the sidecar "
+            "as glb_loop_exported before Web/Quest P1 acceptance."
+        ),
+    }
+
+
+def _declared_belt_loop_inner_diameter(
+    sidecar: dict[str, Any] | None,
+) -> list[float] | None:
+    for value in _sidecar_named_values(sidecar, _BELT_LOOP_INNER_DIAMETER_KEYS):
+        parsed = _parse_xz_pair(value)
+        if parsed is not None and parsed[0] > 0 and parsed[1] > 0:
+            return parsed
+    return None
+
+
+def _declared_belt_loop_clearance(sidecar: dict[str, Any] | None) -> float | None:
+    for value in _sidecar_named_values(sidecar, _BELT_LOOP_CLEARANCE_KEYS):
+        if isinstance(value, (int, float)) and float(value) > 0:
+            return float(value)
+    return None
+
+
+def _sidecar_named_values(
+    sidecar: dict[str, Any] | None,
+    keys: tuple[str, ...],
+) -> Iterable[Any]:
+    if not isinstance(sidecar, dict):
+        return []
+    containers: list[dict[str, Any]] = [sidecar]
+    for key in ("target_envelope", "target_envelope_m", "fit_contract", "waist_fit"):
+        value = sidecar.get(key)
+        if isinstance(value, dict):
+            containers.append(value)
+    values: list[Any] = []
+    for container in containers:
+        for key in keys:
+            if key in container:
+                values.append(container[key])
+    return values
+
+
+def _parse_xz_pair(value: Any) -> list[float] | None:
+    if isinstance(value, dict):
+        x_value = value.get("x", value.get("width_m", value.get("width")))
+        z_value = value.get("z", value.get("depth_m", value.get("depth")))
+        if isinstance(x_value, (int, float)) and isinstance(z_value, (int, float)):
+            return [float(x_value), float(z_value)]
+    if isinstance(value, list):
+        try:
+            if len(value) >= 3:
+                return [float(value[0]), float(value[2])]
+            if len(value) >= 2:
+                return [float(value[0]), float(value[1])]
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def _declared_shell_thickness(

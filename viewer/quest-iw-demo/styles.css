@@ -95,6 +95,17 @@ h1 {
   transition: width 100ms linear;
 }
 
+.operator-state-help {
+  width: min(440px, 100%);
+  margin: 10px 0 0;
+  color: #fff4c8;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+}
+
 .route-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

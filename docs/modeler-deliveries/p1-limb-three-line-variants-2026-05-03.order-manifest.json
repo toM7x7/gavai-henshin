@@ -1,0 +1,382 @@
+{
+  "contract_version": "modeler-variant-order-manifest.v1",
+  "order_id": "p1-limb-three-line-variants-2026-05-03",
+  "ordered_at": "2026-05-03",
+  "assets_root": "viewer/assets/armor-parts",
+  "source_concept_catalog": "docs/assets/hero-suit-triview-2026-05-02/concept-catalog.json",
+  "scope": "P1 limb modules missing three-line variants: upperarm, forearm, hand, thigh for left/right sides.",
+  "lore_goal": "Web de suit seiritsu, Quest de henshin shiken, Replay de taiken wo nokosu.",
+  "target_modules": [
+    "left_upperarm",
+    "right_upperarm",
+    "left_forearm",
+    "right_forearm",
+    "left_hand",
+    "right_hand",
+    "left_thigh",
+    "right_thigh"
+  ],
+  "required_lines": [
+    {
+      "line_id": "line_rescue_knight",
+      "source_concept_ids": ["c02"],
+      "line_label": "Rescue Knight Sleek",
+      "read": "white/cyan rescue suit with slim armor flow and public-safety clarity"
+    },
+    {
+      "line_id": "line_royal_insect",
+      "source_concept_ids": ["c01"],
+      "line_label": "Royal Insect Guardian",
+      "read": "green/white/gold guardian suit with compound-eye and carapace accents"
+    },
+    {
+      "line_id": "line_final_oath",
+      "source_concept_ids": ["c15"],
+      "line_label": "Final Oath Form",
+      "read": "white/gold/cyan final form with high-density glow flow and ceremonial trim"
+    }
+  ],
+  "acceptance_policy": {
+    "required_variants_per_module": 3,
+    "runtime_activation_allowed": false,
+    "delivery_manifest_contract": "modeler-delivery-manifest.v1",
+    "required_sidecar_fields": [
+      "source_concept_ids",
+      "line_id",
+      "design_intent",
+      "fidelity_notes"
+    ],
+    "required_review_views": [
+      "front",
+      "side",
+      "back",
+      "3q",
+      "closeup"
+    ],
+    "intake_gates": [
+      {
+        "gate": "size_position",
+        "pass": "Each delivered upperarm/forearm/hand/thigh variant stays within the modeler acceptance target envelope: +/-10% axis target, fail over +/-15%, left/right pair delta <=3%, canonical limb bone preserved."
+      },
+      {
+        "gate": "position_clearance",
+        "pass": "Reference pose and articulated review show no body intersection, no floating shell, and clear elbow, wrist/controller, hip, and knee motion."
+      },
+      {
+        "gate": "tri_view",
+        "pass": "Delivery manifest or reviewer packet links front, side, back, 3q, and closeup images for all 24 ordered variants; all three line systems remain visually distinct."
+      },
+      {
+        "gate": "web_rendering",
+        "pass": "Web Forge or GLB smoke loads the selected variant_key with fallback count 0 and reads as worn armor over the base suit."
+      },
+      {
+        "gate": "quest_rendering",
+        "pass": "Quest recall loads the same selected variant_key through the runtime package with no GLB fallback and preserves hand/controller, elbow, hip, and knee clearance."
+      }
+    ],
+    "strict_acceptance_command": "python tools/validate_modeler_variant_order_manifest.py --manifest docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json --require-delivered"
+  },
+  "variants": [
+    {
+      "asset_kind": "variant_order",
+      "module": "left_upperarm",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_upperarm_stream",
+      "variant_key": "left_upperarm:rescue_upperarm_stream",
+      "expected_glb_path": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/left_upperarm__rescue_upperarm_stream.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/left_upperarm__rescue_upperarm_stream.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/source/left_upperarm__rescue_upperarm_stream.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/preview/left_upperarm__rescue_upperarm_stream.mesh.json",
+      "design_intent": "Slim rescue upperarm shell that carries cyan suit flow from shoulder to elbow without blocking arm bend."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_upperarm",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_upperarm_stream",
+      "variant_key": "right_upperarm:rescue_upperarm_stream",
+      "mirror_of": "left_upperarm:rescue_upperarm_stream",
+      "expected_glb_path": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/right_upperarm__rescue_upperarm_stream.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/right_upperarm__rescue_upperarm_stream.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/source/right_upperarm__rescue_upperarm_stream.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/preview/right_upperarm__rescue_upperarm_stream.mesh.json",
+      "design_intent": "Mirrored rescue upperarm shell with matching cyan flow and side-aware attachment."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_forearm",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_vambrace",
+      "variant_key": "left_forearm:rescue_vambrace",
+      "expected_glb_path": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/left_forearm__rescue_vambrace.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/left_forearm__rescue_vambrace.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/source/left_forearm__rescue_vambrace.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/preview/left_forearm__rescue_vambrace.mesh.json",
+      "design_intent": "Compact rescue vambrace with wrist cuff detail and readable controller-safe clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_forearm",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_vambrace",
+      "variant_key": "right_forearm:rescue_vambrace",
+      "mirror_of": "left_forearm:rescue_vambrace",
+      "expected_glb_path": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/right_forearm__rescue_vambrace.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/right_forearm__rescue_vambrace.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/source/right_forearm__rescue_vambrace.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/preview/right_forearm__rescue_vambrace.mesh.json",
+      "design_intent": "Mirrored rescue vambrace that keeps wrist rotation clear and line flow continuous."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_hand",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_cuff_lock",
+      "variant_key": "left_hand:rescue_cuff_lock",
+      "expected_glb_path": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/left_hand__rescue_cuff_lock.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/left_hand__rescue_cuff_lock.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/source/left_hand__rescue_cuff_lock.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/preview/left_hand__rescue_cuff_lock.mesh.json",
+      "design_intent": "Light rescue glove cuff and knuckle plate that protect hand readability and controller use."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_hand",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_cuff_lock",
+      "variant_key": "right_hand:rescue_cuff_lock",
+      "mirror_of": "left_hand:rescue_cuff_lock",
+      "expected_glb_path": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/right_hand__rescue_cuff_lock.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/right_hand__rescue_cuff_lock.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/source/right_hand__rescue_cuff_lock.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/preview/right_hand__rescue_cuff_lock.mesh.json",
+      "design_intent": "Mirrored rescue glove cuff with matching knuckle read and palm clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_thigh",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_speed_plate",
+      "variant_key": "left_thigh:rescue_speed_plate",
+      "expected_glb_path": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/left_thigh__rescue_speed_plate.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/left_thigh__rescue_speed_plate.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/source/left_thigh__rescue_speed_plate.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/preview/left_thigh__rescue_speed_plate.mesh.json",
+      "design_intent": "Rescue thigh speed plate that bridges waist to shin without becoming a flat stripe."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_thigh",
+      "line_id": "line_rescue_knight",
+      "asset_key": "rescue_speed_plate",
+      "variant_key": "right_thigh:rescue_speed_plate",
+      "mirror_of": "left_thigh:rescue_speed_plate",
+      "expected_glb_path": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/right_thigh__rescue_speed_plate.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/right_thigh__rescue_speed_plate.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/source/right_thigh__rescue_speed_plate.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/preview/right_thigh__rescue_speed_plate.mesh.json",
+      "design_intent": "Mirrored rescue thigh speed plate with equal length, angle, and hip/knee clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_upperarm",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_upperarm_ridge",
+      "variant_key": "left_upperarm:guardian_upperarm_ridge",
+      "expected_glb_path": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/left_upperarm__guardian_upperarm_ridge.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/left_upperarm__guardian_upperarm_ridge.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/source/left_upperarm__guardian_upperarm_ridge.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/preview/left_upperarm__guardian_upperarm_ridge.mesh.json",
+      "design_intent": "Guardian upperarm carapace ridge with green/gold accent planes that read from side view."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_upperarm",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_upperarm_ridge",
+      "variant_key": "right_upperarm:guardian_upperarm_ridge",
+      "mirror_of": "left_upperarm:guardian_upperarm_ridge",
+      "expected_glb_path": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/right_upperarm__guardian_upperarm_ridge.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/right_upperarm__guardian_upperarm_ridge.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/source/right_upperarm__guardian_upperarm_ridge.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/preview/right_upperarm__guardian_upperarm_ridge.mesh.json",
+      "design_intent": "Mirrored guardian upperarm ridge preserving royal insect asymmetry notes only in metadata."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_forearm",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_forearm_shell",
+      "variant_key": "left_forearm:guardian_forearm_shell",
+      "expected_glb_path": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/left_forearm__guardian_forearm_shell.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/left_forearm__guardian_forearm_shell.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/source/left_forearm__guardian_forearm_shell.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/preview/left_forearm__guardian_forearm_shell.mesh.json",
+      "design_intent": "Forearm shell with insect-guard plate breaks, wrist module, and non-bulky controller clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_forearm",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_forearm_shell",
+      "variant_key": "right_forearm:guardian_forearm_shell",
+      "mirror_of": "left_forearm:guardian_forearm_shell",
+      "expected_glb_path": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/right_forearm__guardian_forearm_shell.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/right_forearm__guardian_forearm_shell.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/source/right_forearm__guardian_forearm_shell.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/preview/right_forearm__guardian_forearm_shell.mesh.json",
+      "design_intent": "Mirrored guardian forearm shell with matching wrist module clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_hand",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_knuckle",
+      "variant_key": "left_hand:guardian_knuckle",
+      "expected_glb_path": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/left_hand__guardian_knuckle.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/left_hand__guardian_knuckle.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/source/left_hand__guardian_knuckle.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/preview/left_hand__guardian_knuckle.mesh.json",
+      "design_intent": "Guardian knuckle plate with small carapace facets and palm emitter kept visible."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_hand",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_knuckle",
+      "variant_key": "right_hand:guardian_knuckle",
+      "mirror_of": "left_hand:guardian_knuckle",
+      "expected_glb_path": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/right_hand__guardian_knuckle.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/right_hand__guardian_knuckle.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/source/right_hand__guardian_knuckle.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/preview/right_hand__guardian_knuckle.mesh.json",
+      "design_intent": "Mirrored guardian knuckle plate with equal glove scale and visible palm emitter."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_thigh",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_outer_guard",
+      "variant_key": "left_thigh:guardian_outer_guard",
+      "expected_glb_path": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/left_thigh__guardian_outer_guard.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/left_thigh__guardian_outer_guard.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/source/left_thigh__guardian_outer_guard.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/preview/left_thigh__guardian_outer_guard.mesh.json",
+      "design_intent": "Guardian thigh outer guard that continues carapace lines from waist toward shin."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_thigh",
+      "line_id": "line_royal_insect",
+      "asset_key": "guardian_outer_guard",
+      "variant_key": "right_thigh:guardian_outer_guard",
+      "mirror_of": "left_thigh:guardian_outer_guard",
+      "expected_glb_path": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/right_thigh__guardian_outer_guard.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/right_thigh__guardian_outer_guard.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/source/right_thigh__guardian_outer_guard.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/preview/right_thigh__guardian_outer_guard.mesh.json",
+      "design_intent": "Mirrored guardian thigh guard with balanced hip and knee clearance."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_upperarm",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_upperarm_guard",
+      "variant_key": "left_upperarm:oath_upperarm_guard",
+      "expected_glb_path": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/left_upperarm__oath_upperarm_guard.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/left_upperarm__oath_upperarm_guard.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/source/left_upperarm__oath_upperarm_guard.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/preview/left_upperarm__oath_upperarm_guard.mesh.json",
+      "design_intent": "Final oath upperarm guard with gold trim and cyan flow from shoulder to forearm."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_upperarm",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_upperarm_guard",
+      "variant_key": "right_upperarm:oath_upperarm_guard",
+      "mirror_of": "left_upperarm:oath_upperarm_guard",
+      "expected_glb_path": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/right_upperarm__oath_upperarm_guard.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/right_upperarm__oath_upperarm_guard.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/source/right_upperarm__oath_upperarm_guard.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/preview/right_upperarm__oath_upperarm_guard.mesh.json",
+      "design_intent": "Mirrored final oath upperarm guard with consistent gold trim and cyan flow."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_forearm",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_gauntlet",
+      "variant_key": "left_forearm:oath_gauntlet",
+      "expected_glb_path": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/left_forearm__oath_gauntlet.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/left_forearm__oath_gauntlet.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/source/left_forearm__oath_gauntlet.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/preview/left_forearm__oath_gauntlet.mesh.json",
+      "design_intent": "Final oath gauntlet with ceremonial trim, cyan emitter lines, and wrist mobility."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_forearm",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_gauntlet",
+      "variant_key": "right_forearm:oath_gauntlet",
+      "mirror_of": "left_forearm:oath_gauntlet",
+      "expected_glb_path": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/right_forearm__oath_gauntlet.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/right_forearm__oath_gauntlet.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/source/right_forearm__oath_gauntlet.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/preview/right_forearm__oath_gauntlet.mesh.json",
+      "design_intent": "Mirrored final oath gauntlet that keeps wrist and controller clearance stable."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_hand",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_palm_core",
+      "variant_key": "left_hand:oath_palm_core",
+      "expected_glb_path": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/left_hand__oath_palm_core.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/left_hand__oath_palm_core.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/source/left_hand__oath_palm_core.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/preview/left_hand__oath_palm_core.mesh.json",
+      "design_intent": "Final oath hand plate with palm core, small knuckle trim, and gesture-safe proportions."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_hand",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_palm_core",
+      "variant_key": "right_hand:oath_palm_core",
+      "mirror_of": "left_hand:oath_palm_core",
+      "expected_glb_path": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/right_hand__oath_palm_core.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/right_hand__oath_palm_core.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/source/right_hand__oath_palm_core.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/preview/right_hand__oath_palm_core.mesh.json",
+      "design_intent": "Mirrored final oath hand plate with matching palm core and gesture-safe proportions."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "left_thigh",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_gold_flow",
+      "variant_key": "left_thigh:oath_gold_flow",
+      "expected_glb_path": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/left_thigh__oath_gold_flow.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/left_thigh__oath_gold_flow.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/source/left_thigh__oath_gold_flow.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/preview/left_thigh__oath_gold_flow.mesh.json",
+      "design_intent": "Final oath thigh plate that carries gold/cyan flow from waist into shin without blocking gait."
+    },
+    {
+      "asset_kind": "variant_order",
+      "module": "right_thigh",
+      "line_id": "line_final_oath",
+      "asset_key": "oath_gold_flow",
+      "variant_key": "right_thigh:oath_gold_flow",
+      "mirror_of": "left_thigh:oath_gold_flow",
+      "expected_glb_path": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/right_thigh__oath_gold_flow.glb",
+      "expected_sidecar_path": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/right_thigh__oath_gold_flow.modeler.json",
+      "expected_source_blend_path": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/source/right_thigh__oath_gold_flow.blend",
+      "expected_preview_mesh_path": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/preview/right_thigh__oath_gold_flow.mesh.json",
+      "design_intent": "Mirrored final oath thigh plate with matching waist-to-shin flow and gait clearance."
+    }
+  ]
+}

@@ -1,0 +1,599 @@
+{
+  "schema_version": "armor-blueprint.v1",
+  "blueprint_id": "ABP-HI2V-GUAR",
+  "design_intent": "メタル系宇宙刑事。銀の誓い、青い光。守護と闘志。",
+  "emotion_axes": {
+    "fighting": 0.55,
+    "tension": 0.4,
+    "guard": 0.7
+  },
+  "palette": {
+    "base_surface": "#8C93A4",
+    "accent": "#2B3F66",
+    "emissive": "#35B9FF",
+    "trim": "#C8CDD9"
+  },
+  "parts": [
+    {
+      "module": "helmet",
+      "silhouette": {
+        "cross_section": "sharp",
+        "crown_height": 0.062,
+        "front_bias": 0.117,
+        "profile": [
+          [
+            0.0,
+            0.68
+          ],
+          [
+            0.18,
+            0.9
+          ],
+          [
+            0.42,
+            1.0
+          ],
+          [
+            0.66,
+            0.98
+          ],
+          [
+            0.86,
+            0.84
+          ],
+          [
+            1.0,
+            0.46
+          ]
+        ]
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.42,
+            "width": 0.014,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ],
+        "meridian_grooves": [
+          {
+            "angle_deg": 52,
+            "width_deg": 3.5,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "angle_deg": -52,
+            "width_deg": 3.5,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ],
+        "rim_trim": true
+      },
+      "features": [
+        {
+          "kind": "visor",
+          "shape": "v",
+          "v_dip": 0.104,
+          "band_bottom": 0.48,
+          "band_top": 0.704,
+          "wrap_deg": 112.0
+        },
+        {
+          "kind": "chin_guard",
+          "flare": 0.156,
+          "top": 0.4,
+          "wrap_deg": 112
+        },
+        {
+          "kind": "crest_fin",
+          "length": 0.36,
+          "height": 0.184,
+          "sweep": 0.45,
+          "thickness_m": 0.01,
+          "zone": "accent"
+        },
+        {
+          "kind": "horn_pair",
+          "length": 0.348,
+          "curve": 0.25,
+          "radius_m": 0.005,
+          "zone": "accent"
+        },
+        {
+          "kind": "horn_pair",
+          "length": 0.29,
+          "curve": 0.7,
+          "radius_m": 0.022,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "chest",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "shell_thickness_m": 0.0146,
+        "ring_grooves": [
+          {
+            "position": 0.42,
+            "width": 0.016,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "position": 0.28,
+            "width": 0.016,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "position": 0.16,
+            "width": 0.014,
+            "depth": 0.376,
+            "zone": "accent"
+          }
+        ],
+        "meridian_grooves": [
+          {
+            "angle_deg": 40,
+            "width_deg": 3.0,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "angle_deg": -40,
+            "width_deg": 3.0,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": 14
+          },
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": -14
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "v_core",
+          "width_deg": 14.0,
+          "apex": 0.22,
+          "top": 0.655
+        },
+        {
+          "kind": "pec_plates",
+          "strength": 0.136,
+          "lobe_offset_deg": 30,
+          "center": 0.7
+        }
+      ]
+    },
+    {
+      "module": "back",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "shell_thickness_m": 0.0146,
+        "ring_grooves": [
+          {
+            "position": 0.42,
+            "width": 0.016,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "position": 0.28,
+            "width": 0.016,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "position": 0.16,
+            "width": 0.014,
+            "depth": 0.376,
+            "zone": "accent"
+          }
+        ],
+        "meridian_grooves": [
+          {
+            "angle_deg": 40,
+            "width_deg": 3.0,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "angle_deg": -40,
+            "width_deg": 3.0,
+            "depth": 0.47,
+            "zone": "accent"
+          },
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": 14
+          },
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": -14
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "waist",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.5,
+            "width": 0.03,
+            "depth": 0.3,
+            "zone": "trim"
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "buckle",
+          "position": 0.5,
+          "angle_deg": 0,
+          "width_m": 0.07,
+          "height_m": 0.05,
+          "depth_m": 0.02,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "left_shoulder",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "right_shoulder",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "left_upperarm",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "right_upperarm",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "left_forearm",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.4,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "cuff_flange",
+          "position": 0.9,
+          "width": 0.06,
+          "flare": 0.21,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "right_forearm",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.4,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "cuff_flange",
+          "position": 0.9,
+          "width": 0.06,
+          "flare": 0.21,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "left_hand",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "right_hand",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "left_thigh",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "right_thigh",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.055
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.55,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": []
+    },
+    {
+      "module": "left_shin",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.45,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ],
+        "meridian_grooves": [
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": 0
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "pad_dome",
+          "position": 0.88,
+          "angle_deg": 0,
+          "width_m": 0.055,
+          "height_m": 0.06,
+          "depth_m": 0.022,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "right_shin",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.45,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ],
+        "meridian_grooves": [
+          {
+            "width_deg": 2.2,
+            "depth": 0.5,
+            "zone": "emissive",
+            "angle_deg": 0
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "pad_dome",
+          "position": 0.88,
+          "angle_deg": 0,
+          "width_m": 0.055,
+          "height_m": 0.06,
+          "depth_m": 0.022,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "left_boot",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.4,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "cuff_flange",
+          "position": 0.85,
+          "width": 0.06,
+          "flare": 0.21,
+          "zone": "accent"
+        }
+      ]
+    },
+    {
+      "module": "right_boot",
+      "silhouette": {
+        "cross_section": "squared"
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {
+            "position": 0.4,
+            "width": 0.02,
+            "depth": 0.47,
+            "zone": "accent"
+          }
+        ]
+      },
+      "features": [
+        {
+          "kind": "cuff_flange",
+          "position": 0.85,
+          "width": 0.06,
+          "flare": 0.21,
+          "zone": "accent"
+        }
+      ]
+    }
+  ]
+}

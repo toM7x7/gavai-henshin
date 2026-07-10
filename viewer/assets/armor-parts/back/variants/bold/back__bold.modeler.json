@@ -1,0 +1,51 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "back",
+  "variant_key": "back:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "spine_line",
+    "surface_zone": "accent"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "back",
+    "variant_key": "back:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "back:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "spine_line",
+      "surface_zone": "accent"
+    },
+    "detail_features": [
+      "bold back core and raised spine rail create a strong rear hero read",
+      "rear vane and dorsal plates thicken the silhouette without becoming loose props"
+    ],
+    "recommended_topping_slots": [
+      "spine_ridge",
+      "rear_core",
+      "rear_vane",
+      "back_core",
+      "spine_rail"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.545199990272522,
+    "y": 0.15063387900590897,
+    "z": 0.5150319933891296
+  },
+  "triangle_count": 612,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_trim",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "back",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

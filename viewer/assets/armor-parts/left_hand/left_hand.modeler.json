@@ -26,7 +26,7 @@
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_hand",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftHand",
     "offset_m": [
@@ -52,6 +52,66 @@
     "mirror_pair_dimension_delta_below_3_percent": "pass",
     "no_body_intersection_at_reference_pose": "pass"
   },
+  "clearance_m": 0.014,
+  "shell_thickness_target_m": 0.02,
+  "variant_key": "left_hand:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "knuckle_glow",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "knuckle",
+      "slot_transform": {
+        "anchor": [
+          0.018,
+          -0.01,
+          0.065
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.035,
+        "y": 0.025,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "left_hand"
+    },
+    {
+      "topping_slot": "palm_emitter",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          -0.035
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.07,
+        "y": 0.07,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "left_hand"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "silhouette_review_notes": [
+    "body_wrap_arc covers back of hand like a hero gauntlet, fingers stay free.",
+    "Cuff trim helps the wrist seam read clearly.",
+    "Top groove hosts the cyan power-line continuation."
+  ],
   "triangles": 296,
   "target_envelope_m": {
     "x": 0.1156,
@@ -59,12 +119,12 @@
     "z": 0.136
   },
   "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
-  "variant_key": "left_hand:base",
-  "part_family": "silver_hero",
-  "base_motif_link": {
-    "name": "knuckle_glow",
-    "surface_zone": "emissive"
-  },
-  "topping_slots": [],
-  "attachment_offset_target_m": 0.04
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Glove texture should keep palm/finger motion clear while emphasizing back-of-hand glow."
+  }
 }

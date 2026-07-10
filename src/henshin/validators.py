@@ -34,6 +34,8 @@ _SCHEMA_KIND_TO_FILE = {
     "partcatalog": "partcatalog.v0.1.schema.json",
     "transform-session": "transform-session.v0.1.schema.json",
     "replay-script": "replay-script.v0.1.schema.json",
+    "replay-record": "replay-record.v0.2.schema.json",
+    "armor-blueprint": "armor-blueprint.v1.schema.json",
 }
 
 

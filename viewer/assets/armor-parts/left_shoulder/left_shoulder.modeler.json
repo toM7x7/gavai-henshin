@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.left_shoulder.v1",
   "category": "shoulder",
   "bbox_m": {
-    "x": 0.18841355293989182,
+    "x": 0.1880144625902176,
     "y": 0.12200000137090683,
-    "z": 0.1670999974012375,
+    "z": 0.15962685644626617,
     "size": [
-      0.18841355293989182,
+      0.1880144625902176,
       0.12200000137090683,
-      0.1670999974012375
+      0.15962685644626617
     ],
     "dimensions": [
-      0.18841355293989182,
+      0.1880144625902176,
       0.12200000137090683,
-      0.1670999974012375
+      0.15962685644626617
     ]
   },
-  "triangle_count": 308,
+  "triangle_count": 552,
   "material_zones": [
     "accent",
     "base_surface",
@@ -55,39 +55,6 @@
   },
   "clearance_m": 0.028,
   "shell_thickness_target_m": 0.038,
-  "body_follow_profile": {
-    "mode": "deltoid_cup_with_chest_and_scapula_lips",
-    "depth_axis": "z",
-    "anchor_bones": [
-      "leftShoulder",
-      "leftUpperArm",
-      "upperChest"
-    ],
-    "follow_panels": [
-      "shoulder_pauldron_cap",
-      "shoulder_insertion_lip",
-      "shoulder_rear_scapula_lip",
-      "shoulder_under_socket_shadow"
-    ],
-    "target_contact": "cap follows the deltoid while lips bridge to chest/back seams"
-  },
-  "fit_alignment_notes": [
-    "Shoulder cup is widened to the target lateral envelope.",
-    "Rear scapula lip improves continuity into the back module.",
-    "Lower socket shadow makes the part read as attached to the arm, not floating."
-  ],
-  "silhouette_review_notes": [
-    "body_wrap_arc cap (arc 140\u00b0) sits over the deltoid, no flat slab read.",
-    "Insertion lip extends inward to bridge into chest_clavicle_trim.",
-    "Outer trim adds a bright cobalt edge on profile views."
-  ],
-  "triangles": 308,
-  "target_envelope_m": {
-    "x": 0.1904,
-    "y": 0.1224,
-    "z": 0.1632
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
   "variant_key": "left_shoulder:base",
   "part_family": "silver_hero",
   "base_motif_link": {
@@ -142,5 +109,69 @@
       "parent_module": "left_shoulder"
     }
   ],
-  "attachment_offset_target_m": 0.04
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "deltoid_cup_with_chest_and_scapula_lips",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "leftShoulder",
+      "leftUpperArm",
+      "upperChest"
+    ],
+    "follow_panels": [
+      "shoulder_pauldron_cap",
+      "shoulder_insertion_lip",
+      "shoulder_rear_scapula_lip",
+      "shoulder_under_socket_shadow"
+    ],
+    "target_contact": "cap follows the deltoid while lips bridge to chest/back seams"
+  },
+  "fit_alignment_notes": [
+    "Shoulder cup is widened to the target lateral envelope.",
+    "Rear scapula lip improves continuity into the back module.",
+    "Lower socket shadow makes the part read as attached to the arm, not floating."
+  ],
+  "suit_silhouette_profile": {
+    "read": "fitted_deltoid_pauldron_shell",
+    "primary_lines": [
+      "outer cobalt edge",
+      "chest insertion lip",
+      "rear scapula lip"
+    ],
+    "prop_countermeasure": "profile-tapered cup and under-socket shadow nest the part into the arm line"
+  },
+  "silhouette_review_notes": [
+    "body_wrap_arc cap (arc 140°) sits over the deltoid, no flat slab read.",
+    "Insertion lip extends inward to bridge into chest_clavicle_trim.",
+    "Outer trim adds a bright cobalt edge on profile views."
+  ],
+  "visual_density_profile": {
+    "issue": "shoulder shells must not read as floating blocks beside the torso",
+    "hero_density_panels": [
+      "shoulder_insertion_lip",
+      "shoulder_outer_trim",
+      "shoulder_rear_scapula_lip",
+      "shoulder_under_socket_shadow"
+    ],
+    "profile_cues": [
+      "deltoid cup",
+      "scapula tuck",
+      "under-socket shadow"
+    ]
+  },
+  "triangles": 552,
+  "target_envelope_m": {
+    "x": 0.1904,
+    "y": 0.1224,
+    "z": 0.1632
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Cup texture should reinforce deltoid fit and the chest/back insertion seam."
+  }
 }

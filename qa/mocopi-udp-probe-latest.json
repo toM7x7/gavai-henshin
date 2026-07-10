@@ -1,0 +1,29 @@
+{
+  "contract_version": "mocopi-udp-probe.v1",
+  "label": "udp-received",
+  "ok": true,
+  "bind_host": "0.0.0.0",
+  "port": 12351,
+  "requested_seconds": 8.0,
+  "elapsed_sec": 8.029,
+  "packet_count": 405,
+  "total_bytes": 650673,
+  "packets_per_sec": 50.445,
+  "senders": {
+    "192.168.1.5:65133": {
+      "packets": 405,
+      "bytes": 650673
+    }
+  },
+  "first_packet_ms": 8.263,
+  "last_packet_ms": 8028.472,
+  "raw_payload_retained": false,
+  "sample": null,
+  "privacy_note": "Raw mocopi motion payloads are not retained unless include_sample_hex is set.",
+  "interpretation": "The phone/app can reach this PC over UDP. Quest live retargeting is still a separate adapter step; this only proves transport reachability.",
+  "next_actions": [
+    "Capture this JSON as mocopi transport evidence.",
+    "Run the Quest BODY baseline and MOCOPI-derived replay evidence packs.",
+    "Do not claim live Quest mocopi until a parser/retargeter feeds Quest motion diagnostics."
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "left_shoulder",
+  "topping_slot": "edge_trim",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.06854,
+      0.0,
+      0.0
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.12,
+    "y": 0.025,
+    "z": 0.025
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "left_shoulder",
+    "topping_slot": "edge_trim",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "edge_trim",
+    "slot_kind": "micro",
+    "allowed_count": {
+      "min": 0,
+      "max": 4
+    },
+    "anchor_hint": {
+      "body_anchor": "left_upper_arm",
+      "parent_surface": "cap_edges",
+      "placement": "thin trim along shoulder cap perimeter"
+    },
+    "max_bbox_m": {
+      "x": 0.12,
+      "y": 0.025,
+      "z": 0.025
+    },
+    "material_zone": "edge_trim",
+    "variant_examples": [
+      "painted lip trim",
+      "raised silver edge",
+      "glow seam trim"
+    ],
+    "conflicts_with": [],
+    "parent_module": "left_shoulder"
+  },
+  "bbox_m": {
+    "x": 0.07439999654889107,
+    "y": 0.013749999925494194,
+    "z": 0.01549999974668026
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

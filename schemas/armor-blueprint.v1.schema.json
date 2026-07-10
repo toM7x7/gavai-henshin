@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "armor-blueprint.v1.schema.json",
+  "title": "ArmorBlueprint v1",
+  "description": "LLM-emittable design contract for the procedural armor generator (tools/blender/armor_blueprint_builder.py). Every field is bounded so any conforming blueprint builds a valid part.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "blueprint_id", "parts"],
+  "properties": {
+    "schema_version": {"const": "armor-blueprint.v1"},
+    "blueprint_id": {"type": "string", "pattern": "^ABP-[A-Z0-9-]{4,32}$"},
+    "design_intent": {"type": "string", "maxLength": 2000},
+    "emotion_axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exalt": {"type": "number", "minimum": 0, "maximum": 1},
+        "fighting": {"type": "number", "minimum": 0, "maximum": 1},
+        "sorrow": {"type": "number", "minimum": 0, "maximum": 1},
+        "tension": {"type": "number", "minimum": 0, "maximum": 1},
+        "guard": {"type": "number", "minimum": 0, "maximum": 1},
+        "embrace": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_surface": {"$ref": "#/$defs/hex"},
+        "accent": {"$ref": "#/$defs/hex"},
+        "emissive": {"$ref": "#/$defs/hex"},
+        "trim": {"$ref": "#/$defs/hex"}
+      }
+    },
+    "physique": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Worn-size bulk multipliers (width/depth only; fit audit still guards the body).",
+      "properties": {
+        "torso_bulk": {"type": "number", "minimum": 0.85, "maximum": 1.45},
+        "shoulder_bulk": {"type": "number", "minimum": 0.85, "maximum": 1.6},
+        "limb_bulk": {"type": "number", "minimum": 0.85, "maximum": 1.4},
+        "helmet_bulk": {"type": "number", "minimum": 0.9, "maximum": 1.25}
+      }
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 18,
+      "items": {"$ref": "#/$defs/part"}
+    }
+  },
+  "$defs": {
+    "hex": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+    "finish": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "metallic": {"type": "number", "minimum": 0, "maximum": 1},
+        "roughness": {"type": "number", "minimum": 0.05, "maximum": 1}
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module"],
+      "properties": {
+        "module": {
+          "enum": ["helmet", "chest", "back", "waist",
+                   "left_shoulder", "right_shoulder",
+                   "left_upperarm", "right_upperarm",
+                   "left_forearm", "right_forearm",
+                   "left_hand", "right_hand",
+                   "left_thigh", "right_thigh",
+                   "left_shin", "right_shin",
+                   "left_boot", "right_boot"]
+        },
+        "palette_override": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Per-part zone recolor (belt=black, gloves=black...) merged over the suit palette.",
+          "properties": {
+            "base_surface": {"$ref": "#/$defs/hex"},
+            "accent": {"$ref": "#/$defs/hex"},
+            "emissive": {"$ref": "#/$defs/hex"},
+            "trim": {"$ref": "#/$defs/hex"}
+          }
+        },
+        "finish_override": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Per-part zone finish. Dark metallic mirrors the sky and reads SILVER — matte black plastic/fabric needs low metallic, high roughness.",
+          "properties": {
+            "base_surface": {"$ref": "#/$defs/finish"},
+            "accent": {"$ref": "#/$defs/finish"},
+            "emissive": {"$ref": "#/$defs/finish"},
+            "trim": {"$ref": "#/$defs/finish"}
+          }
+        },
+        "silhouette": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cross_section": {
+              "anyOf": [
+                {"enum": ["sharp", "rounded", "squared"]},
+                {"type": "number", "minimum": 1.2, "maximum": 5.0}
+              ]
+            },
+            "profile": {
+              "type": "array", "minItems": 2, "maxItems": 8,
+              "items": {
+                "type": "array", "minItems": 2, "maxItems": 2,
+                "prefixItems": [
+                  {"type": "number", "minimum": 0, "maximum": 1},
+                  {"type": "number", "minimum": 0.2, "maximum": 1.2}
+                ]
+              }
+            },
+            "crown_height": {"type": "number", "minimum": 0, "maximum": 0.5},
+            "front_bias": {"type": "number", "minimum": -0.35, "maximum": 0.35},
+            "wrap_deg": {"type": "number", "minimum": 120, "maximum": 360}
+          }
+        },
+        "surface": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "edge_style": {"enum": ["machined", "razor", "organic"]},
+            "smoothness": {"type": "number", "minimum": 0, "maximum": 1},
+            "shell_thickness_m": {"type": "number", "minimum": 0.004, "maximum": 0.03},
+            "rim_trim": {"type": "boolean"},
+            "ring_grooves": {
+              "type": "array", "maxItems": 4,
+              "items": {"$ref": "#/$defs/ring_groove"}
+            },
+            "meridian_grooves": {
+              "type": "array", "maxItems": 6,
+              "items": {"$ref": "#/$defs/meridian_groove"}
+            }
+          }
+        },
+        "features": {
+          "type": "array", "maxItems": 16,
+          "items": {"$ref": "#/$defs/feature"}
+        }
+      }
+    },
+    "ring_groove": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": {"type": "number", "minimum": 0.05, "maximum": 0.95},
+        "width": {"type": "number", "minimum": 0.008, "maximum": 0.06},
+        "depth": {"type": "number", "minimum": 0.1, "maximum": 1.0},
+        "center_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "sector_deg": {"type": "number", "minimum": 10, "maximum": 360},
+        "zone": {"enum": ["accent", "emissive", "trim", "base_surface"]}
+      }
+    },
+    "meridian_groove": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["angle_deg"],
+      "properties": {
+        "angle_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "width_deg": {"type": "number", "minimum": 1, "maximum": 14},
+        "depth": {"type": "number", "minimum": 0.1, "maximum": 1.0},
+        "zone": {"enum": ["accent", "emissive", "trim", "base_surface"]}
+      }
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["visor", "crest_fin", "horn_pair", "v_core",
+                           "pec_plates", "chin_guard", "cuff_flange",
+                           "pad_dome", "buckle", "bulge",
+                           "spike_row", "wing_pair",
+                           "overlay_plate", "edge_blade",
+                           "panel_step", "vent_slats", "rivet_row", "sash", "collar"]},
+        "band_bottom": {"type": "number", "minimum": 0.2, "maximum": 0.9},
+        "band_top": {"type": "number", "minimum": 0.25, "maximum": 0.95},
+        "wrap_deg": {"type": "number", "minimum": 40, "maximum": 220},
+        "shape": {"enum": ["band", "v"]},
+        "v_dip": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "length": {"type": "number", "minimum": 0.05, "maximum": 0.95},
+        "height": {"type": "number", "minimum": 0.02, "maximum": 0.6},
+        "sweep": {"type": "number", "minimum": -1, "maximum": 1},
+        "thickness_m": {"type": "number", "minimum": 0.004, "maximum": 0.04},
+        "curve": {"type": "number", "minimum": 0, "maximum": 1},
+        "radius_m": {"type": "number", "minimum": 0.004, "maximum": 0.05},
+        "pitch_deg": {"type": "number", "minimum": 0, "maximum": 80},
+        "width_deg": {"type": "number", "minimum": 8, "maximum": 60},
+        "apex": {"type": "number", "minimum": 0.05, "maximum": 0.6},
+        "top": {"type": "number", "minimum": 0.3, "maximum": 0.95},
+        "strength": {"type": "number", "minimum": 0, "maximum": 0.3},
+        "lobe_offset_deg": {"type": "number", "minimum": 10, "maximum": 60},
+        "lobe_width_deg": {"type": "number", "minimum": 6, "maximum": 40},
+        "center": {"type": "number", "minimum": 0.2, "maximum": 0.9},
+        "flare": {"type": "number", "minimum": 0, "maximum": 0.4},
+        "position": {"type": "number", "minimum": 0.05, "maximum": 0.95},
+        "width": {"type": "number", "minimum": 0.02, "maximum": 0.2},
+        "angle_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "width_m": {"type": "number", "minimum": 0.02, "maximum": 0.12},
+        "height_m": {"type": "number", "minimum": 0.01, "maximum": 0.12},
+        "depth_m": {"type": "number", "minimum": 0.008, "maximum": 0.05},
+        "count": {"type": "integer", "minimum": 1, "maximum": 24},
+        "arc_deg": {"type": "number", "minimum": 10, "maximum": 300},
+        "t_span": {"type": "number", "minimum": 0.05, "maximum": 0.8},
+        "lift_m": {"type": "number", "minimum": 0.002, "maximum": 0.04},
+        "bulge_m": {"type": "number", "minimum": 0, "maximum": 0.05},
+        "corner": {"type": "number", "minimum": 0, "maximum": 1},
+        "taper": {"type": "number", "minimum": -0.7, "maximum": 0.7},
+        "mirror": {"type": "boolean"},
+        "length_m": {"type": "number", "minimum": 0.015, "maximum": 0.14},
+        "span_m": {"type": "number", "minimum": 0.1, "maximum": 0.45},
+        "rise_m": {"type": "number", "minimum": 0.05, "maximum": 0.35},
+        "droop": {"type": "number", "minimum": 0, "maximum": 0.5},
+        "raise": {"type": "number", "minimum": -1, "maximum": 1},
+        "slats": {"type": "integer", "minimum": 2, "maximum": 8},
+        "depth": {"type": "number", "minimum": 0.1, "maximum": 1.0},
+        "rim": {"type": "number", "minimum": 0, "maximum": 1},
+        "bolts": {"type": "boolean"},
+        "along": {"enum": ["ring", "meridian"]},
+        "from_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "to_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "center_deg": {"type": "number", "minimum": -180, "maximum": 180},
+        "sector_deg": {"type": "number", "minimum": 10, "maximum": 360},
+        "zone": {"enum": ["accent", "emissive", "trim", "base_surface"]}
+      }
+    }
+  }
+}

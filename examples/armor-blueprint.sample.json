@@ -1,0 +1,76 @@
+{
+  "schema_version": "armor-blueprint.v1",
+  "blueprint_id": "ABP-20260705-OATH",
+  "design_intent": "手順を省略しない誓い。守護と闘志の混合。鋭いバイザーと後方へ流れるクレスト、胸部にV字の共鳴コア。",
+  "emotion_axes": {"guard": 0.7, "fighting": 0.55, "exalt": 0.3},
+  "palette": {
+    "base_surface": "#1E2A3A",
+    "accent": "#A8B3C6",
+    "emissive": "#3AC7FF",
+    "trim": "#55617A"
+  },
+  "parts": [
+    {
+      "module": "helmet",
+      "silhouette": {
+        "cross_section": "rounded",
+        "crown_height": 0.14,
+        "front_bias": 0.12,
+        "profile": [[0.0, 0.84], [0.2, 0.98], [0.5, 1.0], [0.78, 0.93], [0.95, 0.7], [1.0, 0.4]]
+      },
+      "surface": {
+        "edge_style": "machined",
+        "smoothness": 0.75,
+        "ring_grooves": [
+          {"position": 0.42, "width": 0.018, "depth": 0.5, "zone": "accent"}
+        ],
+        "meridian_grooves": [
+          {"angle_deg": 55, "width_deg": 3.5, "depth": 0.45, "zone": "accent"},
+          {"angle_deg": -55, "width_deg": 3.5, "depth": 0.45, "zone": "accent"},
+          {"angle_deg": 180, "width_deg": 4.0, "depth": 0.55, "zone": "emissive"}
+        ],
+        "rim_trim": true
+      },
+      "features": [
+        {"kind": "visor", "band_bottom": 0.5, "band_top": 0.72, "wrap_deg": 118},
+        {"kind": "crest_fin", "length": 0.66, "height": 0.32, "sweep": 0.6, "thickness_m": 0.013, "zone": "accent"},
+        {"kind": "horn_pair", "length": 0.24, "curve": 0.7, "radius_m": 0.024, "pitch_deg": 40, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "chest",
+      "silhouette": {
+        "cross_section": "squared",
+        "front_bias": 0.0
+      },
+      "surface": {
+        "edge_style": "machined",
+        "shell_thickness_m": 0.012,
+        "ring_grooves": [
+          {"position": 0.3, "width": 0.02, "depth": 0.45, "zone": "accent"}
+        ],
+        "meridian_grooves": [
+          {"angle_deg": 42, "width_deg": 3.0, "depth": 0.4, "zone": "accent"},
+          {"angle_deg": -42, "width_deg": 3.0, "depth": 0.4, "zone": "accent"}
+        ]
+      },
+      "features": [
+        {"kind": "v_core", "width_deg": 20, "apex": 0.22, "top": 0.64}
+      ]
+    },
+    {
+      "module": "left_shoulder",
+      "silhouette": {
+        "cross_section": "squared",
+        "crown_height": 0.1
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {"position": 0.55, "width": 0.02, "depth": 0.5, "zone": "emissive"}
+        ]
+      },
+      "features": []
+    }
+  ]
+}

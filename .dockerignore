@@ -1,0 +1,31 @@
+# Keep the image lean: exclude local state, evidence, and review-only assets.
+.git
+.github
+.claude
+.pytest_cache
+.playwright-cli
+.playwright-mcp
+node_modules
+sessions
+qa
+tests
+docs
+blender
+output
+dist
+build
+*.log
+.tmp-*
+.env
+.env.*
+config/*.pfx
+config/*.pem
+config/*.key
+config/*.cer
+
+# Review-only asset weight (141MB preview renders + 11MB blend sources).
+# preview/*.mesh.json stays in: it is the runtime GLB fallback chain.
+viewer/assets/armor-parts/**/preview/*.png
+viewer/assets/armor-parts/**/source
+viewer/assets/armor-parts/_masters
+**/*.blend

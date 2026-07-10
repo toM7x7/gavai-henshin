@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.right_shoulder.v1",
   "category": "shoulder",
   "bbox_m": {
-    "x": 0.18841355293989182,
+    "x": 0.1880144625902176,
     "y": 0.12200000509619713,
-    "z": 0.1670999974012375,
+    "z": 0.15962685644626617,
     "size": [
-      0.18841355293989182,
+      0.1880144625902176,
       0.12200000509619713,
-      0.1670999974012375
+      0.15962685644626617
     ],
     "dimensions": [
-      0.18841355293989182,
+      0.1880144625902176,
       0.12200000509619713,
-      0.1670999974012375
+      0.15962685644626617
     ]
   },
-  "triangle_count": 308,
+  "triangle_count": 552,
   "material_zones": [
     "accent",
     "base_surface",
@@ -55,25 +55,6 @@
   },
   "clearance_m": 0.028,
   "shell_thickness_target_m": 0.038,
-  "body_follow_profile": {
-    "mode": "mirror_source_body_follow",
-    "derive_from": "left_shoulder",
-    "mirror_axis": "x"
-  },
-  "fit_alignment_notes": [
-    "Mirrors left_shoulder body-follow geometry and attachment intent across X."
-  ],
-  "silhouette_review_notes": [
-    "Right-side mirror of left_shoulder; pipeline negates x to derive geometry.",
-    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
-  ],
-  "triangles": 308,
-  "target_envelope_m": {
-    "x": 0.1904,
-    "y": 0.1224,
-    "z": 0.1632
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
   "variant_key": "right_shoulder:base",
   "part_family": "silver_hero",
   "base_motif_link": {
@@ -128,5 +109,46 @@
       "parent_module": "right_shoulder"
     }
   ],
-  "attachment_offset_target_m": 0.04
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_shoulder",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_shoulder body-follow geometry and attachment intent across X."
+  ],
+  "suit_silhouette_profile": {
+    "derive_from": "left_shoulder",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source fitted-shell silhouette and density notes"
+    ]
+  },
+  "silhouette_review_notes": [
+    "Right-side mirror of left_shoulder; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_shoulder",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
+  "triangles": 552,
+  "target_envelope_m": {
+    "x": 0.1904,
+    "y": 0.1224,
+    "z": 0.1632
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Cup texture should reinforce deltoid fit and the chest/back insertion seam."
+  }
 }

@@ -1,0 +1,46 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "right_shoulder",
+  "variant_key": "right_shoulder:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "shoulder_arc",
+    "surface_zone": "accent"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shoulder",
+    "variant_key": "right_shoulder:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "right_shoulder:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "shoulder_arc",
+      "surface_zone": "accent"
+    },
+    "detail_features": [
+      "visible panel breakups on front, side, and 3Q views",
+      "larger hero emblem or guard shape creates strong stage readability"
+    ],
+    "recommended_topping_slots": [
+      "shoulder_fin",
+      "edge_trim"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.17716799676418304,
+    "y": 0.1761314794421196,
+    "z": 0.11800000444054604
+  },
+  "triangle_count": 312,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent"
+  ],
+  "source_canonical_module": "right_shoulder",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

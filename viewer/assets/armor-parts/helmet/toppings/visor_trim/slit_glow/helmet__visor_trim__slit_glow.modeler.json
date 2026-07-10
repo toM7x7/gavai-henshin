@@ -1,0 +1,78 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "helmet",
+  "part_id": "viewer.mesh.helmet.v1",
+  "category": "head",
+  "bbox_m": {
+    "x": 0.18000000715255737,
+    "y": 0.02199999988079071,
+    "z": 0.01199999451637268,
+    "size": [
+      0.18000000715255737,
+      0.02199999988079071,
+      0.01199999451637268
+    ],
+    "dimensions": [
+      0.18000000715255737,
+      0.02199999988079071,
+      0.01199999451637268
+    ]
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "emissive"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "head",
+    "offset_m": [
+      0,
+      0.08,
+      0.12
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "head",
+      "neck",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 44,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "helmet:visor_trim:slit_glow",
+  "is_topping": true,
+  "parent_module": "helmet",
+  "topping_slot": "visor_trim",
+  "topping_key": "slit_glow",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.04,
+      0.1
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.2,
+    "y": 0.04,
+    "z": 0.02
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "waist",
+  "variant_key": "waist:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "belt_band",
+    "surface_zone": "accent"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "waist",
+    "variant_key": "waist:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "waist:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "belt_band",
+      "surface_zone": "accent"
+    },
+    "detail_features": [
+      "side silhouette shows thickness and motif continuity",
+      "larger hero emblem or guard shape creates strong stage readability"
+    ],
+    "recommended_topping_slots": [
+      "belt_buckle",
+      "side_clip",
+      "hip_skirt"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.44999998807907104,
+    "y": 0.20138893276453018,
+    "z": 0.16554523259401321
+  },
+  "triangle_count": 680,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "waist",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

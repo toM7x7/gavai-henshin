@@ -345,6 +345,18 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["asset_pipeline"]["surface_plan"]["unified_design"]["generation_unit"],
                 "whole_body_hero_suit_before_layer_split",
             )
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["texture_prompt_contract"],
+                "nanobanana-texture-prompt.v1",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["unified_design"]["prompt_contract"],
+                "nanobanana-texture-prompt.v1",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["unified_design"]["motif_source"],
+                "variant_catalog.base_motif_link + variant.detail_features + topping_slots",
+            )
             self.assertIn(
                 "plain single-color undersuit",
                 response.body["asset_pipeline"]["surface_plan"]["unified_design"]["avoid"],
@@ -357,12 +369,36 @@ class TestNewRouteApi(unittest.TestCase):
                 "continue the same base motif",
                 response.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["generation_target"],
             )
+            surface_design_hints = response.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"]
+            self.assertEqual(surface_design_hints["contract_version"], "nanobanana-variant-design-hints.v1")
+            self.assertEqual(surface_design_hints["texture_prompt_contract"], "nanobanana-texture-prompt.v1")
+            self.assertEqual(surface_design_hints["selected_part_count"], 5)
+            self.assertEqual(surface_design_hints["selected_modules"]["helmet"]["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(
+                surface_design_hints["selected_modules"]["helmet"]["base_motif_link"]["name"],
+                "head_crest_line",
+            )
+            self.assertGreaterEqual(len(surface_design_hints["selected_modules"]["helmet"]["detail_features"]), 2)
+            self.assertIn("crest", surface_design_hints["selected_modules"]["helmet"]["topping_slot_names"])
             self.assertEqual(
                 response.body["asset_pipeline"]["surface_plan"]["emissive"]["texture_role"],
                 "emissive_line_mask",
             )
             self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["contract_version"], "modeler-part-blueprint.v1")
             self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 5)
+            self.assertEqual(
+                response.body["asset_pipeline"]["variant_catalog"]["contract_version"],
+                "armor-part-variant-catalog.v1",
+            )
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["status"], "ready")
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_part_count"], 5)
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_module_count"], 5)
+            self.assertGreaterEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_slot_count"], 10)
+            self.assertIn("helmet", response.body["asset_pipeline"]["variant_catalog"]["selected_modules"])
+            self.assertEqual(
+                response.body["preview"]["variant_catalog"]["selected_modules"]["helmet"]["variants"][0]["variant_key"],
+                "helmet:base",
+            )
             self.assertEqual(
                 [part["module"] for part in response.body["asset_pipeline"]["modeler_blueprints"]["parts"]],
                 ["helmet", "chest", "back", "left_forearm", "right_forearm"],
@@ -409,7 +445,7 @@ class TestNewRouteApi(unittest.TestCase):
             )
             self.assertEqual(
                 response.body["preview"]["modules"]["helmet"]["asset_ref"],
-                "viewer/assets/armor-parts/helmet/helmet.glb",
+                "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
             )
             self.assertEqual(
                 response.body["preview"]["modules"]["back"]["vrm_anchor"]["offset"],
@@ -419,6 +455,20 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["preview"]["modules"]["back"]["vrm_anchor"]["rotation"],
                 [0.0, 180.0, 0.0],
             )
+            self.assertIn("modeler_sidecar", response.body["preview"]["modules"]["back"])
+            self.assertEqual(
+                response.body["preview"]["modules"]["back"]["vrm_attachment"]["primary_bone"],
+                "upperChest",
+            )
+            self.assertEqual(
+                response.body["preview"]["modules"]["back"]["attachment_offset_target_m"],
+                0.08,
+            )
+            self.assertEqual(
+                response.body["preview"]["modules"]["back"]["body_follow_profile"]["mode"],
+                "dorsal_wrap_with_scapula_and_spine_keel",
+            )
+            self.assertIn("topping_slots", response.body["preview"]["modules"]["back"])
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract_version"], "armor-body-fit.v1")
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 5)
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_contract"]["height_cm"], 182.0)
@@ -429,6 +479,10 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertTrue(response.body["model_quality_gate"]["mesh_assets_ready"])
             self.assertTrue(response.body["model_quality_gate"]["texture_lock_allowed"])
             self.assertEqual(response.body["model_quality_gate"]["bounds_contract_version"], "mesh-bounds.v1")
+            self.assertEqual(
+                response.body["model_quality_gate"]["bounds_file"],
+                "viewer/assets/meshes/mesh-bounds.v1.json",
+            )
             self.assertEqual(
                 response.body["model_quality_gate"]["required_parts"],
                 ["back", "chest", "helmet", "left_forearm", "right_forearm"],
@@ -447,6 +501,21 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["asset_pipeline"]["job_defaults"]["surface_design_contract"],
                 "unified_design -> base_suit_surface + armor_overlay_parts",
             )
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_defaults"]["texture_prompt_contract"],
+                "nanobanana-texture-prompt.v1",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_defaults"]["surface_design_hints"],
+                surface_design_hints,
+            )
+            self.assertIn("head_crest_line", response.body["asset_pipeline"]["job_defaults"]["generation_brief"])
+            self.assertTrue(
+                any(
+                    "head_crest_line" in summary
+                    for summary in response.body["asset_pipeline"]["job_defaults"]["variant_prompt_summary"]
+                )
+            )
             self.assertIn(
                 "patterned rubber/fabric",
                 response.body["asset_pipeline"]["job_defaults"]["generation_brief"],
@@ -459,6 +528,18 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["update_suitspec"])
             self.assertTrue(response.body["asset_pipeline"]["job_payload_template"]["writes_final_texture"])
             self.assertFalse(response.body["asset_pipeline"]["job_payload_template"]["dry_run"])
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_payload_template"]["texture_prompt_contract"],
+                "nanobanana-texture-prompt.v1",
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_payload_template"]["surface_design_hints"],
+                surface_design_hints,
+            )
+            self.assertEqual(
+                response.body["asset_pipeline"]["job_payload_template"]["surface_design_hints"]["selected_modules"]["back"]["base_motif_link"]["name"],
+                "spine_line",
+            )
             self.assertNotIn("surface_plan", response.body["asset_pipeline"]["job_payload_template"])
             self.assertNotIn("must_render_layers", response.body["asset_pipeline"]["job_payload_template"])
             self.assertNotIn("minimum_visible_overlay_parts", response.body["asset_pipeline"]["job_payload_template"])
@@ -539,15 +620,27 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["visual_layers"]["surface_layer"]["kind"], "texture_and_emissive_maps")
             self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["contract_version"], "surface-plan.v1")
             self.assertEqual(quest.body["asset_pipeline"]["surface_plan"]["style_intent"], "bright_tokusatsu_hero")
+            self.assertEqual(
+                quest.body["asset_pipeline"]["job_payload_template"]["surface_design_hints"],
+                quest.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"],
+            )
             self.assertEqual(quest.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 5)
             self.assertEqual(quest.body["asset_pipeline"]["render_contract"], quest.body["render_contract"])
             self.assertEqual(quest.body["model_quality_gate"], quest.body["asset_pipeline"]["model_quality_gate"])
+            self.assertEqual(
+                quest.body["model_quality_gate"]["bounds_file"],
+                "viewer/assets/meshes/mesh-bounds.v1.json",
+            )
             self.assertEqual(quest.body["runtime_package"]["manifest"], quest.body["manifest"])
             self.assertEqual(quest.body["runtime_package"]["visual_layers"], quest.body["visual_layers"])
             self.assertEqual(quest.body["runtime_package"]["render_contract"], quest.body["render_contract"])
             self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["contract_version"], "armor-body-fit.v1")
             self.assertEqual(quest.body["runtime_package"]["body_fit_contract"]["height_cm"], 182.0)
             self.assertEqual(quest.body["runtime_package"]["model_quality_gate"], quest.body["model_quality_gate"])
+            self.assertEqual(
+                quest.body["runtime_package"]["model_quality_gate"]["bounds_file"],
+                "viewer/assets/meshes/mesh-bounds.v1.json",
+            )
             self.assertEqual(quest.body["runtime_package"]["runtime_checks"]["model_quality_gate_status"], "pass")
             self.assertTrue(quest.body["runtime_package"]["runtime_checks"]["model_quality_ready"])
             self.assertTrue(quest.body["runtime_package"]["runtime_checks"]["texture_lock_allowed"])
@@ -555,6 +648,204 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(
                 quest.body["runtime_package"]["runtime_checks"]["required_layers"],
                 ["base_suit_surface", "armor_overlay_parts"],
+            )
+
+    def test_quest_recall_public_runtime_contract_is_portable_and_authoritative(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            response = api.post(
+                "/v1/suits/forge",
+                {
+                    "display_name": "Public contract",
+                    "recall_code": "P7C1",
+                    "parts": ["helmet", "chest", "back"],
+                },
+            )
+            quest = api.get("/v1/quest/recall/P7C1")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(quest)
+            assert response is not None and quest is not None
+            self.assertEqual(response.status, 201, response.body)
+            self.assertEqual(quest.status, 200, quest.body)
+            self._assert_public_payload_has_no_machine_local_paths(
+                response.body,
+                forbidden_roots=[Path(tmp)],
+            )
+            self._assert_public_payload_has_no_machine_local_paths(
+                quest.body,
+                forbidden_roots=[Path(tmp)],
+            )
+
+            render_contract = quest.body["render_contract"]
+            runtime_package = quest.body["runtime_package"]
+            asset_pipeline = quest.body["asset_pipeline"]
+            armor_overlay = quest.body["visual_layers"]["armor_overlay"]
+            self.assertEqual(render_contract["render_placement_contract"], "runtime-render-placement.v1")
+            self.assertEqual(runtime_package["render_contract"], render_contract)
+            self.assertEqual(asset_pipeline["render_contract"], render_contract)
+            self.assertEqual(
+                armor_overlay["render_placements"],
+                runtime_package["render_placements"],
+            )
+            self.assertEqual(
+                asset_pipeline["render_placements"],
+                runtime_package["render_placements"],
+            )
+            self.assertNotIn("variant_render_placements", runtime_package)
+
+            self._assert_runtime_render_placement_surface_offsets(runtime_package["render_placements"])
+            self._assert_runtime_render_placement_surface_offsets(asset_pipeline["render_placements"])
+            for part, variants in asset_pipeline["variant_render_placements"].items():
+                with self.subTest(part=part, lane="variant_render_placements"):
+                    self.assertIn(runtime_package["render_placements"][part]["selected_variant_key"], variants)
+                    self._assert_runtime_render_placement_surface_offsets(variants)
+
+            self.assertFalse(asset_pipeline["texture_probe_job"]["blocking"])
+            self.assertEqual(
+                asset_pipeline["texture_probe_job"]["render_contract"],
+                render_contract,
+            )
+            self.assertTrue(asset_pipeline["generation_job"]["deprecated_for_public_ui"])
+            self.assertEqual(asset_pipeline["generation_job"]["alias_of"], "texture_probe_job")
+            self.assertEqual(
+                asset_pipeline["quality_policy"]["speed_check_texture_generation"],
+                "allowed_on_seed_proxy",
+            )
+
+    def test_forge_suit_resolves_selected_variant_glb_and_falls_back_to_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            response = api.post(
+                "/v1/suits/forge",
+                {
+                    "display_name": "Variant pick",
+                    "recall_code": "V2A1",
+                    "parts": ["helmet", "chest", "back"],
+                    "variant_keys": {
+                        "helmet": "helmet:sleek",
+                        "chest": "sleek",
+                        "back": "back:not_delivered",
+                    },
+                },
+            )
+            quest = api.get("/v1/quest/recall/V2A1")
+
+            self.assertIsNotNone(response)
+            self.assertIsNotNone(quest)
+            assert response is not None and quest is not None
+            self.assertEqual(response.status, 201, response.body)
+            preview_modules = response.body["preview"]["modules"]
+            self.assertEqual(preview_modules["helmet"]["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(
+                preview_modules["helmet"]["asset_ref"],
+                "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
+            )
+            self.assertEqual(preview_modules["chest"]["selected_variant_key"], "chest:sleek")
+            self.assertEqual(
+                preview_modules["chest"]["asset_ref"],
+                "viewer/assets/armor-parts/chest/variants/sleek/chest__sleek.glb",
+            )
+            self.assertEqual(preview_modules["back"]["selected_variant_key"], "back:base")
+            self.assertEqual(
+                preview_modules["back"]["asset_ref"],
+                "viewer/assets/armor-parts/back/variants/base/back__base.glb",
+            )
+            overlay_assets = response.body["visual_layers"]["armor_overlay"]["assets"]
+            self.assertEqual(overlay_assets["helmet"]["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(overlay_assets["helmet"]["asset_kind"], "variant_glb")
+            self.assertEqual(overlay_assets["back"]["selected_variant_key"], "back:base")
+            self.assertEqual(overlay_assets["back"]["asset_kind"], "variant_glb")
+            catalog_modules = response.body["asset_pipeline"]["variant_catalog"]["selected_modules"]
+            self.assertEqual(catalog_modules["helmet"]["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(catalog_modules["helmet"]["asset_ref"], preview_modules["helmet"]["asset_ref"])
+            self.assertEqual(
+                response.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"]["selected_modules"]["helmet"]["selected_variant_key"],
+                "helmet:sleek",
+            )
+            self.assertEqual(
+                quest.body["suitspec"]["generation"]["selected_variant_keys"]["helmet"],
+                "helmet:sleek",
+            )
+            self.assertEqual(
+                quest.body["visual_layers"]["armor_overlay"]["assets"]["helmet"]["asset_ref"],
+                "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
+            )
+
+    def test_quest_recall_resolves_selected_variant_before_stale_module_asset_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            suit_store = Path(tmp) / "suits"
+            api = NewRouteApi(Path("."), suit_store_root=suit_store)
+            response = api.post(
+                "/v1/suits/forge",
+                {"display_name": "Variant drift", "recall_code": "D7F3", "parts": ["helmet"]},
+            )
+            assert response is not None
+            self.assertEqual(response.status, 201, response.body)
+
+            suit_dir = next(path for path in suit_store.iterdir() if path.is_dir())
+            suitspec_path = suit_dir / "suitspec.json"
+            suitspec = json.loads(suitspec_path.read_text(encoding="utf-8"))
+            canonical_ref = "viewer/assets/armor-parts/helmet/helmet.glb"
+            variant_ref = "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb"
+            suitspec["modules"]["helmet"]["asset_ref"] = canonical_ref
+            generation = suitspec.setdefault("generation", {})
+            assert isinstance(generation, dict)
+            generation["selected_variant_keys"] = {"helmet": "helmet:sleek"}
+            generation["selected_asset_refs"] = {"helmet": canonical_ref}
+            generation.pop("variant_asset_resolution", None)
+            visual_layers = generation.get("visual_layers")
+            assert isinstance(visual_layers, dict)
+            armor_overlay = visual_layers.get("armor_overlay")
+            assert isinstance(armor_overlay, dict)
+            armor_overlay["assets"] = {
+                "helmet": {
+                    "module": "helmet",
+                    "selected_variant_key": "helmet:sleek",
+                    "asset_ref": canonical_ref,
+                    "asset_kind": "canonical_glb",
+                }
+            }
+            suitspec_path.write_text(json.dumps(suitspec, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            quest = api.get("/v1/quest/recall/D7F3")
+
+            self.assertIsNotNone(quest)
+            assert quest is not None
+            self.assertEqual(quest.status, 200, quest.body)
+            overlay_assets = quest.body["visual_layers"]["armor_overlay"]["assets"]
+            self.assertEqual(overlay_assets["helmet"]["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(overlay_assets["helmet"]["asset_ref"], variant_ref)
+            self.assertEqual(overlay_assets["helmet"]["asset_kind"], "variant_glb")
+            self.assertEqual(quest.body["visual_layers"]["armor_overlay"]["asset_refs"]["helmet"], variant_ref)
+            catalog_helmet = quest.body["asset_pipeline"]["variant_catalog"]["selected_modules"]["helmet"]
+            self.assertEqual(catalog_helmet["selected_variant_key"], "helmet:sleek")
+            self.assertEqual(catalog_helmet["asset_ref"], variant_ref)
+            self.assertEqual(
+                quest.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"]["selected_modules"]["helmet"]["asset_ref"],
+                variant_ref,
+            )
+
+    def test_create_suit_accepts_module_variant_key_and_stores_resolved_asset_ref(self) -> None:
+        suitspec = self._sample_suitspec()
+        suitspec["modules"]["helmet"]["variant_key"] = "helmet:sleek"
+        with tempfile.TemporaryDirectory() as tmp:
+            api = NewRouteApi(Path("."), suit_store_root=Path(tmp) / "suits")
+            response = api.post("/v1/suits", {"suitspec": suitspec})
+
+            self.assertIsNotNone(response)
+            assert response is not None
+            self.assertEqual(response.status, 201, response.body)
+            saved = response.body["suitspec"]
+            self.assertNotIn("variant_key", saved["modules"]["helmet"])
+            self.assertEqual(
+                saved["modules"]["helmet"]["asset_ref"],
+                "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
+            )
+            self.assertEqual(saved["generation"]["selected_variant_keys"]["helmet"], "helmet:sleek")
+            self.assertEqual(
+                saved["generation"]["selected_asset_refs"]["helmet"],
+                "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
             )
 
     def test_quest_recall_backfills_surface_layer_for_legacy_forge_suitspec(self) -> None:
@@ -592,6 +883,14 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(quest.body["asset_pipeline"]["texture_plan"]["provider_profile"], "nano_banana")
             self.assertEqual(quest.body["asset_pipeline"]["job_defaults"]["provider_profile"], "nano_banana")
             self.assertEqual(quest.body["asset_pipeline"]["job_payload_template"]["provider_profile"], "nano_banana")
+            self.assertEqual(
+                quest.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"]["selected_modules"]["helmet"]["base_motif_link"]["name"],
+                "head_crest_line",
+            )
+            self.assertEqual(
+                quest.body["asset_pipeline"]["job_payload_template"]["surface_design_hints"],
+                quest.body["asset_pipeline"]["surface_plan"]["armor_overlay"]["variant_design_hints"],
+            )
             self.assertEqual(quest.body["asset_pipeline"]["texture_probe_job"]["payload"]["provider_profile"], "nano_banana")
             self.assertEqual(
                 quest.body["runtime_package"]["visual_layers"]["surface_layer"],
@@ -637,6 +936,13 @@ class TestNewRouteApi(unittest.TestCase):
             self.assertEqual(response.body["asset_pipeline"]["model_plan"]["body_fit_slot_count"], 1)
             self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["part_count"], 1)
             self.assertEqual(response.body["asset_pipeline"]["modeler_blueprints"]["parts"][0]["module"], "helmet")
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["status"], "ready")
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_modules"], response.body["preview"]["variant_catalog"]["selected_modules"])
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_part_count"], 1)
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_module_count"], 1)
+            self.assertGreaterEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_variant_count"], 2)
+            self.assertGreaterEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_slot_count"], 2)
+            self.assertEqual(list(response.body["asset_pipeline"]["variant_catalog"]["selected_modules"]), ["helmet"])
             self.assertEqual(response.body["asset_pipeline"]["job_defaults"]["parts"], ["helmet"])
             self.assertEqual(response.body["asset_pipeline"]["job_payload_template"]["parts"], ["helmet"])
             self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
@@ -698,6 +1004,18 @@ class TestNewRouteApi(unittest.TestCase):
                 response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["coverage_level"],
                 "canonical_18_ready_for_visual_density_pass",
             )
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_part_count"], 18)
+            self.assertEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_module_count"], 18)
+            self.assertGreaterEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_variant_count"], 26)
+            self.assertGreaterEqual(response.body["asset_pipeline"]["variant_catalog"]["selected_slot_count"], 40)
+            self.assertEqual(response.body["preview"]["variant_catalog"], response.body["asset_pipeline"]["variant_catalog"])
+            self.assertEqual(set(response.body["asset_pipeline"]["variant_catalog"]["selected_modules"]), set(parts))
+            for module, module_catalog in response.body["asset_pipeline"]["variant_catalog"]["selected_modules"].items():
+                with self.subTest(module=module):
+                    self.assertGreaterEqual(len(module_catalog["variants"]), 1)
+                    for variant in module_catalog["variants"]:
+                        self.assertTrue(variant["variant_key"].startswith(f"{module}:"))
+                        self.assertGreaterEqual(len(variant["detail_features"]), 2)
             self.assertEqual(
                 response.body["asset_pipeline"]["model_plan"]["coverage_plan"]["sparse_zones"],
                 [],
@@ -998,6 +1316,62 @@ class TestNewRouteApi(unittest.TestCase):
 
     def _sample_suitspec(self) -> dict:
         return json.loads(Path("examples/suitspec.sample.json").read_text(encoding="utf-8"))
+
+    def _assert_public_payload_has_no_machine_local_paths(
+        self,
+        payload: object,
+        *,
+        forbidden_roots: list[Path],
+    ) -> None:
+        hits: list[str] = []
+        normalized_roots = {
+            root.resolve().as_posix().lower()
+            for root in forbidden_roots
+        }
+
+        def walk(value: object, path: str) -> None:
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    child_path = f"{path}.{key}"
+                    if key == "local_path":
+                        hits.append(f"{child_path}: local_path key is not public")
+                    walk(child, child_path)
+                return
+            if isinstance(value, list):
+                for index, child in enumerate(value):
+                    walk(child, f"{path}[{index}]")
+                return
+            if not isinstance(value, str):
+                return
+            normalized = value.replace("\\", "/")
+            lower = normalized.lower()
+            if lower.startswith("file://") or (len(normalized) >= 3 and normalized[1] == ":" and normalized[2] == "/"):
+                hits.append(f"{path}: {value}")
+            for root in normalized_roots:
+                if root and root in lower:
+                    hits.append(f"{path}: {value}")
+
+        walk(payload, "$")
+        self.assertEqual(hits, [], "\n".join(hits[:20]))
+
+    def _assert_runtime_render_placement_surface_offsets(self, placements: dict) -> None:
+        self.assertTrue(placements)
+        for part, placement in placements.items():
+            with self.subTest(part=part):
+                self.assertEqual(placement["contract_version"], "runtime-render-placement.v1")
+                self.assertEqual(placement["surface_anchor"]["contract_version"], "runtime-body-surface-anchor.v1")
+                for key in ("surface_offset_clamped_m", "quest_surface_offset_clamped_m"):
+                    self.assertIn(key, placement)
+                    self.assertIsInstance(placement[key], list)
+                    self.assertEqual(len(placement[key]), 3)
+                self.assertEqual(
+                    placement["surface_anchor"]["offset_clamped_m"],
+                    placement["surface_offset_clamped_m"],
+                )
+                self.assertEqual(
+                    placement["surface_anchor"]["quest_rig_offset_clamped_m"],
+                    placement["quest_surface_offset_clamped_m"],
+                )
 
     def _api_with_manifest(self, suit_store_root: Path) -> NewRouteApi:
         api = NewRouteApi(Path("."), suit_store_root=suit_store_root)

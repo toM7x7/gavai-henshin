@@ -1,0 +1,219 @@
+{
+  "schema_version": "armor-blueprint.v1",
+  "blueprint_id": "ABP-PATROL-01",
+  "design_intent": "写経v2: samplephoto『PATROL UNIT 01』(赤ポリス・レスキュー特撮ヒーロー)の全身転写。パトロールレッド×白エナメルトリム×金バッジ×ポリスブルー発光。肩と背のパトランプ、ベルトのユーティリティ缶、腿ホルスター、白い縁取り板が言語目標。ベルトと手袋は黒(palette_override)。",
+  "palette": {
+    "base_surface": "#C1272D",
+    "accent": "#F2F3F5",
+    "emissive": "#1B4FD8",
+    "trim": "#C9A227"
+  },
+  "physique": {
+    "torso_bulk": 1.08,
+    "shoulder_bulk": 1.18,
+    "limb_bulk": 1.02,
+    "helmet_bulk": 1.0
+  },
+  "parts": [
+    {
+      "module": "helmet",
+      "silhouette": {
+        "cross_section": "rounded",
+        "crown_height": 0.04,
+        "front_bias": 0.07,
+        "profile": [[0.0, 0.68], [0.16, 0.9], [0.42, 1.0], [0.66, 0.98], [0.88, 0.84], [1.0, 0.5]]
+      },
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {"position": 0.46, "width": 0.012, "depth": 0.45, "zone": "accent"},
+          {"position": 0.26, "width": 0.012, "depth": 0.5, "center_deg": 0, "sector_deg": 64, "zone": "accent"}
+        ],
+        "meridian_grooves": [
+          {"angle_deg": 58, "width_deg": 3.0, "depth": 0.4, "zone": "accent"},
+          {"angle_deg": -58, "width_deg": 3.0, "depth": 0.4, "zone": "accent"},
+          {"angle_deg": 180, "width_deg": 2.4, "depth": 0.45, "zone": "accent"}
+        ],
+        "rim_trim": true
+      },
+      "features": [
+        {"kind": "visor", "shape": "band", "band_bottom": 0.52, "band_top": 0.72, "wrap_deg": 148},
+        {"kind": "chin_guard", "flare": 0.12, "top": 0.4, "wrap_deg": 112},
+        {"kind": "horn_pair", "length": 0.34, "curve": 0.1, "radius_m": 0.004, "zone": "accent"},
+        {"kind": "pad_dome", "position": 0.8, "angle_deg": 0, "width_m": 0.035, "height_m": 0.04, "depth_m": 0.012, "zone": "trim"},
+        {"kind": "pad_dome", "position": 0.5, "angle_deg": 95, "width_m": 0.05, "height_m": 0.05, "depth_m": 0.015, "zone": "base_surface"},
+        {"kind": "pad_dome", "position": 0.5, "angle_deg": -95, "width_m": 0.05, "height_m": 0.05, "depth_m": 0.015, "zone": "base_surface"},
+        {"kind": "vent_slats", "position": 0.24, "t_span": 0.1, "angle_deg": 0, "arc_deg": 34, "slats": 3, "depth": 0.5, "zone": "trim"},
+        {"kind": "panel_step", "position": 0.42, "t_span": 0.26, "angle_deg": 86, "arc_deg": 50, "raise": 0.45, "mirror": true},
+        {"kind": "overlay_plate", "position": 0.63, "t_span": 0.18, "angle_deg": 180, "arc_deg": 110, "lift_m": 0.007, "corner": 0.3, "rim": 0.7, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "chest",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "shell_thickness_m": 0.012,
+        "ring_grooves": [
+          {"position": 0.46, "width": 0.016, "depth": 0.5, "zone": "accent"},
+          {"position": 0.3, "width": 0.014, "depth": 0.45, "zone": "accent"}
+        ],
+        "meridian_grooves": [
+          {"angle_deg": 42, "width_deg": 3.0, "depth": 0.45, "zone": "accent"},
+          {"angle_deg": -42, "width_deg": 3.0, "depth": 0.45, "zone": "accent"}
+        ]
+      },
+      "features": [
+        {"kind": "pec_plates", "strength": 0.12, "lobe_offset_deg": 28, "lobe_width_deg": 18, "center": 0.72},
+        {"kind": "pad_dome", "position": 0.76, "angle_deg": 0, "width_m": 0.07, "height_m": 0.08, "depth_m": 0.018, "zone": "trim"},
+        {"kind": "sash", "band_top": 0.93, "band_bottom": 0.52, "from_deg": -15, "to_deg": -19, "width_m": 0.034, "lift_m": 0.007, "mirror": true, "zone": "base_surface"},
+        {"kind": "overlay_plate", "position": 0.62, "t_span": 0.3, "angle_deg": 30, "arc_deg": 34, "lift_m": 0.012, "corner": 0.25, "rim": 0.85, "bolts": true, "mirror": true, "zone": "base_surface"},
+        {"kind": "overlay_plate", "position": 0.24, "t_span": 0.13, "angle_deg": 0, "arc_deg": 86, "lift_m": 0.008, "corner": 0.15, "rim": 0.8, "zone": "accent"},
+        {"kind": "overlay_plate", "position": 0.1, "t_span": 0.11, "angle_deg": 0, "arc_deg": 82, "lift_m": 0.007, "corner": 0.15, "rim": 0.7, "zone": "base_surface"},
+        {"kind": "vent_slats", "position": 0.58, "t_span": 0.14, "angle_deg": 88, "arc_deg": 22, "slats": 3, "depth": 0.55, "mirror": true, "zone": "trim"},
+        {"kind": "rivet_row", "position": 0.93, "angle_deg": 0, "arc_deg": 104, "count": 6, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "back",
+      "silhouette": {"cross_section": "squared"},
+      "surface": {
+        "edge_style": "machined",
+        "shell_thickness_m": 0.012,
+        "ring_grooves": [
+          {"position": 0.36, "width": 0.016, "depth": 0.5, "zone": "accent"},
+          {"position": 0.18, "width": 0.014, "depth": 0.45, "zone": "accent"}
+        ]
+      },
+      "features": [
+        {"kind": "buckle", "position": 0.82, "angle_deg": 180, "width_m": 0.12, "height_m": 0.035, "depth_m": 0.02, "zone": "emissive"},
+        {"kind": "panel_step", "position": 0.55, "t_span": 0.42, "angle_deg": 0, "arc_deg": 46, "raise": 0.65},
+        {"kind": "overlay_plate", "position": 0.14, "t_span": 0.14, "angle_deg": 0, "arc_deg": 70, "lift_m": 0.009, "corner": 0.2, "rim": 0.75, "zone": "base_surface"},
+        {"kind": "vent_slats", "position": 0.6, "t_span": 0.15, "angle_deg": 24, "arc_deg": 18, "slats": 4, "depth": 0.55, "mirror": true, "zone": "trim"},
+        {"kind": "rivet_row", "position": 0.3, "angle_deg": 0, "arc_deg": 84, "count": 5, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "waist",
+      "palette_override": {"base_surface": "#0B0C10", "accent": "#6E747D"},
+      "finish_override": {"base_surface": {"metallic": 0.15, "roughness": 0.7}},
+      "silhouette": {"cross_section": "squared"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [{"position": 0.5, "width": 0.03, "depth": 0.3, "zone": "trim"}]
+      },
+      "features": [
+        {"kind": "buckle", "position": 0.55, "angle_deg": 0, "width_m": 0.08, "height_m": 0.05, "depth_m": 0.022, "zone": "trim"},
+        {"kind": "buckle", "position": 0.5, "angle_deg": 42, "width_m": 0.045, "height_m": 0.055, "depth_m": 0.024, "zone": "emissive"},
+        {"kind": "buckle", "position": 0.5, "angle_deg": -42, "width_m": 0.045, "height_m": 0.055, "depth_m": 0.024, "zone": "base_surface"},
+        {"kind": "buckle", "position": 0.48, "angle_deg": 80, "width_m": 0.05, "height_m": 0.06, "depth_m": 0.02, "zone": "base_surface"},
+        {"kind": "buckle", "position": 0.48, "angle_deg": -80, "width_m": 0.05, "height_m": 0.06, "depth_m": 0.02, "zone": "base_surface"},
+        {"kind": "overlay_plate", "position": 0.5, "t_span": 0.42, "angle_deg": 180, "arc_deg": 100, "lift_m": 0.01, "corner": 0.25, "taper": -0.2, "rim": 0.75, "zone": "base_surface"},
+        {"kind": "rivet_row", "position": 0.72, "angle_deg": 0, "arc_deg": 120, "count": 7, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "left_shoulder",
+      "silhouette": {"cross_section": "rounded", "crown_height": 0.07},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [{"position": 0.46, "width": 0.02, "depth": 0.5, "zone": "accent"}]
+      },
+      "features": [
+        {"kind": "cuff_flange", "position": 0.16, "width": 0.06, "flare": 0.18, "zone": "accent"},
+        {"kind": "buckle", "position": 0.88, "angle_deg": 0, "width_m": 0.06, "height_m": 0.022, "depth_m": 0.014, "zone": "emissive"},
+        {"kind": "panel_step", "position": 0.7, "t_span": 0.3, "angle_deg": 0, "arc_deg": 140, "raise": 0.55},
+        {"kind": "overlay_plate", "position": 0.3, "t_span": 0.14, "angle_deg": 0, "arc_deg": 144, "lift_m": 0.008, "corner": 0.35, "rim": 0.7, "zone": "accent"},
+        {"kind": "rivet_row", "position": 0.55, "angle_deg": 0, "arc_deg": 120, "count": 5, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "left_upperarm",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [{"position": 0.55, "width": 0.018, "depth": 0.45, "zone": "accent"}]
+      },
+      "features": [
+        {"kind": "panel_step", "position": 0.6, "t_span": 0.32, "angle_deg": 90, "arc_deg": 70, "raise": 0.5},
+        {"kind": "cuff_flange", "position": 0.12, "width": 0.05, "flare": 0.13, "zone": "accent"},
+        {"kind": "rivet_row", "position": 0.8, "angle_deg": 90, "arc_deg": 40, "count": 3, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "left_forearm",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {"position": 0.36, "width": 0.016, "depth": 0.45, "zone": "accent"},
+          {"position": 0.18, "width": 0.014, "depth": 0.4, "zone": "trim"}
+        ]
+      },
+      "features": [
+        {"kind": "cuff_flange", "position": 0.9, "width": 0.06, "flare": 0.2, "zone": "accent"},
+        {"kind": "overlay_plate", "position": 0.56, "t_span": 0.3, "angle_deg": 90, "arc_deg": 56, "lift_m": 0.011, "corner": 0.2, "rim": 0.9, "bolts": true, "zone": "base_surface"},
+        {"kind": "buckle", "position": 0.5, "angle_deg": -90, "width_m": 0.024, "height_m": 0.05, "depth_m": 0.016, "zone": "emissive"},
+        {"kind": "vent_slats", "position": 0.28, "t_span": 0.1, "angle_deg": 90, "arc_deg": 24, "slats": 3, "depth": 0.5, "zone": "trim"}
+      ]
+    },
+    {
+      "module": "left_hand",
+      "palette_override": {"base_surface": "#121316", "accent": "#3A3D44"},
+      "finish_override": {"base_surface": {"metallic": 0.1, "roughness": 0.8}},
+      "silhouette": {"cross_section": "squared"},
+      "surface": {"edge_style": "machined"},
+      "features": [
+        {"kind": "pad_dome", "position": 0.62, "angle_deg": 0, "width_m": 0.05, "height_m": 0.035, "depth_m": 0.012, "zone": "base_surface"},
+        {"kind": "rivet_row", "position": 0.72, "angle_deg": 0, "arc_deg": 56, "count": 4, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "left_thigh",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [{"position": 0.42, "width": 0.02, "depth": 0.45, "zone": "accent"}]
+      },
+      "features": [
+        {"kind": "overlay_plate", "position": 0.6, "t_span": 0.34, "angle_deg": 0, "arc_deg": 60, "lift_m": 0.011, "corner": 0.25, "taper": 0.15, "rim": 0.85, "bolts": true, "zone": "base_surface"},
+        {"kind": "buckle", "position": 0.55, "angle_deg": 90, "width_m": 0.05, "height_m": 0.1, "depth_m": 0.035, "zone": "base_surface"},
+        {"kind": "buckle", "position": 0.42, "angle_deg": 96, "width_m": 0.03, "height_m": 0.05, "depth_m": 0.02, "zone": "emissive"},
+        {"kind": "cuff_flange", "position": 0.12, "width": 0.05, "flare": 0.12, "zone": "accent"},
+        {"kind": "rivet_row", "position": 0.16, "angle_deg": 0, "arc_deg": 84, "count": 4, "zone": "accent"}
+      ]
+    },
+    {
+      "module": "left_shin",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [
+          {"position": 0.52, "width": 0.018, "depth": 0.45, "zone": "accent"},
+          {"position": 0.14, "width": 0.02, "depth": 0.4, "zone": "trim"}
+        ]
+      },
+      "features": [
+        {"kind": "pad_dome", "position": 0.88, "angle_deg": 0, "width_m": 0.055, "height_m": 0.06, "depth_m": 0.022, "zone": "accent"},
+        {"kind": "bulge", "angle_deg": 180, "position": 0.62, "strength": 0.12, "width_deg": 46, "width": 0.18},
+        {"kind": "panel_step", "position": 0.5, "t_span": 0.46, "angle_deg": 0, "arc_deg": 38, "raise": 0.6},
+        {"kind": "overlay_plate", "position": 0.42, "t_span": 0.3, "angle_deg": 90, "arc_deg": 44, "lift_m": 0.008, "corner": 0.3, "rim": 0.75, "zone": "accent"},
+        {"kind": "buckle", "position": 0.6, "angle_deg": -90, "width_m": 0.026, "height_m": 0.06, "depth_m": 0.014, "zone": "emissive"}
+      ]
+    },
+    {
+      "module": "left_boot",
+      "silhouette": {"cross_section": "rounded"},
+      "surface": {
+        "edge_style": "machined",
+        "ring_grooves": [{"position": 0.5, "width": 0.02, "depth": 0.4, "zone": "accent"}]
+      },
+      "features": [
+        {"kind": "cuff_flange", "position": 0.85, "width": 0.06, "flare": 0.18, "zone": "accent"},
+        {"kind": "panel_step", "position": 0.35, "t_span": 0.3, "angle_deg": 0, "arc_deg": 76, "raise": 0.5},
+        {"kind": "overlay_plate", "position": 0.62, "t_span": 0.2, "angle_deg": 0, "arc_deg": 70, "lift_m": 0.008, "corner": 0.25, "rim": 0.8, "zone": "accent"},
+        {"kind": "rivet_row", "position": 0.52, "angle_deg": 0, "arc_deg": 80, "count": 4, "zone": "accent"}
+      ]
+    }
+  ]
+}

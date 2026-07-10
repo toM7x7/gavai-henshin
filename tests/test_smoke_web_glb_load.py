@@ -299,6 +299,32 @@ def test_sidecar_glb_bbox_mismatch_is_reported_before_preview_can_drift(tmp_path
     assert chest["sidecar_glb_bbox_outside_tolerance_axes"] == ["z"]
 
 
+def test_bbox_warn_summary_promotes_near_miss_into_trackable_task(tmp_path: Path) -> None:
+    from henshin.armor_fit_contract import ARMOR_SLOT_SPECS, normalize_slot_id
+
+    module = "chest"
+    target_bbox = smoke._reference_target_dimensions(module)
+    warn_bbox = {**target_bbox, "z": target_bbox["z"] * 0.89}
+    _write_glb_for_module(tmp_path, module, bbox_m=warn_bbox)
+    _write_sidecar_for_module(
+        tmp_path,
+        module,
+        primary_bone=ARMOR_SLOT_SPECS[normalize_slot_id(module)].body_anchor,
+        bbox_m=warn_bbox,
+    )
+
+    report = smoke.smoke_check_web_glb_load(repo_root=tmp_path, modules=[module])
+
+    assert report["ok"] is True, report["failures"]
+    assert report["bbox_warning_count"] == 1
+    warning = report["bbox_warning_summary"][0]
+    assert warning["module"] == module
+    assert warning["axes"] == ["z"]
+    assert warning["max_abs_delta_pct"] == pytest.approx(11.0)
+    assert warning["axis_acceptance"]["z"]["minimum_change_to_pass_m"] > 0
+    assert "Reorder chest bbox axes z" in warning["task"]
+
+
 def test_web_preview_parts_contract_detects_missing_module(tmp_path: Path) -> None:
     forge_dir = tmp_path / "viewer" / "armor-forge"
     forge_dir.mkdir(parents=True)

@@ -1,0 +1,78 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "chest",
+  "part_id": "viewer.mesh.chest.v1",
+  "category": "torso",
+  "bbox_m": {
+    "x": 0.11999999731779099,
+    "y": 0.10000000521540642,
+    "z": 0.02500000223517418,
+    "size": [
+      0.11999999731779099,
+      0.10000000521540642,
+      0.02500000223517418
+    ],
+    "dimensions": [
+      0.11999999731779099,
+      0.10000000521540642,
+      0.02500000223517418
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.03,
+      0.1
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine",
+      "hips"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "chest:chest_core:hero_v",
+  "is_topping": true,
+  "parent_module": "chest",
+  "topping_slot": "chest_core",
+  "topping_key": "hero_v",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.04,
+      0.07
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.14,
+    "y": 0.12,
+    "z": 0.035
+  }
+}

@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.left_thigh.v1",
   "category": "leg",
   "bbox_m": {
-    "x": 0.13225999474525452,
+    "x": 0.12983931228518486,
     "y": 0.37690800428390503,
-    "z": 0.12370000034570694,
+    "z": 0.12248223647475243,
     "size": [
-      0.13225999474525452,
+      0.12983931228518486,
       0.37690800428390503,
-      0.12370000034570694
+      0.12248223647475243
     ],
     "dimensions": [
-      0.13225999474525452,
+      0.12983931228518486,
       0.37690800428390503,
-      0.12370000034570694
+      0.12248223647475243
     ]
   },
-  "triangle_count": 392,
+  "triangle_count": 716,
   "material_zones": [
     "accent",
     "base_surface",
@@ -145,11 +145,19 @@
       "front power cell"
     ]
   },
-  "triangles": 392,
+  "triangles": 716,
   "target_envelope_m": {
     "x": 0.136,
     "y": 0.3956,
     "z": 0.1292
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Leg texture should taper toward joints and keep speed lines aligned across thigh/shin."
+  }
 }

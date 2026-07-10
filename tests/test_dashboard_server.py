@@ -15,7 +15,10 @@ from henshin.dashboard_server import (
     GenerationJob,
     GenerationJobManager,
     IWHenshinVoicePayload,
+    QUEST_DEBUG_HISTORY_MAX_BYTES,
+    QUEST_DEBUG_MAX_BYTES,
     run_iw_henshin_voice,
+    run_save_quest_debug,
 )
 from henshin.new_route_api import NewRouteApi
 
@@ -151,6 +154,78 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("/viewer/quest-iw-demo/?newRoute=1", payload["quest_viewer_path"])
         self.assertNotIn("repo_root", payload)
 
+    def test_quest_debug_endpoint_saves_latest_snapshot_over_http(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+
+            class TestServer(ThreadingMixIn, TCPServer):
+                allow_reuse_address = True
+                daemon_threads = True
+
+            def factory(*args, **kwargs):
+                return DashboardHandler(
+                    *args,
+                    directory=str(root),
+                    root=root,
+                    jobs=GenerationJobManager(root),
+                    **kwargs,
+                )
+
+            with TestServer(("127.0.0.1", 0), factory) as httpd:
+                thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    port = httpd.server_address[1]
+                    payload = {
+                        "event": "scene",
+                        "query": {"code": "3601", "debug": "1"},
+                        "xr": {"session": True, "liveBodyPose": False},
+                        "baseShell": {"visible": False},
+                        "meshes": {"visibleCount": 18},
+                    }
+                    body = json.dumps(payload).encode("utf-8")
+                    request = Request(
+                        f"http://127.0.0.1:{port}/api/quest-debug",
+                        data=body,
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    with urlopen(request, timeout=5) as response:
+                        posted = json.loads(response.read().decode("utf-8"))
+                    with urlopen(f"http://127.0.0.1:{port}/api/quest-debug/latest", timeout=5) as response:
+                        latest = json.loads(response.read().decode("utf-8"))
+                finally:
+                    httpd.shutdown()
+                    thread.join(timeout=5)
+
+            self.assertTrue(posted["ok"])
+            self.assertEqual(posted["latest_url"], "/api/quest-debug/latest")
+            self.assertTrue(latest["ok"])
+            self.assertEqual(latest["record"]["payload"]["query"]["code"], "3601")
+            self.assertFalse(latest["record"]["payload"]["baseShell"]["visible"])
+            self.assertTrue((root / "sessions" / "quest-debug" / "latest.json").is_file())
+            self.assertTrue((root / "sessions" / "quest-debug" / "latest.jsonl").is_file())
+
+    def test_quest_debug_payload_size_is_limited(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                run_save_quest_debug(Path(tmp).resolve(), {"blob": "x" * QUEST_DEBUG_MAX_BYTES})
+
+    def test_quest_debug_history_is_capped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            blob = "x" * (QUEST_DEBUG_MAX_BYTES // 2)
+
+            for index in range(40):
+                run_save_quest_debug(root, {"index": index, "blob": blob})
+
+            history_path = root / "sessions" / "quest-debug" / "latest.jsonl"
+            self.assertLessEqual(history_path.stat().st_size, QUEST_DEBUG_HISTORY_MAX_BYTES)
+            lines = history_path.read_text(encoding="utf-8").splitlines()
+            self.assertGreater(len(lines), 0)
+            latest = json.loads(lines[-1])
+            self.assertEqual(latest["payload"]["index"], 39)
+
     def test_armor_forge_page_exposes_public_workflow_contract(self) -> None:
         html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
@@ -174,6 +249,9 @@ class TestDashboardServer(unittest.TestCase):
             "modelerHandoffTitle",
             "modelerHandoffDetail",
             "modelerBlueprintUrl",
+            "textureQuickAction",
+            "textureQuickButton",
+            "textureQuickDetail",
             "textureJobPanel",
             "textureJobButton",
             "textureJobTitle",
@@ -194,9 +272,28 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn("vrm_bone_metrics", js)
         self.assertIn("addArmorEdges", js)
         self.assertIn("renderAssetPipeline", js)
-        self.assertIn("planned only / surface not generated", html)
+        self.assertIn("loadLocalVariantCatalog", js)
+        self.assertIn("selectedVariantMap", js)
+        self.assertIn("selected_variant_keys", js)
+        self.assertIn("selected_variant_key", js)
+        self.assertIn("variant_catalog_path", js)
+        self.assertIn('select[data-part-variant]', js)
+        self.assertIn("Variant: ${variantSummary}", js)
+        self.assertIn(".part-option", css)
+        self.assertIn("待機中 / 表面未生成 / 生成後に状態を表示", html)
         self.assertIn("planned_not_generated", js)
         self.assertIn("fitStatus", js)
+        self.assertIn("structuralQaForFit", js)
+        self.assertIn("structureQaSummaryFor", js)
+        self.assertIn("fitReferencePoint", js)
+        self.assertIn("boot_float", js)
+        self.assertIn("return Math.max(0, upper.bottomY - lower.topY);", js)
+        self.assertIn("const continuityPairs = continuityPairsForQa(parts);", js)
+        self.assertIn("previewStructureQaState", js)
+        self.assertIn("previewGroundLiftParts", js)
+        self.assertIn("previewContinuityBreaks", js)
+        self.assertIn('setPreviewLayerRow(panel, "structure", "構造QA"', js)
+        self.assertIn('.preview-layer-row[data-layer="structure"]', css)
         self.assertIn("preview_vrm_bone_metrics", js)
         self.assertIn("nano_banana", js)
         self.assertIn("mesh_uv", js)
@@ -312,6 +409,73 @@ class TestDashboardServer(unittest.TestCase):
         self.assertNotIn('id="suitId"', html)
         self.assertNotIn('id="manifestId"', html)
 
+    def test_armor_forge_public_flow_hides_support_diagnostics_static_contract(self) -> None:
+        html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
+        js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
+        copy_js = Path("viewer/shared/exhibition-copy.js").read_text(encoding="utf-8")
+        css = Path("viewer/armor-forge/styles.css").read_text(encoding="utf-8")
+
+        for token in {
+            "展示用 Web Forge",
+            "名前・身長・イメージ",
+            "生成してコード発行",
+            "Quest入力コード",
+            "生成後にQuestへ",
+            "鎧プレビュー",
+            "サポート診断",
+            "詳細パーツ設定",
+            "納品GLBが読み込まれるまで仮形状が出る場合があります",
+            'name="gavai-api-base"',
+            'name="gavai-asset-base"',
+            "サービス設定",
+            "apiBase",
+            "assetBase",
+        }:
+            self.assertIn(token, html)
+        self.assertIn("Quest入力ページを開く", js)
+        self.assertIn("EXHIBITION_OPERATOR_COPY.forge.complete", js)
+        self.assertIn("生成完了。4桁コードをQuestに入力してください。", copy_js)
+
+        support_match = re.search(
+            r'<details class="result-details support-details">(?P<body>.*?)</details>',
+            html,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(support_match)
+        assert support_match is not None
+        support_body = support_match.group("body")
+        for dom_id in {"assetPipeline", "textureJobPanel", "modelerHandoff", "questUrl", "serviceConfigPanel"}:
+            self.assertIn(f'id="{dom_id}"', support_body)
+        self.assertNotIn('id="textureQuickButton"', support_body)
+        self.assertIn('id="textureQuickButton"', html)
+
+        part_options_match = re.search(
+            r'<details class="parts-details support-details">(?P<body>.*?)</details>',
+            html,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(part_options_match)
+        assert part_options_match is not None
+        self.assertIn('id="partGrid"', part_options_match.group("body"))
+
+        self.assertIn('document.createElement("details")', js)
+        self.assertIn('previewLayerPanel.dataset.supportDiagnostics = "preview";', js)
+        self.assertIn('summary.textContent = "プレビュー診断";', js)
+        for token in {
+            "const SERVICE_CONFIG = Object.freeze({",
+            'apiBase: serviceConfigValue("apiBase", "gavai-api-base", "gavai.apiBase")',
+            'assetBase: serviceConfigValue("assetBase", "gavai-asset-base", "gavai.assetBase")',
+            "function resolveServicePath(path, base)",
+            "fetch(resolveServicePath(path, SERVICE_CONFIG.apiBase), options)",
+            "resolveServicePath(raw.startsWith(\"/\") ? raw : `/${raw}`, SERVICE_CONFIG.assetBase)",
+            "function renderServiceConfig()",
+            "renderServiceConfig();",
+        }:
+            self.assertIn(token, js)
+        self.assertIn(".support-details", css)
+        self.assertIn(".preview-layer-panel[open]", css)
+        self.assertIn(".preview-layer-panel:not([open])", css)
+
     def test_armor_forge_base_suit_is_vrm_surface_layer_static_contract(self) -> None:
         html = Path("viewer/armor-forge/index.html").read_text(encoding="utf-8")
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
@@ -379,39 +543,83 @@ class TestDashboardServer(unittest.TestCase):
             "function sidecarMetadataForModule(part, module = {})",
             "item.topping_slot",
             "module?.attachment_offset_target_m",
+            "module?.attachment_offset_m",
             "module?.topping_slots",
             "module?.variant_key",
-            "function sidecarQaFor(records = previewRecordsFromData())",
-            'setPreviewLayerRow(panel, "sidecar", "Sidecar", sidecarQa.title, sidecarQa.detail, sidecarQa.state);',
+            "sidecar?.body_follow_profile?.mode",
+            "function wornPlacementOffsetForPart(part, offset)",
+            "function wornDepthClamp(part, deltaZ, shoulderWidth)",
+            "enforceWornCenterForPart(part, center, targetSize, metrics)",
+            "function sidecarQaFor(records = previewRecordsFromData(), data = latestForgeData)",
+            "function variantCatalogCandidatesFromData(data = latestForgeData)",
+            "function variantCatalogFromData(data = latestForgeData)",
+            "function variantCatalogModuleForPart(part, data = latestForgeData)",
+            "function catalogToppingSlotsForPart(part, data = latestForgeData)",
+            "function catalogToppingSlotEntriesForPart(part, data = latestForgeData)",
+            "function catalogVariantKeysForPart(part, data = latestForgeData)",
+            "function variantCatalogStatsForRecords(records = previewRecordsFromData(), data = latestForgeData)",
+            "function labeledVariantKey(part, key)",
+            'setPreviewLayerRow(panel, "sidecar", "設計メタ", sidecarQa.title, sidecarQa.detail, sidecarQa.state);',
             "canvas.dataset.previewAttachmentOffsetTargets",
             "canvas.dataset.previewToppingSlots",
             "canvas.dataset.previewVariantKeys",
             "canvas.dataset.previewAttachmentOffsetCount",
             "canvas.dataset.previewToppingSlotCount",
             "canvas.dataset.previewVariantKeyCount",
+            "canvas.dataset.previewConflictCount",
+            "canvas.dataset.previewConflictsWith",
+            "canvas.dataset.previewCatalogPath",
+            "canvas.dataset.previewSelectedModuleCount",
+            "canvas.dataset.previewCatalogSlotCount",
+            "canvas.dataset.previewCatalogVariantCount",
+            "canvas.dataset.previewVisualDensityState",
+            "canvas.dataset.previewVisualDensityWarnings",
             "stand.canvas.dataset.previewLayerReadability",
             "function compactDataList(values, limit = 3, empty = \"none\")",
             "function layerReadabilityFor(stand, records, surface)",
             "attachmentOffsetTargetM",
             "offsetAllowanceM",
-            'setPreviewLayerRow(panel, "readability", "Layers", layerReadability.title, layerReadability.detail, layerReadability.state);',
-            'setPreviewLayerRow(panel, "offset", "Offset", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);',
-            'setPreviewLayerRow(panel, "topping", "Topping", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);',
-            'setPreviewLayerRow(panel, "variant", "Variant", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);',
+            'setPreviewLayerRow(panel, "readability", "表示層", layerReadability.title, layerReadability.detail, layerReadability.state);',
+            'setPreviewLayerRow(panel, "offset", "装着位置", sidecarQa.offsetTitle, sidecarQa.offsetDetail, sidecarQa.offsetState);',
+            'setPreviewLayerRow(panel, "topping", "追加意匠", sidecarQa.toppingTitle, sidecarQa.toppingDetail, sidecarQa.toppingState);',
+            'setPreviewLayerRow(panel, "variant", "型選択", sidecarQa.variantTitle, sidecarQa.variantDetail, sidecarQa.variantState);',
+            'setPreviewLayerRow(panel, "density", "意匠QA", sidecarQa.densityTitle, sidecarQa.densityDetail, sidecarQa.densityState);',
             '"Body reference"',
             '"Base suit"',
             '"Armor parts"',
             '"Surface lines"',
+            "data?.preview?.variant_catalog",
+            "data?.preview?.asset_pipeline?.variant_catalog",
+            "data?.asset_pipeline?.variant_catalog",
+            "data?.suitspec?.asset_pipeline?.variant_catalog",
+            "const catalogStats = variantCatalogStatsForRecords(records, data);",
+            "catalogToppingSlotEntriesForPart(part, data)",
+            "catalogVariantKeysForPart(part, data)",
+            "catalogToppingSlotsForPart(part, data)",
+            "catalogDetailFeatureCountForPart(part, data)",
+            "const sidecarQa = sidecarQaFor(records, data);",
         }:
             self.assertIn(token, js)
 
+        sidecar_block = js[js.index("function sidecarQaFor(") : js.index("\n\nfunction layerReadabilityFor")]
+        for forbidden in {
+            "variantCatalogStatsForRecords(records);",
+            "catalogToppingSlotEntriesForPart(part).map",
+            "catalogVariantKeysForPart(part).map",
+            "catalogToppingSlotsForPart(part).length",
+            "catalogDetailFeatureCountForPart(part);",
+        }:
+            self.assertNotIn(forbidden, sidecar_block)
+
         target_center_block = js[js.index("  targetCenterForPart(") : js.index("\n\n  vrmPoseFor")]
         self.assertIn("const sidecar = sidecarMetadataForModule(part, module);", target_center_block)
-        self.assertIn("sidecar.offsetTarget || anchor.offset", target_center_block)
+        self.assertIn("wornPlacementOffsetForPart(part, sidecar.placementOffset || sidecar.offsetTarget || anchor.offset)", target_center_block)
 
         offset_allowance_block = js[js.index("  fitOffsetAllowanceForPart(") : js.index("\n\n  fitClearanceForPart")]
         self.assertIn("fitOffsetAllowanceForPart(part, module, segmentQuat = null)", offset_allowance_block)
-        self.assertIn("sidecarMetadataForModule(part, module).offsetTarget", offset_allowance_block)
+        self.assertIn("const sidecar = sidecarMetadataForModule(part, module);", offset_allowance_block)
+        self.assertIn("wornPlacementOffsetForPart(part, sidecar.offsetTarget)", offset_allowance_block)
+        self.assertIn("Number.isFinite(sidecar.offsetLimitM)", offset_allowance_block)
 
         clearance_block = js[js.index("  fitClearanceForPart(") : js.index("\n\n  targetSizeForPart")]
         self.assertIn("const offsetAllowance = this.fitOffsetAllowanceForPart(part, module, segmentQuat);", clearance_block)
@@ -422,8 +630,44 @@ class TestDashboardServer(unittest.TestCase):
         self.assertIn('.preview-layer-row[data-layer="offset"]', css)
         self.assertIn('.preview-layer-row[data-layer="topping"]', css)
         self.assertIn('.preview-layer-row[data-layer="variant"]', css)
+        self.assertIn('.preview-layer-row[data-layer="density"]', css)
         self.assertIn(".preview-legend small", css)
         self.assertIn("overflow-wrap: anywhere;", css)
+
+    def test_armor_forge_wave2_variant_catalog_is_available_to_preview_and_asset_pipeline(self) -> None:
+        root = Path(".").resolve()
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            response = DashboardHandler._new_route_post_response_for_test(
+                root,
+                "/v1/suits/forge",
+                {"display_name": "Wave2", "parts": ["helmet", "chest", "back"]},
+                suit_store_root=Path(tmp) / "suits",
+            )
+
+        self.assertIsNotNone(response)
+        assert response is not None
+        self.assertEqual(response.status, 201, response.body)
+        body = response.body
+        asset_catalog = body["asset_pipeline"]["variant_catalog"]
+        preview_catalog = body["preview"]["variant_catalog"]
+        preview_pipeline_catalog = body["preview"]["asset_pipeline"]["variant_catalog"]
+
+        self.assertEqual(preview_catalog, asset_catalog)
+        self.assertEqual(preview_pipeline_catalog, asset_catalog)
+        self.assertEqual(asset_catalog["path"], "viewer/assets/armor-parts/variant_catalog.json")
+        self.assertEqual(set(asset_catalog["selected_modules"]), {"helmet", "chest", "back"})
+        self.assertGreaterEqual(asset_catalog["selected_variant_count"], 6)
+        self.assertGreaterEqual(asset_catalog["selected_slot_count"], 6)
+        for part in {"helmet", "chest", "back"}:
+            module = asset_catalog["selected_modules"][part]
+            self.assertGreaterEqual(len(module["variants"]), 2)
+            self.assertGreaterEqual(len(module["topping_slots"]), 2)
+            for slot in module["topping_slots"]:
+                self.assertIn("topping_slot", slot)
+                self.assertIn("conflicts_with", slot)
+            for variant in module["variants"]:
+                self.assertIn("variant_key", variant)
+                self.assertGreaterEqual(len(variant["detail_features"]), 2)
 
     def test_armor_forge_limb_pose_uses_3d_segment_frame_static_contract(self) -> None:
         js = Path("viewer/armor-forge/forge.js").read_text(encoding="utf-8")
@@ -500,7 +744,9 @@ class TestDashboardServer(unittest.TestCase):
             "const [segmentStart, segmentEnd] = this.segmentForPart(part, metrics);",
             "const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);",
             "const sidecar = sidecarMetadataForModule(part, module);",
-            "center = addOrientedOffset(center, sidecar.offsetTarget || anchor.offset, segmentQuat);",
+            "const placementOffset = runtimeOffsetForPreviewPart(part, module)",
+            "|| wornPlacementOffsetForPart(part, sidecar.placementOffset || sidecar.offsetTarget || anchor.offset);",
+            "center = addOrientedOffset(center, placementOffset || [0, 0, 0], segmentQuat);",
         }:
             self.assertIn(token, center_block)
 
@@ -510,6 +756,7 @@ class TestDashboardServer(unittest.TestCase):
             "const segmentQuat = segmentFrameQuaternion(segmentStart, segmentEnd);",
             'const anchorQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2], "XYZ"));',
             "const quaternion = segmentQuat ? segmentQuat.clone().multiply(anchorQuat).normalize() : null;",
+            "const center = this.enforceWornCenterForPart(part, rawCenter, targetSize, metrics);",
             "q: quaternion ? quaternion.toArray() : null,",
             'source: "vrm_bone_metrics",',
         }:
@@ -646,7 +893,7 @@ class TestDashboardServer(unittest.TestCase):
             'aria-label="正面へ戻す"',
             'aria-label="縮小"',
             'aria-label="拡大"',
-            'aria-label="自動回転を切り替え"',
+            'aria-label="自動回転を切り替える"',
         }:
             self.assertIn(token, html)
 
@@ -790,6 +1037,8 @@ class TestDashboardServer(unittest.TestCase):
             job_payload = GeneratePartsPayload(**payload)
 
             GenerationJobManager(root)._validate_payload(job_payload)
+            part_contracts = payload["surface_design_hints"]["per_part_texture_contracts"]
+            helmet_contract = part_contracts["helmet"]
 
         self.assertTrue(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
         self.assertTrue(response.body["asset_pipeline"]["texture_probe_job"]["final_texture_lock_allowed"])
@@ -801,6 +1050,53 @@ class TestDashboardServer(unittest.TestCase):
         self.assertTrue(job_payload.update_suitspec)
         self.assertTrue(job_payload.writes_final_texture)
         self.assertTrue(job_payload.suitspec.endswith("/suitspec.json"))
+        self.assertEqual(helmet_contract["contract_version"], "web-forge-per-part-texture.v1")
+        self.assertEqual(helmet_contract["provider_profile"], "nano_banana")
+        self.assertEqual(helmet_contract["texture_mode"], "mesh_uv")
+        self.assertIn("helmet:", helmet_contract["selected_variant_key"])
+        self.assertIn("uv_availability", helmet_contract)
+        self.assertIn("uv_policy", helmet_contract)
+        self.assertIn("material_hints", helmet_contract)
+        self.assertIn("Per-part texture target: helmet", helmet_contract["texture_prompt"])
+
+    def test_forge_texture_probe_blocks_final_lock_when_selected_uv_contract_fails(self) -> None:
+        root = Path(".").resolve()
+        failed_uv_policy = {
+            "uv_availability": {
+                "texture_mode": "mesh_uv",
+                "uv0_status": "fail",
+                "uv0_source": "test",
+                "uv_guide_expected": True,
+                "can_generate_mesh_uv_texture": False,
+            },
+            "uv_policy": {
+                "contract_version": "part-uv-policy.v1",
+                "source_contract": "test",
+                "primary_motif_zone": "blocked",
+            },
+        }
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            with patch.object(NewRouteApi, "_forge_part_uv_policy", return_value=failed_uv_policy):
+                api = NewRouteApi(root, suit_store_root=Path(tmp) / "suits")
+                response = api.post(
+                    "/v1/suits/forge",
+                    {"display_name": "Visitor", "parts": ["helmet", "chest", "back"]},
+                )
+            assert response is not None
+            probe = response.body["asset_pipeline"]["texture_probe_job"]
+            payload = probe["payload"]
+            job_payload = GeneratePartsPayload(**payload)
+
+            GenerationJobManager(root)._validate_payload(job_payload)
+
+        self.assertFalse(probe["final_texture_lock_allowed"])
+        self.assertFalse(probe["writes_final_texture"])
+        self.assertFalse(job_payload.writes_final_texture)
+        self.assertFalse(response.body["model_quality_gate"]["texture_lock_allowed"])
+        self.assertFalse(response.body["model_quality_gate"]["uv_texture_lock_gate"]["texture_lock_allowed"])
+        self.assertTrue(probe["blocked_by_uv_contract"])
+        self.assertFalse(probe["blocked_by_model_quality"])
+        self.assertEqual(probe["uv_texture_lock_gate"]["invalid_parts"][0]["uv0_status"], "fail")
 
     def test_forge_generation_job_payload_keeps_helmet_only_selection(self) -> None:
         root = Path(".").resolve()
@@ -821,6 +1117,7 @@ class TestDashboardServer(unittest.TestCase):
             job_payload = GeneratePartsPayload(**payload)
 
             GenerationJobManager(root)._validate_payload(job_payload)
+            part_contracts = payload["surface_design_hints"]["per_part_texture_contracts"]
 
         self.assertEqual(mesh_audit.call_args.kwargs.get("required_parts"), ["helmet"])
         self.assertEqual(response.body["visual_layers"]["armor_overlay"]["selected_parts"], ["helmet"])
@@ -837,6 +1134,8 @@ class TestDashboardServer(unittest.TestCase):
         self.assertFalse(response.body["asset_pipeline"]["texture_probe_job"]["writes_final_texture"])
         self.assertEqual(payload["parts"], ["helmet"])
         self.assertFalse(job_payload.writes_final_texture)
+        self.assertEqual(sorted(part_contracts), ["helmet"])
+        self.assertEqual(part_contracts["helmet"]["contract_version"], "web-forge-per-part-texture.v1")
 
     def test_quest_viewer_exposes_vr_recall_input_controls(self) -> None:
         html = Path("viewer/quest-iw-demo/index.html").read_text(encoding="utf-8")
@@ -877,8 +1176,8 @@ class TestDashboardServer(unittest.TestCase):
             "createBaseSuitMaterial",
             "this.baseSuitGroup = new THREE.Group();",
             "this.refreshBaseSuitSurface();",
-            "updateBaseSuitVisibility({ standbyPreview, selfView, reveal })",
-            "this.updateBaseSuitVisibility({ standbyPreview, selfView, reveal });",
+            "updateBaseSuitVisibility({ standbyPreview, selfView, mirrorView = false, reveal, bodyShellAligned = true })",
+            "this.updateBaseSuitVisibility({ standbyPreview, selfView, mirrorView, reveal, bodyShellAligned });",
             "SELF_VIEW_STANDBY_HIDDEN_PARTS",
             "mesh.material.opacity = standbyPreview ? 0.82",
         }:
@@ -945,11 +1244,18 @@ class TestDashboardServer(unittest.TestCase):
                 dry_run=True,
             )
             result = run_iw_henshin_voice(root, payload)
+            raw_replay = json.loads(
+                (root / "sessions" / "S-IW-QUEST-TEST" / "artifacts" / "iwsdk-deposition-replay.json").read_text(
+                    encoding="utf-8"
+                )
+            )
 
         self.assertTrue(result["ok"])
         self.assertEqual(result["result"]["session_id"], "S-IW-QUEST-TEST")
         self.assertEqual(result["replay_url"], "/sessions/S-IW-QUEST-TEST/artifacts/iwsdk-deposition-replay.json")
         self.assertEqual(result["body_sim_url"], "/sessions/S-IW-QUEST-TEST/body-sim.json")
+        self.assertEqual(raw_replay["deposition"]["body_sim_path"], "sessions/S-IW-QUEST-TEST/body-sim.json")
+        self.assertNotIn("\\", raw_replay["deposition"]["body_sim_path"])
         self.assertEqual(result["voice_audio_url"], "/sessions/S-IW-QUEST-TEST/artifacts/voice-command.wav")
         self.assertEqual(result["voice_audio"]["stats"]["mode"], "wav")
         self.assertEqual(result["voice_audio"]["stats"]["bytes"], len(b"dry-run"))

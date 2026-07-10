@@ -1,0 +1,53 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "helmet",
+  "variant_key": "helmet:bold",
+  "variant_asset_key": "bold",
+  "base_motif_link": {
+    "name": "head_crest_line",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "helmet",
+    "variant_key": "helmet:bold"
+  },
+  "catalog_variant": {
+    "variant_key": "helmet:bold",
+    "display_name": "Bold armored variant",
+    "base_motif_link": {
+      "name": "head_crest_line",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "heavy brow ridge and angular cheek guards create an armored hero mask expression",
+      "projected faceplate and mouth guard read as a strong jaw line from stage distance"
+    ],
+    "recommended_topping_slots": [
+      "crest",
+      "visor_trim",
+      "face_plate",
+      "faceplate",
+      "mouth_guard",
+      "cheek_guard",
+      "brow_ridge"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.2741760015487671,
+    "y": 0.2574800103902817,
+    "z": 0.34960000216960907
+  },
+  "triangle_count": 608,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_emissive",
+    "armor_accent",
+    "armor_trim"
+  ],
+  "source_canonical_module": "helmet",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

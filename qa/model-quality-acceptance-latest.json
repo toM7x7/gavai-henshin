@@ -1,0 +1,320 @@
+{
+  "contract_version": "model-quality-acceptance-report.v1",
+  "repo_root": "C:/dev/codex/gavai-henshin",
+  "source_validators": {
+    "release_package": "tools/validate_exhibition_release_package.py",
+    "p1_variant_order_manifest": "tools/validate_modeler_variant_order_manifest.py",
+    "armor_part": "tools/validate_armor_part.py"
+  },
+  "release_package_status": "warn",
+  "release_package_ok": true,
+  "runtime_release_allowed": true,
+  "runtime_release_policy": "Web/Quest runtime release may proceed with model-quality warnings; model delivery/fidelity acceptance remains blocked until listed blockers and micro-dimension warnings are resolved or explicitly waived.",
+  "model_delivery_acceptance_status": "blocked",
+  "model_quality_status": "warn",
+  "model_quality_warning_count": 6,
+  "model_quality_fail_count": 0,
+  "fidelity_acceptance_blockers": [
+    {
+      "module": "waist",
+      "blocker_id": "waist_body_wrap_loop_not_exported",
+      "warning_type": "fidelity_acceptance_blocker",
+      "acceptance_bucket": "p1_fidelity_hold",
+      "phase": "P1",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_glb_loop_exported",
+      "package_gate_status": "warn_now_block_p1",
+      "body_wrap_loop_export_status": "export_status_not_declared",
+      "body_wrap_loop_export_detail": {
+        "status": "export_status_not_declared",
+        "phase": "P1",
+        "acceptance_blocked": true,
+        "metadata_only": false,
+        "glb_loop_export_required": true,
+        "source_fields": {},
+        "required_action": "Export/regenerate the waist GLB from body_wrap_loop and mark the sidecar as glb_loop_exported before model delivery/fidelity acceptance."
+      },
+      "related_micro_dimension_axes": [
+        "x"
+      ],
+      "distinction": "This is a closed wearable-loop proof blocker, not a simple bbox micro-dimension warning.",
+      "required_action": "Export/regenerate the waist GLB with a real body_wrap_loop, declare belt aperture/clearance, and recheck front/side/back/3Q before model delivery acceptance."
+    }
+  ],
+  "micro_dimension_warnings": [
+    {
+      "module": "chest",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "z"
+      ],
+      "max_abs_delta_pct": 12.7,
+      "size_adjustments": [
+        {
+          "axis": "z",
+          "action": "increase",
+          "actual_m": 0.142398,
+          "target_m": 0.1632,
+          "delta_pct": -12.7,
+          "pass_min_m": 0.14688,
+          "pass_max_m": 0.17952,
+          "minimum_change_to_pass_m": 0.004482,
+          "symmetric_each_side_m": 0.002241,
+          "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    },
+    {
+      "module": "waist",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "x"
+      ],
+      "max_abs_delta_pct": 10.1,
+      "size_adjustments": [
+        {
+          "axis": "x",
+          "action": "increase",
+          "actual_m": 0.440351,
+          "target_m": 0.4896,
+          "delta_pct": -10.1,
+          "pass_min_m": 0.44064,
+          "pass_max_m": 0.53856,
+          "minimum_change_to_pass_m": 0.000289,
+          "symmetric_each_side_m": 0.000144,
+          "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    },
+    {
+      "module": "left_upperarm",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "x"
+      ],
+      "max_abs_delta_pct": 11.5,
+      "size_adjustments": [
+        {
+          "axis": "x",
+          "action": "increase",
+          "actual_m": 0.096304,
+          "target_m": 0.1088,
+          "delta_pct": -11.5,
+          "pass_min_m": 0.09792,
+          "pass_max_m": 0.11968,
+          "minimum_change_to_pass_m": 0.001616,
+          "symmetric_each_side_m": 0.000808,
+          "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    },
+    {
+      "module": "right_upperarm",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "x"
+      ],
+      "max_abs_delta_pct": 11.5,
+      "size_adjustments": [
+        {
+          "axis": "x",
+          "action": "increase",
+          "actual_m": 0.096304,
+          "target_m": 0.1088,
+          "delta_pct": -11.5,
+          "pass_min_m": 0.09792,
+          "pass_max_m": 0.11968,
+          "minimum_change_to_pass_m": 0.001616,
+          "symmetric_each_side_m": 0.000808,
+          "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    },
+    {
+      "module": "left_shin",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "x"
+      ],
+      "max_abs_delta_pct": 12.0,
+      "size_adjustments": [
+        {
+          "axis": "x",
+          "action": "increase",
+          "actual_m": 0.101728,
+          "target_m": 0.1156,
+          "delta_pct": -12.0,
+          "pass_min_m": 0.10404,
+          "pass_max_m": 0.12716,
+          "minimum_change_to_pass_m": 0.002312,
+          "symmetric_each_side_m": 0.001156,
+          "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    },
+    {
+      "module": "right_shin",
+      "warning_type": "micro_dimension",
+      "acceptance_bucket": "model_delivery_micro_adjustment",
+      "runtime_release_allowed": true,
+      "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+      "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+      "axes": [
+        "x"
+      ],
+      "max_abs_delta_pct": 12.0,
+      "size_adjustments": [
+        {
+          "axis": "x",
+          "action": "increase",
+          "actual_m": 0.101728,
+          "target_m": 0.1156,
+          "delta_pct": -12.0,
+          "pass_min_m": 0.10404,
+          "pass_max_m": 0.12716,
+          "minimum_change_to_pass_m": 0.002312,
+          "symmetric_each_side_m": 0.001156,
+          "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+        }
+      ],
+      "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+    }
+  ],
+  "p1_missing_matrix_summary": {
+    "contract_version": "p1-missing-matrix-summary.v1",
+    "source": "validate_modeler_variant_order_manifest",
+    "status": "warn_now_block_p1",
+    "manifest": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+    "asset_count": 24,
+    "accepted_asset_count": 0,
+    "blocked_asset_count": 24,
+    "catalog_gap_count": 24,
+    "delivery_gap_count": 24,
+    "runtime_activation_allowed": false,
+    "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+    "entry_count": 24,
+    "p1_blocked_asset_count": 24,
+    "runtime_activation_blocked_count": 24,
+    "stage_counts": {
+      "order": {
+        "ordered_count": 24,
+        "blocked_count": 0
+      },
+      "delivery": {
+        "missing_count": 24
+      },
+      "catalog_registration": {
+        "missing_count": 24
+      },
+      "runtime_activation": {
+        "allowed_count": 0,
+        "blocked_count": 24
+      },
+      "current_stop": {
+        "order": 0,
+        "delivery": 24,
+        "catalog_registration": 0,
+        "runtime_activation": 0
+      }
+    },
+    "current_stop_counts": {
+      "order": 0,
+      "delivery": 24,
+      "catalog_registration": 0,
+      "runtime_activation": 0
+    },
+    "by_line": {
+      "line_rescue_knight": {
+        "line_label": "Rescue Knight Sleek",
+        "asset_count": 8,
+        "p1_blocked_asset_count": 8,
+        "runtime_activation_blocked_count": 8
+      },
+      "line_royal_insect": {
+        "line_label": "Royal Insect Guardian",
+        "asset_count": 8,
+        "p1_blocked_asset_count": 8,
+        "runtime_activation_blocked_count": 8
+      },
+      "line_final_oath": {
+        "line_label": "Final Oath Form",
+        "asset_count": 8,
+        "p1_blocked_asset_count": 8,
+        "runtime_activation_blocked_count": 8
+      }
+    },
+    "warnings": [
+      "catalog: 24 ordered variant(s) not yet declared",
+      "delivery: 24 ordered variant(s) not yet delivered"
+    ],
+    "reasons": []
+  },
+  "recommended_next_actions": [
+    {
+      "priority": "P1",
+      "scope": "model_fidelity",
+      "modules": [
+        "waist"
+      ],
+      "action": "Export/regenerate blocked GLB fidelity assets, starting with waist body_wrap_loop; declare aperture/clearance and recheck front/side/back/3Q.",
+      "source": "fidelity_acceptance_blockers"
+    },
+    {
+      "priority": "P0",
+      "scope": "model_delivery_micro_adjustments",
+      "modules": [
+        "chest",
+        "left_shin",
+        "left_upperarm",
+        "right_shin",
+        "right_upperarm",
+        "waist"
+      ],
+      "action": "Apply bbox micro-dimension fixes or attach tri-view waiver evidence; keep left/right pair edits mirrored.",
+      "source": "micro_dimension_warnings"
+    },
+    {
+      "priority": "P1",
+      "scope": "p1_limb_variants",
+      "action": "Close the P1 missing matrix: deliver/register missing upperarm/forearm/hand/thigh variants while keeping runtime activation blocked until accepted.",
+      "source": "p1_missing_matrix_summary"
+    },
+    {
+      "priority": "P0",
+      "scope": "release_handoff",
+      "action": "Runtime may proceed with warnings, but do not mark model delivery accepted; ship this JSON beside the release package.",
+      "source": "runtime_release_allowed"
+    }
+  ],
+  "release_reasons": [],
+  "release_warnings": [
+    "P1 limb acceptance incomplete: package_gate_status=warn_now_block_p1; release remains runnable but P1 limb variants are not accepted for activation.",
+    "P1 limb manifest validator: catalog: 24 ordered variant(s) not yet declared",
+    "P1 limb manifest validator: delivery: 24 ordered variant(s) not yet delivered"
+  ]
+}

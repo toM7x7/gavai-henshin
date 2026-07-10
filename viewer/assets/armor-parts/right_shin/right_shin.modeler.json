@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.right_shin.v1",
   "category": "leg",
   "bbox_m": {
-    "x": 0.10779999941587448,
+    "x": 0.10172799974679947,
     "y": 0.4105119854211807,
-    "z": 0.11390001326799393,
+    "z": 0.1140519492328167,
     "size": [
-      0.10779999941587448,
+      0.10172799974679947,
       0.4105119854211807,
-      0.11390001326799393
+      0.1140519492328167
     ],
     "dimensions": [
-      0.10779999941587448,
+      0.10172799974679947,
       0.4105119854211807,
-      0.11390001326799393
+      0.1140519492328167
     ]
   },
-  "triangle_count": 440,
+  "triangle_count": 676,
   "material_zones": [
     "accent",
     "base_surface",
@@ -47,7 +47,7 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "pass",
+    "bbox_within_target_envelope": "warn",
     "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "warn",
     "mirror_pair_dimension_delta_below_3_percent": "pass",
@@ -118,6 +118,13 @@
   "fit_alignment_notes": [
     "Mirrors left_shin body-follow geometry and attachment intent across X."
   ],
+  "suit_silhouette_profile": {
+    "derive_from": "left_shin",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source fitted-shell silhouette and density notes"
+    ]
+  },
   "silhouette_review_notes": [
     "Right-side mirror of left_shin; pipeline negates x to derive geometry.",
     "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
@@ -129,11 +136,19 @@
       "mirrors source hero-density panels and silhouette cues"
     ]
   },
-  "triangles": 440,
+  "triangles": 676,
   "target_envelope_m": {
     "x": 0.1156,
     "y": 0.3956,
     "z": 0.1156
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Leg texture should taper toward joints and keep speed lines aligned across thigh/shin."
+  }
 }

@@ -6,6 +6,7 @@ handler so the same contract can later be mirrored by a Cloud Run/Hono service.
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import re
 import shutil
@@ -17,8 +18,9 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
-from .armor_fit_contract import build_body_fit_contract, visual_layer_slot_summary
+from .armor_fit_contract import body_surface_fit_policy_for_part, build_body_fit_contract, visual_layer_slot_summary
 from .armor_model_quality import MODEL_QUALITY_BLOCKING_GATE, audit_viewer_mesh_assets
+from .constants import PROTOCOL_STATES
 from .ids import (
     generate_approval_id,
     generate_morphotype_id,
@@ -29,46 +31,20 @@ from .ids import (
 )
 from .manifest import project_suitspec_to_manifest
 from .modeler_blueprints import build_modeler_blueprint_catalog
-from .runtime_package import build_runtime_suit_package
+from .runtime_package import build_render_placements, build_runtime_suit_package
+from .uv_contracts import resolve_uv_contract, serialize_uv_contract
 from .validators import validate_against_schema, validate_suitspec
+from .variant_selection import LOCAL_RULE_PROVIDER, SAKURA_AI_PROVIDER, SakuraAIVariantSelectionAdapter, select_variants_payload
 
 _SUIT_ID_RE = re.compile(r"^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$")
 _MANIFEST_ID_RE = re.compile(r"^MNF-[0-9]{8}-[A-Z0-9]{4}$")
 _SESSION_ID_RE = re.compile(r"^S-[A-Z0-9][A-Z0-9-]{2,63}$")
 _EVENT_ID_RE = re.compile(r"^EVT-[0-9]{8}-[A-Z0-9]{6}$")
 _SUIT_STATUSES = {"DRAFT", "READY", "ACTIVE", "RETIRED"}
-_TRANSFORM_STATES = {
-    "IDLE",
-    "POSTED",
-    "FIT_AUDIT",
-    "MORPHOTYPE_LOCKED",
-    "DESIGN_ISSUED",
-    "DRY_FIT_SIM",
-    "TRY_ON",
-    "APPROVAL_PENDING",
-    "APPROVED",
-    "DEPOSITION",
-    "SEALING",
-    "ACTIVE",
-    "ARCHIVED",
-    "REFUSED",
-}
-_TRANSFORM_STATE_ORDER = [
-    "IDLE",
-    "POSTED",
-    "FIT_AUDIT",
-    "MORPHOTYPE_LOCKED",
-    "DESIGN_ISSUED",
-    "DRY_FIT_SIM",
-    "TRY_ON",
-    "APPROVAL_PENDING",
-    "APPROVED",
-    "DEPOSITION",
-    "SEALING",
-    "ACTIVE",
-    "ARCHIVED",
-    "REFUSED",
-]
+# The lore-defined protocol in constants.py is the single source of truth for
+# transform states; this API only adds rank-based non-regression on top.
+_TRANSFORM_STATE_ORDER = list(PROTOCOL_STATES)
+_TRANSFORM_STATES = set(_TRANSFORM_STATE_ORDER)
 _TRANSFORM_STATE_RANK = {state: index for index, state in enumerate(_TRANSFORM_STATE_ORDER)}
 _FORGE_DEFAULT_PARTS = {
     "helmet",
@@ -96,6 +72,8 @@ _FORGE_MIN_HEIGHT_CM = 90.0
 _FORGE_MAX_HEIGHT_CM = 230.0
 _FORGE_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
 _FORGE_TEXTURE_PROVIDER_PROFILE = "nano_banana"
+_FORGE_TEXTURE_PROMPT_CONTRACT = "nanobanana-texture-prompt.v1"
+_FORGE_PER_PART_TEXTURE_CONTRACT = "web-forge-per-part-texture.v1"
 _FORGE_TEXTURE_MODE = "mesh_uv"
 _FORGE_UV_REFINE = True
 _FORGE_ASSET_CONTRACT = "vrm-base-suit+modeler-glb-overlay+mesh-v1-fallback"
@@ -104,6 +82,7 @@ _FORGE_BASE_SURFACE_LAYER_ID = "base_suit_surface"
 _FORGE_ARMOR_OVERLAY_LAYER_ID = "armor_overlay_parts"
 _FORGE_SURFACE_LAYER_ID = "surface_materials"
 _FORGE_SURFACE_PLAN_CONTRACT = "surface-plan.v1"
+_FORGE_VARIANT_CATALOG_PATH = "viewer/assets/armor-parts/variant_catalog.json"
 _FORGE_FIT_STATUS = "preview_vrm_bone_metrics"
 _FORGE_SURFACE_GENERATION_STATUS = "planned_not_generated"
 _FORGE_MODEL_REBUILD_WAVE = "Wave 1"
@@ -177,6 +156,7 @@ _TRANSFORM_EVENT_TYPES = {
     "SESSION_ARCHIVED",
 }
 _MAX_REPLAY_MOTION_FRAMES = 240
+_VARIANT_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,6 +190,7 @@ class NewRouteApi:
         if not isinstance(suitspec, dict):
             return self._bad_request("suitspec must be a JSON object")
         try:
+            suitspec = self._suitspec_with_resolved_variant_assets(suitspec)
             validate_suitspec(suitspec)
             validate_against_schema(suitspec, "suitspec")
         except ValueError as exc:
@@ -471,6 +452,11 @@ class NewRouteApi:
             manifest = runtime_package["manifest"] if isinstance(manifest, dict) else manifest
             visual_layers = runtime_package["visual_layers"]
             render_contract = runtime_package["render_contract"]
+            asset_pipeline = self._clone_json(asset_pipeline)
+            asset_pipeline["visual_layers"] = self._clone_json(visual_layers)
+            asset_pipeline["render_contract"] = self._clone_json(render_contract)
+            if isinstance(asset_pipeline.get("texture_probe_job"), dict):
+                asset_pipeline["texture_probe_job"]["render_contract"] = self._clone_json(render_contract)
         runtime_suit = {
             "suit_id": suit_id,
             "recall_code": canonical_code,
@@ -1045,6 +1031,9 @@ class NewRouteApi:
         suitspec["text"] = self._forge_text(payload, display_name)
 
         enabled_parts = self._forge_enabled_parts(payload)
+        variant_selection = self._forge_auto_variant_selection(payload, enabled_parts)
+        requested_variant_keys = dict(variant_selection.get("selected_variant_keys", {}))
+        asset_resolutions: dict[str, dict[str, Any]] = {}
         modules = suitspec.get("modules")
         if not isinstance(modules, dict):
             raise ValueError("forge template modules must be a JSON object")
@@ -1052,14 +1041,288 @@ class NewRouteApi:
             if not isinstance(module, dict):
                 continue
             module["enabled"] = part_name in enabled_parts
-            modeler_glb_ref = self._forge_modeler_glb_asset_ref(part_name)
+            resolution = self._forge_resolved_module_asset(part_name, requested_variant_keys.get(part_name))
+            modeler_glb_ref = resolution.get("asset_ref")
             if modeler_glb_ref:
                 module["asset_ref"] = modeler_glb_ref
-                self._apply_forge_modeler_sidecar(part_name, module)
+                if part_name in enabled_parts:
+                    asset_resolutions[part_name] = resolution
+                self._apply_forge_modeler_sidecar(part_name, module, resolution.get("selected_variant_key"))
             module.pop("texture_path", None)
+            module.pop("variant_key", None)
+            module.pop("selected_variant_key", None)
+        generation = suitspec.get("generation")
+        if isinstance(generation, dict):
+            actual_variant_keys = {
+                part: str(resolution["selected_variant_key"])
+                for part, resolution in sorted(asset_resolutions.items())
+                if resolution.get("selected_variant_key")
+            }
+            generation["selected_variant_keys"] = actual_variant_keys
+            generation["variant_selection"] = {
+                **self._clone_json(variant_selection),
+                "selected_variant_keys": actual_variant_keys,
+            }
+            generation["selected_asset_refs"] = {
+                part: str(resolution["asset_ref"])
+                for part, resolution in sorted(asset_resolutions.items())
+                if resolution.get("asset_ref")
+            }
+            generation["variant_asset_resolution"] = {
+                part: self._clone_json(resolution)
+                for part, resolution in sorted(asset_resolutions.items())
+            }
+            variant_catalog = self._forge_variant_catalog(
+                sorted(enabled_parts),
+                selected_variant_keys=actual_variant_keys,
+                modules=modules,
+            )
+            variant_design_hints = self._forge_variant_design_hints(
+                sorted(enabled_parts),
+                variant_catalog=variant_catalog,
+                selected_variant_keys=actual_variant_keys,
+            )
+            per_part_texture_contracts = self._forge_per_part_texture_contracts(
+                suitspec,
+                sorted(enabled_parts),
+                texture_plan=generation.get("texture_plan") if isinstance(generation.get("texture_plan"), dict) else {},
+                variant_design_hints=variant_design_hints,
+            )
+            variant_design_hints["per_part_texture_contract"] = _FORGE_PER_PART_TEXTURE_CONTRACT
+            variant_design_hints["per_part_texture_contracts"] = per_part_texture_contracts
+            generation["surface_design_hints"] = variant_design_hints
+            surface_plan = generation.get("surface_plan") if isinstance(generation.get("surface_plan"), dict) else {}
+            armor_overlay = surface_plan.get("armor_overlay") if isinstance(surface_plan.get("armor_overlay"), dict) else {}
+            if isinstance(surface_plan, dict):
+                surface_plan["per_part_texture_contract"] = _FORGE_PER_PART_TEXTURE_CONTRACT
+            if isinstance(armor_overlay, dict):
+                armor_overlay["variant_design_hints"] = variant_design_hints
+                armor_overlay["per_part_texture_contracts"] = per_part_texture_contracts
+            job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
+            if isinstance(job_defaults, dict):
+                job_defaults["selected_variant_keys"] = actual_variant_keys
+                job_defaults["surface_design_hints"] = variant_design_hints
+            model_plan = generation.get("model_plan") if isinstance(generation.get("model_plan"), dict) else {}
+            if isinstance(model_plan, dict):
+                model_plan["selected_variant_keys"] = actual_variant_keys
         self._annotate_forge_model_plan_with_runtime_assets(suitspec, enabled_parts)
         self._assert_forge_visible_overlay_modules(modules, enabled_parts)
         return suitspec
+
+    def _normalize_variant_key(self, part_name: str, value: Any) -> str | None:
+        module = str(part_name or "").strip()
+        raw = str(value or "").strip()
+        if not module or not raw:
+            return None
+        if ":" in raw:
+            key_module, slug = raw.split(":", 1)
+            if key_module.strip() != module:
+                return None
+        else:
+            slug = raw
+        slug = slug.strip()
+        if not _VARIANT_SLUG_RE.fullmatch(slug):
+            return None
+        return f"{module}:{slug}"
+
+    def _variant_slug(self, part_name: str, variant_key: str | None) -> str | None:
+        normalized = self._normalize_variant_key(part_name, variant_key)
+        if not normalized:
+            return None
+        return normalized.split(":", 1)[1]
+
+    def _canonical_variant_key(self, part_name: str) -> str:
+        sidecar = self._forge_modeler_sidecar(part_name)
+        if isinstance(sidecar, dict):
+            key = self._normalize_variant_key(part_name, sidecar.get("variant_key"))
+            if key:
+                return key
+        return f"{part_name}:base"
+
+    def _forge_requested_variant_keys(self, payload: dict[str, Any], enabled_parts: set[str]) -> dict[str, str]:
+        requested: dict[str, str] = {}
+        for field in ("variant_keys", "selected_variant_keys", "module_variants", "variants"):
+            value = payload.get(field)
+            if not isinstance(value, dict):
+                continue
+            for part_name, raw_key in value.items():
+                part = str(part_name or "").strip()
+                if part not in enabled_parts:
+                    continue
+                key = self._normalize_variant_key(part, raw_key)
+                if key:
+                    requested[part] = key
+
+        selected_variants = payload.get("selected_variants")
+        if isinstance(selected_variants, list):
+            for record in selected_variants:
+                if not isinstance(record, dict):
+                    continue
+                part = str(record.get("part") or record.get("module") or "").strip()
+                if part not in enabled_parts:
+                    continue
+                raw_key = (
+                    record.get("selected_variant_key")
+                    or record.get("variant_key")
+                    or record.get("key")
+                )
+                key = self._normalize_variant_key(part, raw_key)
+                if key:
+                    requested[part] = key
+
+        modules = payload.get("modules")
+        if isinstance(modules, dict):
+            for part_name, module in modules.items():
+                part = str(part_name or "").strip()
+                if part not in enabled_parts or not isinstance(module, dict):
+                    continue
+                key = self._normalize_variant_key(part, module.get("variant_key") or module.get("selected_variant_key"))
+                if key:
+                    requested[part] = key
+
+        top_level_key = self._normalize_variant_key(next(iter(enabled_parts), ""), payload.get("variant_key"))
+        if top_level_key and len(enabled_parts) == 1:
+            requested[next(iter(enabled_parts))] = top_level_key
+        return dict(sorted(requested.items()))
+
+    def _forge_auto_variant_selection(
+        self,
+        payload: dict[str, Any],
+        enabled_parts: set[str],
+    ) -> dict[str, Any]:
+        explicit_variant_keys = self._forge_requested_variant_keys(payload, enabled_parts)
+        selector_request = {
+            "display_name": payload.get("display_name") or payload.get("name") or "",
+            "guardian_target": payload.get("guardian_target") or payload.get("archetype") or "",
+            "protection_target": payload.get("protection_target") or payload.get("archetype") or "",
+            "temperament_mood": payload.get("temperament_mood") or payload.get("temperament") or "",
+            "height_cm": payload.get("height_cm"),
+            "colors": payload.get("palette") if isinstance(payload.get("palette"), dict) else {},
+            "selected_parts": sorted(enabled_parts),
+            "memo_prompt": payload.get("brief") or payload.get("prompt") or payload.get("memo") or "",
+            "explicit_variants": explicit_variant_keys,
+        }
+        requested_provider = str(payload.get("variant_selection_provider") or "").strip().lower()
+        selector_adapter = (
+            SakuraAIVariantSelectionAdapter()
+            if requested_provider in {"sakura_ai", "sakura", "sakura_ai_engine", "sakura_ai_pending"}
+            else None
+        )
+        try:
+            selection = select_variants_payload(
+                selector_request,
+                catalog_path=self.repo_root / _FORGE_VARIANT_CATALOG_PATH,
+                adapter=selector_adapter,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            return {
+                "contract_version": "wave2-auto-selection.v1",
+                "selection_mode": "auto_fallback",
+                "llm_provider": LOCAL_RULE_PROVIDER,
+                "provider_status": "fallback_after_selector_error",
+                "error": str(exc),
+                "explicit_variant_keys": explicit_variant_keys,
+                "selected_variant_keys": explicit_variant_keys,
+                "modules": {
+                    part: {
+                        "selected_variant_key": key,
+                        "selection_reason": "Explicit variant preserved after selector error.",
+                        "llm_provider": LOCAL_RULE_PROVIDER,
+                        "explicit": True,
+                    }
+                    for part, key in explicit_variant_keys.items()
+                },
+            }
+
+        modules = selection.get("modules") if isinstance(selection.get("modules"), dict) else {}
+        selected_variant_keys = {
+            part: str(record["selected_variant_key"])
+            for part, record in modules.items()
+            if part in enabled_parts
+            and isinstance(record, dict)
+            and self._normalize_variant_key(part, record.get("selected_variant_key"))
+        }
+        llm_provider = str(selection.get("llm_provider") or LOCAL_RULE_PROVIDER)
+        if llm_provider.startswith(SAKURA_AI_PROVIDER):
+            provider_status = "sakura_ai_active"
+        elif requested_provider.startswith("sakura"):
+            provider_status = "sakura_ai_fallback_local_rule"
+        else:
+            provider_status = "local_rule_active"
+        return {
+            "contract_version": "wave2-auto-selection.v1",
+            "selection_mode": str(payload.get("variant_selection_mode") or "auto"),
+            "llm_provider": llm_provider,
+            "provider_status": provider_status,
+            "explicit_variant_keys": explicit_variant_keys,
+            "selected_variant_keys": dict(sorted(selected_variant_keys.items())),
+            "modules": self._clone_json(modules),
+        }
+
+    def _selected_variant_keys_from_suitspec(self, suitspec: dict[str, Any]) -> dict[str, str]:
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        generation = suitspec.get("generation") if isinstance(suitspec.get("generation"), dict) else {}
+        raw_selected = generation.get("selected_variant_keys") if isinstance(generation.get("selected_variant_keys"), dict) else {}
+        selected: dict[str, str] = {}
+        for part_name, module in modules.items():
+            if not isinstance(module, dict):
+                continue
+            part = str(part_name)
+            raw_key = raw_selected.get(part) or module.get("selected_variant_key") or module.get("variant_key")
+            key = self._normalize_variant_key(part, raw_key)
+            if key:
+                selected[part] = key
+                continue
+            asset_ref = str(module.get("asset_ref") or "")
+            match = re.search(rf"/{re.escape(part)}/variants/([^/]+)/{re.escape(part)}__\1\.glb$", asset_ref)
+            if match:
+                selected[part] = f"{part}:{match.group(1)}"
+        return dict(sorted(selected.items()))
+
+    def _suitspec_with_resolved_variant_assets(self, suitspec: dict[str, Any]) -> dict[str, Any]:
+        normalized = self._clone_json(suitspec)
+        modules = normalized.get("modules") if isinstance(normalized.get("modules"), dict) else {}
+        if not isinstance(modules, dict):
+            return normalized
+
+        generation = normalized.setdefault("generation", {})
+        if not isinstance(generation, dict):
+            return normalized
+        if isinstance(generation.get("variant_asset_resolution"), dict):
+            for module in modules.values():
+                if isinstance(module, dict):
+                    module.pop("variant_key", None)
+                    module.pop("selected_variant_key", None)
+            return normalized
+        selected_variant_keys = self._selected_variant_keys_from_suitspec(normalized)
+        selected_asset_refs: dict[str, str] = {}
+        variant_asset_resolution: dict[str, dict[str, Any]] = {}
+        for part_name, module in modules.items():
+            if not isinstance(module, dict):
+                continue
+            module.pop("variant_key", None)
+            module.pop("selected_variant_key", None)
+            selected_key = selected_variant_keys.get(part_name)
+            if not selected_key:
+                continue
+            resolution = self._forge_resolved_module_asset(part_name, selected_key)
+            asset_ref = resolution.get("asset_ref")
+            if asset_ref:
+                module["asset_ref"] = asset_ref
+                selected_asset_refs[part_name] = str(asset_ref)
+            if resolution.get("selected_variant_key"):
+                selected_variant_keys[part_name] = str(resolution["selected_variant_key"])
+            variant_asset_resolution[part_name] = resolution
+        if selected_variant_keys:
+            generation["selected_variant_keys"] = dict(sorted(selected_variant_keys.items()))
+        if selected_asset_refs:
+            generation["selected_asset_refs"] = dict(sorted(selected_asset_refs.items()))
+        if variant_asset_resolution:
+            generation["variant_asset_resolution"] = {
+                part: self._clone_json(resolution)
+                for part, resolution in sorted(variant_asset_resolution.items())
+            }
+        return normalized
 
     def _forge_modeler_glb_asset_ref(self, part_name: str) -> str | None:
         module = str(part_name or "").strip()
@@ -1070,22 +1333,124 @@ class NewRouteApi:
             return None
         return self._relative_path(target)
 
-    def _forge_modeler_sidecar_path(self, part_name: str) -> Path:
+    def _forge_variant_glb_asset_ref(self, part_name: str, variant_key: str | None) -> str | None:
         module = str(part_name or "").strip()
-        return self.repo_root / "viewer" / "assets" / "armor-parts" / module / f"{module}.modeler.json"
-
-    def _forge_modeler_sidecar(self, part_name: str) -> dict[str, Any] | None:
-        target = self._forge_modeler_sidecar_path(part_name)
+        slug = self._variant_slug(module, variant_key)
+        if not module or not slug:
+            return None
+        target = self.repo_root / "viewer" / "assets" / "armor-parts" / module / "variants" / slug / f"{module}__{slug}.glb"
         if not target.is_file():
             return None
+        return self._relative_path(target)
+
+    def _forge_resolved_module_asset(self, part_name: str, requested_variant_key: str | None = None) -> dict[str, Any]:
+        requested_key = self._normalize_variant_key(part_name, requested_variant_key)
+        canonical_ref = self._forge_modeler_glb_asset_ref(part_name)
+        canonical_key = self._canonical_variant_key(part_name)
+        if requested_key:
+            variant_ref = self._forge_variant_glb_asset_ref(part_name, requested_key)
+            if variant_ref:
+                return {
+                    "module": part_name,
+                    "requested_variant_key": requested_key,
+                    "selected_variant_key": requested_key,
+                    "asset_ref": variant_ref,
+                    "asset_kind": "variant_glb",
+                    "fallback_used": False,
+                }
+            return {
+                "module": part_name,
+                "requested_variant_key": requested_key,
+                "selected_variant_key": canonical_key,
+                "asset_ref": canonical_ref,
+                "asset_kind": "canonical_glb" if canonical_ref else "missing",
+                "fallback_used": True,
+                "fallback_reason": "variant_glb_missing",
+            }
+        return {
+            "module": part_name,
+            "requested_variant_key": None,
+            "selected_variant_key": canonical_key,
+            "asset_ref": canonical_ref,
+            "asset_kind": "canonical_glb" if canonical_ref else "missing",
+            "fallback_used": False,
+        }
+
+    def _forge_overlay_asset_records(
+        self,
+        modules: dict[str, Any],
+        enabled_parts: list[str],
+        selected_variant_keys: dict[str, str] | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        selected = selected_variant_keys if isinstance(selected_variant_keys, dict) else {}
+        assets: dict[str, dict[str, Any]] = {}
+        for part in enabled_parts:
+            module = modules.get(part) if isinstance(modules.get(part), dict) else {}
+            selected_key = selected.get(part) or self._canonical_variant_key(part)
+            module_asset_ref = str(module.get("asset_ref") or "")
+            resolution = self._forge_resolved_module_asset(part, selected_key)
+            resolved_asset_ref = str(resolution.get("asset_ref") or "")
+            use_resolved_asset = part in selected and bool(resolved_asset_ref)
+            asset_ref = resolved_asset_ref if use_resolved_asset else module_asset_ref
+            if not asset_ref and resolved_asset_ref:
+                asset_ref = resolved_asset_ref
+                use_resolved_asset = True
+            if resolution.get("selected_variant_key") and (part in selected or use_resolved_asset):
+                selected_key = str(resolution["selected_variant_key"])
+            asset_kind = str(resolution.get("asset_kind") or "") if use_resolved_asset else ""
+            if not asset_kind:
+                asset_kind = "variant_glb" if "/variants/" in asset_ref else "canonical_glb"
+            assets[part] = {
+                "module": part,
+                "selected_variant_key": selected_key,
+                "asset_ref": asset_ref,
+                "asset_kind": asset_kind,
+            }
+            if resolution.get("requested_variant_key"):
+                assets[part]["requested_variant_key"] = str(resolution["requested_variant_key"])
+            if resolution.get("fallback_used"):
+                assets[part]["fallback_used"] = True
+                assets[part]["fallback_reason"] = str(resolution.get("fallback_reason") or "fallback")
+        return assets
+
+    def _forge_modeler_sidecar_path(self, part_name: str, variant_key: str | None = None) -> Path:
+        module = str(part_name or "").strip()
+        slug = self._variant_slug(module, variant_key)
+        if slug:
+            return self.repo_root / "viewer" / "assets" / "armor-parts" / module / "variants" / slug / f"{module}__{slug}.modeler.json"
+        return self.repo_root / "viewer" / "assets" / "armor-parts" / module / f"{module}.modeler.json"
+
+    def _forge_modeler_sidecar(self, part_name: str, variant_key: str | None = None) -> dict[str, Any] | None:
+        canonical_target = self._forge_modeler_sidecar_path(part_name)
+        canonical: dict[str, Any] | None = None
+        if canonical_target.is_file():
+            try:
+                data = self._read_json(canonical_target)
+                canonical = data if isinstance(data, dict) else None
+            except (OSError, json.JSONDecodeError):
+                canonical = None
+        target = self._forge_modeler_sidecar_path(part_name, variant_key)
+        if not target.is_file():
+            return canonical
         try:
             data = self._read_json(target)
         except (OSError, json.JSONDecodeError):
-            return None
-        return data if isinstance(data, dict) else None
+            return canonical
+        if not isinstance(data, dict):
+            return canonical
+        if target == canonical_target:
+            return data
+        merged = self._clone_json(canonical) if isinstance(canonical, dict) else {}
+        merged.update(data)
+        return merged if merged else data
 
-    def _apply_forge_modeler_sidecar(self, part_name: str, module: dict[str, Any]) -> None:
-        sidecar = self._forge_modeler_sidecar(part_name)
+    def _apply_forge_modeler_sidecar(
+        self,
+        part_name: str,
+        module: dict[str, Any],
+        variant_key: str | None = None,
+    ) -> None:
+        sidecar = self._forge_modeler_sidecar(part_name, variant_key)
         attachment = sidecar.get("vrm_attachment") if isinstance(sidecar, dict) else None
         if not isinstance(attachment, dict):
             return
@@ -1102,6 +1467,40 @@ class NewRouteApi:
             "rotation": [float(value) for value in rotation],
             "scale": [float(value) for value in scale] if self._is_vec3(scale) else [1.0, 1.0, 1.0],
         }
+
+    def _apply_forge_modeler_sidecar_preview(
+        self,
+        part_name: str,
+        record: dict[str, Any],
+        variant_key: str | None = None,
+    ) -> None:
+        sidecar = self._forge_modeler_sidecar(part_name, variant_key)
+        attachment = sidecar.get("vrm_attachment") if isinstance(sidecar, dict) else None
+        if not isinstance(sidecar, dict):
+            return
+        record["modeler_sidecar"] = deepcopy(sidecar)
+        selected_key = self._normalize_variant_key(part_name, sidecar.get("variant_key")) or self._normalize_variant_key(part_name, variant_key)
+        if selected_key:
+            record["selected_variant_key"] = selected_key
+        if isinstance(attachment, dict):
+            record["vrm_attachment"] = deepcopy(attachment)
+            offset = attachment.get("offset_m")
+            if self._is_vec3(offset):
+                record["attachment_offset_m"] = [float(value) for value in offset]
+        if isinstance(sidecar.get("attachment_offset_target_m"), (int, float)):
+            record["attachment_offset_target_m"] = float(sidecar["attachment_offset_target_m"])
+        for key in (
+            "variant_key",
+            "part_family",
+            "base_motif_link",
+            "topping_slots",
+            "body_follow_profile",
+            "ground_contact_profile",
+            "shell_thickness_target_m",
+            "clearance_m",
+        ):
+            if key in sidecar:
+                record[key] = deepcopy(sidecar[key])
 
     def _is_vec3(self, value: Any) -> bool:
         if not isinstance(value, list) or len(value) != 3:
@@ -1120,20 +1519,48 @@ class NewRouteApi:
         if not isinstance(model_plan, dict):
             return
         selected = sorted(str(part) for part in enabled_parts if str(part).strip())
-        modeler_glb_parts = [part for part in selected if self._forge_modeler_glb_asset_ref(part)]
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        selected_variant_keys = self._selected_variant_keys_from_suitspec(suitspec)
+        overlay_assets = self._forge_overlay_asset_records(modules, selected, selected_variant_keys)
+        modeler_glb_parts = [
+            part
+            for part in selected
+            if str(overlay_assets.get(part, {}).get("asset_ref") or "").endswith(".glb")
+        ]
         mesh_v1_fallback_parts = [part for part in selected if part not in modeler_glb_parts]
-        modeler_sidecar_parts = [part for part in modeler_glb_parts if self._forge_modeler_sidecar(part)]
+        modeler_sidecar_parts = [
+            part
+            for part in modeler_glb_parts
+            if self._forge_modeler_sidecar(part, overlay_assets.get(part, {}).get("selected_variant_key"))
+        ]
+        variant_glb_parts = [
+            part
+            for part in modeler_glb_parts
+            if overlay_assets.get(part, {}).get("asset_kind") == "variant_glb"
+        ]
         model_plan["asset_contract"] = _FORGE_ASSET_CONTRACT
         model_plan["placement_source"] = "modeler_sidecar_vrm_attachment" if modeler_sidecar_parts else "suitspec_template_vrm_anchor"
         model_plan["runtime_asset_parts"] = {
             "primary_format": "glb" if modeler_glb_parts else "mesh.v1",
             "modeler_glb": modeler_glb_parts,
+            "variant_glb": variant_glb_parts,
             "mesh_v1_fallback": mesh_v1_fallback_parts,
             "selected_count": len(selected),
             "modeler_glb_count": len(modeler_glb_parts),
+            "variant_glb_count": len(variant_glb_parts),
             "fallback_count": len(mesh_v1_fallback_parts),
             "modeler_sidecar_placement": modeler_sidecar_parts,
             "modeler_sidecar_placement_count": len(modeler_sidecar_parts),
+            "selected_variant_keys": {
+                part: str(asset["selected_variant_key"])
+                for part, asset in overlay_assets.items()
+                if asset.get("selected_variant_key")
+            },
+            "asset_refs": {
+                part: str(asset["asset_ref"])
+                for part, asset in overlay_assets.items()
+                if asset.get("asset_ref")
+            },
         }
         if modeler_glb_parts and not mesh_v1_fallback_parts:
             model_plan["mesh_source_status"] = "modeler_glb_available"
@@ -1250,14 +1677,229 @@ class NewRouteApi:
             "required_for_runtime": False,
         }
 
+    def _forge_per_part_texture_contracts(
+        self,
+        suitspec: dict[str, Any],
+        enabled_parts: list[str],
+        *,
+        texture_plan: dict[str, Any] | None = None,
+        variant_design_hints: dict[str, Any] | None = None,
+    ) -> dict[str, dict[str, Any]]:
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        selected_variant_keys = self._selected_variant_keys_from_suitspec(suitspec)
+        design_hints = variant_design_hints if isinstance(variant_design_hints, dict) else {}
+        hint_modules = (
+            design_hints.get("selected_modules")
+            if isinstance(design_hints.get("selected_modules"), dict)
+            else {}
+        )
+        body_fit_contract = build_body_fit_contract(suitspec, selected_slots=enabled_parts)
+        slot_by_part = {
+            str(slot.get("runtime_part_id") or slot_id): slot
+            for slot_id, slot in body_fit_contract.get("slots", {}).items()
+            if isinstance(slot, dict)
+        }
+        texture_mode = str((texture_plan or {}).get("texture_mode") or _FORGE_TEXTURE_MODE)
+        contracts: dict[str, dict[str, Any]] = {}
+        for part in enabled_parts:
+            module = modules.get(part) if isinstance(modules.get(part), dict) else {}
+            hint = hint_modules.get(part) if isinstance(hint_modules.get(part), dict) else {}
+            selected_key = (
+                self._normalize_variant_key(part, selected_variant_keys.get(part))
+                or self._normalize_variant_key(part, hint.get("selected_variant_key"))
+                or self._canonical_variant_key(part)
+            )
+            sidecar = self._forge_modeler_sidecar(part, selected_key)
+            uv_policy = self._forge_part_uv_policy(suitspec, part, sidecar, texture_mode=texture_mode)
+            material_hints = self._forge_part_material_hints(part, sidecar, hint)
+            shape_role = self._forge_part_shape_role(part, slot_by_part.get(part), sidecar)
+            detail_features = [
+                str(item)
+                for item in hint.get("detail_features", [])
+                if str(item).strip()
+            ] if isinstance(hint.get("detail_features"), list) else []
+            topping_slots = [
+                str(item)
+                for item in hint.get("topping_slot_names", [])
+                if str(item).strip()
+            ] if isinstance(hint.get("topping_slot_names"), list) else []
+            record = {
+                "contract_version": _FORGE_PER_PART_TEXTURE_CONTRACT,
+                "part": part,
+                "provider_profile": _FORGE_TEXTURE_PROVIDER_PROFILE,
+                "texture_prompt_contract": _FORGE_TEXTURE_PROMPT_CONTRACT,
+                "texture_mode": texture_mode,
+                "selected_variant_key": selected_key,
+                "asset_ref": str(hint.get("asset_ref") or module.get("asset_ref") or ""),
+                "shape_role": shape_role,
+                "uv_availability": uv_policy["uv_availability"],
+                "uv_policy": uv_policy["uv_policy"],
+                "material_hints": material_hints,
+                "base_motif_link": self._clone_json(hint.get("base_motif_link")) if isinstance(hint.get("base_motif_link"), dict) else {},
+                "detail_features": detail_features,
+                "topping_slot_names": topping_slots,
+            }
+            record["texture_prompt"] = self._forge_part_texture_prompt(record)
+            contracts[part] = record
+        return dict(sorted(contracts.items()))
+
+    def _forge_part_uv_policy(
+        self,
+        suitspec: dict[str, Any],
+        part: str,
+        sidecar: dict[str, Any] | None,
+        *,
+        texture_mode: str,
+    ) -> dict[str, dict[str, Any]]:
+        contract = serialize_uv_contract(resolve_uv_contract(suitspec, part))
+        qa = sidecar.get("qa_self_report") if isinstance(sidecar, dict) and isinstance(sidecar.get("qa_self_report"), dict) else {}
+        uv0_status = str(qa.get("non_overlapping_uv0") or "").strip().lower()
+        if not uv0_status:
+            uv0_status = "unknown"
+        can_generate = texture_mode == _FORGE_TEXTURE_MODE and uv0_status not in {"fail", "failed", "missing"}
+        return {
+            "uv_availability": {
+                "texture_mode": texture_mode,
+                "uv0_status": uv0_status,
+                "uv0_source": "modeler_sidecar.qa_self_report.non_overlapping_uv0" if qa else "uv_contract_default",
+                "uv_guide_expected": texture_mode == _FORGE_TEXTURE_MODE,
+                "can_generate_mesh_uv_texture": can_generate,
+            },
+            "uv_policy": {
+                "contract_version": "part-uv-policy.v1",
+                "source_contract": "uv_contracts.resolve_uv_contract",
+                "fill_ratio_target": contract.get("fill_ratio_target"),
+                "blank_area_max_percent": contract.get("blank_area_max_percent"),
+                "seam_safe_margin_percent": contract.get("seam_safe_margin_percent"),
+                "primary_motif_zone": contract.get("primary_motif_zone"),
+                "low_frequency_zone": contract.get("low_frequency_zone"),
+                "panel_flow_direction": contract.get("panel_flow_direction"),
+                "forbidden_detail_zone": contract.get("forbidden_detail_zone"),
+                "island_layout_rule": contract.get("island_layout_rule"),
+            },
+        }
+
+    def _forge_uv_texture_lock_gate(self, per_part_texture_contracts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        invalid_parts: list[dict[str, Any]] = []
+        for part, contract in sorted(per_part_texture_contracts.items()):
+            if not isinstance(contract, dict):
+                continue
+            mode = str(contract.get("texture_mode") or "").strip()
+            uv_availability = (
+                contract.get("uv_availability")
+                if isinstance(contract.get("uv_availability"), dict)
+                else {}
+            )
+            if mode != _FORGE_TEXTURE_MODE:
+                continue
+            uv0_status = str(uv_availability.get("uv0_status") or "").strip().lower()
+            mesh_uv_allowed = uv_availability.get("can_generate_mesh_uv_texture")
+            if mesh_uv_allowed is False or uv0_status in {"fail", "failed", "missing"}:
+                invalid_parts.append(
+                    {
+                        "part": part,
+                        "selected_variant_key": str(contract.get("selected_variant_key") or ""),
+                        "uv0_status": uv0_status or "unknown",
+                        "can_generate_mesh_uv_texture": bool(mesh_uv_allowed),
+                    }
+                )
+        return {
+            "contract_version": "uv-texture-lock-gate.v1",
+            "texture_mode": _FORGE_TEXTURE_MODE,
+            "texture_lock_allowed": not invalid_parts,
+            "invalid_parts": invalid_parts,
+            "reasons": [
+                f"{item['part']}: UV0 {item['uv0_status']} blocks final mesh-UV texture lock"
+                for item in invalid_parts
+            ],
+        }
+
+    def _forge_part_material_hints(
+        self,
+        part: str,
+        sidecar: dict[str, Any] | None,
+        hint: dict[str, Any],
+    ) -> dict[str, Any]:
+        zones = sidecar.get("material_zones") if isinstance(sidecar, dict) and isinstance(sidecar.get("material_zones"), list) else []
+        material_notes = (
+            sidecar.get("surface_material_hints")
+            if isinstance(sidecar, dict) and isinstance(sidecar.get("surface_material_hints"), dict)
+            else {}
+        )
+        motif = hint.get("base_motif_link") if isinstance(hint.get("base_motif_link"), dict) else {}
+        return {
+            "contract_version": "part-material-hints.v1",
+            "material_zones": [str(zone) for zone in zones if str(zone).strip()] or ["base_surface", "accent", "emissive", "trim"],
+            "surface_material_hints": self._clone_json(material_notes),
+            "motif_surface_zone": str(motif.get("surface_zone") or ""),
+            "default_material_language": (
+                f"{part} uses bright hard-shell base surfaces, controlled accent trim, thin emissive masks, "
+                "and dark separation material at cuffs, sockets, vents, and underside returns."
+            ),
+        }
+
+    def _forge_part_shape_role(
+        self,
+        part: str,
+        slot: dict[str, Any] | None,
+        sidecar: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        policy = body_surface_fit_policy_for_part(part) or {}
+        body_follow = (
+            sidecar.get("body_follow_profile")
+            if isinstance(sidecar, dict) and isinstance(sidecar.get("body_follow_profile"), dict)
+            else {}
+        )
+        return {
+            "contract_version": "part-shape-role.v1",
+            "surface_role": policy.get("role") or "",
+            "body_anchor": (slot or {}).get("body_anchor"),
+            "coverage": list((slot or {}).get("coverage") or []),
+            "target_contact": body_follow.get("target_contact") or policy.get("target_contact"),
+            "fit_basis": "body_surface_fit_policy+body_fit_slot+modeler_sidecar",
+        }
+
+    def _forge_part_texture_prompt(self, record: dict[str, Any]) -> str:
+        material_hints = record.get("material_hints") if isinstance(record.get("material_hints"), dict) else {}
+        material_zones = ", ".join(material_hints.get("material_zones") or [])
+        detail = "; ".join(record.get("detail_features") or []) or "use selected catalog detail features"
+        toppings = ", ".join(record.get("topping_slot_names") or []) or "no topping slots"
+        motif = record.get("base_motif_link") if isinstance(record.get("base_motif_link"), dict) else {}
+        uv_policy = record.get("uv_policy") if isinstance(record.get("uv_policy"), dict) else {}
+        uv_availability = record.get("uv_availability") if isinstance(record.get("uv_availability"), dict) else {}
+        shape_role = record.get("shape_role") if isinstance(record.get("shape_role"), dict) else {}
+        return (
+            f"Per-part texture target: {record.get('part')} with selected variant {record.get('selected_variant_key')}. "
+            f"Shape role: {shape_role.get('surface_role') or 'armor_overlay_part'}; contact intent: {shape_role.get('target_contact') or 'body-following overlay'}. "
+            f"UV availability: uv0={uv_availability.get('uv0_status')}, mesh_uv_allowed={uv_availability.get('can_generate_mesh_uv_texture')}. "
+            f"UV policy: primary motif zone={uv_policy.get('primary_motif_zone')}; low-frequency zone={uv_policy.get('low_frequency_zone')}; panel flow={uv_policy.get('panel_flow_direction')}. "
+            f"Material zones: {material_zones}. Motif: {motif.get('name') or 'base_suit_motif'} on {motif.get('surface_zone') or 'declared material zone'}. "
+            f"Variant features: {detail}. Topping anchors: {toppings}. "
+            "Generate this module's atlas as its own engineered surface while preserving whole-suit palette, motif continuity, and Nanobanana provider discipline."
+        )
+
     def _forge_surface_plan(
         self,
         enabled_parts: list[str],
         texture_plan: dict[str, Any],
         style_tags: list[str],
+        variant_design_hints: dict[str, Any] | None = None,
+        per_part_texture_contracts: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        design_hints = (
+            self._clone_json(variant_design_hints)
+            if isinstance(variant_design_hints, dict)
+            else self._forge_variant_design_hints(enabled_parts)
+        )
+        part_contracts = (
+            self._clone_json(per_part_texture_contracts)
+            if isinstance(per_part_texture_contracts, dict)
+            else {}
+        )
         return {
             "contract_version": _FORGE_SURFACE_PLAN_CONTRACT,
+            "texture_prompt_contract": _FORGE_TEXTURE_PROMPT_CONTRACT,
+            "per_part_texture_contract": _FORGE_PER_PART_TEXTURE_CONTRACT,
             "layer_id": _FORGE_SURFACE_LAYER_ID,
             "status": _FORGE_SURFACE_GENERATION_STATUS,
             "style_intent": "bright_tokusatsu_hero",
@@ -1268,6 +1910,12 @@ class NewRouteApi:
             "style_tags": list(style_tags),
             "unified_design": {
                 "generation_unit": "whole_body_hero_suit_before_layer_split",
+                "prompt_contract": _FORGE_TEXTURE_PROMPT_CONTRACT,
+                "motif_source": "variant_catalog.base_motif_link + variant.detail_features + topping_slots",
+                "base_overlay_motif_rule": (
+                    "base_suit_surface must establish the named motif lines first; armor_overlay_parts must receive, "
+                    "continue, and terminate those same motifs through trims, bevels, cores, and emissive masks"
+                ),
                 "design_goal": (
                     "one cohesive tokusatsu hero suit where the VRM base-suit surface "
                     "and GLB armor overlays share motif, palette, emissive routing, and material language"
@@ -1300,6 +1948,8 @@ class NewRouteApi:
                     "hard-surface armor materials that sit above the base suit, continue the same base motif, "
                     "hide proxy boxiness, minimize visual gaps, and preserve joint readability"
                 ),
+                "variant_design_hints": design_hints,
+                "per_part_texture_contracts": part_contracts,
                 "requires_model_quality_gate": MODEL_QUALITY_BLOCKING_GATE,
             },
             "emissive": {
@@ -1354,6 +2004,15 @@ class NewRouteApi:
     ) -> dict[str, Any]:
         brief = str(payload.get("brief") or "Generate a fitted base suit with selected armor overlays.").strip()
         enabled_parts = sorted(self._forge_enabled_parts(payload))
+        variant_selection = self._forge_auto_variant_selection(payload, set(enabled_parts))
+        selected_variant_keys = dict(variant_selection.get("selected_variant_keys", {}))
+        variant_catalog = self._forge_variant_catalog(enabled_parts, selected_variant_keys=selected_variant_keys)
+        variant_design_hints = self._forge_variant_design_hints(
+            enabled_parts,
+            variant_catalog=variant_catalog,
+            selected_variant_keys=selected_variant_keys,
+        )
+        variant_prompt_summary = self._forge_variant_prompt_summary(variant_design_hints)
         unified_design_brief = (
             "Generate one unified tokusatsu hero suit, not a plain base body plus unrelated toppings. "
             "The base_suit_surface is the VRM body texture: patterned rubber/fabric, body-following panel seams, "
@@ -1367,10 +2026,16 @@ class NewRouteApi:
             f"Declared wearer height: {body_profile['height_cm']}cm. "
             f"Style tags: {', '.join(style_tags)}. "
             f"{unified_design_brief}"
+            f"Variant catalog linkage: {' '.join(variant_prompt_summary[:6])}. "
             "Preserve the lore: Web establishes the suit, Quest performs the transformation trial, replay preserves it."
         )
         texture_plan = self._forge_texture_plan()
-        surface_plan = self._forge_surface_plan(enabled_parts, texture_plan, style_tags)
+        surface_plan = self._forge_surface_plan(
+            enabled_parts,
+            texture_plan,
+            style_tags,
+            variant_design_hints=variant_design_hints,
+        )
         body_fit_contract = build_body_fit_contract(
             {"body_profile": body_profile, "modules": {}},
             selected_slots=enabled_parts,
@@ -1388,6 +2053,7 @@ class NewRouteApi:
             "model_rebuild_required": True,
             "base_suit": "VRM baseline body-fit substrate",
             "overlay_parts": enabled_parts,
+            "selected_variant_keys": selected_variant_keys,
             "body_fit_contract": body_fit_contract,
             "body_fit_contract_version": body_fit_contract["contract_version"],
             "body_fit_height_scale": body_fit_contract["height_scale"],
@@ -1414,6 +2080,7 @@ class NewRouteApi:
             "texture_plan": texture_plan,
             "fit_status": _FORGE_FIT_STATUS,
             "surface_generation_status": _FORGE_SURFACE_GENERATION_STATUS,
+            "variant_selection": self._clone_json(variant_selection),
             "surface_plan": surface_plan,
             "planned_quality_gates": [
                 "base_suit_surface_present",
@@ -1439,10 +2106,15 @@ class NewRouteApi:
                 "priority_mode": "exhibition",
                 "tracking_source": "web_forge",
                 "parts": enabled_parts,
+                "selected_variant_keys": selected_variant_keys,
+                "variant_selection": self._clone_json(variant_selection),
                 "must_render_layers": render_contract["required_layers"],
                 "minimum_visible_overlay_parts": render_contract["minimum_visible_overlay_parts"],
                 "generation_brief": prompt[:1200],
                 "surface_design_contract": "unified_design -> base_suit_surface + armor_overlay_parts",
+                "texture_prompt_contract": _FORGE_TEXTURE_PROMPT_CONTRACT,
+                "variant_prompt_summary": variant_prompt_summary,
+                "surface_design_hints": variant_design_hints,
                 "requires": ["server_resolved_suitspec_path"],
             },
             "part_prompts": {
@@ -1576,25 +2248,47 @@ class NewRouteApi:
 
     def _forge_public_preview(self, suitspec: dict[str, Any], *, suitspec_path: str | None = None) -> dict[str, Any]:
         modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        selected_variant_keys = self._selected_variant_keys_from_suitspec(suitspec)
+        asset_pipeline = self._forge_public_asset_pipeline(suitspec, suitspec_path=suitspec_path)
+        render_placements = (
+            asset_pipeline.get("render_placements")
+            if isinstance(asset_pipeline.get("render_placements"), dict)
+            else {}
+        )
+        variant_render_placements = (
+            asset_pipeline.get("variant_render_placements")
+            if isinstance(asset_pipeline.get("variant_render_placements"), dict)
+            else {}
+        )
         preview_modules = {}
         for part_name, module in modules.items():
             if not isinstance(module, dict):
                 continue
+            selected_variant_key = selected_variant_keys.get(part_name) or self._canonical_variant_key(part_name)
             record = {
                 "enabled": bool(module.get("enabled")),
+                "selected_variant_key": selected_variant_key,
                 "asset_ref": module.get("asset_ref"),
             }
             for key in ("fit", "vrm_anchor", "attachment_slot"):
                 if key in module:
                     record[key] = self._clone_json(module[key])
+            if record.get("asset_ref"):
+                self._apply_forge_modeler_sidecar_preview(part_name, record, selected_variant_key)
+            if isinstance(render_placements.get(part_name), dict):
+                record["runtime_placement"] = self._clone_json(render_placements[part_name])
+            if isinstance(variant_render_placements.get(part_name), dict):
+                record["variant_render_placements"] = self._clone_json(variant_render_placements[part_name])
             preview_modules[part_name] = record
-        asset_pipeline = self._forge_public_asset_pipeline(suitspec, suitspec_path=suitspec_path)
         return {
             "palette": self._clone_json(suitspec.get("palette", {})),
             "body_profile": self._clone_json(suitspec.get("body_profile", {})),
             "visual_layers": self._clone_json(asset_pipeline["visual_layers"]),
             "render_contract": self._clone_json(asset_pipeline["render_contract"]),
             "asset_pipeline": asset_pipeline,
+            "render_placements": self._clone_json(render_placements),
+            "variant_render_placements": self._clone_json(variant_render_placements),
+            "variant_catalog": self._clone_json(asset_pipeline["variant_catalog"]),
             "modules": preview_modules,
         }
 
@@ -1620,37 +2314,142 @@ class NewRouteApi:
             render_contract = self._forge_render_contract(enabled_parts)
         visual_layers = self._clone_json(visual_layers)
         visual_layers.setdefault("surface_layer", self._forge_surface_layer())
+        body_profile = suitspec.get("body_profile") if isinstance(suitspec.get("body_profile"), dict) else {}
+        body_fit_contract = (
+            model_plan.get("body_fit_contract")
+            if isinstance(model_plan.get("body_fit_contract"), dict)
+            else build_body_fit_contract(
+                {"body_profile": body_profile, "modules": modules},
+                selected_slots=enabled_parts,
+            )
+        )
+        render_placements = build_render_placements(suitspec, body_fit_contract)
+        selected_variant_keys = self._selected_variant_keys_from_suitspec(suitspec)
+        variant_catalog = self._forge_variant_catalog(
+            enabled_parts,
+            selected_variant_keys=selected_variant_keys,
+            modules=modules,
+        )
+        variant_render_placements = self._forge_variant_render_placements(
+            suitspec,
+            body_fit_contract,
+            variant_catalog,
+        )
+        overlay_assets = self._forge_overlay_asset_records(modules, enabled_parts, selected_variant_keys)
+        variant_resolutions = (
+            generation.get("variant_asset_resolution")
+            if isinstance(generation.get("variant_asset_resolution"), dict)
+            else {}
+        )
+        for part, resolution in variant_resolutions.items():
+            if not isinstance(resolution, dict) or part not in overlay_assets:
+                continue
+            if resolution.get("requested_variant_key"):
+                overlay_assets[part]["requested_variant_key"] = str(resolution["requested_variant_key"])
+            if resolution.get("fallback_used"):
+                overlay_assets[part]["fallback_used"] = True
+                overlay_assets[part]["fallback_reason"] = str(resolution.get("fallback_reason") or "fallback")
+        armor_overlay = visual_layers.get("armor_overlay") if isinstance(visual_layers.get("armor_overlay"), dict) else {}
+        if isinstance(armor_overlay, dict):
+            armor_overlay["assets"] = self._clone_json(overlay_assets)
+            armor_overlay["asset_refs"] = {
+                part: str(asset["asset_ref"])
+                for part, asset in overlay_assets.items()
+                if asset.get("asset_ref")
+            }
+            armor_overlay["selected_variant_keys"] = {
+                part: str(asset["selected_variant_key"])
+                for part, asset in overlay_assets.items()
+                if asset.get("selected_variant_key")
+            }
+            armor_overlay["render_placements"] = self._clone_json(render_placements)
+            armor_overlay["variant_render_placements"] = self._clone_json(variant_render_placements)
+        render_contract = self._clone_json(render_contract)
+        render_contract["render_placement_contract"] = "runtime-render-placement.v1"
+        render_contract["render_placement_parts"] = sorted(render_placements)
+        render_contract["variant_render_placement_contract"] = "runtime-render-placement.v1"
+        render_contract["variant_render_placement_parts"] = sorted(variant_render_placements)
+        variant_design_hints = self._forge_variant_design_hints(
+            enabled_parts,
+            variant_catalog=variant_catalog,
+            selected_variant_keys=selected_variant_keys,
+        )
+        per_part_texture_contracts = self._forge_per_part_texture_contracts(
+            suitspec,
+            enabled_parts,
+            texture_plan=texture_plan,
+            variant_design_hints=variant_design_hints,
+        )
+        variant_design_hints["per_part_texture_contract"] = _FORGE_PER_PART_TEXTURE_CONTRACT
+        variant_design_hints["per_part_texture_contracts"] = self._clone_json(per_part_texture_contracts)
         surface_plan = generation.get("surface_plan") if isinstance(generation.get("surface_plan"), dict) else {}
         if not surface_plan:
             surface_plan = self._forge_surface_plan(
                 enabled_parts,
                 texture_plan,
                 self._forge_style_tags(suitspec),
+                variant_design_hints=variant_design_hints,
+                per_part_texture_contracts=per_part_texture_contracts,
             )
         else:
             surface_plan = self._clone_json(surface_plan)
+            surface_plan["texture_prompt_contract"] = _FORGE_TEXTURE_PROMPT_CONTRACT
+            surface_plan["per_part_texture_contract"] = _FORGE_PER_PART_TEXTURE_CONTRACT
             surface_plan["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
             surface_plan.setdefault("texture_mode", texture_plan["texture_mode"])
             surface_plan.setdefault("target_resolution", texture_plan.get("target_resolution") or "2K")
+            unified_design = surface_plan.setdefault("unified_design", {})
+            if isinstance(unified_design, dict):
+                unified_design["prompt_contract"] = _FORGE_TEXTURE_PROMPT_CONTRACT
+                unified_design.setdefault("motif_source", "variant_catalog.base_motif_link + variant.detail_features + topping_slots")
+                unified_design.setdefault(
+                    "base_overlay_motif_rule",
+                    (
+                        "base_suit_surface must establish the named motif lines first; armor_overlay_parts must "
+                        "continue those same motifs through trims, bevels, cores, and emissive masks"
+                    ),
+                )
+            armor_overlay = surface_plan.setdefault("armor_overlay", {})
+            if isinstance(armor_overlay, dict):
+                armor_overlay["variant_design_hints"] = self._clone_json(variant_design_hints)
+                armor_overlay["per_part_texture_contracts"] = self._clone_json(per_part_texture_contracts)
         modeler_blueprints = self._forge_modeler_blueprints(enabled_parts, suitspec=suitspec)
+        variant_prompt_summary = self._forge_variant_prompt_summary(variant_design_hints)
         job_defaults = generation.get("job_defaults") if isinstance(generation.get("job_defaults"), dict) else {}
         job_defaults = self._clone_json(job_defaults)
         job_defaults["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
         job_defaults.setdefault("texture_mode", texture_plan["texture_mode"])
         job_defaults.setdefault("uv_refine", texture_plan["uv_refine"])
         job_defaults.setdefault("update_suitspec", texture_plan["update_suitspec"])
+        job_defaults["texture_prompt_contract"] = _FORGE_TEXTURE_PROMPT_CONTRACT
+        job_defaults["variant_prompt_summary"] = variant_prompt_summary
+        job_defaults["surface_design_hints"] = self._clone_json(variant_design_hints)
+        job_defaults["selected_variant_keys"] = {
+            part: str(asset["selected_variant_key"])
+            for part, asset in overlay_assets.items()
+            if asset.get("selected_variant_key")
+        }
+        if isinstance(generation.get("variant_selection"), dict):
+            job_defaults["variant_selection"] = self._clone_json(generation["variant_selection"])
         planned_quality_gates = (
             generation.get("planned_quality_gates") if isinstance(generation.get("planned_quality_gates"), list) else []
         )
         quality_policy = generation.get("quality_policy") if isinstance(generation.get("quality_policy"), dict) else {}
         job_payload_template = self._clone_json(job_defaults)
         job_payload_template.pop("requires", None)
-        for render_only_key in ("must_render_layers", "minimum_visible_overlay_parts", "surface_design_contract"):
+        for render_only_key in (
+            "must_render_layers",
+            "minimum_visible_overlay_parts",
+            "surface_design_contract",
+        ):
             job_payload_template.pop(render_only_key, None)
         job_payload_template.pop("surface_plan", None)
         job_payload_template["provider_profile"] = _FORGE_TEXTURE_PROVIDER_PROFILE
         job_payload_template.setdefault("texture_mode", _FORGE_TEXTURE_MODE)
         job_payload_template.setdefault("uv_refine", _FORGE_UV_REFINE)
+        job_payload_template["texture_prompt_contract"] = _FORGE_TEXTURE_PROMPT_CONTRACT
+        job_payload_template["variant_prompt_summary"] = variant_prompt_summary
+        job_payload_template["surface_design_hints"] = self._clone_json(variant_design_hints)
         if suitspec_path:
             job_payload_template["suitspec"] = suitspec_path
         job_payload_template.setdefault("suitspec", "__SERVER_RESOLVED_SUITSPEC_PATH__")
@@ -1711,14 +2510,29 @@ class NewRouteApi:
                 "base_suit_contract": "docs/base-suit-overlay-contract.md",
             },
         }
-        texture_lock_allowed = model_quality_gate.get("status") == "pass"
+        uv_texture_lock_gate = self._forge_uv_texture_lock_gate(per_part_texture_contracts)
+        model_texture_lock_allowed = (
+            model_quality_gate.get("status") == "pass"
+            and bool(model_quality_gate.get("texture_lock_allowed"))
+        )
+        texture_lock_allowed = model_texture_lock_allowed and bool(uv_texture_lock_gate["texture_lock_allowed"])
+        model_quality_gate["uv_texture_lock_gate"] = self._clone_json(uv_texture_lock_gate)
+        model_quality_gate["texture_lock_allowed"] = texture_lock_allowed
+        if not uv_texture_lock_gate["texture_lock_allowed"]:
+            existing_reasons = model_quality_gate.get("reasons") if isinstance(model_quality_gate.get("reasons"), list) else []
+            uv_reasons = [str(reason) for reason in uv_texture_lock_gate.get("reasons", [])]
+            model_quality_gate["reasons"] = uv_reasons + [
+                str(reason) for reason in existing_reasons if str(reason) not in uv_reasons
+            ]
         job_payload_template["writes_final_texture"] = texture_lock_allowed
         texture_probe_job = {
             "contract_version": "texture-probe.v1",
             "status": "ready_for_final_texture_lock" if texture_lock_allowed else "allowed_on_seed_proxy",
             "blocking": False,
             "final_texture_lock_allowed": texture_lock_allowed,
-            "blocked_by_model_quality": not texture_lock_allowed,
+            "blocked_by_model_quality": not model_texture_lock_allowed,
+            "blocked_by_uv_contract": model_texture_lock_allowed and not uv_texture_lock_gate["texture_lock_allowed"],
+            "uv_texture_lock_gate": self._clone_json(uv_texture_lock_gate),
             "writes_final_texture": texture_lock_allowed,
             "method": "POST",
             "endpoint": job_links["create_generation_job"],
@@ -1730,12 +2544,15 @@ class NewRouteApi:
         return {
             "visual_layers": self._clone_json(visual_layers),
             "render_contract": self._clone_json(render_contract),
+            "render_placements": self._clone_json(render_placements),
+            "variant_render_placements": self._clone_json(variant_render_placements),
             "model_plan": self._clone_json(model_plan),
             "texture_plan": self._clone_json(texture_plan),
             "fit_status": str(generation.get("fit_status") or _FORGE_FIT_STATUS),
             "surface_generation_status": str(generation.get("surface_generation_status") or _FORGE_SURFACE_GENERATION_STATUS),
             "surface_plan": self._clone_json(surface_plan),
             "modeler_blueprints": self._clone_json(modeler_blueprints),
+            "variant_catalog": self._clone_json(variant_catalog),
             "job_defaults": self._clone_json(job_defaults),
             "job_payload_template": job_payload_template,
             "links": job_links,
@@ -1757,6 +2574,248 @@ class NewRouteApi:
             "quality_policy": self._clone_json(quality_policy),
         }
 
+    def _forge_variant_render_placements(
+        self,
+        suitspec: dict[str, Any],
+        body_fit_contract: dict[str, Any],
+        variant_catalog: dict[str, Any],
+    ) -> dict[str, dict[str, dict[str, Any]]]:
+        modules = suitspec.get("modules") if isinstance(suitspec.get("modules"), dict) else {}
+        selected_modules = (
+            variant_catalog.get("selected_modules")
+            if isinstance(variant_catalog.get("selected_modules"), dict)
+            else {}
+        )
+        placements_by_part: dict[str, dict[str, dict[str, Any]]] = {}
+        for part, catalog_module in sorted(selected_modules.items()):
+            source_module = modules.get(part) if isinstance(modules.get(part), dict) else {}
+            if source_module.get("enabled") is not True:
+                continue
+            variants = catalog_module.get("variants") if isinstance(catalog_module.get("variants"), list) else []
+            part_placements: dict[str, dict[str, Any]] = {}
+            for variant in variants:
+                if not isinstance(variant, dict):
+                    continue
+                variant_key = self._normalize_variant_key(part, variant.get("variant_key") or variant.get("key"))
+                if not variant_key:
+                    continue
+                resolution = self._forge_resolved_module_asset(part, variant_key)
+                selected_key = self._normalize_variant_key(part, resolution.get("selected_variant_key"))
+                if selected_key != variant_key:
+                    continue
+                asset_ref = str(variant.get("asset_ref") or resolution.get("asset_ref") or "")
+                if not asset_ref:
+                    continue
+                variant_suitspec = self._clone_json(suitspec)
+                variant_modules = (
+                    variant_suitspec.get("modules")
+                    if isinstance(variant_suitspec.get("modules"), dict)
+                    else {}
+                )
+                variant_module = variant_modules.get(part) if isinstance(variant_modules.get(part), dict) else None
+                if variant_module is None:
+                    continue
+                variant_module["enabled"] = True
+                variant_module["asset_ref"] = asset_ref
+                variant_module["selected_variant_key"] = variant_key
+                variant_module["variant_key"] = variant_key
+                self._apply_forge_modeler_sidecar(part, variant_module, variant_key)
+                generation = variant_suitspec.get("generation")
+                if not isinstance(generation, dict):
+                    generation = {}
+                    variant_suitspec["generation"] = generation
+                selected_variant_keys = (
+                    dict(generation.get("selected_variant_keys"))
+                    if isinstance(generation.get("selected_variant_keys"), dict)
+                    else {}
+                )
+                selected_variant_keys[part] = variant_key
+                generation["selected_variant_keys"] = selected_variant_keys
+                placement = build_render_placements(variant_suitspec, body_fit_contract).get(part)
+                if not isinstance(placement, dict):
+                    continue
+                placement = self._clone_json(placement)
+                placement["asset_ref"] = asset_ref
+                placement["selected_variant_key"] = variant_key
+                part_placements[variant_key] = placement
+            if part_placements:
+                placements_by_part[part] = dict(sorted(part_placements.items()))
+        return dict(sorted(placements_by_part.items()))
+
+    def _forge_variant_catalog(
+        self,
+        enabled_parts: list[str],
+        *,
+        selected_variant_keys: dict[str, str] | None = None,
+        modules: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        selected_keys = selected_variant_keys if isinstance(selected_variant_keys, dict) else {}
+        module_payloads = modules if isinstance(modules, dict) else {}
+        catalog_path = self.repo_root / _FORGE_VARIANT_CATALOG_PATH
+        if not catalog_path.exists():
+            return {
+                "contract_version": "armor-part-variant-catalog.v1",
+                "status": "missing",
+                "path": _FORGE_VARIANT_CATALOG_PATH,
+                "selected_part_count": len(enabled_parts),
+                "selected_modules": {},
+            }
+        catalog = self._read_json(catalog_path)
+        modules = catalog.get("modules") if isinstance(catalog.get("modules"), dict) else {}
+        selected_modules = {}
+        for part in enabled_parts:
+            if not isinstance(modules.get(part), dict):
+                continue
+            module_catalog = self._clone_json(modules[part])
+            module_payload = module_payloads.get(part) if isinstance(module_payloads.get(part), dict) else {}
+            selected_key = selected_keys.get(part) or self._canonical_variant_key(part)
+            module_asset_ref = str(module_payload.get("asset_ref") or "")
+            resolution = self._forge_resolved_module_asset(part, selected_key)
+            resolved_asset_ref = str(resolution.get("asset_ref") or "")
+            use_resolved_asset = part in selected_keys and bool(resolved_asset_ref)
+            asset_ref = resolved_asset_ref if use_resolved_asset else module_asset_ref
+            if not asset_ref and resolved_asset_ref:
+                asset_ref = resolved_asset_ref
+                use_resolved_asset = True
+            if use_resolved_asset:
+                selected_key = str(resolution.get("selected_variant_key") or selected_key)
+            module_catalog["selected_variant_key"] = selected_key
+            module_catalog["asset_ref"] = asset_ref
+            selected_modules[part] = module_catalog
+        selected_slot_count = sum(
+            len(module.get("topping_slots", []))
+            for module in selected_modules.values()
+            if isinstance(module.get("topping_slots"), list)
+        )
+        selected_variant_count = sum(
+            len(module.get("variants", []))
+            for module in selected_modules.values()
+            if isinstance(module.get("variants"), list)
+        )
+        return {
+            "contract_version": str(catalog.get("contract_version") or "armor-part-variant-catalog.v1"),
+            "status": "ready",
+            "path": _FORGE_VARIANT_CATALOG_PATH,
+            "canonical_part_count": len(catalog.get("canonical_parts") or []),
+            "selected_part_count": len(enabled_parts),
+            "selected_module_count": len(selected_modules),
+            "selected_slot_count": selected_slot_count,
+            "selected_variant_count": selected_variant_count,
+            "selected_modules": selected_modules,
+        }
+
+    def _forge_variant_design_hints(
+        self,
+        enabled_parts: list[str],
+        *,
+        variant_catalog: dict[str, Any] | None = None,
+        selected_variant_keys: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        catalog = variant_catalog if isinstance(variant_catalog, dict) else self._forge_variant_catalog(enabled_parts)
+        modules = catalog.get("selected_modules") if isinstance(catalog.get("selected_modules"), dict) else {}
+        selected_keys = selected_variant_keys if isinstance(selected_variant_keys, dict) else {}
+        selected_modules: dict[str, Any] = {}
+        for part in enabled_parts:
+            module = modules.get(part)
+            if not isinstance(module, dict):
+                continue
+            selected_key = (
+                self._normalize_variant_key(part, selected_keys.get(part))
+                or self._normalize_variant_key(part, module.get("selected_variant_key"))
+            )
+            sidecar = self._forge_modeler_sidecar(part, selected_key)
+            sidecar_variant_key = str(sidecar.get("variant_key") or "").strip() if isinstance(sidecar, dict) else ""
+            variants = module.get("variants") if isinstance(module.get("variants"), list) else []
+            desired_variant_key = selected_key or sidecar_variant_key
+            selected_variant = next(
+                (
+                    variant
+                    for variant in variants
+                    if isinstance(variant, dict) and str(variant.get("variant_key") or "") == desired_variant_key
+                ),
+                None,
+            )
+            if not isinstance(selected_variant, dict):
+                selected_variant = next((variant for variant in variants if isinstance(variant, dict)), {})
+            base_motif_link = (
+                selected_variant.get("base_motif_link")
+                if isinstance(selected_variant.get("base_motif_link"), dict)
+                else module.get("base_motif_link")
+            )
+            if not isinstance(base_motif_link, dict) and isinstance(sidecar, dict):
+                base_motif_link = sidecar.get("base_motif_link")
+            topping_slots = module.get("topping_slots") if isinstance(module.get("topping_slots"), list) else []
+            if not topping_slots and isinstance(sidecar, dict) and isinstance(sidecar.get("topping_slots"), list):
+                topping_slots = sidecar["topping_slots"]
+            detail_features = [
+                str(feature)
+                for feature in selected_variant.get("detail_features", [])
+                if str(feature).strip()
+            ] if isinstance(selected_variant.get("detail_features"), list) else []
+            recommended_slots = [
+                str(slot)
+                for slot in selected_variant.get("recommended_topping_slots", [])
+                if str(slot).strip()
+            ] if isinstance(selected_variant.get("recommended_topping_slots"), list) else []
+            topping_slot_names = []
+            for slot in topping_slots:
+                if isinstance(slot, dict):
+                    name = str(slot.get("topping_slot") or slot.get("slot") or "").strip()
+                else:
+                    name = str(slot).strip()
+                if name and name not in topping_slot_names:
+                    topping_slot_names.append(name)
+            motif_name = str(base_motif_link.get("name") or "base_suit_motif") if isinstance(base_motif_link, dict) else "base_suit_motif"
+            variant_key = str(selected_variant.get("variant_key") or selected_key or sidecar_variant_key or f"{part}:base")
+            selected_modules[part] = {
+                "module": part,
+                "part_family": str(module.get("part_family") or part),
+                "selected_variant_key": variant_key,
+                "asset_ref": str(module.get("asset_ref") or ""),
+                "base_motif_link": self._clone_json(base_motif_link) if isinstance(base_motif_link, dict) else {},
+                "detail_features": detail_features,
+                "topping_slots": self._clone_json(topping_slots) if isinstance(topping_slots, list) else [],
+                "topping_slot_names": topping_slot_names,
+                "recommended_topping_slots": recommended_slots,
+                "prompt_hint": (
+                    f"{part} uses {variant_key}; continue base motif {motif_name} from the base suit "
+                    "into overlay trims, bevels, topping anchors, and emissive masks"
+                ),
+            }
+        return {
+            "contract_version": "nanobanana-variant-design-hints.v1",
+            "source_catalog": {
+                "contract_version": str(catalog.get("contract_version") or "armor-part-variant-catalog.v1"),
+                "path": str(catalog.get("path") or _FORGE_VARIANT_CATALOG_PATH),
+            },
+            "texture_prompt_contract": _FORGE_TEXTURE_PROMPT_CONTRACT,
+            "selected_part_count": len(enabled_parts),
+            "selected_module_count": len(selected_modules),
+            "selected_modules": selected_modules,
+        }
+
+    def _forge_variant_prompt_summary(self, variant_design_hints: dict[str, Any]) -> list[str]:
+        modules = (
+            variant_design_hints.get("selected_modules")
+            if isinstance(variant_design_hints.get("selected_modules"), dict)
+            else {}
+        )
+        summary = []
+        for module in modules.values():
+            if not isinstance(module, dict):
+                continue
+            base_motif_link = module.get("base_motif_link") if isinstance(module.get("base_motif_link"), dict) else {}
+            motif = str(base_motif_link.get("name") or "base_suit_motif")
+            slots = module.get("topping_slot_names") if isinstance(module.get("topping_slot_names"), list) else []
+            slot_text = ", ".join(str(slot) for slot in slots[:4]) or "no topping slots"
+            detail_features = module.get("detail_features") if isinstance(module.get("detail_features"), list) else []
+            detail_text = str(detail_features[0]) if detail_features else "continue selected catalog detail features"
+            summary.append(
+                f"{module.get('module')}: {module.get('selected_variant_key')} continues {motif}; "
+                f"features: {detail_text}; topping anchors: {slot_text}"
+            )
+        return summary
+
     def _forge_model_quality_gate(self, *, render_contract: dict[str, Any] | None = None) -> dict[str, Any]:
         selected_quality_parts = None
         if isinstance(render_contract, dict):
@@ -1774,6 +2833,8 @@ class NewRouteApi:
         gate.pop("repo_root", None)
         if gate.get("mesh_dir"):
             gate["mesh_dir"] = self._relative_path(Path(str(gate["mesh_dir"])))
+        if gate.get("bounds_file"):
+            gate["bounds_file"] = self._relative_path(Path(str(gate["bounds_file"])))
         parts = gate.get("parts") if isinstance(gate.get("parts"), dict) else {}
         for part_result in parts.values():
             if not isinstance(part_result, dict) or not part_result.get("path"):
@@ -1874,10 +2935,20 @@ class NewRouteApi:
 
     def _relative_path(self, path: Path) -> str:
         resolved = path.resolve()
-        try:
-            return resolved.relative_to(self.repo_root).as_posix()
-        except ValueError:
-            return resolved.as_posix()
+        roots: tuple[tuple[Path, str | None], ...] = (
+            (self.repo_root, None),
+            (self.suit_store_root, "suits"),
+            (self.trial_store_root, "trials"),
+        )
+        for root, public_prefix in roots:
+            try:
+                relative = resolved.relative_to(root.resolve()).as_posix()
+            except ValueError:
+                continue
+            if public_prefix is None:
+                return relative
+            return f"{public_prefix}/{relative}" if relative else public_prefix
+        return resolved.name
 
     def _storage_info(self, path: Path) -> dict[str, str]:
         return {"backend": "local-json", "path": self._relative_path(path)}

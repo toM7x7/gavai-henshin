@@ -1,0 +1,312 @@
+"""Export a curated shareable QA evidence manifest.
+
+The exporter consumes the QA privacy validation result, or runs the validator
+itself, then separates qa/ files into shareable curated JSON, local-only raw
+evidence, and blocked files. It does not copy evidence files.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from validate_qa_evidence_privacy import validate_qa_evidence_privacy  # noqa: E402
+
+
+CONTRACT_VERSION = "shareable-qa-evidence-manifest.v1"
+DEFAULT_OUT = Path("qa/shareable-qa-evidence-latest.json")
+CURATED_JSON_CONTRACTS = {
+    "mocopi-evidence-share-package.v1",
+    "release-stage-manifest.v1",
+    "release-stage-manifest.v4",
+    "release-stage-manifest.v5",
+    "release-stage-manifest-validation.v1",
+    "release-stage-manifest-validation.v4",
+    "release-stage-manifest-validation.v6",
+    CONTRACT_VERSION,
+}
+LOCAL_ONLY_CODES = {
+    "share-exclude-media",
+    "share-exclude-quest-screenshot",
+    "share-exclude-raw-debug",
+    "share-exclude-raw-log",
+    "json-too-large-for-share-review",
+    "json-parse-error",
+    "unknown-json-manifest-contract",
+    "json-no-contract-version",
+    "localhost-url-share-warning",
+    "local-path-share-warning",
+    "pii-like-json-key",
+    "release-manifest-qa-evidence-unsafe",
+}
+
+
+def export_shareable_qa_evidence_manifest(
+    *,
+    qa_root: str | Path = "qa",
+    privacy_report: dict[str, Any] | None = None,
+    privacy_report_path: str | Path | None = None,
+    output_path: str | Path = DEFAULT_OUT,
+) -> dict[str, Any]:
+    root = Path(qa_root)
+    report = privacy_report or validate_qa_evidence_privacy(root, mode="share")
+    findings_by_path = _findings_by_path(report)
+    all_files = sorted(_rel(root, path) for path in root.rglob("*") if path.is_file()) if root.exists() else []
+    output_rel = _output_rel(root, output_path)
+
+    blocked_files = _blocked_files(findings_by_path)
+    blocked_paths = {item["path"] for item in blocked_files}
+    shareable_files = _shareable_files(root, report, findings_by_path, output_rel)
+    shareable_paths = {item["path"] for item in shareable_files}
+    local_only_files = _local_only_files(all_files, findings_by_path, shareable_paths, blocked_paths)
+
+    recommended = sorted({_git_stage_path(root, item["path"]) for item in shareable_files})
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "qa_root": root.as_posix(),
+        "privacy_gate_status": _privacy_gate_status(report, privacy_report_path),
+        "shareable_files": shareable_files,
+        "local_only_files": local_only_files,
+        "blocked_files": blocked_files,
+        "recommended_git_stage_paths": recommended,
+        "notes": [
+            "Stage only recommended_git_stage_paths for GitHub/external-PC handoff.",
+            "Do not stage raw qa/logs folders, screenshots, ADB dumps, or unknown JSON evidence.",
+            "Regenerate this manifest after adding or removing QA evidence.",
+        ],
+    }
+
+
+def load_privacy_report(path: str | Path) -> dict[str, Any]:
+    loaded = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(loaded, dict):
+        raise ValueError("privacy report JSON must be an object")
+    return loaded
+
+
+def _privacy_gate_status(report: dict[str, Any], path: str | Path | None) -> dict[str, Any]:
+    readiness = report.get("share_readiness") if isinstance(report.get("share_readiness"), dict) else {}
+    blockers = readiness.get("blockers") if isinstance(readiness.get("blockers"), list) else []
+    warnings = readiness.get("warnings") if isinstance(readiness.get("warnings"), list) else []
+    mode = str(report.get("mode") or "")
+    return {
+        "source": Path(path).as_posix() if path else "computed",
+        "mode": mode,
+        "status": report.get("status", ""),
+        "ok": bool(report.get("ok")),
+        "ready_for_curated_share": mode == "share" and not blockers,
+        "raw_qa_tree_share_ready": mode == "share" and not blockers and not warnings,
+        "blocker_count": len(blockers),
+        "warning_count": len(warnings),
+        "local_evidence_count": len(readiness.get("local_evidence") if isinstance(readiness.get("local_evidence"), list) else []),
+    }
+
+
+def _shareable_files(
+    root: Path,
+    report: dict[str, Any],
+    findings_by_path: dict[str, list[dict[str, Any]]],
+    output_rel: str,
+) -> list[dict[str, Any]]:
+    shareable: dict[str, dict[str, Any]] = {
+        output_rel: {
+            "path": output_rel,
+            "git_stage_path": _git_stage_path(root, output_rel),
+            "kind": "shareable_qa_manifest",
+            "contract_version": CONTRACT_VERSION,
+            "reason": "curated public/private classification manifest generated by this exporter",
+        }
+    }
+    json_reports = report.get("json_manifest_safety") if isinstance(report.get("json_manifest_safety"), list) else []
+    for item in json_reports:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "")
+        contract = str(item.get("contract_version") or "")
+        if not path or path in findings_by_path:
+            continue
+        if item.get("safe_manifest") and contract in CURATED_JSON_CONTRACTS:
+            shareable[path] = {
+                "path": path,
+                "git_stage_path": _git_stage_path(root, path),
+                "kind": "curated_json_manifest",
+                "contract_version": contract,
+                "reason": "privacy validator marked this JSON manifest as share-safe",
+            }
+    return [shareable[path] for path in sorted(shareable)]
+
+
+def _local_only_files(
+    all_files: list[str],
+    findings_by_path: dict[str, list[dict[str, Any]]],
+    shareable_paths: set[str],
+    blocked_paths: set[str],
+) -> list[dict[str, Any]]:
+    local_only: dict[str, dict[str, Any]] = {}
+    for path in all_files:
+        if path in shareable_paths or path in blocked_paths:
+            continue
+        findings = findings_by_path.get(path, [])
+        if findings:
+            local_only[path] = {
+                "path": path,
+                "kind": _local_kind(findings),
+                "finding_codes": sorted({finding["code"] for finding in findings}),
+                "reason": "; ".join(_unique(finding["message"] for finding in findings)),
+            }
+    for path, findings in findings_by_path.items():
+        if path in shareable_paths or path in blocked_paths or path in local_only:
+            continue
+        if any(finding["code"] in LOCAL_ONLY_CODES for finding in findings):
+            local_only[path] = {
+                "path": path,
+                "kind": _local_kind(findings),
+                "finding_codes": sorted({finding["code"] for finding in findings}),
+                "reason": "; ".join(_unique(finding["message"] for finding in findings)),
+            }
+    return [local_only[path] for path in sorted(local_only)]
+
+
+def _blocked_files(findings_by_path: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    blocked: list[dict[str, Any]] = []
+    for path, findings in sorted(findings_by_path.items()):
+        blockers = [finding for finding in findings if finding.get("severity") == "blocker"]
+        if not blockers:
+            continue
+        blocked.append(
+            {
+                "path": path,
+                "kind": "blocked_privacy_finding",
+                "finding_codes": sorted({finding["code"] for finding in blockers}),
+                "reason": "; ".join(_unique(finding["message"] for finding in blockers)),
+                "recommended_action": "; ".join(_unique(finding["recommended_action"] for finding in blockers)),
+            }
+        )
+    return blocked
+
+
+def _local_kind(findings: list[dict[str, Any]]) -> str:
+    codes = {finding.get("code") for finding in findings}
+    if "share-exclude-quest-screenshot" in codes or "share-exclude-media" in codes:
+        return "media_or_screenshot"
+    if "share-exclude-raw-debug" in codes:
+        return "raw_debug_dump"
+    if "share-exclude-raw-log" in codes:
+        return "raw_log"
+    if "release-manifest-qa-evidence-unsafe" in codes:
+        return "release_manifest_unsafe_sample"
+    if "json-no-contract-version" in codes or "unknown-json-manifest-contract" in codes:
+        return "uncurated_json"
+    return "local_evidence"
+
+
+def _findings_by_path(report: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    findings = report.get("findings") if isinstance(report.get("findings"), list) else []
+    for finding in findings:
+        if not isinstance(finding, dict) or not finding.get("path"):
+            continue
+        normalized = _normalize_report_path(str(finding["path"]), report)
+        grouped.setdefault(normalized, []).append(finding)
+    return grouped
+
+
+def _normalize_report_path(path: str, report: dict[str, Any]) -> str:
+    value = path.replace("\\", "/")
+    qa_root = Path(str(report.get("qa_root") or "qa")).name
+    prefix = f"{qa_root}/"
+    if value.startswith(prefix):
+        return value[len(prefix):]
+    return value
+
+
+def _output_rel(root: Path, output_path: str | Path) -> str:
+    path = Path(output_path)
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        normalized = path.as_posix()
+        prefix = root.as_posix().rstrip("/") + "/"
+        if normalized.startswith(prefix):
+            return normalized[len(prefix):]
+        if path.name:
+            return path.name
+        return "shareable-qa-evidence-latest.json"
+
+
+def _git_stage_path(root: Path, rel: str) -> str:
+    root_name = root.name or "qa"
+    if rel.startswith(f"{root_name}/"):
+        return rel
+    return Path(root_name, rel).as_posix()
+
+
+def _rel(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _unique(values: Any) -> list[str]:
+    seen: set[str] = set()
+    output: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in seen:
+            output.append(text)
+            seen.add(text)
+    return output
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _print_text_report(manifest: dict[str, Any]) -> None:
+    status = manifest["privacy_gate_status"]
+    print(f"privacy_gate={status['status']} curated_share={status['ready_for_curated_share']}")
+    print("recommended_git_stage_paths:")
+    for path in manifest["recommended_git_stage_paths"]:
+        print(f"- {path}")
+    if manifest["blocked_files"]:
+        print("blocked_files:")
+        for item in manifest["blocked_files"]:
+            print(f"- {item['path']}: {item['reason']}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--qa-root", type=Path, default=Path("qa"), help="QA evidence root, default: qa")
+    parser.add_argument("--privacy-report", type=Path, help="Optional privacy report JSON")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"Write manifest, default: {DEFAULT_OUT}")
+    parser.add_argument("--report-json", action="store_true", help="Emit manifest JSON to stdout")
+    args = parser.parse_args(argv)
+
+    privacy_report = load_privacy_report(args.privacy_report) if args.privacy_report else None
+    manifest = export_shareable_qa_evidence_manifest(
+        qa_root=args.qa_root,
+        privacy_report=privacy_report,
+        privacy_report_path=args.privacy_report,
+        output_path=args.out,
+    )
+    _write_json(args.out, manifest)
+    if args.report_json:
+        json.dump(manifest, sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
+    else:
+        _print_text_report(manifest)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

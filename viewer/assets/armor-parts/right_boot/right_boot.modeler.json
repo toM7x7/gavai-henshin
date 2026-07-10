@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.right_boot.v1",
   "category": "foot",
   "bbox_m": {
-    "x": 0.11926399916410446,
+    "x": 0.11800000071525574,
     "y": 0.09000000730156898,
-    "z": 0.2900000065565109,
+    "z": 0.29099999368190765,
     "size": [
-      0.11926399916410446,
+      0.11800000071525574,
       0.09000000730156898,
-      0.2900000065565109
+      0.29099999368190765
     ],
     "dimensions": [
-      0.11926399916410446,
+      0.11800000071525574,
       0.09000000730156898,
-      0.2900000065565109
+      0.29099999368190765
     ]
   },
-  "triangle_count": 620,
+  "triangle_count": 764,
   "material_zones": [
     "accent",
     "base_surface",
@@ -117,6 +117,13 @@
   "fit_alignment_notes": [
     "Mirrors left_boot body-follow geometry and attachment intent across X."
   ],
+  "suit_silhouette_profile": {
+    "derive_from": "left_boot",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source fitted-shell silhouette and density notes"
+    ]
+  },
   "silhouette_review_notes": [
     "Right-side mirror of left_boot; pipeline negates x to derive geometry.",
     "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
@@ -133,11 +140,19 @@
     "mirror_axis": "x",
     "stance_note": "Mirror uses the source sole bottom as the foot contact reference."
   },
-  "triangles": 620,
+  "triangles": 764,
   "target_envelope_m": {
     "x": 0.1224,
     "y": 0.0884,
     "z": 0.2856
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Boot texture should make toe, heel, cuff, and sole feel grounded as one volume."
+  }
 }

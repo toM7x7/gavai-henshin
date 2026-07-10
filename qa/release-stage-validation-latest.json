@@ -1,0 +1,699 @@
+﻿{
+  "contract_version": "release-stage-manifest-validation.v6",
+  "read_only": true,
+  "strict": false,
+  "ok": false,
+  "status": "fail",
+  "repo_root": "C:/dev/codex/gavai-henshin",
+  "inputs": {
+    "manifest": "C:/dev/codex/gavai-henshin/qa/release-stage-manifest-latest.json",
+    "package_report": "C:/dev/codex/gavai-henshin/qa/exhibition_release_package_latest.json",
+    "package_report_loaded": true
+  },
+  "manifest_counts": {
+    "total": 26625,
+    "by_category": {
+      "release-critical": 132,
+      "operator-docs": 29,
+      "armor-assets": 422,
+      "qa-evidence": 1,
+      "local-qa-artifact": 14,
+      "reference-docs": 45,
+      "reference-artifact": 35,
+      "user-feedback-media": 41,
+      "local-workspace": 2,
+      "generated-artifact": 25904,
+      "ambiguous": 0
+    },
+    "by_status": {
+      " M": 114,
+      "??": 608,
+      "!!": 25903
+    },
+    "tracked_artifact_candidates": 1
+  },
+  "package_report_counts": {
+    "missing_count": 0,
+    "pattern_gap_count": 0,
+    "untracked_count": 282,
+    "tracked_candidate_count": 390
+  },
+  "package_manifest_alignment": {
+    "required_untracked_count": 282,
+    "tracked_candidate_count": 390,
+    "required_untracked_paths_sample": [
+      {
+        "path": ".env.demo.example",
+        "package_categories": [
+          "runtime"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/current-web-quest-check-guide.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/quest-deposition-visual-direction-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/replay-record-contract.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "docs/web-service-phase0-task-breakdown-2026-05-02.md",
+        "package_categories": [
+          "operator_docs"
+        ],
+        "stage_category": "operator-docs",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "classifier_reason": "operator/release handoff documentation",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "examples/modeler_delivery_manifest.sample.json",
+        "package_categories": [
+          "examples"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "examples/replay-record.sample.json",
+        "package_categories": [
+          "replay"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "schemas/replay-record.v0.2.schema.json",
+        "package_categories": [
+          "replay"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "src/henshin/variant_selection.py",
+        "package_categories": [
+          "runtime"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      },
+      {
+        "path": "tools/exhibition_smoke_check.py",
+        "package_categories": [
+          "runtime"
+        ],
+        "stage_category": "release-critical",
+        "stage_policy": "stage-candidate",
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+        "package_reason": "critical release-package file exists but is not tracked by git"
+      }
+    ],
+    "recommended_stage_groups": {
+      "release-critical": {
+        "count": 9,
+        "paths_sample": [
+          ".env.demo.example",
+          "examples/modeler_delivery_manifest.sample.json",
+          "examples/replay-record.sample.json",
+          "schemas/replay-record.v0.2.schema.json",
+          "src/henshin/variant_selection.py",
+          "tools/exhibition_smoke_check.py",
+          "tools/validate_exhibition_release_package.py",
+          "tools/validate_modeler_variant_order_manifest.py",
+          "tools/validate_variant_catalog.py"
+        ],
+        "package_categories": {
+          "runtime": 6,
+          "examples": 1,
+          "replay": 2
+        },
+        "recommended_action": "review and stage in the runtime/release-critical commit",
+        "stage_policy": "stage-candidate"
+      },
+      "operator-docs": {
+        "count": 14,
+        "paths_sample": [
+          "docs/current-web-quest-check-guide.md",
+          "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+          "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+          "docs/exhibition-pc-runbook-2026-05-04.md",
+          "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+          "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+          "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+          "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+          "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+          "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+          "docs/quest-deposition-visual-direction-2026-05-04.md",
+          "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+          "docs/replay-record-contract.md",
+          "docs/web-service-phase0-task-breakdown-2026-05-02.md"
+        ],
+        "package_categories": {
+          "operator_docs": 14
+        },
+        "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+        "stage_policy": "stage-candidate"
+      },
+      "armor-assets": {
+        "count": 259,
+        "paths_sample": [
+          "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.glb",
+          "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.modeler.json",
+          "viewer/assets/armor-parts/back/toppings/rear_core/base/preview/back__rear_core__base.mesh.json",
+          "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.glb",
+          "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.modeler.json",
+          "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/preview/back__rear_core__compact_core.mesh.json",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.glb",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.modeler.json",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/base/preview/back__spine_ridge__base.mesh.json",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.glb",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.modeler.json",
+          "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/preview/back__spine_ridge__compact_ridge.mesh.json",
+          "viewer/assets/armor-parts/back/variants/base/back__base.glb",
+          "viewer/assets/armor-parts/back/variants/base/back__base.modeler.json",
+          "viewer/assets/armor-parts/back/variants/base/preview/back__base.mesh.json",
+          "viewer/assets/armor-parts/back/variants/bold/back__bold.glb",
+          "viewer/assets/armor-parts/back/variants/bold/back__bold.modeler.json",
+          "viewer/assets/armor-parts/back/variants/bold/preview/back__bold.mesh.json",
+          "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.glb",
+          "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.modeler.json"
+        ],
+        "package_categories": {
+          "armor_toppings": 96,
+          "armor_variants": 162,
+          "armor_catalog_ref": 90,
+          "armor": 1
+        },
+        "recommended_action": "stage catalog-referenced armor assets in a dedicated asset commit",
+        "stage_policy": "stage-candidate"
+      }
+    },
+    "manual_review_groups": {},
+    "sample_limit": 20,
+    "unsampled_required_untracked_count": 262
+  },
+  "local_qa_json_count": 15,
+  "local_qa_json_samples": [
+    "qa/armor-forge-exhibition-mode-browser-check.json",
+    "qa/exhibition-service-gate-latest.json",
+    "qa/exhibition_release_package_latest.json",
+    "qa/exhibition_smoke_check_3601_adb_latest.json",
+    "qa/gcp-phase0-service-contract-latest.json"
+  ],
+  "local_qa_json_by_category": {
+    "qa-evidence": [
+      "qa/shareable-qa-evidence-latest.json"
+    ],
+    "local-qa-artifact": [
+      "qa/armor-forge-exhibition-mode-browser-check.json",
+      "qa/exhibition-service-gate-latest.json",
+      "qa/exhibition_release_package_latest.json",
+      "qa/exhibition_smoke_check_3601_adb_latest.json",
+      "qa/gcp-phase0-service-contract-latest.json"
+    ]
+  },
+  "strict_warning_failure": false,
+  "blockers": [
+    {
+      "code": "package-report-untracked-required-files",
+      "severity": "blocker",
+      "category": "",
+      "count": 282,
+      "message": "Package validator reports release-required files that exist but are not tracked by git.",
+      "recommended_action": "stage the required files or intentionally produce a separately reviewed local snapshot",
+      "required_untracked_paths_sample": [
+        {
+          "path": ".env.demo.example",
+          "package_categories": [
+            "runtime"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/current-web-quest-check-guide.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/quest-deposition-visual-direction-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/replay-record-contract.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "docs/web-service-phase0-task-breakdown-2026-05-02.md",
+          "package_categories": [
+            "operator_docs"
+          ],
+          "stage_category": "operator-docs",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "classifier_reason": "operator/release handoff documentation",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "examples/modeler_delivery_manifest.sample.json",
+          "package_categories": [
+            "examples"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "examples/replay-record.sample.json",
+          "package_categories": [
+            "replay"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "schemas/replay-record.v0.2.schema.json",
+          "package_categories": [
+            "replay"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "src/henshin/variant_selection.py",
+          "package_categories": [
+            "runtime"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        },
+        {
+          "path": "tools/exhibition_smoke_check.py",
+          "package_categories": [
+            "runtime"
+          ],
+          "stage_category": "release-critical",
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "classifier_reason": "runtime, tool, schema, example, or test needed before push",
+          "package_reason": "critical release-package file exists but is not tracked by git"
+        }
+      ],
+      "recommended_stage_groups": {
+        "release-critical": {
+          "count": 9,
+          "paths_sample": [
+            ".env.demo.example",
+            "examples/modeler_delivery_manifest.sample.json",
+            "examples/replay-record.sample.json",
+            "schemas/replay-record.v0.2.schema.json",
+            "src/henshin/variant_selection.py",
+            "tools/exhibition_smoke_check.py",
+            "tools/validate_exhibition_release_package.py",
+            "tools/validate_modeler_variant_order_manifest.py",
+            "tools/validate_variant_catalog.py"
+          ],
+          "package_categories": {
+            "runtime": 6,
+            "examples": 1,
+            "replay": 2
+          },
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "stage_policy": "stage-candidate"
+        },
+        "operator-docs": {
+          "count": 14,
+          "paths_sample": [
+            "docs/current-web-quest-check-guide.md",
+            "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+            "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+            "docs/exhibition-pc-runbook-2026-05-04.md",
+            "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+            "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+            "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+            "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+            "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+            "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+            "docs/quest-deposition-visual-direction-2026-05-04.md",
+            "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+            "docs/replay-record-contract.md",
+            "docs/web-service-phase0-task-breakdown-2026-05-02.md"
+          ],
+          "package_categories": {
+            "operator_docs": 14
+          },
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "stage_policy": "stage-candidate"
+        },
+        "armor-assets": {
+          "count": 259,
+          "paths_sample": [
+            "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.glb",
+            "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.modeler.json",
+            "viewer/assets/armor-parts/back/toppings/rear_core/base/preview/back__rear_core__base.mesh.json",
+            "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.glb",
+            "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.modeler.json",
+            "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/preview/back__rear_core__compact_core.mesh.json",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.glb",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.modeler.json",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/base/preview/back__spine_ridge__base.mesh.json",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.glb",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.modeler.json",
+            "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/preview/back__spine_ridge__compact_ridge.mesh.json",
+            "viewer/assets/armor-parts/back/variants/base/back__base.glb",
+            "viewer/assets/armor-parts/back/variants/base/back__base.modeler.json",
+            "viewer/assets/armor-parts/back/variants/base/preview/back__base.mesh.json",
+            "viewer/assets/armor-parts/back/variants/bold/back__bold.glb",
+            "viewer/assets/armor-parts/back/variants/bold/back__bold.modeler.json",
+            "viewer/assets/armor-parts/back/variants/bold/preview/back__bold.mesh.json",
+            "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.glb",
+            "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.modeler.json"
+          ],
+          "package_categories": {
+            "armor_toppings": 96,
+            "armor_variants": 162,
+            "armor_catalog_ref": 90,
+            "armor": 1
+          },
+          "recommended_action": "stage catalog-referenced armor assets in a dedicated asset commit",
+          "stage_policy": "stage-candidate"
+        }
+      },
+      "manual_review_groups": {},
+      "unsampled_required_untracked_count": 262
+    }
+  ],
+  "warnings": [
+    {
+      "code": "manifest-stage-candidates-exceed-package-tracked-candidates",
+      "severity": "warn",
+      "category": "",
+      "count": 193,
+      "message": "Manifest required stage candidates are much larger than the package validator tracked_candidate_count.",
+      "recommended_action": "inspect whether docs/tools/tests outside package validator scope explain the difference"
+    }
+  ],
+  "notes": [
+    "This checker is read-only and never stages, commits, or pushes files.",
+    "A passing report means the manifests are internally consistent, not that the staged diff has been reviewed."
+  ]
+}

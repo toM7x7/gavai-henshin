@@ -1,0 +1,77 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "right_shin",
+  "part_id": "viewer.mesh.right_shin.v1",
+  "category": "leg",
+  "bbox_m": {
+    "x": 0.017500000074505806,
+    "y": 0.04999999888241291,
+    "z": 0.024991091340780258,
+    "size": [
+      0.017500000074505806,
+      0.04999999888241291,
+      0.024991091340780258
+    ],
+    "dimensions": [
+      0.017500000074505806,
+      0.04999999888241291,
+      0.024991091340780258
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "left_shin",
+  "vrm_attachment": {
+    "primary_bone": "rightLowerLeg",
+    "offset_m": [
+      0,
+      -0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "rightLowerLeg",
+      "rightUpperLeg",
+      "rightFoot"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "right_shin:shin_spike:narrow_spike",
+  "is_topping": true,
+  "parent_module": "right_shin",
+  "topping_slot": "shin_spike",
+  "topping_key": "narrow_spike",
+  "slot_transform": {
+    "anchor": [
+      -0.0,
+      0.04,
+      0.06
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.06,
+    "y": 0.12,
+    "z": 0.04
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "right_shin",
+  "variant_key": "right_shin:sleek",
+  "variant_asset_key": "sleek",
+  "base_motif_link": {
+    "name": "shin_v",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shin",
+    "variant_key": "right_shin:sleek"
+  },
+  "catalog_variant": {
+    "variant_key": "right_shin:sleek",
+    "display_name": "Sleek line variant",
+    "base_motif_link": {
+      "name": "shin_v",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "shin-to-boot socket is visible",
+      "thin trim lines and small emitters increase density without bulky silhouette"
+    ],
+    "recommended_topping_slots": [
+      "shin_spike",
+      "ankle_cuff_trim",
+      "ankle_cuff"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.10779999941587448,
+    "y": 0.11791155487298965,
+    "z": 0.39668799936771393
+  },
+  "triangle_count": 484,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_trim",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "right_shin",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

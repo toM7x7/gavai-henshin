@@ -1,0 +1,44 @@
+# Build + deploy the henshin API/dashboard to Cloud Run.
+# Usage:
+#   gcloud builds submit --config infra/gcp/cloudbuild.yaml \
+#     --substitutions _REGION=asia-northeast1,_SERVICE=henshin-api-ui
+#
+# Promotion gate (run before any deploy, per exhibition-service governance):
+#   python tools/export_gcp_phase0_service_contract.py
+#   python tools/validate_service_deployment_contract.py --mode external
+#   python tools/validate_exhibition_service_gate.py --strict
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/henshin/${_SERVICE}:$SHORT_SHA
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/henshin/${_SERVICE}:$SHORT_SHA
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/henshin/${_SERVICE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      # Single instance until SuitStore/TrialStore cloud drivers exist:
+      # the JSON store lives on the instance filesystem.
+      - --min-instances=0
+      - --max-instances=1
+      - --memory=1Gi
+      - --set-env-vars=APP_ENV=cloud,STORE_DRIVER=json,ARTIFACT_STORE_DRIVER=local,LIVE_STATE_DRIVER=memory,QUEUE_DRIVER=inline
+      - --set-secrets=GEMINI_API_KEY=henshin-gemini-api-key:latest,SAKURA_AI_ENGINE_TOKEN=henshin-sakura-token:latest
+
+substitutions:
+  _REGION: asia-northeast1
+  _SERVICE: henshin-api-ui
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/henshin/${_SERVICE}:$SHORT_SHA

@@ -1,0 +1,2939 @@
+{
+  "contract_version": "armor-part-variant-catalog.v1",
+  "schema_version": "armor-part-variant-catalog.v1",
+  "catalog_id": "gavai-henshin.canonical-armor-variant-catalog",
+  "intent": "Designer/modeler-authored variants and micro topping slots for Wave 2 hero-suit detail density.",
+  "units": {
+    "max_bbox_m": "meters, local to the parent armor part",
+    "anchor_hint": "semantic placement hint for modeler and runtime mapping"
+  },
+  "canonical_parts": [
+    "helmet",
+    "chest",
+    "back",
+    "waist",
+    "left_shoulder",
+    "right_shoulder",
+    "left_upperarm",
+    "right_upperarm",
+    "left_forearm",
+    "right_forearm",
+    "left_hand",
+    "right_hand",
+    "left_thigh",
+    "right_thigh",
+    "left_shin",
+    "right_shin",
+    "left_boot",
+    "right_boot"
+  ],
+  "slot_kinds": [
+    "micro",
+    "detail",
+    "topping"
+  ],
+  "modules": {
+    "helmet": {
+      "part_family": "head",
+      "base_motif_link": {
+        "name": "head_crest_line",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "helmet:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "separate brow ridge, cheek guards, and mouth guard keep the face readable from front view",
+            "short crest and segmented faceplate break the helmet into heroic facial armor zones"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ]
+        },
+        {
+          "variant_key": "helmet:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "thin brow ridge and inset visor trim frame the eyes without widening the helmet",
+            "small cheek guard seams and mouth grille vents add face density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ]
+        },
+        {
+          "variant_key": "helmet:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "heavy brow ridge and angular cheek guards create an armored hero mask expression",
+            "projected faceplate and mouth guard read as a strong jaw line from stage distance"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ]
+        },
+        {
+          "variant_key": "helmet:crest_guardian",
+          "display_name": "Crest Guardian",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "raised crest makes the helmet readable from front and 3Q views",
+            "crown and cheek guards reinforce guardian-like upper-face armor"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ],
+          "asset_key": "crest_guardian",
+          "asset_ref": "viewer/assets/armor-parts/helmet/variants/crest_guardian/helmet__crest_guardian.glb"
+        },
+        {
+          "variant_key": "helmet:heroic_face",
+          "display_name": "Heroic Face",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "facial armor is split into brow, cheek, and mouth guard blocks",
+            "front view keeps a readable hero mask silhouette for close-up transformation shots"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ],
+          "asset_key": "heroic_face",
+          "asset_ref": "viewer/assets/armor-parts/helmet/variants/heroic_face/helmet__heroic_face.glb"
+        },
+        {
+          "variant_key": "helmet:sleek_visor",
+          "display_name": "Sleek Visor",
+          "base_motif_link": {
+            "name": "head_crest_line",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "single visor band creates a fast tokusatsu profile across the eyes",
+            "smooth lens trim leaves space for Nanobanana glow and scan-line texture"
+          ],
+          "recommended_topping_slots": [
+            "crest",
+            "visor_trim",
+            "face_plate",
+            "faceplate",
+            "mouth_guard",
+            "cheek_guard",
+            "brow_ridge"
+          ],
+          "asset_key": "sleek_visor",
+          "asset_ref": "viewer/assets/armor-parts/helmet/variants/sleek_visor/helmet__sleek_visor.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "crest",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "top_center",
+            "placement": "forehead to crown ridge"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.18,
+            "z": 0.16
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "short mohawk crest",
+            "twin antenna crest",
+            "blade crown crest"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "visor_trim",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_upper",
+            "placement": "horizontal band across eye line"
+          },
+          "max_bbox_m": {
+            "x": 0.25,
+            "y": 0.075,
+            "z": 0.04
+          },
+          "material_zone": "lens",
+          "variant_examples": [
+            "single slit visor",
+            "dual eye lens",
+            "wraparound tactical visor"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "face_plate",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_lower",
+            "placement": "centered over mouth and jaw line"
+          },
+          "max_bbox_m": {
+            "x": 0.24,
+            "y": 0.18,
+            "z": 0.055
+          },
+          "material_zone": "faceplate",
+          "variant_examples": [
+            "smooth mask",
+            "split respirator",
+            "angular hero plate"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "faceplate",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_mid",
+            "placement": "thin overlay shell from nose bridge to upper mouth, inside visor and cheek guards"
+          },
+          "max_bbox_m": {
+            "x": 0.21,
+            "y": 0.15,
+            "z": 0.04
+          },
+          "material_zone": "faceplate_overlay",
+          "variant_examples": [
+            "split nose bridge faceplate",
+            "inset breathing shell",
+            "faceted mask overlay"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "mouth_guard",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_lower",
+            "placement": "small grille or guard elements across the mouth and chin line"
+          },
+          "max_bbox_m": {
+            "x": 0.14,
+            "y": 0.055,
+            "z": 0.03
+          },
+          "material_zone": "jaw_vent",
+          "variant_examples": [
+            "three-slot respirator grille",
+            "raised chin guard bar",
+            "compact angular mouth vent"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "cheek_guard",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_left_right",
+            "placement": "paired cheek armor pads under visor corners, clear of mouth guard"
+          },
+          "max_bbox_m": {
+            "x": 0.07,
+            "y": 0.1,
+            "z": 0.04
+          },
+          "material_zone": "cheek_armor",
+          "variant_examples": [
+            "sloped cheek wedge",
+            "small layered cheek pad",
+            "sharp mask cheek fang"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        },
+        {
+          "topping_slot": "brow_ridge",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "head",
+            "parent_surface": "front_upper",
+            "placement": "raised ridge above visor, following forehead curve"
+          },
+          "max_bbox_m": {
+            "x": 0.23,
+            "y": 0.055,
+            "z": 0.045
+          },
+          "material_zone": "brow_trim",
+          "variant_examples": [
+            "single stern brow bar",
+            "split eyebrow armor",
+            "stepped command ridge"
+          ],
+          "conflicts_with": [],
+          "parent_module": "helmet"
+        }
+      ]
+    },
+    "chest": {
+      "part_family": "torso_front",
+      "base_motif_link": {
+        "name": "chest_v_stripe",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "chest:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "left and right pector plates frame the chest core like separate armor muscles",
+            "abdomen panel and side ribs continue the motif from sternum to waist"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ]
+        },
+        {
+          "variant_key": "chest:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "thin pector plate seams and side rib slats add chest density without a bulky torso",
+            "narrow abdomen panel gives a clear centerline between chest core and belt"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ]
+        },
+        {
+          "variant_key": "chest:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "large pector plates and raised abdomen panel create readable front armor anatomy",
+            "deep side ribs make the chest look wrapped around the body instead of floating"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ]
+        },
+        {
+          "variant_key": "chest:broad_guard",
+          "display_name": "Broad Guard",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "wide pector guard increases heroic mass across the upper torso",
+            "side ribs keep the shell tied to the body curve rather than floating forward"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ],
+          "asset_key": "broad_guard",
+          "asset_ref": "viewer/assets/armor-parts/chest/variants/broad_guard/chest__broad_guard.glb"
+        },
+        {
+          "variant_key": "chest:split_rib",
+          "display_name": "Split Rib",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "separated rib plates expose suit motion zones between armor layers",
+            "split panels create texture islands for coherent base-suit and armor motifs"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ],
+          "asset_key": "split_rib",
+          "asset_ref": "viewer/assets/armor-parts/chest/variants/split_rib/chest__split_rib.glb"
+        },
+        {
+          "variant_key": "chest:v_core",
+          "display_name": "V Core",
+          "base_motif_link": {
+            "name": "chest_v_stripe",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "central V core anchors the chest motif from collar to abdomen",
+            "pector and sternum panels preserve a worn armor shell instead of a flat decal"
+          ],
+          "recommended_topping_slots": [
+            "chest_core",
+            "rib_trim",
+            "collar_guard",
+            "pector_plate",
+            "abdomen_panel",
+            "side_rib"
+          ],
+          "asset_key": "v_core",
+          "asset_ref": "viewer/assets/armor-parts/chest/variants/v_core/chest__v_core.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "chest_core",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "front_center",
+            "placement": "sternum center mass"
+          },
+          "max_bbox_m": {
+            "x": 0.24,
+            "y": 0.26,
+            "z": 0.055
+          },
+          "material_zone": "core_panel",
+          "variant_examples": [
+            "round reactor core",
+            "hex chest gem",
+            "layered command plate"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        },
+        {
+          "topping_slot": "rib_trim",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 8
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "front_sides",
+            "placement": "paired ribs following torso curve"
+          },
+          "max_bbox_m": {
+            "x": 0.18,
+            "y": 0.035,
+            "z": 0.03
+          },
+          "material_zone": "rib_trim",
+          "variant_examples": [
+            "stepped rib slats",
+            "glowing rib channels",
+            "smooth contour ribs"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        },
+        {
+          "topping_slot": "collar_guard",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "upper_chest",
+            "parent_surface": "top_left_right",
+            "placement": "below clavicle, clear of neck"
+          },
+          "max_bbox_m": {
+            "x": 0.16,
+            "y": 0.07,
+            "z": 0.045
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "raised collar tabs",
+            "folded guard flanges",
+            "small clavicle fins"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        },
+        {
+          "topping_slot": "pector_plate",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "front_left_right_upper",
+            "placement": "paired upper chest plates flanking the central chest core"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.14,
+            "z": 0.045
+          },
+          "material_zone": "pector_panel",
+          "variant_examples": [
+            "split pector armor tile",
+            "curved muscle plate",
+            "faceted upper chest panel"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        },
+        {
+          "topping_slot": "abdomen_panel",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "front_center_lower",
+            "placement": "stacked center plates below chest core and above waist buckle"
+          },
+          "max_bbox_m": {
+            "x": 0.16,
+            "y": 0.11,
+            "z": 0.04
+          },
+          "material_zone": "abdomen_panel",
+          "variant_examples": [
+            "stacked ab armor plates",
+            "hexagonal lower reactor cover",
+            "narrow centerline belly guard"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        },
+        {
+          "topping_slot": "side_rib",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 6
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "front_side_wrap",
+            "placement": "short rib slats wrapping toward side silhouette below pector plates"
+          },
+          "max_bbox_m": {
+            "x": 0.1,
+            "y": 0.045,
+            "z": 0.035
+          },
+          "material_zone": "side_rib_trim",
+          "variant_examples": [
+            "three stepped side ribs",
+            "thin glowing rib notch",
+            "layered oblique armor slat"
+          ],
+          "conflicts_with": [],
+          "parent_module": "chest"
+        }
+      ]
+    },
+    "back": {
+      "part_family": "torso_back",
+      "base_motif_link": {
+        "name": "spine_line",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "back:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "back core sits between shoulder blades with a visible spine rail running downward",
+            "rear plates follow the torso curve so the back reads as worn armor, not a backpack"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ]
+        },
+        {
+          "variant_key": "back:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "slim spine rail and inset back core add rear detail while staying close to the body",
+            "narrow rear panel seams continue the chest motif around the side"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ]
+        },
+        {
+          "variant_key": "back:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "bold back core and raised spine rail create a strong rear hero read",
+            "rear vane and dorsal plates thicken the silhouette without becoming loose props"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ]
+        },
+        {
+          "variant_key": "back:rear_core",
+          "display_name": "Rear Core",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "central rear core provides a clear back focal point for mirror checks",
+            "compact paneling leaves shoulder and waist motion gaps visible"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ],
+          "asset_key": "rear_core",
+          "asset_ref": "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.glb"
+        },
+        {
+          "variant_key": "back:scapula_shell",
+          "display_name": "Scapula Shell",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "left and right scapula shells wrap around shoulder blade volume",
+            "rear plates avoid a flat backpack read by following torso curvature"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ],
+          "asset_key": "scapula_shell",
+          "asset_ref": "viewer/assets/armor-parts/back/variants/scapula_shell/back__scapula_shell.glb"
+        },
+        {
+          "variant_key": "back:spine_ridge",
+          "display_name": "Spine Ridge",
+          "base_motif_link": {
+            "name": "spine_line",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "vertical rear ridge gives the back a clear transformation silhouette",
+            "segmented dorsal line continues the base suit motif down the spine"
+          ],
+          "recommended_topping_slots": [
+            "spine_ridge",
+            "rear_core",
+            "rear_vane",
+            "back_core",
+            "spine_rail"
+          ],
+          "asset_key": "spine_ridge",
+          "asset_ref": "viewer/assets/armor-parts/back/variants/spine_ridge/back__spine_ridge.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "spine_ridge",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "rear_center",
+            "placement": "vertical ridge from upper back to waist"
+          },
+          "max_bbox_m": {
+            "x": 0.09,
+            "y": 0.44,
+            "z": 0.07
+          },
+          "material_zone": "spine_accent",
+          "variant_examples": [
+            "segmented vertebra ridge",
+            "smooth dorsal rail",
+            "glowing spine strip"
+          ],
+          "conflicts_with": [],
+          "parent_module": "back"
+        },
+        {
+          "topping_slot": "rear_core",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "rear_center_upper",
+            "placement": "between shoulder blades"
+          },
+          "max_bbox_m": {
+            "x": 0.22,
+            "y": 0.18,
+            "z": 0.065
+          },
+          "material_zone": "rear_core_panel",
+          "variant_examples": [
+            "round rear reactor",
+            "shield battery pack",
+            "flat command module"
+          ],
+          "conflicts_with": [],
+          "parent_module": "back"
+        },
+        {
+          "topping_slot": "rear_vane",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "upper_back",
+            "parent_surface": "rear_left_right",
+            "placement": "paired compact vanes, not full wings"
+          },
+          "max_bbox_m": {
+            "x": 0.12,
+            "y": 0.22,
+            "z": 0.09
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "short stabilizer vane",
+            "folded rear fin",
+            "compact booster cowl"
+          ],
+          "conflicts_with": [],
+          "parent_module": "back"
+        },
+        {
+          "topping_slot": "back_core",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "rear_center_mid",
+            "placement": "compact rear core plate below shoulder blades and above waist"
+          },
+          "max_bbox_m": {
+            "x": 0.2,
+            "y": 0.2,
+            "z": 0.055
+          },
+          "material_zone": "back_core_panel",
+          "variant_examples": [
+            "diamond dorsal core",
+            "flat rear battery plate",
+            "inset circular back reactor"
+          ],
+          "conflicts_with": [],
+          "parent_module": "back"
+        },
+        {
+          "topping_slot": "spine_rail",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 5
+          },
+          "anchor_hint": {
+            "body_anchor": "spine_chest",
+            "parent_surface": "rear_center_line",
+            "placement": "stacked small rail segments following the spine ridge"
+          },
+          "max_bbox_m": {
+            "x": 0.055,
+            "y": 0.09,
+            "z": 0.04
+          },
+          "material_zone": "spine_rail_trim",
+          "variant_examples": [
+            "stacked vertebra rail",
+            "thin glowing dorsal tabs",
+            "segmented mechanical spine track"
+          ],
+          "conflicts_with": [],
+          "parent_module": "back"
+        }
+      ]
+    },
+    "waist": {
+      "part_family": "pelvis",
+      "base_motif_link": {
+        "name": "belt_band",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "waist:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "torso shell uses layered panels instead of one smooth slab",
+            "side silhouette shows thickness and motif continuity"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ]
+        },
+        {
+          "variant_key": "waist:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "torso shell uses layered panels instead of one smooth slab",
+            "thin trim lines and small emitters increase density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ]
+        },
+        {
+          "variant_key": "waist:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "side silhouette shows thickness and motif continuity",
+            "larger hero emblem or guard shape creates strong stage readability"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ]
+        },
+        {
+          "variant_key": "waist:hero_buckle",
+          "display_name": "Hero Buckle",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "front buckle acts as the transformation device anchor on the belt",
+            "emblem plate links waist texture, chest line, and Quest recall identity"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ],
+          "asset_key": "hero_buckle",
+          "asset_ref": "viewer/assets/armor-parts/waist/variants/hero_buckle/waist__hero_buckle.glb"
+        },
+        {
+          "variant_key": "waist:side_clip",
+          "display_name": "Side Clip",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "side clips add small readable mechanical detail without hiding the hips",
+            "clip geometry marks topping attachment points for future belt accessories"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ],
+          "asset_key": "side_clip",
+          "asset_ref": "viewer/assets/armor-parts/waist/variants/side_clip/waist__side_clip.glb"
+        },
+        {
+          "variant_key": "waist:wrap_belt",
+          "display_name": "Wrap Belt",
+          "base_motif_link": {
+            "name": "belt_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "continuous belt band closes the waist silhouette around the body",
+            "wrapped plates bridge torso armor and leg suit texture"
+          ],
+          "recommended_topping_slots": [
+            "belt_buckle",
+            "side_clip",
+            "hip_skirt"
+          ],
+          "asset_key": "wrap_belt",
+          "asset_ref": "viewer/assets/armor-parts/waist/variants/wrap_belt/waist__wrap_belt.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "belt_buckle",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "hips",
+            "parent_surface": "front_center",
+            "placement": "centered at belt front"
+          },
+          "max_bbox_m": {
+            "x": 0.16,
+            "y": 0.1,
+            "z": 0.045
+          },
+          "material_zone": "buckle",
+          "variant_examples": [
+            "hero emblem buckle",
+            "rectangular lock plate",
+            "round energy buckle"
+          ],
+          "conflicts_with": [],
+          "parent_module": "waist"
+        },
+        {
+          "topping_slot": "side_clip",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "hips",
+            "parent_surface": "left_right_sides",
+            "placement": "small clips along belt side line"
+          },
+          "max_bbox_m": {
+            "x": 0.055,
+            "y": 0.085,
+            "z": 0.035
+          },
+          "material_zone": "side_trim",
+          "variant_examples": [
+            "flat belt latch",
+            "raised utility tab",
+            "small side reactor clip"
+          ],
+          "conflicts_with": [],
+          "parent_module": "waist"
+        },
+        {
+          "topping_slot": "hip_skirt",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "hips",
+            "parent_surface": "left_right_lower",
+            "placement": "short armor flap above thigh socket"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.18,
+            "z": 0.04
+          },
+          "material_zone": "skirt_panel",
+          "variant_examples": [
+            "short side fauld",
+            "angular hip plate",
+            "layered mini skirt guard"
+          ],
+          "conflicts_with": [],
+          "parent_module": "waist"
+        }
+      ]
+    },
+    "left_shoulder": {
+      "part_family": "shoulder",
+      "base_motif_link": {
+        "name": "shoulder_arc",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "left_shoulder:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "left_shoulder:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "thin trim lines and small emitters increase density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "left_shoulder:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "visible panel breakups on front, side, and 3Q views",
+            "larger hero emblem or guard shape creates strong stage readability"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "left_shoulder:heavy_guard",
+          "display_name": "Heavy Guard",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "thicker shoulder guard increases upper-body armor presence",
+            "layered lip panels make the shoulder read as a separate crafted part"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "heavy_guard",
+          "asset_ref": "viewer/assets/armor-parts/left_shoulder/variants/heavy_guard/left_shoulder__heavy_guard.glb"
+        },
+        {
+          "variant_key": "left_shoulder:sleek_cap",
+          "display_name": "Sleek Cap",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "compact cap follows the deltoid without over-widening the shoulder",
+            "edge trim keeps arm movement readable in side view"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "sleek_cap",
+          "asset_ref": "viewer/assets/armor-parts/left_shoulder/variants/sleek_cap/left_shoulder__sleek_cap.glb"
+        },
+        {
+          "variant_key": "left_shoulder:winged_fin",
+          "display_name": "Winged Fin",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "small fin raises the shoulder line for a sharper hero silhouette",
+            "fin remains close to the body so it can survive VR motion preview"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "winged_fin",
+          "asset_ref": "viewer/assets/armor-parts/left_shoulder/variants/winged_fin/left_shoulder__winged_fin.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "shoulder_fin",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_arm",
+            "parent_surface": "outer_top",
+            "placement": "rises from shoulder cap without wing span"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.16,
+            "z": 0.12
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "single blade fin",
+            "stacked shark fin",
+            "rounded crest fin"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_shoulder"
+        },
+        {
+          "topping_slot": "edge_trim",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_arm",
+            "parent_surface": "cap_edges",
+            "placement": "thin trim along shoulder cap perimeter"
+          },
+          "max_bbox_m": {
+            "x": 0.12,
+            "y": 0.025,
+            "z": 0.025
+          },
+          "material_zone": "edge_trim",
+          "variant_examples": [
+            "painted lip trim",
+            "raised silver edge",
+            "glow seam trim"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_shoulder"
+        }
+      ]
+    },
+    "right_shoulder": {
+      "part_family": "shoulder",
+      "mirror_of": "left_shoulder",
+      "base_motif_link": {
+        "name": "shoulder_arc",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "right_shoulder:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "right_shoulder:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "thin trim lines and small emitters increase density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "right_shoulder:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "visible panel breakups on front, side, and 3Q views",
+            "larger hero emblem or guard shape creates strong stage readability"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ]
+        },
+        {
+          "variant_key": "right_shoulder:heavy_guard",
+          "display_name": "Heavy Guard",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "thicker shoulder guard increases upper-body armor presence",
+            "layered lip panels make the shoulder read as a separate crafted part"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "heavy_guard",
+          "asset_ref": "viewer/assets/armor-parts/right_shoulder/variants/heavy_guard/right_shoulder__heavy_guard.glb",
+          "mirror_of": "left_shoulder:heavy_guard"
+        },
+        {
+          "variant_key": "right_shoulder:sleek_cap",
+          "display_name": "Sleek Cap",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "compact cap follows the deltoid without over-widening the shoulder",
+            "edge trim keeps arm movement readable in side view"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "sleek_cap",
+          "asset_ref": "viewer/assets/armor-parts/right_shoulder/variants/sleek_cap/right_shoulder__sleek_cap.glb",
+          "mirror_of": "left_shoulder:sleek_cap"
+        },
+        {
+          "variant_key": "right_shoulder:winged_fin",
+          "display_name": "Winged Fin",
+          "base_motif_link": {
+            "name": "shoulder_arc",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "small fin raises the shoulder line for a sharper hero silhouette",
+            "fin remains close to the body so it can survive VR motion preview"
+          ],
+          "recommended_topping_slots": [
+            "shoulder_fin",
+            "edge_trim"
+          ],
+          "asset_key": "winged_fin",
+          "asset_ref": "viewer/assets/armor-parts/right_shoulder/variants/winged_fin/right_shoulder__winged_fin.glb",
+          "mirror_of": "left_shoulder:winged_fin"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "shoulder_fin",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_arm",
+            "parent_surface": "outer_top",
+            "placement": "mirrored shoulder cap fin"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.16,
+            "z": 0.12
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "single blade fin",
+            "stacked shark fin",
+            "rounded crest fin"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_shoulder"
+        },
+        {
+          "topping_slot": "edge_trim",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_arm",
+            "parent_surface": "cap_edges",
+            "placement": "mirrored cap perimeter trim"
+          },
+          "max_bbox_m": {
+            "x": 0.12,
+            "y": 0.025,
+            "z": 0.025
+          },
+          "material_zone": "edge_trim",
+          "variant_examples": [
+            "painted lip trim",
+            "raised silver edge",
+            "glow seam trim"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_shoulder"
+        }
+      ]
+    },
+    "left_upperarm": {
+      "part_family": "upperarm",
+      "base_motif_link": {
+        "name": "arm_stripe",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "left_upperarm:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "arm_stripe",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "bicep_band",
+            "outer_plate"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "bicep_band",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_arm",
+            "parent_surface": "upperarm_ring",
+            "placement": "wraps around bicep shell"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.045,
+            "z": 0.035
+          },
+          "material_zone": "band_trim",
+          "variant_examples": [
+            "smooth bicep ring",
+            "segmented muscle band",
+            "thin glow bracelet"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_upperarm"
+        },
+        {
+          "topping_slot": "outer_plate",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_arm",
+            "parent_surface": "outer_side",
+            "placement": "small protective plate on lateral arm"
+          },
+          "max_bbox_m": {
+            "x": 0.09,
+            "y": 0.12,
+            "z": 0.035
+          },
+          "material_zone": "outer_plate",
+          "variant_examples": [
+            "oval guard tile",
+            "angular rank plate",
+            "small inset armor chip"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_upperarm"
+        }
+      ]
+    },
+    "right_upperarm": {
+      "part_family": "upperarm",
+      "mirror_of": "left_upperarm",
+      "base_motif_link": {
+        "name": "arm_stripe",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "right_upperarm:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "arm_stripe",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "bicep_band",
+            "outer_plate"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "bicep_band",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_arm",
+            "parent_surface": "upperarm_ring",
+            "placement": "mirrored bicep shell wrap"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.045,
+            "z": 0.035
+          },
+          "material_zone": "band_trim",
+          "variant_examples": [
+            "smooth bicep ring",
+            "segmented muscle band",
+            "thin glow bracelet"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_upperarm"
+        },
+        {
+          "topping_slot": "outer_plate",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_arm",
+            "parent_surface": "outer_side",
+            "placement": "mirrored lateral arm plate"
+          },
+          "max_bbox_m": {
+            "x": 0.09,
+            "y": 0.12,
+            "z": 0.035
+          },
+          "material_zone": "outer_plate",
+          "variant_examples": [
+            "oval guard tile",
+            "angular rank plate",
+            "small inset armor chip"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_upperarm"
+        }
+      ]
+    },
+    "left_forearm": {
+      "part_family": "forearm",
+      "base_motif_link": {
+        "name": "wrist_band",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "left_forearm:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "wrist_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "forearm_cuff",
+            "wrist_module"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "forearm_cuff",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_lower_arm",
+            "parent_surface": "wrist_end",
+            "placement": "wraps wrist end of forearm armor"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.08,
+            "z": 0.045
+          },
+          "material_zone": "cuff_trim",
+          "variant_examples": [
+            "blocky wrist cuff",
+            "thin bracelet cuff",
+            "layered gauntlet cuff"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_forearm"
+        },
+        {
+          "topping_slot": "wrist_module",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "left_lower_arm",
+            "parent_surface": "outer_wrist",
+            "placement": "compact module mounted away from palm rotation"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.1,
+            "z": 0.055
+          },
+          "material_zone": "module_plate",
+          "variant_examples": [
+            "small comm unit",
+            "blade emitter socket",
+            "round wrist dial"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_forearm"
+        }
+      ]
+    },
+    "right_forearm": {
+      "part_family": "forearm",
+      "mirror_of": "left_forearm",
+      "base_motif_link": {
+        "name": "wrist_band",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "right_forearm:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "wrist_band",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "forearm_cuff",
+            "wrist_module"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "forearm_cuff",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_lower_arm",
+            "parent_surface": "wrist_end",
+            "placement": "mirrored wrist cuff"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.08,
+            "z": 0.045
+          },
+          "material_zone": "cuff_trim",
+          "variant_examples": [
+            "blocky wrist cuff",
+            "thin bracelet cuff",
+            "layered gauntlet cuff"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_forearm"
+        },
+        {
+          "topping_slot": "wrist_module",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "right_lower_arm",
+            "parent_surface": "outer_wrist",
+            "placement": "mirrored compact wrist module"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.1,
+            "z": 0.055
+          },
+          "material_zone": "module_plate",
+          "variant_examples": [
+            "small comm unit",
+            "blade emitter socket",
+            "round wrist dial"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_forearm"
+        }
+      ]
+    },
+    "left_hand": {
+      "part_family": "hand",
+      "base_motif_link": {
+        "name": "knuckle_glow",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "left_hand:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "knuckle_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "knuckle",
+            "palm_emitter"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "knuckle",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "left_hand",
+            "parent_surface": "back_of_hand_knuckles",
+            "placement": "small pads above fingers"
+          },
+          "max_bbox_m": {
+            "x": 0.035,
+            "y": 0.025,
+            "z": 0.025
+          },
+          "material_zone": "knuckle_trim",
+          "variant_examples": [
+            "round knuckle dot",
+            "rectangular knuckle cap",
+            "tiny spike knuckle"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_hand"
+        },
+        {
+          "topping_slot": "palm_emitter",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_hand",
+            "parent_surface": "palm_center",
+            "placement": "flat inset centered in palm"
+          },
+          "max_bbox_m": {
+            "x": 0.07,
+            "y": 0.07,
+            "z": 0.025
+          },
+          "material_zone": "emissive",
+          "variant_examples": [
+            "round palm emitter",
+            "triangle palm gem",
+            "slot beam aperture"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_hand"
+        }
+      ]
+    },
+    "right_hand": {
+      "part_family": "hand",
+      "mirror_of": "left_hand",
+      "base_motif_link": {
+        "name": "knuckle_glow",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "right_hand:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "knuckle_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "knuckle",
+            "palm_emitter"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "knuckle",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "right_hand",
+            "parent_surface": "back_of_hand_knuckles",
+            "placement": "mirrored knuckle pads"
+          },
+          "max_bbox_m": {
+            "x": 0.035,
+            "y": 0.025,
+            "z": 0.025
+          },
+          "material_zone": "knuckle_trim",
+          "variant_examples": [
+            "round knuckle dot",
+            "rectangular knuckle cap",
+            "tiny spike knuckle"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_hand"
+        },
+        {
+          "topping_slot": "palm_emitter",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_hand",
+            "parent_surface": "palm_center",
+            "placement": "mirrored flat palm inset"
+          },
+          "max_bbox_m": {
+            "x": 0.07,
+            "y": 0.07,
+            "z": 0.025
+          },
+          "material_zone": "emissive",
+          "variant_examples": [
+            "round palm emitter",
+            "triangle palm gem",
+            "slot beam aperture"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_hand"
+        }
+      ]
+    },
+    "left_thigh": {
+      "part_family": "thigh",
+      "base_motif_link": {
+        "name": "thigh_stripe",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "left_thigh:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "thigh_stripe",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "knee_socket_trim",
+            "outer_guard"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "knee_socket_trim",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_leg",
+            "parent_surface": "lower_front",
+            "placement": "small trim above knee joint"
+          },
+          "max_bbox_m": {
+            "x": 0.09,
+            "y": 0.04,
+            "z": 0.035
+          },
+          "material_zone": "edge_trim",
+          "variant_examples": [
+            "thin knee lip",
+            "notched lower trim",
+            "small glow socket"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_thigh"
+        },
+        {
+          "topping_slot": "outer_guard",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "left_upper_leg",
+            "parent_surface": "outer_side",
+            "placement": "thigh side guard above knee clearance"
+          },
+          "max_bbox_m": {
+            "x": 0.1,
+            "y": 0.2,
+            "z": 0.045
+          },
+          "material_zone": "outer_plate",
+          "variant_examples": [
+            "long side guard",
+            "split thigh tile",
+            "short rank plate"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_thigh"
+        }
+      ]
+    },
+    "right_thigh": {
+      "part_family": "thigh",
+      "mirror_of": "left_thigh",
+      "base_motif_link": {
+        "name": "thigh_stripe",
+        "surface_zone": "accent"
+      },
+      "variants": [
+        {
+          "variant_key": "right_thigh:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "thigh_stripe",
+            "surface_zone": "accent"
+          },
+          "detail_features": [
+            "base suit motif line continues into armor surface",
+            "visible panel breakups on front, side, and 3Q views"
+          ],
+          "recommended_topping_slots": [
+            "knee_socket_trim",
+            "outer_guard"
+          ]
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "knee_socket_trim",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_leg",
+            "parent_surface": "lower_front",
+            "placement": "mirrored small trim above knee"
+          },
+          "max_bbox_m": {
+            "x": 0.09,
+            "y": 0.04,
+            "z": 0.035
+          },
+          "material_zone": "edge_trim",
+          "variant_examples": [
+            "thin knee lip",
+            "notched lower trim",
+            "small glow socket"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_thigh"
+        },
+        {
+          "topping_slot": "outer_guard",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 2
+          },
+          "anchor_hint": {
+            "body_anchor": "right_upper_leg",
+            "parent_surface": "outer_side",
+            "placement": "mirrored thigh side guard"
+          },
+          "max_bbox_m": {
+            "x": 0.1,
+            "y": 0.2,
+            "z": 0.045
+          },
+          "material_zone": "outer_plate",
+          "variant_examples": [
+            "long side guard",
+            "split thigh tile",
+            "short rank plate"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_thigh"
+        }
+      ]
+    },
+    "left_shin": {
+      "part_family": "shin",
+      "base_motif_link": {
+        "name": "shin_v",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "left_shin:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "shin-to-boot socket is visible",
+            "knee and ankle clearance remain readable"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "left_shin:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "shin-to-boot socket is visible",
+            "thin trim lines and small emitters increase density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "left_shin:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "knee and ankle clearance remain readable",
+            "larger hero emblem or guard shape creates strong stage readability"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "left_shin:knee_trim",
+          "display_name": "Knee Trim",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "knee trim defines the joint boundary without locking the leg",
+            "upper edge creates a clean transition between thigh and shin armor"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "knee_trim",
+          "asset_ref": "viewer/assets/armor-parts/left_shin/variants/knee_trim/left_shin__knee_trim.glb"
+        },
+        {
+          "variant_key": "left_shin:shin_spike",
+          "display_name": "Shin Spike",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "small spike accent adds a directional action line to the shin",
+            "raised detail gives Nanobanana a hard-surface highlight target"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "shin_spike",
+          "asset_ref": "viewer/assets/armor-parts/left_shin/variants/shin_spike/left_shin__shin_spike.glb"
+        },
+        {
+          "variant_key": "left_shin:stream_shin",
+          "display_name": "Stream Shin",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "long shin stream panel continues leg motif from knee to ankle",
+            "narrow front plate keeps the lower-leg shape athletic rather than bulky"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "stream_shin",
+          "asset_ref": "viewer/assets/armor-parts/left_shin/variants/stream_shin/left_shin__stream_shin.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "shin_spike",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "left_lower_leg",
+            "parent_surface": "front_center",
+            "placement": "small spikes along shin ridge"
+          },
+          "max_bbox_m": {
+            "x": 0.055,
+            "y": 0.1,
+            "z": 0.07
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "single knee-down spike",
+            "triple low spikes",
+            "smooth blade ridge"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_shin"
+        },
+        {
+          "topping_slot": "ankle_cuff_trim",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_shin",
+            "parent_surface": "motif_linked_surface",
+            "placement": "modeler-defined within parent envelope"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.08,
+            "z": 0.035
+          },
+          "material_zone": "accent",
+          "variant_examples": [
+            "ankle_cuff_trim_base",
+            "ankle_cuff_trim_sleek",
+            "ankle_cuff_trim_bold"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_shin"
+        },
+        {
+          "topping_slot": "ankle_cuff",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_lower_leg",
+            "parent_surface": "lower_ring",
+            "placement": "wraps shin bottom above boot socket"
+          },
+          "max_bbox_m": {
+            "x": 0.14,
+            "y": 0.08,
+            "z": 0.04
+          },
+          "material_zone": "cuff_trim",
+          "variant_examples": [
+            "thin ankle ring",
+            "blocky lower cuff",
+            "stepped boot connector"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_shin"
+        }
+      ]
+    },
+    "right_shin": {
+      "part_family": "shin",
+      "mirror_of": "left_shin",
+      "base_motif_link": {
+        "name": "shin_v",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "right_shin:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "shin-to-boot socket is visible",
+            "knee and ankle clearance remain readable"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "right_shin:sleek",
+          "display_name": "Sleek line variant",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "shin-to-boot socket is visible",
+            "thin trim lines and small emitters increase density without bulky silhouette"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "right_shin:bold",
+          "display_name": "Bold armored variant",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "knee and ankle clearance remain readable",
+            "larger hero emblem or guard shape creates strong stage readability"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ]
+        },
+        {
+          "variant_key": "right_shin:knee_trim",
+          "display_name": "Knee Trim",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "knee trim defines the joint boundary without locking the leg",
+            "upper edge creates a clean transition between thigh and shin armor"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "knee_trim",
+          "asset_ref": "viewer/assets/armor-parts/right_shin/variants/knee_trim/right_shin__knee_trim.glb",
+          "mirror_of": "left_shin:knee_trim"
+        },
+        {
+          "variant_key": "right_shin:shin_spike",
+          "display_name": "Shin Spike",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "small spike accent adds a directional action line to the shin",
+            "raised detail gives Nanobanana a hard-surface highlight target"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "shin_spike",
+          "asset_ref": "viewer/assets/armor-parts/right_shin/variants/shin_spike/right_shin__shin_spike.glb",
+          "mirror_of": "left_shin:shin_spike"
+        },
+        {
+          "variant_key": "right_shin:stream_shin",
+          "display_name": "Stream Shin",
+          "base_motif_link": {
+            "name": "shin_v",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "long shin stream panel continues leg motif from knee to ankle",
+            "narrow front plate keeps the lower-leg shape athletic rather than bulky"
+          ],
+          "recommended_topping_slots": [
+            "shin_spike",
+            "ankle_cuff_trim",
+            "ankle_cuff"
+          ],
+          "asset_key": "stream_shin",
+          "asset_ref": "viewer/assets/armor-parts/right_shin/variants/stream_shin/right_shin__stream_shin.glb",
+          "mirror_of": "left_shin:stream_shin"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "shin_spike",
+          "slot_kind": "topping",
+          "allowed_count": {
+            "min": 0,
+            "max": 3
+          },
+          "anchor_hint": {
+            "body_anchor": "right_lower_leg",
+            "parent_surface": "front_center",
+            "placement": "mirrored small spikes along shin ridge"
+          },
+          "max_bbox_m": {
+            "x": 0.055,
+            "y": 0.1,
+            "z": 0.07
+          },
+          "material_zone": "accent_trim",
+          "variant_examples": [
+            "single knee-down spike",
+            "triple low spikes",
+            "smooth blade ridge"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_shin"
+        },
+        {
+          "topping_slot": "ankle_cuff_trim",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_shin",
+            "parent_surface": "motif_linked_surface",
+            "placement": "modeler-defined within parent envelope"
+          },
+          "max_bbox_m": {
+            "x": 0.08,
+            "y": 0.08,
+            "z": 0.035
+          },
+          "material_zone": "accent",
+          "variant_examples": [
+            "ankle_cuff_trim_base",
+            "ankle_cuff_trim_sleek",
+            "ankle_cuff_trim_bold"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_shin"
+        },
+        {
+          "topping_slot": "ankle_cuff",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_lower_leg",
+            "parent_surface": "lower_ring",
+            "placement": "mirrored shin bottom cuff"
+          },
+          "max_bbox_m": {
+            "x": 0.14,
+            "y": 0.08,
+            "z": 0.04
+          },
+          "material_zone": "cuff_trim",
+          "variant_examples": [
+            "thin ankle ring",
+            "blocky lower cuff",
+            "stepped boot connector"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_shin"
+        }
+      ]
+    },
+    "left_boot": {
+      "part_family": "boot",
+      "base_motif_link": {
+        "name": "boot_instep_glow",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "left_boot:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "sole, toe, heel, and ankle cuff are separately readable",
+            "ground contact remains stable in side view"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ]
+        },
+        {
+          "variant_key": "left_boot:sleek",
+          "display_name": "Left boot sleek fin variant",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "thin toe guard and ankle cuff keep the foot readable as a hero boot",
+            "rear heel fin extends the leg line without floating off the floor"
+          ],
+          "recommended_topping_slots": [
+            "boot_toe",
+            "ankle_socket",
+            "boot_heel"
+          ]
+        },
+        {
+          "variant_key": "left_boot:bold",
+          "display_name": "Left boot armored sole variant",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "layered sole plate gives stage-readable footing instead of a plain sock shape",
+            "ankle trim and side guard connect shin armor to the foot without blocking movement"
+          ],
+          "recommended_topping_slots": [
+            "boot_toe",
+            "ankle_socket",
+            "boot_heel"
+          ]
+        },
+        {
+          "variant_key": "left_boot:ankle_cuff",
+          "display_name": "Ankle Cuff",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "ankle cuff closes the gap between shin and boot modules",
+            "ring detail preserves motion readability around the ankle joint"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "ankle_cuff",
+          "asset_ref": "viewer/assets/armor-parts/left_boot/variants/ankle_cuff/left_boot__ankle_cuff.glb"
+        },
+        {
+          "variant_key": "left_boot:heel_guard",
+          "display_name": "Heel Guard",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "heel guard balances the boot silhouette from side and back views",
+            "rear plate protects the foot profile without lifting it off the ground"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "heel_guard",
+          "asset_ref": "viewer/assets/armor-parts/left_boot/variants/heel_guard/left_boot__heel_guard.glb"
+        },
+        {
+          "variant_key": "left_boot:toe_hero",
+          "display_name": "Hero Toe",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "toe cap gives the boot a heroic forward stance in front view",
+            "front sole shape makes the feet read as armor rather than bare suit"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "toe_hero",
+          "asset_ref": "viewer/assets/armor-parts/left_boot/variants/toe_hero/left_boot__toe_hero.glb"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "ankle_socket",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_foot",
+            "parent_surface": "top_ankle",
+            "placement": "boot top connector under shin cuff"
+          },
+          "max_bbox_m": {
+            "x": 0.15,
+            "y": 0.09,
+            "z": 0.1
+          },
+          "material_zone": "socket_trim",
+          "variant_examples": [
+            "round ankle socket",
+            "split hinge socket",
+            "soft collar socket"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_boot"
+        },
+        {
+          "topping_slot": "boot_heel",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_foot",
+            "parent_surface": "rear_heel",
+            "placement": "rear heel block touching sole line"
+          },
+          "max_bbox_m": {
+            "x": 0.11,
+            "y": 0.075,
+            "z": 0.08
+          },
+          "material_zone": "heel_guard",
+          "variant_examples": [
+            "flat heel block",
+            "raised runner heel",
+            "angular stabilizer heel"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_boot"
+        },
+        {
+          "topping_slot": "boot_sole",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "left_foot",
+            "parent_surface": "bottom",
+            "placement": "thin sole plates below boot body"
+          },
+          "max_bbox_m": {
+            "x": 0.14,
+            "y": 0.028,
+            "z": 0.15
+          },
+          "material_zone": "sole",
+          "variant_examples": [
+            "flat tread plate",
+            "segmented grip pads",
+            "thin hover sole"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_boot"
+        },
+        {
+          "topping_slot": "boot_toe",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "left_foot",
+            "parent_surface": "front_toe",
+            "placement": "toe cap follows foot forward direction"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.055,
+            "z": 0.13
+          },
+          "material_zone": "toe_cap",
+          "variant_examples": [
+            "rounded toe cap",
+            "pointed hero toe",
+            "split armored toe"
+          ],
+          "conflicts_with": [],
+          "parent_module": "left_boot"
+        }
+      ]
+    },
+    "right_boot": {
+      "part_family": "boot",
+      "mirror_of": "left_boot",
+      "base_motif_link": {
+        "name": "boot_instep_glow",
+        "surface_zone": "emissive"
+      },
+      "variants": [
+        {
+          "variant_key": "right_boot:base",
+          "display_name": "Base hero fit",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "sole, toe, heel, and ankle cuff are separately readable",
+            "ground contact remains stable in side view"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ]
+        },
+        {
+          "variant_key": "right_boot:sleek",
+          "display_name": "Right boot sleek fin variant",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "thin toe guard and ankle cuff keep the foot readable as a hero boot",
+            "rear heel fin extends the leg line without floating off the floor"
+          ],
+          "recommended_topping_slots": [
+            "boot_toe",
+            "ankle_socket",
+            "boot_heel"
+          ]
+        },
+        {
+          "variant_key": "right_boot:bold",
+          "display_name": "Right boot armored sole variant",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "layered sole plate gives stage-readable footing instead of a plain sock shape",
+            "ankle trim and side guard connect shin armor to the foot without blocking movement"
+          ],
+          "recommended_topping_slots": [
+            "boot_toe",
+            "ankle_socket",
+            "boot_heel"
+          ]
+        },
+        {
+          "variant_key": "right_boot:ankle_cuff",
+          "display_name": "Ankle Cuff",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "ankle cuff closes the gap between shin and boot modules",
+            "ring detail preserves motion readability around the ankle joint"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "ankle_cuff",
+          "asset_ref": "viewer/assets/armor-parts/right_boot/variants/ankle_cuff/right_boot__ankle_cuff.glb",
+          "mirror_of": "left_boot:ankle_cuff"
+        },
+        {
+          "variant_key": "right_boot:heel_guard",
+          "display_name": "Heel Guard",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "heel guard balances the boot silhouette from side and back views",
+            "rear plate protects the foot profile without lifting it off the ground"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "heel_guard",
+          "asset_ref": "viewer/assets/armor-parts/right_boot/variants/heel_guard/right_boot__heel_guard.glb",
+          "mirror_of": "left_boot:heel_guard"
+        },
+        {
+          "variant_key": "right_boot:toe_hero",
+          "display_name": "Hero Toe",
+          "base_motif_link": {
+            "name": "boot_instep_glow",
+            "surface_zone": "emissive"
+          },
+          "detail_features": [
+            "toe cap gives the boot a heroic forward stance in front view",
+            "front sole shape makes the feet read as armor rather than bare suit"
+          ],
+          "recommended_topping_slots": [
+            "ankle_socket",
+            "boot_heel",
+            "boot_sole",
+            "boot_toe"
+          ],
+          "asset_key": "toe_hero",
+          "asset_ref": "viewer/assets/armor-parts/right_boot/variants/toe_hero/right_boot__toe_hero.glb",
+          "mirror_of": "left_boot:toe_hero"
+        }
+      ],
+      "topping_slots": [
+        {
+          "topping_slot": "ankle_socket",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_foot",
+            "parent_surface": "top_ankle",
+            "placement": "mirrored boot top connector"
+          },
+          "max_bbox_m": {
+            "x": 0.15,
+            "y": 0.09,
+            "z": 0.1
+          },
+          "material_zone": "socket_trim",
+          "variant_examples": [
+            "round ankle socket",
+            "split hinge socket",
+            "soft collar socket"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_boot"
+        },
+        {
+          "topping_slot": "boot_heel",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_foot",
+            "parent_surface": "rear_heel",
+            "placement": "mirrored heel block touching sole line"
+          },
+          "max_bbox_m": {
+            "x": 0.11,
+            "y": 0.075,
+            "z": 0.08
+          },
+          "material_zone": "heel_guard",
+          "variant_examples": [
+            "flat heel block",
+            "raised runner heel",
+            "angular stabilizer heel"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_boot"
+        },
+        {
+          "topping_slot": "boot_sole",
+          "slot_kind": "micro",
+          "allowed_count": {
+            "min": 0,
+            "max": 4
+          },
+          "anchor_hint": {
+            "body_anchor": "right_foot",
+            "parent_surface": "bottom",
+            "placement": "mirrored thin sole plates"
+          },
+          "max_bbox_m": {
+            "x": 0.14,
+            "y": 0.028,
+            "z": 0.15
+          },
+          "material_zone": "sole",
+          "variant_examples": [
+            "flat tread plate",
+            "segmented grip pads",
+            "thin hover sole"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_boot"
+        },
+        {
+          "topping_slot": "boot_toe",
+          "slot_kind": "detail",
+          "allowed_count": {
+            "min": 0,
+            "max": 1
+          },
+          "anchor_hint": {
+            "body_anchor": "right_foot",
+            "parent_surface": "front_toe",
+            "placement": "mirrored toe cap"
+          },
+          "max_bbox_m": {
+            "x": 0.13,
+            "y": 0.055,
+            "z": 0.13
+          },
+          "material_zone": "toe_cap",
+          "variant_examples": [
+            "rounded toe cap",
+            "pointed hero toe",
+            "split armored toe"
+          ],
+          "conflicts_with": [],
+          "parent_module": "right_boot"
+        }
+      ]
+    }
+  }
+}

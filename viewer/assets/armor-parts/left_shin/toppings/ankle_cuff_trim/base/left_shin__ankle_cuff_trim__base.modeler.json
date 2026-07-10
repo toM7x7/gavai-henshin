@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "left_shin",
+  "topping_slot": "ankle_cuff_trim",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      0.04971
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.08,
+    "y": 0.08,
+    "z": 0.035
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "left_shin",
+    "topping_slot": "ankle_cuff_trim",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "ankle_cuff_trim",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "left_shin",
+      "parent_surface": "motif_linked_surface",
+      "placement": "modeler-defined within parent envelope"
+    },
+    "max_bbox_m": {
+      "x": 0.08,
+      "y": 0.08,
+      "z": 0.035
+    },
+    "material_zone": "accent",
+    "variant_examples": [
+      "ankle_cuff_trim_base",
+      "ankle_cuff_trim_sleek",
+      "ankle_cuff_trim_bold"
+    ],
+    "conflicts_with": [],
+    "parent_module": "left_shin"
+  },
+  "bbox_m": {
+    "x": 0.04960000142455101,
+    "y": 0.019249998033046722,
+    "z": 0.04960000142455101
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "armor_accent"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

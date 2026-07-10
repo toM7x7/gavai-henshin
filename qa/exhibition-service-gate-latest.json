@@ -1,0 +1,23 @@
+﻿{
+  "contract_version": "exhibition-service-gate.v1",
+  "ok": true,
+  "gate_status": "GO",
+  "strict": false,
+  "mode": "local",
+  "allowed_runtime_mode": "local_fallback",
+  "local_fallback_required": true,
+  "external_service_blockers": [],
+  "operator_decision_summary": {
+    "label": "GO",
+    "decision": "Use the exhibition PC local fallback as the visitor path.",
+    "allowed_runtime_mode": "local_fallback",
+    "local_fallback_rule": "local-pass cannot be overridden by service, PlayCanvas, or mocopi lanes.",
+    "next_action": "Keep local fallback running and record the service gate JSON with show evidence."
+  },
+  "inputs": {
+    "gcp_phase0_contract": "qa/gcp-phase0-service-contract-latest.json",
+    "service_deployment_contract": "qa/service-deployment-contract-local-latest.json",
+    "exhibition_smoke_report": null
+  },
+  "generated_at": "2026-05-04T12:22:41+00:00"
+}

@@ -1,0 +1,557 @@
+{
+  "schema_version": "0.2",
+  "replay_id": "RPL-20260504-0076",
+  "suit_id": "VDA-AXIS-OP-00-0001",
+  "recall_code": "0076",
+  "manifest_id": "MNF-20260504-ABCD",
+  "runtime_package": {
+    "contract_version": "base-suit-overlay.v1",
+    "manifest_id": "MNF-20260504-ABCD",
+    "render_placement_contract": "runtime-render-placement.v1",
+    "runtime_package_path": "replay-bundles/RPB-20260504-0076/runtime-package.json",
+    "visible_overlay_count": 6,
+    "can_render_runtime_suit": true
+  },
+  "transform_trial": {
+    "session_id": "S-TRIAL-UNIT-0001",
+    "state": "ACTIVE",
+    "started_at": "2026-05-04T09:10:00+00:00",
+    "completed_at": "2026-05-04T09:10:08+00:00",
+    "event_count": 4,
+    "tracking_source": "mocopi",
+    "device_id": "mocopi-kit-operator-demo",
+    "operator_id": "operator-local",
+    "event_log_ref": {
+      "uri": "replay-bundles/RPB-20260504-0076/transform-session.json",
+      "media_type": "application/json",
+      "schema_version": "0.1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    }
+  },
+  "playback": {
+    "view_mode": "mirror",
+    "source": "archive",
+    "motion_source": "mocopi",
+    "duration_sec": 8.0,
+    "motion_frame_count": 240,
+    "diagnostic_token": "MOCOPI"
+  },
+  "source_events": [
+    {
+      "event_id": "EVT-20260504-A1B2C3",
+      "session_id": "S-TRIAL-UNIT-0001",
+      "sequence": 0,
+      "event_type": "SESSION_CREATED",
+      "occurred_at": "2026-05-04T09:10:00+00:00",
+      "state_after": "POSTED",
+      "payload_summary": {
+        "manifest_id": "MNF-20260504-ABCD"
+      }
+    },
+    {
+      "event_id": "EVT-20260504-D4E5F6",
+      "session_id": "S-TRIAL-UNIT-0001",
+      "sequence": 1,
+      "event_type": "VOICE_CAPTURED",
+      "occurred_at": "2026-05-04T09:10:02+00:00",
+      "state_before": "POSTED",
+      "state_after": "POSTED",
+      "payload_summary": {
+        "trigger_phrase": "generate",
+        "audio_stats_ref": "audio.voice_capture.stats"
+      }
+    },
+    {
+      "event_id": "EVT-20260504-G7H8I9",
+      "session_id": "S-TRIAL-UNIT-0001",
+      "sequence": 2,
+      "event_type": "DEPOSITION_STARTED",
+      "occurred_at": "2026-05-04T09:10:03+00:00",
+      "state_before": "POSTED",
+      "state_after": "DEPOSITION",
+      "payload_summary": {
+        "view_mode": "self",
+        "replay_source": "voice"
+      }
+    },
+    {
+      "event_id": "EVT-20260504-J1K2L3",
+      "session_id": "S-TRIAL-UNIT-0001",
+      "sequence": 3,
+      "event_type": "DEPOSITION_COMPLETED",
+      "occurred_at": "2026-05-04T09:10:08+00:00",
+      "state_before": "DEPOSITION",
+      "state_after": "ACTIVE",
+      "payload_summary": {
+        "motion_capture": {
+          "format": "mocopi-joint-stream.v1",
+          "provider": "mocopi",
+          "frame_rate_hz": 30,
+          "frame_count": 240,
+          "frames_ref": "artifacts.mocopi_motion"
+        }
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "segment_id": "SEG-0000",
+      "start_time_sec": 0.0,
+      "duration_sec": 0.5,
+      "source_event_ids": [
+        "EVT-20260504-A1B2C3"
+      ],
+      "actions": [
+        {
+          "action_type": "state_marker",
+          "at_time_sec": 0.0,
+          "params": {
+            "event_type": "SESSION_CREATED",
+            "state_after": "POSTED"
+          }
+        }
+      ]
+    },
+    {
+      "segment_id": "SEG-0003",
+      "start_time_sec": 8.0,
+      "duration_sec": 0.5,
+      "source_event_ids": [
+        "EVT-20260504-J1K2L3"
+      ],
+      "actions": [
+        {
+          "action_type": "fx",
+          "at_time_sec": 8.0,
+          "params": {
+            "event_type": "DEPOSITION_COMPLETED",
+            "state_after": "ACTIVE"
+          }
+        }
+      ]
+    },
+    {
+      "segment_id": "SEG-MOTION-0003",
+      "start_time_sec": 3.0,
+      "duration_sec": 5.0,
+      "source_event_ids": [
+        "EVT-20260504-J1K2L3"
+      ],
+      "actions": [
+        {
+          "action_type": "deposition_progress",
+          "at_time_sec": 3.0,
+          "params": {
+            "motion_capture_format": "mocopi-joint-stream.v1",
+            "motion_source": "mocopi",
+            "motion_frame": {
+              "t": 0.0,
+              "progress": 0.0,
+              "head": [
+                0.0,
+                1.6,
+                0.0
+              ]
+            }
+          }
+        },
+        {
+          "action_type": "deposition_progress",
+          "at_time_sec": 8.0,
+          "params": {
+            "motion_capture_format": "mocopi-joint-stream.v1",
+            "motion_source": "mocopi",
+            "motion_frame": {
+              "t": 5.0,
+              "progress": 1.0,
+              "head": [
+                0.0,
+                1.62,
+                -0.02
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "audio": {
+    "voice_capture": {
+      "status": "captured",
+      "mime_type": "audio/webm",
+      "bytes": 24576,
+      "sample_rate": 48000,
+      "channels": 1,
+      "duration_ms": 2200,
+      "artifact_ref": {
+        "uri": "replay-bundles/RPB-20260504-0076/media/voice-command.webm",
+        "media_type": "audio/webm",
+        "storage_backend": "bundle_relative",
+        "portable": true,
+        "retention_role": "private_raw_capture"
+      },
+      "stats": {
+        "mode": "mic",
+        "rms": 0.12,
+        "peak": 0.44
+      }
+    },
+    "trigger": {
+      "detected": true,
+      "phrase": "generate",
+      "transcript": "generate",
+      "match": "generate",
+      "provider": "sakura-ai-engine",
+      "model": "whisper",
+      "language": "en",
+      "confidence": 0.92
+    },
+    "tts": {
+      "status": "generated",
+      "text": "Protocol complete. Integrity first.",
+      "provider": "sakura-ai-engine",
+      "model": "tts",
+      "voice": "default",
+      "audio_ref": {
+        "uri": "replay-bundles/RPB-20260504-0076/media/tts.wav",
+        "media_type": "audio/wav",
+        "storage_backend": "bundle_relative",
+        "portable": true,
+        "retention_role": "optional_media"
+      }
+    }
+  },
+  "presentation": {
+    "default_locale": "ja-JP",
+    "supported_locales": [
+      "ja-JP"
+    ],
+    "event_labels": [
+      {
+        "event_type": "SESSION_CREATED",
+        "locale": "ja-JP",
+        "label": "試験開始",
+        "short_label": "開始",
+        "description": "変身試験のセッションが作成された。"
+      },
+      {
+        "event_type": "VOICE_CAPTURED",
+        "locale": "ja-JP",
+        "label": "音声取得",
+        "short_label": "音声",
+        "description": "トリガー音声を取得し、認識結果を記録した。"
+      },
+      {
+        "event_type": "DEPOSITION_STARTED",
+        "locale": "ja-JP",
+        "label": "変身開始",
+        "short_label": "変身",
+        "description": "一人称変身シーケンスが開始された。"
+      },
+      {
+        "event_type": "DEPOSITION_COMPLETED",
+        "locale": "ja-JP",
+        "label": "変身完了",
+        "short_label": "完了",
+        "description": "スーツ装着と再生用モーション記録が完了した。"
+      }
+    ],
+    "view_mode_labels": [
+      {
+        "view_mode": "self",
+        "locale": "ja-JP",
+        "label": "一人称",
+        "short_label": "自分"
+      },
+      {
+        "view_mode": "mirror",
+        "locale": "ja-JP",
+        "label": "鏡",
+        "short_label": "鏡"
+      },
+      {
+        "view_mode": "observer",
+        "locale": "ja-JP",
+        "label": "観察",
+        "short_label": "観察"
+      }
+    ],
+    "display_policy": {
+      "ui_uses_labels_not_raw_event_types": true,
+      "hide_private_ids_on_public_display": true,
+      "fallback_locale": "ja-JP"
+    }
+  },
+  "motion_provenance": {
+    "primary_source": "mocopi",
+    "capture_system": {
+      "provider": "mocopi",
+      "format": "mocopi-joint-stream.v1",
+      "device_label": "mocopi-kit-operator-demo",
+      "adapter_version": "replay-contract-draft"
+    },
+    "session_ref": {
+      "session_id": "MCP-20260504-OPDEMO",
+      "source_session_id": "mocopi-local-20260504-001",
+      "recording_started_at": "2026-05-04T09:10:00+00:00",
+      "recording_ended_at": "2026-05-04T09:10:08+00:00"
+    },
+    "frame_rate_hz": 30,
+    "frame_count": 240,
+    "timebase": "deposition_elapsed_sec",
+    "coordinate_space": "mocopi_world_y_up",
+    "source_artifact_ref": {
+      "uri": "replay-bundles/RPB-20260504-0076/motion/mocopi-session.json",
+      "media_type": "application/json",
+      "schema_version": "mocopi-joint-stream.v1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "private_raw_capture"
+    },
+    "derived_artifact_ref": {
+      "uri": "replay-bundles/RPB-20260504-0076/motion/replay-motion.json",
+      "media_type": "application/json",
+      "schema_version": "replay-motion.v0",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "retargeting": {
+      "status": "runtime_retargeted",
+      "target": "runtime_package",
+      "notes": "mocopi world joints are retained as source; replay runtime consumes the derived retargeted frame stream."
+    },
+    "privacy_classification": "identifying_motion"
+  },
+  "operation": {
+    "mode": "web_service",
+    "api_surface": {
+      "service_name": "new-route-api",
+      "version": "v1",
+      "trial_replay_endpoint": "/v1/trials/{trialId}/replay",
+      "replay_record_endpoint": "/v1/trials/{trialId}/replay-record"
+    },
+    "storage_backend": "cloud_sql_gcs",
+    "write_path": "cloud_sql_metadata_gcs_artifacts",
+    "runtime_resolver": {
+      "artifact_uri_schemes": [
+        "relative",
+        "gs",
+        "https"
+      ],
+      "requires_runtime_package_snapshot": true,
+      "fallback_allowed": false
+    },
+    "external_pc_runtime": {
+      "offline_supported": true,
+      "network_required": false,
+      "preflight_required": true,
+      "preflight_checklist_ref": {
+        "uri": "replay-bundles/RPB-20260504-0076/exhibition-pc-preflight.json",
+        "media_type": "application/json",
+        "storage_backend": "bundle_relative",
+        "portable": true,
+        "retention_role": "export_manifest"
+      }
+    }
+  },
+  "portability": {
+    "uri_policy": "bundle_relative_or_cloud_uri",
+    "bundle_id": "RPB-20260504-0076",
+    "bundle_root": {
+      "uri": "replay-bundles/RPB-20260504-0076/",
+      "media_type": "application/vnd.gavai.replay-bundle",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "export_manifest": {
+      "uri": "replay-bundles/RPB-20260504-0076/export-manifest.json",
+      "media_type": "application/json",
+      "schema_version": "replay-export-manifest.v0",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "export_manifest"
+    },
+    "deployment_targets": [
+      "external_exhibition_pc",
+      "gcp_cloud_run",
+      "gcs_archive"
+    ],
+    "required_artifact_keys": [
+      "replay_script",
+      "transform_session",
+      "runtime_package"
+    ],
+    "cloud_artifact_root": {
+      "uri": "gs://gavai-henshin-replay-demo/replay-bundles/RPB-20260504-0076/",
+      "media_type": "application/vnd.gavai.replay-bundle",
+      "storage_backend": "gcs",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "move_validation": {
+      "portable_between_pcs": true,
+      "cloud_ready": true,
+      "absolute_local_paths_allowed": false,
+      "validation_strategy": "validate_schema_then_resolve_required_artifacts"
+    }
+  },
+  "media_retention": {
+    "retention_class": "operator_approved_archive",
+    "export_formats": [
+      "replay_record_json",
+      "replay_script_json",
+      "portable_bundle_zip",
+      "gcs_object_set"
+    ],
+    "delete_policy": "operator_review_required",
+    "contains_voice_audio": true,
+    "contains_motion_capture": true,
+    "mocopi_raw_retention": "retain_with_consent",
+    "export_review_required": true,
+    "cloud_bucket_policy": "private_gcs_object"
+  },
+  "privacy": {
+    "operator_consent": {
+      "status": "assumed_for_operator_demo",
+      "scope": [
+        "voice_audio",
+        "speech_transcript",
+        "body_motion",
+        "mocopi_motion",
+        "viewer_replay",
+        "portable_export",
+        "service_upload",
+        "cloud_export"
+      ],
+      "assumption": "Local operator/demo consent is assumed for internal verification; public exhibition capture must replace this with an explicit granted record before retaining raw voice audio or exporting to cloud."
+    },
+    "participant_consent": {
+      "status": "unknown",
+      "scope": [
+        "viewer_replay"
+      ],
+      "assumption": "No visitor consent is implied by this sample. Exhibition mode must collect or avoid storing participant-identifying media."
+    },
+    "pii_classes": [
+      "voice_audio",
+      "speech_transcript",
+      "body_motion",
+      "mocopi_motion",
+      "mocopi_session_id",
+      "device_id",
+      "operator_id"
+    ],
+    "voice_storage": "raw_audio_retained",
+    "motion_storage": "raw_frames_retained",
+    "exhibition_pc_policy": {
+      "operator_unlock_required": true,
+      "public_display_redaction": "hide_raw_audio_and_ids",
+      "raw_media_export_requires_granted_consent": true
+    },
+    "cloud_export_allowed": false,
+    "notes": "Cloud export is blocked until consent status is explicit and retention policy is approved."
+  },
+  "validity": {
+    "validation_status": "valid_with_warnings",
+    "valid_when_moved": {
+      "portable_bundle_required": true,
+      "relative_paths_resolve_from": "bundle_root",
+      "missing_required_artifact_behavior": "invalid"
+    },
+    "valid_in_cloud": {
+      "uri_schemes": [
+        "relative",
+        "gs",
+        "https"
+      ],
+      "gcp_target": "cloud_sql_gcs",
+      "signed_url_ok": true
+    },
+    "integrity_policy": {
+      "schema_validation_required": true,
+      "content_hash_recommended": true,
+      "runtime_package_snapshot_required": true
+    }
+  },
+  "artifacts": {
+    "replay_script": {
+      "uri": "replay-bundles/RPB-20260504-0076/replay-script.json",
+      "media_type": "application/json",
+      "schema_version": "0.1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "transform_session": {
+      "uri": "replay-bundles/RPB-20260504-0076/transform-session.json",
+      "media_type": "application/json",
+      "schema_version": "0.1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "runtime_package": {
+      "uri": "replay-bundles/RPB-20260504-0076/runtime-package.json",
+      "media_type": "application/json",
+      "schema_version": "base-suit-overlay.v1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "body_sim": {
+      "uri": "replay-bundles/RPB-20260504-0076/motion/body-sim.json",
+      "media_type": "application/json",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "optional_media"
+    },
+    "mocopi_motion": {
+      "uri": "replay-bundles/RPB-20260504-0076/motion/mocopi-session.json",
+      "media_type": "application/json",
+      "schema_version": "mocopi-joint-stream.v1",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "private_raw_capture"
+    },
+    "motion_capture": {
+      "uri": "replay-bundles/RPB-20260504-0076/motion/replay-motion.json",
+      "media_type": "application/json",
+      "schema_version": "replay-motion.v0",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "required_runtime"
+    },
+    "voice_audio": {
+      "uri": "replay-bundles/RPB-20260504-0076/media/voice-command.webm",
+      "media_type": "audio/webm",
+      "bytes": 24576,
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "private_raw_capture"
+    },
+    "tts_audio": {
+      "uri": "replay-bundles/RPB-20260504-0076/media/tts.wav",
+      "media_type": "audio/wav",
+      "storage_backend": "bundle_relative",
+      "portable": true,
+      "retention_role": "optional_media"
+    },
+    "export_manifest": {
+      "uri": "gs://gavai-henshin-replay-demo/replay-bundles/RPB-20260504-0076/export-manifest.json",
+      "media_type": "application/json",
+      "schema_version": "replay-export-manifest.v0",
+      "storage_backend": "gcs",
+      "portable": true,
+      "retention_role": "export_manifest"
+    }
+  },
+  "metadata": {
+    "created_at": "2026-05-04T09:10:09+00:00",
+    "generator": "replay-record-contract-sample",
+    "notes": "Draft envelope for the next replay API; current demos continue to emit ReplayScript v0.1."
+  }
+}

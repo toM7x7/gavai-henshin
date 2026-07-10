@@ -1,0 +1,78 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "helmet",
+  "part_id": "viewer.mesh.helmet.v1",
+  "category": "head",
+  "bbox_m": {
+    "x": 0.02500000037252903,
+    "y": 0.04500001668930054,
+    "z": 0.03294092137366533,
+    "size": [
+      0.02500000037252903,
+      0.04500001668930054,
+      0.03294092137366533
+    ],
+    "dimensions": [
+      0.02500000037252903,
+      0.04500001668930054,
+      0.03294092137366533
+    ]
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "head",
+    "offset_m": [
+      0,
+      0.08,
+      0.12
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "head",
+      "neck",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 108,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "helmet:crest:short_crest",
+  "is_topping": true,
+  "parent_module": "helmet",
+  "topping_slot": "crest",
+  "topping_key": "short_crest",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.16,
+      0.0
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.08,
+    "y": 0.12,
+    "z": 0.06
+  }
+}

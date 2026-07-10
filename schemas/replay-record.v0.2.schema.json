@@ -1,0 +1,1499 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gavai-henshin.local/schema/replay-record.v0.2.schema.json",
+  "title": "ReplayRecord v0.2",
+  "description": "Archival replay envelope that wraps a transform trial, replay script, runtime package identity, view mode, voice/audio metadata, and durable artifact references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "replay_id",
+    "suit_id",
+    "recall_code",
+    "manifest_id",
+    "runtime_package",
+    "transform_trial",
+    "playback",
+    "source_events",
+    "timeline",
+    "presentation",
+    "motion_provenance",
+    "operation",
+    "portability",
+    "media_retention",
+    "privacy",
+    "validity",
+    "artifacts",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.2"
+    },
+    "replay_id": {
+      "$ref": "#/$defs/replayId"
+    },
+    "suit_id": {
+      "$ref": "#/$defs/suitId"
+    },
+    "recall_code": {
+      "$ref": "#/$defs/recallCode"
+    },
+    "manifest_id": {
+      "$ref": "#/$defs/manifestId"
+    },
+    "runtime_package": {
+      "$ref": "#/$defs/runtimePackageRef"
+    },
+    "transform_trial": {
+      "$ref": "#/$defs/transformTrialRef"
+    },
+    "playback": {
+      "$ref": "#/$defs/playback"
+    },
+    "source_events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/transformEventRef"
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/replaySegment"
+      }
+    },
+    "audio": {
+      "$ref": "#/$defs/audioVoiceMetadata"
+    },
+    "presentation": {
+      "$ref": "#/$defs/presentation"
+    },
+    "motion_provenance": {
+      "$ref": "#/$defs/motionProvenance"
+    },
+    "operation": {
+      "$ref": "#/$defs/serviceOperation"
+    },
+    "portability": {
+      "$ref": "#/$defs/portability"
+    },
+    "media_retention": {
+      "$ref": "#/$defs/mediaRetention"
+    },
+    "privacy": {
+      "$ref": "#/$defs/privacy"
+    },
+    "validity": {
+      "$ref": "#/$defs/replayValidity"
+    },
+    "artifacts": {
+      "$ref": "#/$defs/replayArtifacts"
+    },
+    "metadata": {
+      "$ref": "#/$defs/recordMetadata"
+    }
+  },
+  "$defs": {
+    "replayId": {
+      "type": "string",
+      "pattern": "^RPL-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^S-[A-Z0-9][A-Z0-9-]{2,63}$"
+    },
+    "manifestId": {
+      "type": "string",
+      "pattern": "^MNF-[0-9]{8}-[A-Z0-9]{4}$"
+    },
+    "suitId": {
+      "type": "string",
+      "pattern": "^VDA-[A-Z0-9]+-[A-Z0-9]+-[0-9]{2}-[0-9]{4}$"
+    },
+    "recallCode": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{4}$"
+    },
+    "eventId": {
+      "type": "string",
+      "pattern": "^EVT-[0-9]{8}-[A-Z0-9]{6}$"
+    },
+    "transformState": {
+      "type": "string",
+      "enum": [
+        "IDLE",
+        "POSTED",
+        "FIT_AUDIT",
+        "MORPHOTYPE_LOCKED",
+        "DESIGN_ISSUED",
+        "DRY_FIT_SIM",
+        "TRY_ON",
+        "APPROVAL_PENDING",
+        "APPROVED",
+        "DEPOSITION",
+        "SEALING",
+        "ACTIVE",
+        "ARCHIVED",
+        "REFUSED"
+      ]
+    },
+    "transformEventType": {
+      "type": "string",
+      "enum": [
+        "SESSION_CREATED",
+        "TRIGGER_DETECTED",
+        "VOICE_CAPTURED",
+        "TRACKING_FRAME_BATCH",
+        "STATE_TRANSITION",
+        "FIT_AUDIT_RECORDED",
+        "MORPHOTYPE_LOCKED",
+        "BLUEPRINT_ISSUED",
+        "APPROVAL_GRANTED",
+        "DEPOSITION_STARTED",
+        "DEPOSITION_PROGRESS",
+        "DEPOSITION_COMPLETED",
+        "SEAL_VERIFIED",
+        "REFUSAL_RECORDED",
+        "ERROR_RECORDED",
+        "SESSION_ARCHIVED"
+      ]
+    },
+    "runtimePackageRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "manifest_id",
+        "render_placement_contract"
+      ],
+      "properties": {
+        "contract_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "manifest_id": {
+          "$ref": "#/$defs/manifestId"
+        },
+        "render_placement_contract": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "runtime_package_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_package_hash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "visible_overlay_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "can_render_runtime_suit": {
+          "type": "boolean"
+        }
+      }
+    },
+    "transformTrialRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "state",
+        "started_at",
+        "event_count"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "#/$defs/sessionId"
+        },
+        "state": {
+          "$ref": "#/$defs/transformState"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tracking_source": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "mocopi",
+            "webcam",
+            "quest",
+            "iw_sdk"
+          ]
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "operator_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "event_log_ref": {
+          "$ref": "#/$defs/artifactRef"
+        }
+      }
+    },
+    "playback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "view_mode",
+        "source",
+        "motion_source",
+        "duration_sec"
+      ],
+      "properties": {
+        "view_mode": {
+          "type": "string",
+          "enum": [
+            "self",
+            "mirror",
+            "observer"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "voice",
+            "archive",
+            "operator",
+            "auto",
+            "test"
+          ]
+        },
+        "motion_source": {
+          "type": "string",
+          "enum": [
+            "live_pose",
+            "body_sim",
+            "body_sim_plus_live_pose",
+            "static_fallback",
+            "live_capture",
+            "mocopi",
+            "first_person"
+          ]
+        },
+        "duration_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "motion_frame_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diagnostic_token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      }
+    },
+    "transformEventRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "session_id",
+        "sequence",
+        "event_type",
+        "occurred_at"
+      ],
+      "properties": {
+        "event_id": {
+          "$ref": "#/$defs/eventId"
+        },
+        "session_id": {
+          "$ref": "#/$defs/sessionId"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "event_type": {
+          "$ref": "#/$defs/transformEventType"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "state_before": {
+          "$ref": "#/$defs/transformState"
+        },
+        "state_after": {
+          "$ref": "#/$defs/transformState"
+        },
+        "payload_ref": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "payload_summary": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "replaySegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "segment_id",
+        "start_time_sec",
+        "duration_sec",
+        "actions"
+      ],
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "pattern": "^SEG-[A-Z0-9][A-Z0-9_-]{1,63}$"
+        },
+        "start_time_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "duration_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "source_event_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/eventId"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/replayAction"
+          }
+        }
+      }
+    },
+    "replayAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_type",
+        "at_time_sec"
+      ],
+      "properties": {
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "state_marker",
+            "camera",
+            "fx",
+            "audio",
+            "text",
+            "part_visibility",
+            "deposition_progress"
+          ]
+        },
+        "at_time_sec": {
+          "type": "number",
+          "minimum": 0
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "audioVoiceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "voice_capture",
+        "trigger",
+        "tts"
+      ],
+      "properties": {
+        "voice_capture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "captured",
+                "mock",
+                "not_captured",
+                "unavailable"
+              ]
+            },
+            "mime_type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sample_rate": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "channels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "duration_ms": {
+              "type": "number",
+              "minimum": 0
+            },
+            "artifact_ref": {
+              "$ref": "#/$defs/artifactRef"
+            },
+            "stats": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "detected",
+            "phrase"
+          ],
+          "properties": {
+            "detected": {
+              "type": "boolean"
+            },
+            "phrase": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "transcript": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "match": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "provider": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "model": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "language": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "tts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "generated",
+                "fallback_speech",
+                "skipped",
+                "unavailable"
+              ]
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "provider": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "model": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "voice": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "audio_ref": {
+              "$ref": "#/$defs/artifactRef"
+            }
+          }
+        }
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_locale",
+        "event_labels",
+        "display_policy"
+      ],
+      "properties": {
+        "default_locale": {
+          "type": "string",
+          "const": "ja-JP"
+        },
+        "supported_locales": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/localeCode"
+          }
+        },
+        "event_labels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/localizedEventLabel"
+          }
+        },
+        "view_mode_labels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/localizedViewModeLabel"
+          }
+        },
+        "display_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ui_uses_labels_not_raw_event_types",
+            "hide_private_ids_on_public_display"
+          ],
+          "properties": {
+            "ui_uses_labels_not_raw_event_types": {
+              "type": "boolean",
+              "const": true
+            },
+            "hide_private_ids_on_public_display": {
+              "type": "boolean"
+            },
+            "fallback_locale": {
+              "$ref": "#/$defs/localeCode"
+            }
+          }
+        }
+      }
+    },
+    "localizedEventLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_type",
+        "locale",
+        "label"
+      ],
+      "properties": {
+        "event_type": {
+          "$ref": "#/$defs/transformEventType"
+        },
+        "locale": {
+          "$ref": "#/$defs/localeCode"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "short_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 160
+        }
+      }
+    },
+    "localizedViewModeLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "view_mode",
+        "locale",
+        "label"
+      ],
+      "properties": {
+        "view_mode": {
+          "type": "string",
+          "enum": [
+            "self",
+            "mirror",
+            "observer"
+          ]
+        },
+        "locale": {
+          "$ref": "#/$defs/localeCode"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "short_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        }
+      }
+    },
+    "localeCode": {
+      "type": "string",
+      "pattern": "^[a-z]{2}-[A-Z]{2}$"
+    },
+    "replayArtifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "replay_script",
+        "transform_session",
+        "runtime_package"
+      ],
+      "properties": {
+        "replay_script": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "transform_session": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "runtime_package": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "body_sim": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "mocopi_motion": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "motion_capture": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "voice_audio": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "tts_audio": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "preview_image": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "video": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "export_manifest": {
+          "$ref": "#/$defs/artifactRef"
+        }
+      }
+    },
+    "motionProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_source",
+        "capture_system",
+        "session_ref",
+        "frame_rate_hz",
+        "frame_count",
+        "timebase",
+        "coordinate_space",
+        "source_artifact_ref",
+        "privacy_classification"
+      ],
+      "properties": {
+        "primary_source": {
+          "type": "string",
+          "enum": [
+            "mocopi",
+            "quest_live_pose",
+            "body_sim",
+            "mixed",
+            "static_fallback"
+          ]
+        },
+        "capture_system": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider",
+            "format"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "mocopi",
+                "quest",
+                "iw_sdk",
+                "body_sim",
+                "manual"
+              ]
+            },
+            "format": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            },
+            "device_label": {
+              "type": "string",
+              "maxLength": 96
+            },
+            "adapter_version": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "session_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "session_id"
+          ],
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "source_session_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "recording_started_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "recording_ended_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "frame_rate_hz": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 240
+        },
+        "frame_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timebase": {
+          "type": "string",
+          "enum": [
+            "absolute_utc",
+            "session_elapsed_sec",
+            "event_elapsed_sec",
+            "deposition_elapsed_sec"
+          ]
+        },
+        "coordinate_space": {
+          "type": "string",
+          "enum": [
+            "mocopi_world_y_up",
+            "quest_rig_local_y_up_z_back",
+            "vrm_humanoid_local_y_up_z_front",
+            "body_sim_segment",
+            "mixed_runtime"
+          ]
+        },
+        "source_artifact_ref": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "derived_artifact_ref": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "retargeting": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "not_required",
+                "runtime_retargeted",
+                "prebaked"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "enum": [
+                "runtime_package",
+                "quest_rig",
+                "body_sim"
+              ]
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "privacy_classification": {
+          "type": "string",
+          "enum": [
+            "identifying_motion",
+            "derived_nonidentifying_motion",
+            "static_no_motion"
+          ]
+        }
+      }
+    },
+    "serviceOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "api_surface",
+        "storage_backend",
+        "write_path",
+        "runtime_resolver",
+        "external_pc_runtime"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "local_demo",
+            "web_service",
+            "cloud_service"
+          ]
+        },
+        "api_surface": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "service_name",
+            "version"
+          ],
+          "properties": {
+            "service_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            },
+            "trial_replay_endpoint": {
+              "type": "string",
+              "pattern": "^/.*"
+            },
+            "replay_record_endpoint": {
+              "type": "string",
+              "pattern": "^/.*"
+            }
+          }
+        },
+        "storage_backend": {
+          "type": "string",
+          "enum": [
+            "local_json_bundle",
+            "cloud_sql_gcs",
+            "gcs_only"
+          ]
+        },
+        "write_path": {
+          "type": "string",
+          "enum": [
+            "sessions_new_route_trial_bundle",
+            "cloud_sql_metadata_gcs_artifacts",
+            "gcs_artifact_set"
+          ]
+        },
+        "runtime_resolver": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "artifact_uri_schemes",
+            "requires_runtime_package_snapshot"
+          ],
+          "properties": {
+            "artifact_uri_schemes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "relative",
+                  "gs",
+                  "https"
+                ]
+              }
+            },
+            "requires_runtime_package_snapshot": {
+              "type": "boolean"
+            },
+            "fallback_allowed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "external_pc_runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "offline_supported",
+            "network_required",
+            "preflight_required"
+          ],
+          "properties": {
+            "offline_supported": {
+              "type": "boolean"
+            },
+            "network_required": {
+              "type": "boolean"
+            },
+            "preflight_required": {
+              "type": "boolean"
+            },
+            "preflight_checklist_ref": {
+              "$ref": "#/$defs/artifactRef"
+            }
+          }
+        }
+      }
+    },
+    "portability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri_policy",
+        "bundle_id",
+        "bundle_root",
+        "deployment_targets",
+        "required_artifact_keys",
+        "move_validation"
+      ],
+      "properties": {
+        "uri_policy": {
+          "type": "string",
+          "enum": [
+            "bundle_relative_or_cloud_uri"
+          ]
+        },
+        "bundle_id": {
+          "type": "string",
+          "pattern": "^RPB-[0-9]{8}-[A-Z0-9]{4}$"
+        },
+        "bundle_root": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "export_manifest": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "deployment_targets": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "local_dev",
+              "external_exhibition_pc",
+              "gcp_cloud_run",
+              "gcs_archive",
+              "firebase_hosting"
+            ]
+          }
+        },
+        "required_artifact_keys": {
+          "$ref": "#/$defs/artifactKeyList"
+        },
+        "cloud_artifact_root": {
+          "$ref": "#/$defs/artifactRef"
+        },
+        "move_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "portable_between_pcs",
+            "cloud_ready",
+            "absolute_local_paths_allowed",
+            "validation_strategy"
+          ],
+          "properties": {
+            "portable_between_pcs": {
+              "type": "boolean"
+            },
+            "cloud_ready": {
+              "type": "boolean"
+            },
+            "absolute_local_paths_allowed": {
+              "type": "boolean",
+              "const": false
+            },
+            "validation_strategy": {
+              "type": "string",
+              "enum": [
+                "validate_schema_then_resolve_required_artifacts",
+                "validate_schema_only",
+                "operator_manual_check"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "mediaRetention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retention_class",
+        "export_formats",
+        "delete_policy",
+        "contains_voice_audio",
+        "contains_motion_capture"
+      ],
+      "properties": {
+        "retention_class": {
+          "type": "string",
+          "enum": [
+            "demo_ephemeral",
+            "exhibition_session",
+            "operator_approved_archive",
+            "cloud_archive"
+          ]
+        },
+        "export_formats": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "replay_record_json",
+              "replay_script_json",
+              "portable_bundle_zip",
+              "mp4",
+              "preview_image",
+              "gcs_object_set"
+            ]
+          }
+        },
+        "delete_policy": {
+          "type": "string",
+          "enum": [
+            "delete_after_demo",
+            "retain_until_date",
+            "operator_review_required",
+            "archive_until_revoked"
+          ]
+        },
+        "retain_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contains_voice_audio": {
+          "type": "boolean"
+        },
+        "contains_motion_capture": {
+          "type": "boolean"
+        },
+        "mocopi_raw_retention": {
+          "type": "string",
+          "enum": [
+            "retain_with_consent",
+            "delete_after_retarget",
+            "not_captured"
+          ]
+        },
+        "export_review_required": {
+          "type": "boolean"
+        },
+        "cloud_bucket_policy": {
+          "type": "string",
+          "enum": [
+            "not_exported",
+            "private_gcs_object",
+            "signed_url_only",
+            "public_demo_asset"
+          ]
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operator_consent",
+        "participant_consent",
+        "pii_classes",
+        "voice_storage",
+        "motion_storage",
+        "exhibition_pc_policy",
+        "cloud_export_allowed"
+      ],
+      "properties": {
+        "operator_consent": {
+          "$ref": "#/$defs/consentAssumption"
+        },
+        "participant_consent": {
+          "$ref": "#/$defs/consentAssumption"
+        },
+        "pii_classes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "voice_audio",
+              "speech_transcript",
+              "body_motion",
+              "mocopi_motion",
+              "mocopi_session_id",
+              "device_id",
+              "operator_id",
+              "none"
+            ]
+          }
+        },
+        "voice_storage": {
+          "type": "string",
+          "enum": [
+            "raw_audio_retained",
+            "derived_metadata_only",
+            "not_captured"
+          ]
+        },
+        "motion_storage": {
+          "type": "string",
+          "enum": [
+            "raw_frames_retained",
+            "derived_replay_only",
+            "not_captured"
+          ]
+        },
+        "exhibition_pc_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operator_unlock_required",
+            "public_display_redaction",
+            "raw_media_export_requires_granted_consent"
+          ],
+          "properties": {
+            "operator_unlock_required": {
+              "type": "boolean"
+            },
+            "public_display_redaction": {
+              "type": "string",
+              "enum": [
+                "hide_raw_audio_and_ids",
+                "derived_replay_only",
+                "none"
+              ]
+            },
+            "raw_media_export_requires_granted_consent": {
+              "type": "boolean"
+            }
+          }
+        },
+        "cloud_export_allowed": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "consentAssumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "scope",
+        "assumption"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "granted",
+            "assumed_for_operator_demo",
+            "not_required",
+            "revoked",
+            "unknown"
+          ]
+        },
+        "scope": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "voice_audio",
+              "speech_transcript",
+              "body_motion",
+              "mocopi_motion",
+              "viewer_replay",
+              "portable_export",
+              "service_upload",
+              "cloud_export"
+            ]
+          }
+        },
+        "assumption": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "captured_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "replayValidity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validation_status",
+        "valid_when_moved",
+        "valid_in_cloud",
+        "integrity_policy"
+      ],
+      "properties": {
+        "validation_status": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "valid_with_warnings",
+            "invalid",
+            "unchecked"
+          ]
+        },
+        "valid_when_moved": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "portable_bundle_required",
+            "relative_paths_resolve_from",
+            "missing_required_artifact_behavior"
+          ],
+          "properties": {
+            "portable_bundle_required": {
+              "type": "boolean"
+            },
+            "relative_paths_resolve_from": {
+              "type": "string",
+              "enum": [
+                "record_file",
+                "bundle_root",
+                "export_manifest"
+              ]
+            },
+            "missing_required_artifact_behavior": {
+              "type": "string",
+              "enum": [
+                "invalid",
+                "degraded"
+              ]
+            }
+          }
+        },
+        "valid_in_cloud": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "uri_schemes",
+            "gcp_target",
+            "signed_url_ok"
+          ],
+          "properties": {
+            "uri_schemes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "relative",
+                  "gs",
+                  "https"
+                ]
+              }
+            },
+            "gcp_target": {
+              "type": "string",
+              "enum": [
+                "none",
+                "gcs_cloud_run",
+                "gcs_firebase_hosting",
+                "cloud_sql_gcs"
+              ]
+            },
+            "signed_url_ok": {
+              "type": "boolean"
+            }
+          }
+        },
+        "integrity_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_validation_required",
+            "content_hash_recommended",
+            "runtime_package_snapshot_required"
+          ],
+          "properties": {
+            "schema_validation_required": {
+              "type": "boolean"
+            },
+            "content_hash_recommended": {
+              "type": "boolean"
+            },
+            "runtime_package_snapshot_required": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "artifactKeyList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "replay_script",
+          "transform_session",
+          "runtime_package",
+          "body_sim",
+          "mocopi_motion",
+          "motion_capture",
+          "voice_audio",
+          "tts_audio",
+          "preview_image",
+          "video",
+          "export_manifest"
+        ]
+      }
+    },
+    "artifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?![A-Za-z]:)(?!file:)(?!/)(?!.*\\\\).+"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "schema_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "content_hash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "storage_backend": {
+          "type": "string",
+          "enum": [
+            "bundle_relative",
+            "gcs",
+            "https_signed",
+            "https_public"
+          ]
+        },
+        "portable": {
+          "type": "boolean"
+        },
+        "retention_role": {
+          "type": "string",
+          "enum": [
+            "required_runtime",
+            "optional_media",
+            "private_raw_capture",
+            "export_manifest"
+          ]
+        }
+      }
+    },
+    "recordMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at",
+        "generator"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}

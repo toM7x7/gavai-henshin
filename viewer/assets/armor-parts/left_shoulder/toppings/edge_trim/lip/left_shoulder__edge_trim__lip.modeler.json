@@ -1,0 +1,78 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "left_shoulder",
+  "part_id": "viewer.mesh.left_shoulder.v1",
+  "category": "shoulder",
+  "bbox_m": {
+    "x": 0.14000000059604645,
+    "y": 0.02199999988079071,
+    "z": 0.01199999451637268,
+    "size": [
+      0.14000000059604645,
+      0.02199999988079071,
+      0.01199999451637268
+    ],
+    "dimensions": [
+      0.14000000059604645,
+      0.02199999988079071,
+      0.01199999451637268
+    ]
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "accent"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "right_shoulder",
+  "vrm_attachment": {
+    "primary_bone": "leftShoulder",
+    "offset_m": [
+      0.02,
+      0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "leftShoulder",
+      "leftUpperArm",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 44,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "left_shoulder:edge_trim:lip",
+  "is_topping": true,
+  "parent_module": "left_shoulder",
+  "topping_slot": "edge_trim",
+  "topping_key": "lip",
+  "slot_transform": {
+    "anchor": [
+      0.04,
+      0.0,
+      0.1
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.16,
+    "y": 0.04,
+    "z": 0.02
+  }
+}

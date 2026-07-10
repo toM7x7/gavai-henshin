@@ -1,0 +1,49 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "right_shin",
+  "variant_key": "right_shin:base",
+  "variant_asset_key": "base",
+  "base_motif_link": {
+    "name": "shin_v",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shin",
+    "variant_key": "right_shin:base"
+  },
+  "catalog_variant": {
+    "variant_key": "right_shin:base",
+    "display_name": "Base hero fit",
+    "base_motif_link": {
+      "name": "shin_v",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "shin-to-boot socket is visible",
+      "knee and ankle clearance remain readable"
+    ],
+    "recommended_topping_slots": [
+      "shin_spike",
+      "ankle_cuff_trim",
+      "ankle_cuff"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.10779999941587448,
+    "y": 0.11390001326799393,
+    "z": 0.39668799936771393
+  },
+  "triangle_count": 396,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_trim",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "right_shin",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

@@ -1,0 +1,3992 @@
+﻿{
+  "contract_version": "exhibition-release-package-completeness.v1",
+  "ok": true,
+  "status": "warn",
+  "repo_root": "C:/dev/codex/gavai-henshin",
+  "git_tracking": {
+    "requested": true,
+    "checked": true,
+    "worktree": true,
+    "allow_untracked_for_local_snapshot": true,
+    "untracked_blocking": false,
+    "untracked_policy": "local_snapshot_allowed"
+  },
+  "missing_count": 0,
+  "pattern_gap_count": 0,
+  "untracked_count": 282,
+  "reasons": [],
+  "warnings": [
+    "P1 limb acceptance incomplete: package_gate_status=warn_now_block_p1; release remains runnable but P1 limb variants are not accepted for activation.",
+    "P1 limb manifest validator: catalog: 24 ordered variant(s) not yet declared",
+    "P1 limb manifest validator: delivery: 24 ordered variant(s) not yet delivered",
+    "git tracking gate: 282 critical untracked file(s) allowed for explicit local snapshot; copy/export must include these paths and preserve this report."
+  ],
+  "missing": [],
+  "pattern_gaps": [],
+  "untracked": [
+    {
+      "path": ".env.demo.example",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/current-web-quest-check-guide.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/quest-deposition-visual-direction-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/replay-record-contract.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "docs/web-service-phase0-task-breakdown-2026-05-02.md",
+      "categories": [
+        "operator_docs"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "examples/modeler_delivery_manifest.sample.json",
+      "categories": [
+        "examples"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "examples/replay-record.sample.json",
+      "categories": [
+        "replay"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "schemas/replay-record.v0.2.schema.json",
+      "categories": [
+        "replay"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "src/henshin/variant_selection.py",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "tools/exhibition_smoke_check.py",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "tools/validate_exhibition_release_package.py",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "tools/validate_modeler_variant_order_manifest.py",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "tools/validate_variant_catalog.py",
+      "categories": [
+        "runtime"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/base/back__rear_core__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/base/preview/back__rear_core__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/back__rear_core__compact_core.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/rear_core/compact_core/preview/back__rear_core__compact_core.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/base/back__spine_ridge__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/base/preview/back__spine_ridge__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/back__spine_ridge__compact_ridge.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/toppings/spine_ridge/compact_ridge/preview/back__spine_ridge__compact_ridge.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/base/back__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/base/back__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/base/preview/back__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/bold/back__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/bold/back__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/bold/preview/back__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/rear_core/back__rear_core.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/rear_core/preview/back__rear_core.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/scapula_shell/back__scapula_shell.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/scapula_shell/back__scapula_shell.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/scapula_shell/preview/back__scapula_shell.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/sleek/back__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/sleek/back__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/sleek/preview/back__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/spine_ridge/back__spine_ridge.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/spine_ridge/back__spine_ridge.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/back/variants/spine_ridge/preview/back__spine_ridge.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/base/chest__chest_core__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/base/chest__chest_core__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/base/preview/chest__chest_core__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/hero_v/chest__chest_core__hero_v.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/hero_v/chest__chest_core__hero_v.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/chest_core/hero_v/preview/chest__chest_core__hero_v.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/base/chest__rib_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/base/chest__rib_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/base/preview/chest__rib_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/rib_stripe/chest__rib_trim__rib_stripe.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/rib_stripe/chest__rib_trim__rib_stripe.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/toppings/rib_trim/rib_stripe/preview/chest__rib_trim__rib_stripe.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/base/chest__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/base/chest__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/base/preview/chest__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/bold/chest__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/bold/chest__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/bold/preview/chest__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/broad_guard/chest__broad_guard.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/broad_guard/chest__broad_guard.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/broad_guard/preview/chest__broad_guard.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/sleek/chest__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/sleek/chest__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/sleek/preview/chest__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/split_rib/chest__split_rib.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/split_rib/chest__split_rib.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/split_rib/preview/chest__split_rib.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/v_core/chest__v_core.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/v_core/chest__v_core.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/chest/variants/v_core/preview/chest__v_core.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/base/helmet__crest__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/base/helmet__crest__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/base/preview/helmet__crest__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/short_crest/helmet__crest__short_crest.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/short_crest/helmet__crest__short_crest.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/crest/short_crest/preview/helmet__crest__short_crest.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/base/helmet__visor_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/base/helmet__visor_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/base/preview/helmet__visor_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/slit_glow/helmet__visor_trim__slit_glow.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/slit_glow/helmet__visor_trim__slit_glow.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/toppings/visor_trim/slit_glow/preview/helmet__visor_trim__slit_glow.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/base/helmet__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/base/helmet__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/base/preview/helmet__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/bold/helmet__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/bold/helmet__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/bold/preview/helmet__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/crest_guardian/helmet__crest_guardian.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/crest_guardian/helmet__crest_guardian.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/crest_guardian/preview/helmet__crest_guardian.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/heroic_face/helmet__heroic_face.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/heroic_face/helmet__heroic_face.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/heroic_face/preview/helmet__heroic_face.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek/preview/helmet__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek_visor/helmet__sleek_visor.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek_visor/helmet__sleek_visor.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/helmet/variants/sleek_visor/preview/helmet__sleek_visor.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/ankle_cuff/left_boot__ankle_cuff.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/ankle_cuff/left_boot__ankle_cuff.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/ankle_cuff/preview/left_boot__ankle_cuff.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/heel_guard/left_boot__heel_guard.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/heel_guard/left_boot__heel_guard.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/heel_guard/preview/left_boot__heel_guard.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/toe_hero/left_boot__toe_hero.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/toe_hero/left_boot__toe_hero.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_boot/variants/toe_hero/preview/left_boot__toe_hero.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/base/left_shin__ankle_cuff_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/base/left_shin__ankle_cuff_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/base/preview/left_shin__ankle_cuff_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/cuff/left_shin__ankle_cuff_trim__cuff.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/cuff/left_shin__ankle_cuff_trim__cuff.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/ankle_cuff_trim/cuff/preview/left_shin__ankle_cuff_trim__cuff.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/base/left_shin__shin_spike__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/base/left_shin__shin_spike__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/base/preview/left_shin__shin_spike__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/narrow_spike/left_shin__shin_spike__narrow_spike.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/narrow_spike/left_shin__shin_spike__narrow_spike.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/toppings/shin_spike/narrow_spike/preview/left_shin__shin_spike__narrow_spike.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/base/left_shin__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/base/left_shin__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/base/preview/left_shin__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/bold/left_shin__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/bold/left_shin__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/bold/preview/left_shin__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/knee_trim/left_shin__knee_trim.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/knee_trim/left_shin__knee_trim.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/knee_trim/preview/left_shin__knee_trim.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/shin_spike/left_shin__shin_spike.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/shin_spike/left_shin__shin_spike.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/shin_spike/preview/left_shin__shin_spike.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/sleek/left_shin__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/sleek/left_shin__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/sleek/preview/left_shin__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/stream_shin/left_shin__stream_shin.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/stream_shin/left_shin__stream_shin.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shin/variants/stream_shin/preview/left_shin__stream_shin.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/base/left_shoulder__edge_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/base/left_shoulder__edge_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/base/preview/left_shoulder__edge_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/lip/left_shoulder__edge_trim__lip.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/lip/left_shoulder__edge_trim__lip.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/edge_trim/lip/preview/left_shoulder__edge_trim__lip.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/base/left_shoulder__shoulder_fin__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/base/left_shoulder__shoulder_fin__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/base/preview/left_shoulder__shoulder_fin__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/winged/left_shoulder__shoulder_fin__winged.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/winged/left_shoulder__shoulder_fin__winged.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/toppings/shoulder_fin/winged/preview/left_shoulder__shoulder_fin__winged.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/base/left_shoulder__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/base/left_shoulder__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/base/preview/left_shoulder__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/bold/left_shoulder__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/bold/left_shoulder__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/bold/preview/left_shoulder__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/heavy_guard/left_shoulder__heavy_guard.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/heavy_guard/left_shoulder__heavy_guard.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/heavy_guard/preview/left_shoulder__heavy_guard.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek/left_shoulder__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek/left_shoulder__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek/preview/left_shoulder__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek_cap/left_shoulder__sleek_cap.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek_cap/left_shoulder__sleek_cap.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/sleek_cap/preview/left_shoulder__sleek_cap.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/winged_fin/left_shoulder__winged_fin.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/winged_fin/left_shoulder__winged_fin.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/left_shoulder/variants/winged_fin/preview/left_shoulder__winged_fin.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/ankle_cuff/preview/right_boot__ankle_cuff.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/ankle_cuff/right_boot__ankle_cuff.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/ankle_cuff/right_boot__ankle_cuff.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/heel_guard/preview/right_boot__heel_guard.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/heel_guard/right_boot__heel_guard.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/heel_guard/right_boot__heel_guard.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/toe_hero/preview/right_boot__toe_hero.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/toe_hero/right_boot__toe_hero.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_boot/variants/toe_hero/right_boot__toe_hero.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/base/preview/right_shin__ankle_cuff_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/base/right_shin__ankle_cuff_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/base/right_shin__ankle_cuff_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/cuff/preview/right_shin__ankle_cuff_trim__cuff.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/cuff/right_shin__ankle_cuff_trim__cuff.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/ankle_cuff_trim/cuff/right_shin__ankle_cuff_trim__cuff.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/base/preview/right_shin__shin_spike__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/base/right_shin__shin_spike__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/base/right_shin__shin_spike__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/narrow_spike/preview/right_shin__shin_spike__narrow_spike.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/narrow_spike/right_shin__shin_spike__narrow_spike.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/toppings/shin_spike/narrow_spike/right_shin__shin_spike__narrow_spike.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/base/preview/right_shin__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/base/right_shin__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/base/right_shin__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/bold/preview/right_shin__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/bold/right_shin__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/bold/right_shin__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/knee_trim/preview/right_shin__knee_trim.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/knee_trim/right_shin__knee_trim.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/knee_trim/right_shin__knee_trim.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/shin_spike/preview/right_shin__shin_spike.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/shin_spike/right_shin__shin_spike.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/shin_spike/right_shin__shin_spike.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/sleek/preview/right_shin__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/sleek/right_shin__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/sleek/right_shin__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/stream_shin/preview/right_shin__stream_shin.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/stream_shin/right_shin__stream_shin.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shin/variants/stream_shin/right_shin__stream_shin.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/base/preview/right_shoulder__edge_trim__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/base/right_shoulder__edge_trim__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/base/right_shoulder__edge_trim__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/lip/preview/right_shoulder__edge_trim__lip.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/lip/right_shoulder__edge_trim__lip.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/edge_trim/lip/right_shoulder__edge_trim__lip.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/base/preview/right_shoulder__shoulder_fin__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/base/right_shoulder__shoulder_fin__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/base/right_shoulder__shoulder_fin__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/winged/preview/right_shoulder__shoulder_fin__winged.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/winged/right_shoulder__shoulder_fin__winged.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/toppings/shoulder_fin/winged/right_shoulder__shoulder_fin__winged.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/base/preview/right_shoulder__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/base/right_shoulder__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/base/right_shoulder__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/bold/preview/right_shoulder__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/bold/right_shoulder__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/bold/right_shoulder__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/heavy_guard/preview/right_shoulder__heavy_guard.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/heavy_guard/right_shoulder__heavy_guard.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/heavy_guard/right_shoulder__heavy_guard.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek/preview/right_shoulder__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek/right_shoulder__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek/right_shoulder__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek_cap/preview/right_shoulder__sleek_cap.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek_cap/right_shoulder__sleek_cap.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/sleek_cap/right_shoulder__sleek_cap.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/winged_fin/preview/right_shoulder__winged_fin.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/winged_fin/right_shoulder__winged_fin.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/right_shoulder/variants/winged_fin/right_shoulder__winged_fin.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/variant_catalog.json",
+      "categories": [
+        "armor"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/base/preview/waist__belt_buckle__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/base/waist__belt_buckle__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/base/waist__belt_buckle__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/driver_lo/preview/waist__belt_buckle__driver_lo.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/driver_lo/waist__belt_buckle__driver_lo.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/belt_buckle/driver_lo/waist__belt_buckle__driver_lo.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/base/preview/waist__side_clip__base.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/base/waist__side_clip__base.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/base/waist__side_clip__base.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/runner_clip/preview/waist__side_clip__runner_clip.mesh.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/runner_clip/waist__side_clip__runner_clip.glb",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/toppings/side_clip/runner_clip/waist__side_clip__runner_clip.modeler.json",
+      "categories": [
+        "armor_toppings"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/base/preview/waist__base.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/base/waist__base.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/base/waist__base.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/bold/preview/waist__bold.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/bold/waist__bold.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/bold/waist__bold.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/hero_buckle/preview/waist__hero_buckle.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/hero_buckle/waist__hero_buckle.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/hero_buckle/waist__hero_buckle.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/side_clip/preview/waist__side_clip.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/side_clip/waist__side_clip.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/side_clip/waist__side_clip.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/sleek/preview/waist__sleek.mesh.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/sleek/waist__sleek.glb",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/sleek/waist__sleek.modeler.json",
+      "categories": [
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/wrap_belt/preview/waist__wrap_belt.mesh.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/wrap_belt/waist__wrap_belt.glb",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    },
+    {
+      "path": "viewer/assets/armor-parts/waist/variants/wrap_belt/waist__wrap_belt.modeler.json",
+      "categories": [
+        "armor_catalog_ref",
+        "armor_variants"
+      ],
+      "reason": "critical release-package file exists but is not tracked by git"
+    }
+  ],
+  "model_quality": {
+    "contract_version": "modeler-exhibition-quality-adjustments.v1",
+    "status": "warn",
+    "runtime_release_allowed": true,
+    "runtime_release_policy": "Web/Quest runtime release may proceed with model-quality warnings; model delivery/fidelity acceptance remains blocked until listed blockers and micro-dimension warnings are resolved or explicitly waived.",
+    "model_delivery_acceptance_status": "blocked",
+    "fidelity_acceptance_blocker_count": 1,
+    "fidelity_acceptance_blockers": [
+      {
+        "module": "waist",
+        "blocker_id": "waist_body_wrap_loop_not_exported",
+        "warning_type": "fidelity_acceptance_blocker",
+        "acceptance_bucket": "p1_fidelity_hold",
+        "phase": "P1",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_glb_loop_exported",
+        "package_gate_status": "warn_now_block_p1",
+        "body_wrap_loop_export_status": "export_status_not_declared",
+        "body_wrap_loop_export_detail": {
+          "status": "export_status_not_declared",
+          "phase": "P1",
+          "acceptance_blocked": true,
+          "metadata_only": false,
+          "glb_loop_export_required": true,
+          "source_fields": {},
+          "required_action": "Export/regenerate the waist GLB from body_wrap_loop and mark the sidecar as glb_loop_exported before model delivery/fidelity acceptance."
+        },
+        "related_micro_dimension_axes": [
+          "x"
+        ],
+        "distinction": "This is a closed wearable-loop proof blocker, not a simple bbox micro-dimension warning.",
+        "required_action": "Export/regenerate the waist GLB with a real body_wrap_loop, declare belt aperture/clearance, and recheck front/side/back/3Q before model delivery acceptance."
+      }
+    ],
+    "micro_dimension_warning_count": 6,
+    "micro_dimension_warnings": [
+      {
+        "module": "chest",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "z"
+        ],
+        "max_abs_delta_pct": 12.7,
+        "size_adjustments": [
+          {
+            "axis": "z",
+            "action": "increase",
+            "actual_m": 0.142398,
+            "target_m": 0.1632,
+            "delta_pct": -12.7,
+            "pass_min_m": 0.14688,
+            "pass_max_m": 0.17952,
+            "minimum_change_to_pass_m": 0.004482,
+            "symmetric_each_side_m": 0.002241,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      },
+      {
+        "module": "waist",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "x"
+        ],
+        "max_abs_delta_pct": 10.1,
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.440351,
+            "target_m": 0.4896,
+            "delta_pct": -10.1,
+            "pass_min_m": 0.44064,
+            "pass_max_m": 0.53856,
+            "minimum_change_to_pass_m": 0.000289,
+            "symmetric_each_side_m": 0.000144,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      },
+      {
+        "module": "left_upperarm",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "x"
+        ],
+        "max_abs_delta_pct": 11.5,
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      },
+      {
+        "module": "right_upperarm",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "x"
+        ],
+        "max_abs_delta_pct": 11.5,
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      },
+      {
+        "module": "left_shin",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "x"
+        ],
+        "max_abs_delta_pct": 12.0,
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      },
+      {
+        "module": "right_shin",
+        "warning_type": "micro_dimension",
+        "acceptance_bucket": "model_delivery_micro_adjustment",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived",
+        "package_gate_status": "warn_runtime_allowed_block_model_delivery",
+        "axes": [
+          "x"
+        ],
+        "max_abs_delta_pct": 12.0,
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "required_action": "Resolve the listed bbox micro-dimension deltas, or attach tri-view waiver evidence, before model delivery/fidelity acceptance."
+      }
+    ],
+    "part_count": 18,
+    "warning_count": 6,
+    "fail_count": 0,
+    "pass_tolerance_pct": 10.0,
+    "fail_tolerance_pct": 15.0,
+    "warnings": [],
+    "parts": [
+      {
+        "module": "helmet",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.279888,
+          "y": 0.3496,
+          "z": 0.253991
+        },
+        "target_bbox_m": {
+          "x": 0.2856,
+          "y": 0.34,
+          "z": 0.2584
+        },
+        "max_abs_delta_pct": 2.8,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.279888,
+            "target_m": 0.2856,
+            "delta_pct": -2.0,
+            "pass_min_m": 0.25704,
+            "pass_max_m": 0.31416,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.3496,
+            "target_m": 0.34,
+            "delta_pct": 2.8,
+            "pass_min_m": 0.306,
+            "pass_max_m": 0.374,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.253991,
+            "target_m": 0.2584,
+            "delta_pct": -1.7,
+            "pass_min_m": 0.23256,
+            "pass_max_m": 0.28424,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.02,
+              0.04
+            ],
+            "magnitude_m": 0.044721,
+            "target_m": 0.08
+          }
+        },
+        "tri_view_focus": [
+          "helmet: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Keep a cool hero face: visor, brow, cheek, and crest must read in front and side, not only texture.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "chest",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.623225,
+          "y": 0.5025,
+          "z": 0.142398
+        },
+        "target_bbox_m": {
+          "x": 0.6392,
+          "y": 0.4992,
+          "z": 0.1632
+        },
+        "max_abs_delta_pct": 12.7,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.623225,
+            "target_m": 0.6392,
+            "delta_pct": -2.5,
+            "pass_min_m": 0.57528,
+            "pass_max_m": 0.70312,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.5025,
+            "target_m": 0.4992,
+            "delta_pct": 0.7,
+            "pass_min_m": 0.44928,
+            "pass_max_m": 0.54912,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "increase",
+            "actual_m": 0.142398,
+            "target_m": 0.1632,
+            "delta_pct": -12.7,
+            "pass_min_m": 0.14688,
+            "pass_max_m": 0.17952,
+            "minimum_change_to_pass_m": 0.004482,
+            "symmetric_each_side_m": 0.002241,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "z",
+            "action": "increase",
+            "actual_m": 0.142398,
+            "target_m": 0.1632,
+            "delta_pct": -12.7,
+            "pass_min_m": 0.14688,
+            "pass_max_m": 0.17952,
+            "minimum_change_to_pass_m": 0.004482,
+            "symmetric_each_side_m": 0.002241,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "chest: add local z depth by +0.002241m front/back; verify side and 3Q volume",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.012,
+              0.064
+            ],
+            "magnitude_m": 0.065115,
+            "target_m": 0.08
+          }
+        },
+        "tri_view_focus": [
+          "chest.z: side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+        ],
+        "design_directive": "Make the suit read powerful from tri-view: V core, rib returns, and side seams should add depth, not a flat tile.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived"
+        }
+      },
+      {
+        "module": "back",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.576337,
+          "y": 0.522532,
+          "z": 0.135401
+        },
+        "target_bbox_m": {
+          "x": 0.5984,
+          "y": 0.5148,
+          "z": 0.136
+        },
+        "max_abs_delta_pct": 3.7,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.576337,
+            "target_m": 0.5984,
+            "delta_pct": -3.7,
+            "pass_min_m": 0.53856,
+            "pass_max_m": 0.65824,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.522532,
+            "target_m": 0.5148,
+            "delta_pct": 1.5,
+            "pass_min_m": 0.46332,
+            "pass_max_m": 0.56628,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.135401,
+            "target_m": 0.136,
+            "delta_pct": -0.4,
+            "pass_min_m": 0.1224,
+            "pass_max_m": 0.1496,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.002,
+              -0.07
+            ],
+            "magnitude_m": 0.070029,
+            "target_m": 0.08
+          }
+        },
+        "tri_view_focus": [
+          "back: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Back view needs a spine keel/rear core that is compact but unmistakably designed.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "waist",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.440351,
+          "y": 0.156788,
+          "z": 0.19
+        },
+        "target_bbox_m": {
+          "x": 0.4896,
+          "y": 0.1716,
+          "z": 0.1904
+        },
+        "max_abs_delta_pct": 10.1,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.440351,
+            "target_m": 0.4896,
+            "delta_pct": -10.1,
+            "pass_min_m": 0.44064,
+            "pass_max_m": 0.53856,
+            "minimum_change_to_pass_m": 0.000289,
+            "symmetric_each_side_m": 0.000144,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.156788,
+            "target_m": 0.1716,
+            "delta_pct": -8.6,
+            "pass_min_m": 0.15444,
+            "pass_max_m": 0.18876,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.19,
+            "target_m": 0.1904,
+            "delta_pct": -0.2,
+            "pass_min_m": 0.17136,
+            "pass_max_m": 0.20944,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.440351,
+            "target_m": 0.4896,
+            "delta_pct": -10.1,
+            "pass_min_m": 0.44064,
+            "pass_max_m": 0.53856,
+            "minimum_change_to_pass_m": 0.000289,
+            "symmetric_each_side_m": 0.000144,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "waist: expand local x symmetrically by +0.000144m per side; keep bone anchor centered",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.006,
+              0.04
+            ],
+            "magnitude_m": 0.040447,
+            "target_m": 0.06
+          }
+        },
+        "tri_view_focus": [
+          "waist.x: front/back width read; compare left/right silhouette and mirror-pair balance"
+        ],
+        "design_directive": "Treat the belt as a transformation driver loop: buckle, hip plates, and rear clasp should connect chest to legs.",
+        "fidelity_acceptance": {
+          "module": "waist",
+          "blocker_id": "waist_body_wrap_loop_not_exported",
+          "warning_type": "fidelity_acceptance_blocker",
+          "acceptance_bucket": "p1_fidelity_hold",
+          "phase": "P1",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_glb_loop_exported",
+          "package_gate_status": "warn_now_block_p1",
+          "body_wrap_loop_export_status": "export_status_not_declared",
+          "body_wrap_loop_export_detail": {
+            "status": "export_status_not_declared",
+            "phase": "P1",
+            "acceptance_blocked": true,
+            "metadata_only": false,
+            "glb_loop_export_required": true,
+            "source_fields": {},
+            "required_action": "Export/regenerate the waist GLB from body_wrap_loop and mark the sidecar as glb_loop_exported before model delivery/fidelity acceptance."
+          },
+          "related_micro_dimension_axes": [
+            "x"
+          ],
+          "distinction": "This is a closed wearable-loop proof blocker, not a simple bbox micro-dimension warning.",
+          "required_action": "Export/regenerate the waist GLB with a real body_wrap_loop, declare belt aperture/clearance, and recheck front/side/back/3Q before model delivery acceptance."
+        }
+      },
+      {
+        "module": "left_shoulder",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.188014,
+          "y": 0.122,
+          "z": 0.159627
+        },
+        "target_bbox_m": {
+          "x": 0.1904,
+          "y": 0.1224,
+          "z": 0.1632
+        },
+        "max_abs_delta_pct": 2.2,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.188014,
+            "target_m": 0.1904,
+            "delta_pct": -1.3,
+            "pass_min_m": 0.17136,
+            "pass_max_m": 0.20944,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.122,
+            "target_m": 0.1224,
+            "delta_pct": -0.3,
+            "pass_min_m": 0.11016,
+            "pass_max_m": 0.13464,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.159627,
+            "target_m": 0.1632,
+            "delta_pct": -2.2,
+            "pass_min_m": 0.14688,
+            "pass_max_m": 0.17952,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.031839,
+              0.005458,
+              0.020013
+            ],
+            "magnitude_m": 0.038,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_shoulder: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Deltoid cap should look sharp and heroic from front/back while leaving arm lift clearance.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "right_shoulder",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.188014,
+          "y": 0.122,
+          "z": 0.159627
+        },
+        "target_bbox_m": {
+          "x": 0.1904,
+          "y": 0.1224,
+          "z": 0.1632
+        },
+        "max_abs_delta_pct": 2.2,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.188014,
+            "target_m": 0.1904,
+            "delta_pct": -1.3,
+            "pass_min_m": 0.17136,
+            "pass_max_m": 0.20944,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.122,
+            "target_m": 0.1224,
+            "delta_pct": -0.3,
+            "pass_min_m": 0.11016,
+            "pass_max_m": 0.13464,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.159627,
+            "target_m": 0.1632,
+            "delta_pct": -2.2,
+            "pass_min_m": 0.14688,
+            "pass_max_m": 0.17952,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              -0.031839,
+              0.005458,
+              0.020013
+            ],
+            "magnitude_m": 0.038,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_shoulder: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Deltoid cap should look sharp and heroic from front/back while leaving arm lift clearance.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "left_upperarm",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.096304,
+          "y": 0.283008,
+          "z": 0.103745
+        },
+        "target_bbox_m": {
+          "x": 0.1088,
+          "y": 0.2924,
+          "z": 0.1088
+        },
+        "max_abs_delta_pct": 11.5,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.283008,
+            "target_m": 0.2924,
+            "delta_pct": -3.2,
+            "pass_min_m": 0.26316,
+            "pass_max_m": 0.32164,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.103745,
+            "target_m": 0.1088,
+            "delta_pct": -4.6,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "left_upperarm: expand local x symmetrically by +0.000808m per side; keep bone anchor centered",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.015,
+              0.005
+            ],
+            "magnitude_m": 0.015811,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_upperarm.x: front/back width read; compare left/right silhouette and mirror-pair balance"
+        ],
+        "design_directive": "Upperarm should carry stream panels from shoulder to forearm, not read as a thin tube band.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived"
+        }
+      },
+      {
+        "module": "right_upperarm",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.096304,
+          "y": 0.283008,
+          "z": 0.103745
+        },
+        "target_bbox_m": {
+          "x": 0.1088,
+          "y": 0.2924,
+          "z": 0.1088
+        },
+        "max_abs_delta_pct": 11.5,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.283008,
+            "target_m": 0.2924,
+            "delta_pct": -3.2,
+            "pass_min_m": 0.26316,
+            "pass_max_m": 0.32164,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.103745,
+            "target_m": 0.1088,
+            "delta_pct": -4.6,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.096304,
+            "target_m": 0.1088,
+            "delta_pct": -11.5,
+            "pass_min_m": 0.09792,
+            "pass_max_m": 0.11968,
+            "minimum_change_to_pass_m": 0.001616,
+            "symmetric_each_side_m": 0.000808,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "right_upperarm: expand local x symmetrically by +0.000808m per side; keep bone anchor centered",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.015,
+              0.005
+            ],
+            "magnitude_m": 0.015811,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_upperarm.x: front/back width read; compare left/right silhouette and mirror-pair balance"
+        ],
+        "design_directive": "Upperarm should carry stream panels from shoulder to forearm, not read as a thin tube band.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived"
+        }
+      },
+      {
+        "module": "left_forearm",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.094755,
+          "y": 0.26604,
+          "z": 0.099889
+        },
+        "target_bbox_m": {
+          "x": 0.102,
+          "y": 0.2788,
+          "z": 0.102
+        },
+        "max_abs_delta_pct": 7.1,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.094755,
+            "target_m": 0.102,
+            "delta_pct": -7.1,
+            "pass_min_m": 0.0918,
+            "pass_max_m": 0.1122,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.26604,
+            "target_m": 0.2788,
+            "delta_pct": -4.6,
+            "pass_min_m": 0.25092,
+            "pass_max_m": 0.30668,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.099889,
+            "target_m": 0.102,
+            "delta_pct": -2.1,
+            "pass_min_m": 0.0918,
+            "pass_max_m": 0.1122,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.01,
+              0.005
+            ],
+            "magnitude_m": 0.01118,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_forearm: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Forearm vambrace needs wrist cuff readability and controller-safe side clearance.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "right_forearm",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.094755,
+          "y": 0.26604,
+          "z": 0.099889
+        },
+        "target_bbox_m": {
+          "x": 0.102,
+          "y": 0.2788,
+          "z": 0.102
+        },
+        "max_abs_delta_pct": 7.1,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.094755,
+            "target_m": 0.102,
+            "delta_pct": -7.1,
+            "pass_min_m": 0.0918,
+            "pass_max_m": 0.1122,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.26604,
+            "target_m": 0.2788,
+            "delta_pct": -4.6,
+            "pass_min_m": 0.25092,
+            "pass_max_m": 0.30668,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.099889,
+            "target_m": 0.102,
+            "delta_pct": -2.1,
+            "pass_min_m": 0.0918,
+            "pass_max_m": 0.1122,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.01,
+              0.005
+            ],
+            "magnitude_m": 0.01118,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_forearm: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Forearm vambrace needs wrist cuff readability and controller-safe side clearance.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "left_hand",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.115,
+          "y": 0.078272,
+          "z": 0.140037
+        },
+        "target_bbox_m": {
+          "x": 0.1156,
+          "y": 0.0816,
+          "z": 0.136
+        },
+        "max_abs_delta_pct": 4.1,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.115,
+            "target_m": 0.1156,
+            "delta_pct": -0.5,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.078272,
+            "target_m": 0.0816,
+            "delta_pct": -4.1,
+            "pass_min_m": 0.07344,
+            "pass_max_m": 0.08976,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.140037,
+            "target_m": 0.136,
+            "delta_pct": 3.0,
+            "pass_min_m": 0.1224,
+            "pass_max_m": 0.1496,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.0,
+              0.01
+            ],
+            "magnitude_m": 0.01,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_hand: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Hand plate should use broad knuckle/palm shapes; avoid tiny details that vanish in Quest.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "right_hand",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.115,
+          "y": 0.078272,
+          "z": 0.140037
+        },
+        "target_bbox_m": {
+          "x": 0.1156,
+          "y": 0.0816,
+          "z": 0.136
+        },
+        "max_abs_delta_pct": 4.1,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.115,
+            "target_m": 0.1156,
+            "delta_pct": -0.5,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.078272,
+            "target_m": 0.0816,
+            "delta_pct": -4.1,
+            "pass_min_m": 0.07344,
+            "pass_max_m": 0.08976,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.140037,
+            "target_m": 0.136,
+            "delta_pct": 3.0,
+            "pass_min_m": 0.1224,
+            "pass_max_m": 0.1496,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.0,
+              0.01
+            ],
+            "magnitude_m": 0.01,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_hand: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Hand plate should use broad knuckle/palm shapes; avoid tiny details that vanish in Quest.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "left_thigh",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.129839,
+          "y": 0.376908,
+          "z": 0.122482
+        },
+        "target_bbox_m": {
+          "x": 0.136,
+          "y": 0.3956,
+          "z": 0.1292
+        },
+        "max_abs_delta_pct": 5.2,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.129839,
+            "target_m": 0.136,
+            "delta_pct": -4.5,
+            "pass_min_m": 0.1224,
+            "pass_max_m": 0.1496,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.376908,
+            "target_m": 0.3956,
+            "delta_pct": -4.7,
+            "pass_min_m": 0.35604,
+            "pass_max_m": 0.43516,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.122482,
+            "target_m": 0.1292,
+            "delta_pct": -5.2,
+            "pass_min_m": 0.11628,
+            "pass_max_m": 0.14212,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.005,
+              -0.01,
+              0.005
+            ],
+            "magnitude_m": 0.012247,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_thigh: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Thigh plate should continue waist-to-shin flow and remain visible in side view without blocking gait.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "right_thigh",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.129839,
+          "y": 0.376908,
+          "z": 0.122482
+        },
+        "target_bbox_m": {
+          "x": 0.136,
+          "y": 0.3956,
+          "z": 0.1292
+        },
+        "max_abs_delta_pct": 5.2,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.129839,
+            "target_m": 0.136,
+            "delta_pct": -4.5,
+            "pass_min_m": 0.1224,
+            "pass_max_m": 0.1496,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.376908,
+            "target_m": 0.3956,
+            "delta_pct": -4.7,
+            "pass_min_m": 0.35604,
+            "pass_max_m": 0.43516,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.122482,
+            "target_m": 0.1292,
+            "delta_pct": -5.2,
+            "pass_min_m": 0.11628,
+            "pass_max_m": 0.14212,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              -0.005,
+              -0.01,
+              0.005
+            ],
+            "magnitude_m": 0.012247,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_thigh: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Thigh plate should continue waist-to-shin flow and remain visible in side view without blocking gait.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "left_shin",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.101728,
+          "y": 0.410512,
+          "z": 0.114052
+        },
+        "target_bbox_m": {
+          "x": 0.1156,
+          "y": 0.3956,
+          "z": 0.1156
+        },
+        "max_abs_delta_pct": 12.0,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.410512,
+            "target_m": 0.3956,
+            "delta_pct": 3.8,
+            "pass_min_m": 0.35604,
+            "pass_max_m": 0.43516,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.114052,
+            "target_m": 0.1156,
+            "delta_pct": -1.3,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "left_shin: expand local x symmetrically by +0.001156m per side; keep bone anchor centered",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.015,
+              0.005
+            ],
+            "magnitude_m": 0.015811,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "left_shin.x: front/back width read; compare left/right silhouette and mirror-pair balance"
+        ],
+        "design_directive": "Shin should have a strong knee-to-boot stream and ankle cuff so the leg reads grounded.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived"
+        }
+      },
+      {
+        "module": "right_shin",
+        "status": "warn",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "blocked",
+        "model_quality_warning_type": "micro_dimension",
+        "bbox_m": {
+          "x": 0.101728,
+          "y": 0.410512,
+          "z": 0.114052
+        },
+        "target_bbox_m": {
+          "x": 0.1156,
+          "y": 0.3956,
+          "z": 0.1156
+        },
+        "max_abs_delta_pct": 12.0,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.410512,
+            "target_m": 0.3956,
+            "delta_pct": 3.8,
+            "pass_min_m": 0.35604,
+            "pass_max_m": 0.43516,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.114052,
+            "target_m": 0.1156,
+            "delta_pct": -1.3,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [
+          {
+            "axis": "x",
+            "action": "increase",
+            "actual_m": 0.101728,
+            "target_m": 0.1156,
+            "delta_pct": -12.0,
+            "pass_min_m": 0.10404,
+            "pass_max_m": 0.12716,
+            "minimum_change_to_pass_m": 0.002312,
+            "symmetric_each_side_m": 0.001156,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          }
+        ],
+        "position_adjustment": {
+          "summary": "right_shin: expand local x symmetrically by +0.001156m per side; keep bone anchor centered",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              -0.015,
+              0.005
+            ],
+            "magnitude_m": 0.015811,
+            "target_m": 0.04
+          }
+        },
+        "tri_view_focus": [
+          "right_shin.x: front/back width read; compare left/right silhouette and mirror-pair balance"
+        ],
+        "design_directive": "Shin should have a strong knee-to-boot stream and ankle cuff so the leg reads grounded.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "blocked_until_micro_adjusted_or_waived"
+        }
+      },
+      {
+        "module": "left_boot",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.118,
+          "y": 0.09,
+          "z": 0.291
+        },
+        "target_bbox_m": {
+          "x": 0.1224,
+          "y": 0.0884,
+          "z": 0.2856
+        },
+        "max_abs_delta_pct": 3.6,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.118,
+            "target_m": 0.1224,
+            "delta_pct": -3.6,
+            "pass_min_m": 0.11016,
+            "pass_max_m": 0.13464,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.09,
+            "target_m": 0.0884,
+            "delta_pct": 1.8,
+            "pass_min_m": 0.07956,
+            "pass_max_m": 0.09724,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.291,
+            "target_m": 0.2856,
+            "delta_pct": 1.9,
+            "pass_min_m": 0.25704,
+            "pass_max_m": 0.31416,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.0,
+              0.035
+            ],
+            "magnitude_m": 0.035,
+            "target_m": 0.06
+          }
+        },
+        "tri_view_focus": [
+          "left_boot: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Boot needs grounded toe, sole, heel, and ankle mass visible from side/back.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      },
+      {
+        "module": "right_boot",
+        "status": "pass",
+        "runtime_release_allowed": true,
+        "model_delivery_acceptance_status": "pass",
+        "model_quality_warning_type": null,
+        "bbox_m": {
+          "x": 0.118,
+          "y": 0.09,
+          "z": 0.291
+        },
+        "target_bbox_m": {
+          "x": 0.1224,
+          "y": 0.0884,
+          "z": 0.2856
+        },
+        "max_abs_delta_pct": 3.6,
+        "axis_reports": {
+          "x": {
+            "axis": "x",
+            "action": "hold",
+            "actual_m": 0.118,
+            "target_m": 0.1224,
+            "delta_pct": -3.6,
+            "pass_min_m": 0.11016,
+            "pass_max_m": 0.13464,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/back width read; compare left/right silhouette and mirror-pair balance"
+          },
+          "y": {
+            "axis": "y",
+            "action": "hold",
+            "actual_m": 0.09,
+            "target_m": 0.0884,
+            "delta_pct": 1.8,
+            "pass_min_m": 0.07956,
+            "pass_max_m": 0.09724,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "front/side vertical coverage; protect neck, elbow, hip, knee, or ankle escape"
+          },
+          "z": {
+            "axis": "z",
+            "action": "hold",
+            "actual_m": 0.291,
+            "target_m": 0.2856,
+            "delta_pct": 1.9,
+            "pass_min_m": 0.25704,
+            "pass_max_m": 0.31416,
+            "minimum_change_to_pass_m": 0.0,
+            "symmetric_each_side_m": 0.0,
+            "view_impact": "side/3Q depth read; avoid flat plate/proxy impression under exhibition lighting"
+          }
+        },
+        "size_adjustments": [],
+        "position_adjustment": {
+          "summary": "No position shift required; preserve current anchor and tri-view silhouette.",
+          "attachment_offset": {
+            "action": "hold",
+            "offset_m": [
+              0.0,
+              0.0,
+              0.035
+            ],
+            "magnitude_m": 0.035,
+            "target_m": 0.06
+          }
+        },
+        "tri_view_focus": [
+          "right_boot: front/side/back accepted for package gate; keep current silhouette and material-zone read."
+        ],
+        "design_directive": "Boot needs grounded toe, sole, heel, and ankle mass visible from side/back.",
+        "fidelity_acceptance": {
+          "status": "not_blocked",
+          "runtime_release_allowed": true,
+          "model_delivery_acceptance_status": "pass"
+        }
+      }
+    ]
+  },
+  "model_quality_warning_count": 6,
+  "model_quality_fail_count": 0,
+  "experience_gates": {
+    "contract_version": "exhibition-experience-readiness-gates.v1",
+    "status": "pass",
+    "warning_count": 0,
+    "warnings": [],
+    "gates": [
+      {
+        "gate": "japanese_ui",
+        "status": "pass",
+        "checked_files": [
+          "viewer/armor-forge/index.html",
+          "viewer/armor-forge/forge.js",
+          "viewer/quest-iw-demo/index.html",
+          "viewer/quest-iw-demo/quest-demo.js"
+        ],
+        "files_with_japanese_copy": [
+          "viewer/armor-forge/index.html",
+          "viewer/armor-forge/forge.js",
+          "viewer/quest-iw-demo/index.html",
+          "viewer/quest-iw-demo/quest-demo.js"
+        ],
+        "warnings": []
+      },
+      {
+        "gate": "quest_deposition_visuals",
+        "status": "pass",
+        "checked_files": [
+          "viewer/quest-iw-demo/quest-demo.js",
+          "docs/quest-deposition-visual-direction-2026-05-04.md"
+        ],
+        "missing_evidence_terms": [],
+        "warnings": []
+      },
+      {
+        "gate": "model_fit_micro_adjustment_artifacts",
+        "status": "pass",
+        "expected_part_count": 18,
+        "reported_part_count": 18,
+        "complete_part_count": 18,
+        "artifact_hint": "Save tools/validate_exhibition_release_package.py --report-json as qa/model_fit_micro_adjustments.json.",
+        "warnings": []
+      },
+      {
+        "gate": "tri_view_fidelity_hold_documentation",
+        "status": "pass",
+        "checked_docs": [
+          "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+          "docs/modeler-triview-30variant-audit-table-2026-05-03.md"
+        ],
+        "missing_evidence_terms": [],
+        "warnings": []
+      },
+      {
+        "gate": "p1_limb_order_acceptance_baseline",
+        "status": "pass",
+        "checked_docs": [
+          "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+          "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json"
+        ],
+        "missing_baseline_terms": [],
+        "warnings": []
+      },
+      {
+        "gate": "local_required_optional_enhancement_separation",
+        "status": "pass",
+        "required_lane": "external_pc_local",
+        "required_operator_labels": [
+          "local-pass",
+          "local-fail"
+        ],
+        "optional_operator_labels": {
+          "gcp_service": [
+            "service-pass",
+            "service-fail",
+            "not-included"
+          ],
+          "playcanvas": [
+            "playcanvas-pass",
+            "playcanvas-fail",
+            "not-included"
+          ],
+          "mocopi": [
+            "mocopi-GO",
+            "DEMO-ONLY",
+            "NO-GO",
+            "not-included"
+          ]
+        },
+        "checked_docs": [
+          "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+          "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+          "docs/exhibition-pc-runbook-2026-05-04.md",
+          "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+          "docs/web-service-phase0-task-breakdown-2026-05-02.md",
+          "docs/quest-mocopi-exhibition-spike-2026-05-04.md"
+        ],
+        "missing_evidence_terms": [],
+        "missing_script_terms": [],
+        "warnings": []
+      }
+    ]
+  },
+  "experience_warning_count": 0,
+  "p1_acceptance": {
+    "contract_version": "exhibition-p1-limb-acceptance-summary.v1",
+    "manifest": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+    "validator": "tools/validate_modeler_variant_order_manifest.py",
+    "package_gate_status": "warn_now_block_p1",
+    "acceptance_complete": false,
+    "runtime_activation_allowed": false,
+    "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+    "validator_ok": true,
+    "validator_status": "warn",
+    "asset_count": 24,
+    "accepted_asset_count": 0,
+    "blocked_asset_count": 24,
+    "catalog_gap_count": 24,
+    "delivery_gap_count": 24,
+    "line_system_reports": {
+      "line_rescue_knight": {
+        "ordered_count": 8,
+        "accepted_count": 0,
+        "blocked_count": 8,
+        "package_gate_status": "warn_now_block_p1",
+        "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+        "limb_families": [
+          "forearm",
+          "hand",
+          "thigh",
+          "upperarm"
+        ]
+      },
+      "line_royal_insect": {
+        "ordered_count": 8,
+        "accepted_count": 0,
+        "blocked_count": 8,
+        "package_gate_status": "warn_now_block_p1",
+        "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+        "limb_families": [
+          "forearm",
+          "hand",
+          "thigh",
+          "upperarm"
+        ]
+      },
+      "line_final_oath": {
+        "ordered_count": 8,
+        "accepted_count": 0,
+        "blocked_count": 8,
+        "package_gate_status": "warn_now_block_p1",
+        "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+        "limb_families": [
+          "forearm",
+          "hand",
+          "thigh",
+          "upperarm"
+        ]
+      }
+    },
+    "reasons": [],
+    "warnings": [
+      "P1 limb acceptance incomplete: package_gate_status=warn_now_block_p1; release remains runnable but P1 limb variants are not accepted for activation.",
+      "P1 limb manifest validator: catalog: 24 ordered variant(s) not yet declared",
+      "P1 limb manifest validator: delivery: 24 ordered variant(s) not yet delivered"
+    ]
+  },
+  "p1_acceptance_warning_count": 3,
+  "tracked_candidate_count": 390,
+  "expected_variant_glbs": 54,
+  "expected_topping_glbs": 32
+}

@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "chest",
+  "topping_slot": "chest_core",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      0.07018
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.24,
+    "y": 0.26,
+    "z": 0.055
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "chest",
+    "topping_slot": "chest_core",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "chest_core",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "spine_chest",
+      "parent_surface": "front_center",
+      "placement": "sternum center mass"
+    },
+    "max_bbox_m": {
+      "x": 0.24,
+      "y": 0.26,
+      "z": 0.055
+    },
+    "material_zone": "core_panel",
+    "variant_examples": [
+      "round reactor core",
+      "hex chest gem",
+      "layered command plate"
+    ],
+    "conflicts_with": [],
+    "parent_module": "chest"
+  },
+  "bbox_m": {
+    "x": 0.14880000054836273,
+    "y": 0.0340999998152256,
+    "z": 0.16120000183582306
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_accent"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

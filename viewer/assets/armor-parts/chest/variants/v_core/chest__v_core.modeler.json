@@ -1,0 +1,66 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "chest",
+  "part_id": "viewer.mesh.chest.v1",
+  "category": "torso",
+  "bbox_m": {
+    "x": 0.5889999866485596,
+    "y": 0.4599999934434891,
+    "z": 0.1607472002506256,
+    "size": [
+      0.5889999866485596,
+      0.4599999934434891,
+      0.1607472002506256
+    ],
+    "dimensions": [
+      0.5889999866485596,
+      0.4599999934434891,
+      0.1607472002506256
+    ]
+  },
+  "triangle_count": 352,
+  "material_zones": [
+    "accent",
+    "base_surface",
+    "emissive"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.03,
+      0.1
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine",
+      "hips"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 352,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "chest:v_core",
+  "is_variant": true,
+  "parent_module": "chest",
+  "target_envelope_m": {
+    "x": 0.6392,
+    "y": 0.4992,
+    "z": 0.1632
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "back",
+  "part_id": "viewer.mesh.back.v1",
+  "category": "dorsal",
+  "bbox_m": {
+    "x": 0.5375999808311462,
+    "y": 0.5099999904632568,
+    "z": 0.13536997884511948,
+    "size": [
+      0.5375999808311462,
+      0.5099999904632568,
+      0.13536997884511948
+    ],
+    "dimensions": [
+      0.5375999808311462,
+      0.5099999904632568,
+      0.13536997884511948
+    ]
+  },
+  "triangle_count": 392,
+  "material_zones": [
+    "accent",
+    "base_surface"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "upperChest",
+    "offset_m": [
+      0,
+      0.01,
+      -0.1
+    ],
+    "rotation_deg": [
+      0,
+      180,
+      0
+    ],
+    "fallback_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 392,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "back:scapula_shell",
+  "is_variant": true,
+  "parent_module": "back",
+  "target_envelope_m": {
+    "x": 0.5984,
+    "y": 0.5148,
+    "z": 0.136
+  }
+}

@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.chest.v1",
   "category": "torso",
   "bbox_m": {
-    "x": 0.6144000291824341,
-    "y": 0.5049999952316284,
-    "z": 0.1640281230211258,
+    "x": 0.6232252717018127,
+    "y": 0.5024999976158142,
+    "z": 0.14239779114723206,
     "size": [
-      0.6144000291824341,
-      0.5049999952316284,
-      0.1640281230211258
+      0.6232252717018127,
+      0.5024999976158142,
+      0.14239779114723206
     ],
     "dimensions": [
-      0.6144000291824341,
-      0.5049999952316284,
-      0.1640281230211258
+      0.6232252717018127,
+      0.5024999976158142,
+      0.14239779114723206
     ]
   },
-  "triangle_count": 520,
+  "triangle_count": 1196,
   "material_zones": [
     "accent",
     "base_surface",
@@ -47,7 +47,7 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "pass",
+    "bbox_within_target_envelope": "warn",
     "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
     "mirror_pair_dimension_delta_below_3_percent": "skip",
@@ -55,39 +55,6 @@
   },
   "clearance_m": 0.024,
   "shell_thickness_target_m": 0.045,
-  "body_follow_profile": {
-    "mode": "ribcage_wrap_with_side_returns",
-    "depth_axis": "z",
-    "anchor_bones": [
-      "upperChest",
-      "chest",
-      "spine"
-    ],
-    "follow_panels": [
-      "chest_pectoral_shell",
-      "chest_abdomen_wrap",
-      "chest_left_rib_follow",
-      "chest_right_rib_follow"
-    ],
-    "target_contact": "front shell and side ribs keep visible clearance from the body proxy"
-  },
-  "fit_alignment_notes": [
-    "Pectoral shell is widened and raised to track the upperChest volume.",
-    "Side rib followers reduce the flat tile read without expanding the global bbox.",
-    "Lower abdomen wrap is dropped to meet the waist module cleanly."
-  ],
-  "silhouette_review_notes": [
-    "Single body_wrap_arc (chord 0.62, arc 80\u00b0) gives true ribcage curvature.",
-    "Sagitta + bulge reach z ~ 0.16m, matching authoring target envelope.",
-    "Central V hosts the cyan power-line emissive groove."
-  ],
-  "triangles": 520,
-  "target_envelope_m": {
-    "x": 0.6392,
-    "y": 0.4992,
-    "z": 0.1632
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
   "variant_key": "chest:base",
   "part_family": "silver_hero",
   "base_motif_link": {
@@ -142,5 +109,71 @@
       "parent_module": "chest"
     }
   ],
-  "attachment_offset_target_m": 0.08
+  "attachment_offset_target_m": 0.08,
+  "body_follow_profile": {
+    "mode": "ribcage_wrap_with_side_returns",
+    "depth_axis": "z",
+    "anchor_bones": [
+      "upperChest",
+      "chest",
+      "spine"
+    ],
+    "follow_panels": [
+      "chest_pectoral_shell",
+      "chest_abdomen_wrap",
+      "chest_left_rib_follow",
+      "chest_right_rib_follow",
+      "chest_side_seam_left",
+      "chest_side_seam_right"
+    ],
+    "target_contact": "front shell and side ribs keep visible clearance from the body proxy"
+  },
+  "fit_alignment_notes": [
+    "Pectoral shell is widened and raised to track the upperChest volume.",
+    "Side rib followers and seam lips reduce the flat tile read without expanding the global bbox.",
+    "Lower abdomen wrap is dropped to meet the waist module cleanly."
+  ],
+  "suit_silhouette_profile": {
+    "read": "continuous_front_torso_wrap",
+    "primary_lines": [
+      "clavicle shelf",
+      "sternum V",
+      "side seam returns"
+    ],
+    "negative_space_policy": "lower abdomen narrows before belt so the suit does not read as a box cuirass"
+  },
+  "silhouette_review_notes": [
+    "Single body_wrap_arc (chord 0.62, arc 80°) gives true ribcage curvature.",
+    "Sagitta + bulge reach z ~ 0.16m, matching authoring target envelope.",
+    "Central V hosts the cyan power-line emissive groove."
+  ],
+  "visual_density_profile": {
+    "issue": "torso needed hero suit density without becoming layered plate armor",
+    "hero_density_panels": [
+      "chest_central_v",
+      "chest_clavicle_trim",
+      "chest_side_seam_left",
+      "chest_side_seam_right"
+    ],
+    "profile_cues": [
+      "continuous side seam",
+      "cyan sternum groove",
+      "narrow abdomen-to-belt tuck"
+    ]
+  },
+  "triangles": 1196,
+  "target_envelope_m": {
+    "x": 0.6392,
+    "y": 0.4992,
+    "z": 0.1632
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Continue chest and side-seam color grammar into the ribcage wrap."
+  }
 }

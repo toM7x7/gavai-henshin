@@ -1,0 +1,3548 @@
+{
+  "contract_version": "release-stage-manifest.v5",
+  "read_only": true,
+  "repo_root": "C:/dev/codex/gavai-henshin",
+  "source": {
+    "tool": "tools/list_release_stage_candidates.py",
+    "contract_version": "release-stage-candidates.v5.summary",
+    "summary": true,
+    "sample_limit": 20,
+    "git_status": {
+      "include_ignored": true,
+      "command": [
+        "git",
+        "-C",
+        "C:/dev/codex/gavai-henshin",
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+        "--ignored"
+      ]
+    }
+  },
+  "counts": {
+    "total": 26625,
+    "by_category": {
+      "release-critical": 132,
+      "operator-docs": 29,
+      "armor-assets": 422,
+      "qa-evidence": 1,
+      "local-qa-artifact": 14,
+      "reference-docs": 45,
+      "reference-artifact": 35,
+      "user-feedback-media": 41,
+      "local-workspace": 2,
+      "generated-artifact": 25904,
+      "ambiguous": 0
+    },
+    "by_status": {
+      " M": 114,
+      "??": 608,
+      "!!": 25903
+    },
+    "tracked_artifact_candidates": 1
+  },
+  "categories": {
+    "release-critical": {
+      "count": 132,
+      "samples": [
+        {
+          "category": "release-critical",
+          "path": ".env.example",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": ".gitignore",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "README.md",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "examples/suitspec.sample.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "package.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "pyproject.toml",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/armor_fit_contract.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/dashboard_server.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/forge.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/new_route_api.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/part_generation.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/runtime_package.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "src/henshin/validators.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_armor_part_specs.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_dashboard_server.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_new_route_api.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_quest_recall_render_contract.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_runtime_package.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_smoke_web_glb_load.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        },
+        {
+          "category": "release-critical",
+          "path": "tests/test_validate_armor_part.py",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "runtime, tool, schema, example, or test needed before push",
+          "recommended_action": "stage-candidate",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 112,
+      "recommended_action": "review and stage in the runtime/release-critical commit",
+      "stage_policy": "stage-candidate"
+    },
+    "operator-docs": {
+      "count": 29,
+      "samples": [
+        {
+          "category": "operator-docs",
+          "path": "docs/current-web-quest-check-guide.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-github-cleanup-plan-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-pc-transfer-readiness-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/modeler-deliveries/p1-limb-order-packet-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/modeler-fit-micro-adjustments-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/p1-limb-variant-order-acceptance-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/quest-armor-stand-interaction-plan-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/quest-centerline-telemetry-qa-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/quest-deposition-visual-direction-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/quest-foundation-to-platform-roadmap-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        },
+        {
+          "category": "operator-docs",
+          "path": "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "operator/release handoff documentation",
+          "recommended_action": "stage-in-docs-commit",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 9,
+      "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+      "stage_policy": "stage-candidate"
+    },
+    "armor-assets": {
+      "count": 422,
+      "samples": [
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/_masters/full_suit_3q.png",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/_masters/full_suit_back.png",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/_masters/full_suit_front.png",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/_masters/full_suit_overlay.png",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/_masters/full_suit_side.png",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/back/back.glb",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/back/back.modeler.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/back/preview/back.mesh.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/back/source/back.blend",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/chest/chest.glb",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/chest/chest.modeler.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/chest/preview/chest.mesh.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/chest/source/chest.blend",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/helmet/helmet.glb",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/helmet/helmet.modeler.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/helmet/preview/helmet.mesh.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/helmet/source/helmet.blend",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/left_boot/left_boot.glb",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/left_boot/left_boot.modeler.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        },
+        {
+          "category": "armor-assets",
+          "path": "viewer/assets/armor-parts/left_boot/preview/left_boot.mesh.json",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "armor catalog or GLB/modeler/preview/source asset",
+          "recommended_action": "stage-in-asset-commit",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 402,
+      "recommended_action": "stage catalog-referenced armor assets in a dedicated asset commit",
+      "stage_policy": "stage-candidate"
+    },
+    "qa-evidence": {
+      "count": 1,
+      "samples": [
+        {
+          "category": "qa-evidence",
+          "path": "qa/shareable-qa-evidence-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "shareable QA evidence manifest; stage only if recommended by the shareable QA manifest",
+          "recommended_action": "manual-evidence-review",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 1,
+      "suppressed": 0,
+      "recommended_action": "stage only shareable QA evidence manifests recommended by the privacy/shareable validator",
+      "stage_policy": "manual-evidence-review"
+    },
+    "local-qa-artifact": {
+      "count": 14,
+      "samples": [
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/armor-forge-exhibition-mode-browser-check.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/exhibition-service-gate-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/exhibition_release_package_latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/exhibition_smoke_check_3601_adb_latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/gcp-phase0-service-contract-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/model-quality-acceptance-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/release-stage-manifest-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/release-stage-validation-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/replay-record-3601.demo.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/replay/3601.replay-record.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/replay/replay-qa-3601.summary.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/runtime-package-3601.snapshot.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/service-deployment-contract-local-latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-qa-artifact",
+          "path": "qa/smoke_web_glb_load_latest.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 14,
+      "suppressed": 0,
+      "recommended_action": "do not stage raw or privacy-unvalidated QA evidence; promote through the shareable QA manifest if needed",
+      "stage_policy": "do-not-stage"
+    },
+    "reference-docs": {
+      "count": 45,
+      "samples": [
+        {
+          "category": "reference-docs",
+          "path": "docs/base-suit-overlay-contract.md",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-wave1pp-practical-handoff.md",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/armor-build-wave2-results.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/armor-part-variant-taxonomy.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/armor-variant-integration-roadmap.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/current-progress-next-schedule-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/current-system-progress-2026-05-02.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/hero-suit-reference-analysis-2026-04-30.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-30variant-triview-review-worklist-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-asset-intake-contract-2026-05-02.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-blender-wave2-operation-guide.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-blender-wave2-smoke-evidence.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-creative-variant-brief-wave2.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-delivery-coordinate-review-2026-05-03.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-delivery-package-index-latest.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-designer-autonomy-wave2.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-fidelity-gate-status-2026-05-02.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-fidelity-hold-tracking-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-first-three-lines-order-2026-05-02.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-docs",
+          "path": "docs/modeler-fit-and-triview-next-audit-2026-05-04.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "non-operator reference/planning documentation",
+          "recommended_action": "manual-doc-review",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 25,
+      "recommended_action": "stage only docs promoted by the release owner; not required for clone runtime",
+      "stage_policy": "manual-doc-review"
+    },
+    "reference-artifact": {
+      "count": 35,
+      "samples": [
+        {
+          "category": "reference-artifact",
+          "path": "docs/_smoke_renders/chest_back_3q.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/_smoke_renders/chest_back_front.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/_smoke_renders/chest_back_side.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/_smoke_renders/helmet_sleek_front.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/_smoke_renders/helmet_sleek_side.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-surface-fit-concept.svg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/README.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/concept-catalog.json",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-01-concepts-01-03.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-02-concepts-04-06.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-03-concepts-07-09.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-04-concepts-10-12.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-05-concepts-13-15.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1.zip",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/00_README.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/01_定義書.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/02_仕様書.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/03_進捗差分とロードマップ.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/04_AI実行指示書.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        },
+        {
+          "category": "reference-artifact",
+          "path": "examples/henshin_docs_bundle_v0_1/Henshin_Project_Doc_Bundle_v0_1.md",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+          "recommended_action": "manual-reference-review",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 15,
+      "recommended_action": "stage only curated reference artifacts; keep screenshots/bundles out by default",
+      "stage_policy": "manual-reference-review"
+    },
+    "user-feedback-media": {
+      "count": 41,
+      "samples": [
+        {
+          "category": "user-feedback-media",
+          "path": "examples/1f7b1732-5e7e-45f6-bc9c-7f7f3bebfd3a.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/226a844c-3daa-4710-8b2b-73abfeb40d99.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/268647b4-8ca6-4ae4-9d22-98f996cee47d.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/2936d74a-a906-40e1-b608-b77da69d5789.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/3b7df9e5-be98-442e-a8fe-d543cccc1a5b.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/505a2d47-412b-48b0-a5b9-6c5728814fd0.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/613c7deb-e12f-41b4-841b-ebfa5c5f6577.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/631bc359-024a-493b-b8c0-311980118501.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/6e1eac43-f4e5-4d02-a1ca-85ce6bfcb118.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/80a9f086-8850-452f-b837-74d8df9ce6b5.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/9f139d51-49c0-4ab1-8f6d-b137449502e4.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/a4b66a44-db2f-4a9b-a23e-1f0ff728322d.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/db3b4e95-b54d-4558-96fd-0d1e9205eec2.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/e945d204-7154-4977-bb0a-324fafe87e3c.jpg",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/message (1).txt",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/スクリーンショット 2026-04-29 045752.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/スクリーンショット 2026-04-29 045828.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/スクリーンショット 2026-04-29 045837.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/スクリーンショット 2026-04-29 065057.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "user-feedback-media",
+          "path": "examples/スクリーンショット 2026-04-29 082112.png",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "user-provided or screenshot media under examples; do not stage by default",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 21,
+      "recommended_action": "do not stage user photos/screenshots by default",
+      "stage_policy": "do-not-stage"
+    },
+    "local-workspace": {
+      "count": 2,
+      "samples": [
+        {
+          "category": "local-workspace",
+          "path": ".claude/worktrees/jovial-cohen-4bf60f/",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local agent/modeling workspace; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "local-workspace",
+          "path": "blender/review_master.blend",
+          "status": "??",
+          "tracked": false,
+          "ignored": false,
+          "reason": "local agent/modeling workspace; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 2,
+      "suppressed": 0,
+      "recommended_action": "do not stage local agent/modeling workspace files",
+      "stage_policy": "do-not-stage"
+    },
+    "generated-artifact": {
+      "count": 25904,
+      "samples": [
+        {
+          "category": "generated-artifact",
+          "path": "tests/.tmp/quest-api-live.err.log",
+          "status": " M",
+          "tracked": true,
+          "ignored": false,
+          "reason": "local browser/smoke/QA output path",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".env",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/console-2026-04-28T11-51-49-689Z.log",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/console-2026-05-03T11-58-48-988Z.log",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/console-2026-05-03T12-18-43-188Z.log",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-04-28T11-51-50-792Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-04-28T11-52-26-884Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-04-28T11-52-57-734Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-57-31-767Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-57-57-764Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-57-57-834Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-58-10-551Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-58-49-817Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T11-59-22-350Z.png",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T12-03-11-253Z.png",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T12-18-44-014Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-cli/page-2026-05-03T12-19-24-156Z.png",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-mcp/console-2026-05-03T21-23-12-384Z.log",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-mcp/page-2026-05-03T21-07-47-423Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        },
+        {
+          "category": "generated-artifact",
+          "path": ".playwright-mcp/page-2026-05-03T21-16-55-141Z.yml",
+          "status": "!!",
+          "tracked": false,
+          "ignored": true,
+          "reason": "ignored by git status; keep out of normal release staging",
+          "recommended_action": "do-not-stage",
+          "old_path": ""
+        }
+      ],
+      "sample_count": 20,
+      "suppressed": 25884,
+      "recommended_action": "do not stage for the normal GitHub release",
+      "stage_policy": "do-not-stage"
+    },
+    "ambiguous": {
+      "count": 0,
+      "samples": [],
+      "sample_count": 0,
+      "suppressed": 0,
+      "recommended_action": "resolve manually before push; stage only with an explicit release-owner reason",
+      "stage_policy": "manual-review"
+    }
+  },
+  "stage_decision": {
+    "stage_candidates": {
+      "description": "Normal release stage candidates. Review by group, then stage manually.",
+      "categories": [
+        "release-critical",
+        "operator-docs",
+        "armor-assets"
+      ],
+      "count": 583,
+      "by_category": {
+        "release-critical": {
+          "count": 132,
+          "sample_count": 20,
+          "suppressed": 112,
+          "stage_policy": "stage-candidate",
+          "recommended_action": "review and stage in the runtime/release-critical commit",
+          "samples": [
+            {
+              "category": "release-critical",
+              "path": ".env.example",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": ".gitignore",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "README.md",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "examples/suitspec.sample.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "package.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "pyproject.toml",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/armor_fit_contract.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/dashboard_server.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/forge.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/new_route_api.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/part_generation.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/runtime_package.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "src/henshin/validators.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_armor_part_specs.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_dashboard_server.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_new_route_api.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_quest_recall_render_contract.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_runtime_package.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_smoke_web_glb_load.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            },
+            {
+              "category": "release-critical",
+              "path": "tests/test_validate_armor_part.py",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "runtime, tool, schema, example, or test needed before push",
+              "recommended_action": "stage-candidate",
+              "old_path": ""
+            }
+          ]
+        },
+        "operator-docs": {
+          "count": 29,
+          "sample_count": 20,
+          "suppressed": 9,
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage required runbook, checklist, and handoff docs after runtime/assets",
+          "samples": [
+            {
+              "category": "operator-docs",
+              "path": "docs/current-web-quest-check-guide.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-day-one-page-checklist-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-github-cleanup-plan-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-pc-release-package-manifest-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-pc-transfer-readiness-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-service-mocopi-roadmap-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/exhibition-ui-redesign-backlog-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/modeler-deliveries/p1-limb-order-packet-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/modeler-exhibition-readiness-risks-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/modeler-fit-micro-adjustments-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/modeler-triview-30variant-audit-table-2026-05-03.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/p1-limb-variant-order-acceptance-2026-05-03.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/p1-limb-variant-order-acceptance-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/quest-armor-stand-interaction-plan-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/quest-centerline-telemetry-qa-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/quest-deposition-visual-direction-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/quest-foundation-to-platform-roadmap-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            },
+            {
+              "category": "operator-docs",
+              "path": "docs/quest-mocopi-exhibition-spike-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "operator/release handoff documentation",
+              "recommended_action": "stage-in-docs-commit",
+              "old_path": ""
+            }
+          ]
+        },
+        "armor-assets": {
+          "count": 422,
+          "sample_count": 20,
+          "suppressed": 402,
+          "stage_policy": "stage-candidate",
+          "recommended_action": "stage catalog-referenced armor assets in a dedicated asset commit",
+          "samples": [
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/_masters/full_suit_3q.png",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/_masters/full_suit_back.png",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/_masters/full_suit_front.png",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/_masters/full_suit_overlay.png",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/_masters/full_suit_side.png",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/back/back.glb",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/back/back.modeler.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/back/preview/back.mesh.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/back/source/back.blend",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/chest/chest.glb",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/chest/chest.modeler.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/chest/preview/chest.mesh.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/chest/source/chest.blend",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/helmet/helmet.glb",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/helmet/helmet.modeler.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/helmet/preview/helmet.mesh.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/helmet/source/helmet.blend",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/left_boot/left_boot.glb",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/left_boot/left_boot.modeler.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            },
+            {
+              "category": "armor-assets",
+              "path": "viewer/assets/armor-parts/left_boot/preview/left_boot.mesh.json",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "armor catalog or GLB/modeler/preview/source asset",
+              "recommended_action": "stage-in-asset-commit",
+              "old_path": ""
+            }
+          ]
+        }
+      }
+    },
+    "manual_review": {
+      "description": "Not automatic stage inputs. Promote individual paths only by explicit release-owner decision.",
+      "categories": [
+        "qa-evidence",
+        "reference-docs",
+        "reference-artifact",
+        "ambiguous"
+      ],
+      "count": 81,
+      "by_category": {
+        "qa-evidence": {
+          "count": 1,
+          "sample_count": 1,
+          "suppressed": 0,
+          "stage_policy": "manual-evidence-review",
+          "recommended_action": "stage only shareable QA evidence manifests recommended by the privacy/shareable validator",
+          "samples": [
+            {
+              "category": "qa-evidence",
+              "path": "qa/shareable-qa-evidence-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "shareable QA evidence manifest; stage only if recommended by the shareable QA manifest",
+              "recommended_action": "manual-evidence-review",
+              "old_path": ""
+            }
+          ]
+        },
+        "reference-docs": {
+          "count": 45,
+          "sample_count": 20,
+          "suppressed": 25,
+          "stage_policy": "manual-doc-review",
+          "recommended_action": "stage only docs promoted by the release owner; not required for clone runtime",
+          "samples": [
+            {
+              "category": "reference-docs",
+              "path": "docs/base-suit-overlay-contract.md",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-wave1pp-practical-handoff.md",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/armor-build-wave2-results.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/armor-part-variant-taxonomy.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/armor-variant-integration-roadmap.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/current-progress-next-schedule-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/current-system-progress-2026-05-02.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/hero-suit-reference-analysis-2026-04-30.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-30variant-triview-review-worklist-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-asset-intake-contract-2026-05-02.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-blender-wave2-operation-guide.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-blender-wave2-smoke-evidence.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-creative-variant-brief-wave2.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-delivery-coordinate-review-2026-05-03.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-delivery-package-index-latest.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-designer-autonomy-wave2.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-fidelity-gate-status-2026-05-02.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-fidelity-hold-tracking-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-first-three-lines-order-2026-05-02.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-docs",
+              "path": "docs/modeler-fit-and-triview-next-audit-2026-05-04.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "non-operator reference/planning documentation",
+              "recommended_action": "manual-doc-review",
+              "old_path": ""
+            }
+          ]
+        },
+        "reference-artifact": {
+          "count": 35,
+          "sample_count": 20,
+          "suppressed": 15,
+          "stage_policy": "manual-reference-review",
+          "recommended_action": "stage only curated reference artifacts; keep screenshots/bundles out by default",
+          "samples": [
+            {
+              "category": "reference-artifact",
+              "path": "docs/_smoke_renders/chest_back_3q.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/_smoke_renders/chest_back_front.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/_smoke_renders/chest_back_side.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/_smoke_renders/helmet_sleek_front.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/_smoke_renders/helmet_sleek_side.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-surface-fit-concept.svg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/README.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/concept-catalog.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-01-concepts-01-03.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-02-concepts-04-06.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-03-concepts-07-09.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-04-concepts-10-12.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "docs/assets/hero-suit-triview-2026-05-02/sheet-05-concepts-13-15.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1.zip",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/00_README.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/01_定義書.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/02_仕様書.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/03_進捗差分とロードマップ.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/04_AI実行指示書.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            },
+            {
+              "category": "reference-artifact",
+              "path": "examples/henshin_docs_bundle_v0_1/Henshin_Project_Doc_Bundle_v0_1.md",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "reference visual/doc bundle artifact; stage only by explicit release-owner choice",
+              "recommended_action": "manual-reference-review",
+              "old_path": ""
+            }
+          ]
+        },
+        "ambiguous": {
+          "count": 0,
+          "sample_count": 0,
+          "suppressed": 0,
+          "stage_policy": "manual-review",
+          "recommended_action": "resolve manually before push; stage only with an explicit release-owner reason",
+          "samples": []
+        }
+      }
+    },
+    "do_not_stage": {
+      "description": "Local, generated, privacy-unvalidated, or workspace-only files that must stay out of normal GitHub staging.",
+      "categories": [
+        "local-qa-artifact",
+        "user-feedback-media",
+        "local-workspace",
+        "generated-artifact"
+      ],
+      "count": 25961,
+      "by_category": {
+        "local-qa-artifact": {
+          "count": 14,
+          "sample_count": 14,
+          "suppressed": 0,
+          "stage_policy": "do-not-stage",
+          "recommended_action": "do not stage raw or privacy-unvalidated QA evidence; promote through the shareable QA manifest if needed",
+          "samples": [
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/armor-forge-exhibition-mode-browser-check.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/exhibition-service-gate-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/exhibition_release_package_latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/exhibition_smoke_check_3601_adb_latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/gcp-phase0-service-contract-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/model-quality-acceptance-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/release-stage-manifest-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/release-stage-validation-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/replay-record-3601.demo.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/replay/3601.replay-record.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/replay/replay-qa-3601.summary.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/runtime-package-3601.snapshot.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/service-deployment-contract-local-latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-qa-artifact",
+              "path": "qa/smoke_web_glb_load_latest.json",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local/raw or privacy-unvalidated QA JSON evidence; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            }
+          ]
+        },
+        "user-feedback-media": {
+          "count": 41,
+          "sample_count": 20,
+          "suppressed": 21,
+          "stage_policy": "do-not-stage",
+          "recommended_action": "do not stage user photos/screenshots by default",
+          "samples": [
+            {
+              "category": "user-feedback-media",
+              "path": "examples/1f7b1732-5e7e-45f6-bc9c-7f7f3bebfd3a.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/226a844c-3daa-4710-8b2b-73abfeb40d99.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/268647b4-8ca6-4ae4-9d22-98f996cee47d.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/2936d74a-a906-40e1-b608-b77da69d5789.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/3b7df9e5-be98-442e-a8fe-d543cccc1a5b.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/505a2d47-412b-48b0-a5b9-6c5728814fd0.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/613c7deb-e12f-41b4-841b-ebfa5c5f6577.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/631bc359-024a-493b-b8c0-311980118501.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/6e1eac43-f4e5-4d02-a1ca-85ce6bfcb118.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/80a9f086-8850-452f-b837-74d8df9ce6b5.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/9f139d51-49c0-4ab1-8f6d-b137449502e4.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/a4b66a44-db2f-4a9b-a23e-1f0ff728322d.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/db3b4e95-b54d-4558-96fd-0d1e9205eec2.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/e945d204-7154-4977-bb0a-324fafe87e3c.jpg",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/message (1).txt",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/スクリーンショット 2026-04-29 045752.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/スクリーンショット 2026-04-29 045828.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/スクリーンショット 2026-04-29 045837.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/スクリーンショット 2026-04-29 065057.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "user-feedback-media",
+              "path": "examples/スクリーンショット 2026-04-29 082112.png",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "user-provided or screenshot media under examples; do not stage by default",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            }
+          ]
+        },
+        "local-workspace": {
+          "count": 2,
+          "sample_count": 2,
+          "suppressed": 0,
+          "stage_policy": "do-not-stage",
+          "recommended_action": "do not stage local agent/modeling workspace files",
+          "samples": [
+            {
+              "category": "local-workspace",
+              "path": ".claude/worktrees/jovial-cohen-4bf60f/",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local agent/modeling workspace; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "local-workspace",
+              "path": "blender/review_master.blend",
+              "status": "??",
+              "tracked": false,
+              "ignored": false,
+              "reason": "local agent/modeling workspace; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            }
+          ]
+        },
+        "generated-artifact": {
+          "count": 25904,
+          "sample_count": 20,
+          "suppressed": 25884,
+          "stage_policy": "do-not-stage",
+          "recommended_action": "do not stage for the normal GitHub release",
+          "samples": [
+            {
+              "category": "generated-artifact",
+              "path": "tests/.tmp/quest-api-live.err.log",
+              "status": " M",
+              "tracked": true,
+              "ignored": false,
+              "reason": "local browser/smoke/QA output path",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".env",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/console-2026-04-28T11-51-49-689Z.log",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/console-2026-05-03T11-58-48-988Z.log",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/console-2026-05-03T12-18-43-188Z.log",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-04-28T11-51-50-792Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-04-28T11-52-26-884Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-04-28T11-52-57-734Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-57-31-767Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-57-57-764Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-57-57-834Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-58-10-551Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-58-49-817Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T11-59-22-350Z.png",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T12-03-11-253Z.png",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T12-18-44-014Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-cli/page-2026-05-03T12-19-24-156Z.png",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-mcp/console-2026-05-03T21-23-12-384Z.log",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-mcp/page-2026-05-03T21-07-47-423Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            },
+            {
+              "category": "generated-artifact",
+              "path": ".playwright-mcp/page-2026-05-03T21-16-55-141Z.yml",
+              "status": "!!",
+              "tracked": false,
+              "ignored": true,
+              "reason": "ignored by git status; keep out of normal release staging",
+              "recommended_action": "do-not-stage",
+              "old_path": ""
+            }
+          ]
+        }
+      }
+    }
+  },
+  "push_readiness": {
+    "ready": false,
+    "blockers": [
+      {
+        "code": "tracked-generated-artifacts-present",
+        "severity": "blocker",
+        "category": "generated-artifact",
+        "count": 1,
+        "message": "Tracked generated artifacts can still be staged despite ignore rules.",
+        "recommended_action": "leave them unstaged or handle with a separately reviewed cleanup plan"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "generated-artifacts-present",
+        "severity": "warn",
+        "category": "generated-artifact",
+        "count": 25904,
+        "message": "Generated artifacts are present in the worktree report and should stay out of release staging.",
+        "recommended_action": "do not stage for the normal GitHub release"
+      },
+      {
+        "code": "qa-evidence-needs-explicit-approval",
+        "severity": "warn",
+        "category": "qa-evidence",
+        "count": 1,
+        "message": "QA evidence is not runtime input; stage only shareable QA manifests recommended by the privacy/shareable validator.",
+        "recommended_action": "stage only shareable QA evidence manifests recommended by the privacy/shareable validator"
+      },
+      {
+        "code": "local-qa-artifacts-present",
+        "severity": "warn",
+        "category": "local-qa-artifact",
+        "count": 14,
+        "message": "Raw or privacy-unvalidated QA JSON evidence is present and should stay out of normal release staging.",
+        "recommended_action": "do not stage raw or privacy-unvalidated QA evidence; promote through the shareable QA manifest if needed"
+      },
+      {
+        "code": "reference-docs-present",
+        "severity": "warn",
+        "category": "reference-docs",
+        "count": 45,
+        "message": "Reference/planning docs are present; stage only those promoted into the handoff.",
+        "recommended_action": "stage only docs promoted by the release owner; not required for clone runtime"
+      },
+      {
+        "code": "reference-artifacts-present",
+        "severity": "warn",
+        "category": "reference-artifact",
+        "count": 35,
+        "message": "Reference artifacts are present and are not required clone/runtime inputs.",
+        "recommended_action": "stage only curated reference artifacts; keep screenshots/bundles out by default"
+      },
+      {
+        "code": "user-feedback-media-present",
+        "severity": "warn",
+        "category": "user-feedback-media",
+        "count": 41,
+        "message": "User feedback media/screenshots are present and should stay out of normal release staging.",
+        "recommended_action": "do not stage user photos/screenshots by default"
+      },
+      {
+        "code": "local-workspace-present",
+        "severity": "warn",
+        "category": "local-workspace",
+        "count": 2,
+        "message": "Local workspace files are present and should stay out of release staging.",
+        "recommended_action": "do not stage local agent/modeling workspace files"
+      },
+      {
+        "code": "summary-suppressed-paths",
+        "severity": "warn",
+        "category": "",
+        "count": 26468,
+        "message": "The manifest contains samples only; inspect --report-json or the candidate tool when exact paths are needed.",
+        "recommended_action": "rerun with a larger --sample-limit or inspect tools/list_release_stage_candidates.py --json",
+        "suppressed_by_category": {
+          "release-critical": 112,
+          "operator-docs": 9,
+          "armor-assets": 402,
+          "reference-docs": 25,
+          "reference-artifact": 15,
+          "user-feedback-media": 21,
+          "generated-artifact": 25884
+        }
+      }
+    ]
+  },
+  "recommended_stage_units": [
+    "release-hygiene",
+    "runtime-contract",
+    "armor-assets",
+    "operator-docs",
+    "qa-evidence-only-if-approved",
+    "reference-docs-only-if-promoted"
+  ],
+  "do_not_stage": [
+    ".playwright-cli/**",
+    ".playwright-mcp/**",
+    "tests/.tmp/**",
+    "output/playwright/**",
+    "qa/logs/**",
+    "qa/*.json except qa/shareable-qa-evidence-latest.json and shareable manifest recommended paths",
+    "qa/replay/*.json",
+    "qa/replay/*.replay-record.json",
+    "qa/*runtime-package*.snapshot.json",
+    "qa/*replay-record*.demo.json",
+    "qa/exhibition_release_package_latest.json",
+    "qa/model-quality-acceptance-latest.json",
+    "qa/release-stage-validation-latest.json",
+    "qa/replay/*.summary.json",
+    "examples/*.jpg",
+    "examples/*.png",
+    "examples/henshin_docs*_bundle*/**",
+    "docs/_smoke_renders/**",
+    ".claude/**",
+    "blender/**",
+    "transient server logs",
+    "local QA screenshots"
+  ],
+  "notes": [
+    "This manifest is read-only and never stages, commits, or pushes files.",
+    "stage_decision is the mechanical pre-push map: stage_candidates may be reviewed for staging, manual_review needs explicit promotion, and do_not_stage must stay unstaged.",
+    "Use blockers as pre-push decisions, not as automatic cleanup commands.",
+    "Use samples for review triage; rerun with a higher --sample-limit for more paths."
+  ],
+  "output_path": "C:/dev/codex/gavai-henshin/qa/release-stage-manifest-latest.json"
+}

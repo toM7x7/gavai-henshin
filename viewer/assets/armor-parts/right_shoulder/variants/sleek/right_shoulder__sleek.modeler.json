@@ -1,0 +1,47 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "right_shoulder",
+  "variant_key": "right_shoulder:sleek",
+  "variant_asset_key": "sleek",
+  "base_motif_link": {
+    "name": "shoulder_arc",
+    "surface_zone": "accent"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shoulder",
+    "variant_key": "right_shoulder:sleek"
+  },
+  "catalog_variant": {
+    "variant_key": "right_shoulder:sleek",
+    "display_name": "Sleek line variant",
+    "base_motif_link": {
+      "name": "shoulder_arc",
+      "surface_zone": "accent"
+    },
+    "detail_features": [
+      "base suit motif line continues into armor surface",
+      "thin trim lines and small emitters increase density without bulky silhouette"
+    ],
+    "recommended_topping_slots": [
+      "shoulder_fin",
+      "edge_trim"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.17716799676418304,
+    "y": 0.16820000112056732,
+    "z": 0.12163200229406357
+  },
+  "triangle_count": 248,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent",
+    "armor_emissive"
+  ],
+  "source_canonical_module": "right_shoulder",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

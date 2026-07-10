@@ -20,6 +20,7 @@ from .gemini_image import (
     generate_image as generate_gemini_image,
     resolve_api_key as resolve_gemini_api_key,
 )
+from ._env import load_dotenv as _load_dotenv
 
 
 ProgressCallback = Callable[[dict[str, Any]], None]
@@ -49,21 +50,6 @@ class GeneratedImage:
     total_ms: int = 0
     logs: list[str] = field(default_factory=list)
     raw_response: dict[str, Any] | None = None
-
-
-def _load_dotenv(path: str | Path = ".env") -> dict[str, str]:
-    p = Path(path)
-    if not p.exists() or not p.is_file():
-        return {}
-
-    values: dict[str, str] = {}
-    for raw in p.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'").strip('"')
-    return values
 
 
 def resolve_provider_api_key(provider: str, explicit: str | None = None, dotenv_path: str | Path = ".env") -> str:

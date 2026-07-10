@@ -1,0 +1,149 @@
+{
+  "contract_version": "exhibition-pc-transfer-checklist.v1",
+  "ok": true,
+  "status": "pass",
+  "generated_at": "2026-05-05T14:18:10+00:00",
+  "repo_root": "C:/dev/codex/gavai-henshin",
+  "ready_count": 9,
+  "missing_count": 0,
+  "ready_items": [
+    {
+      "key": "readme",
+      "label": "README",
+      "category": "operator_docs",
+      "description": "Top-level project orientation for a fresh exhibition PC checkout or zip.",
+      "required": true,
+      "status": "ready",
+      "path": "README.md",
+      "present": true
+    },
+    {
+      "key": "demo_env_template",
+      "label": "Demo env template",
+      "category": "env",
+      "description": "Local exhibition fallback env template with no real secrets.",
+      "required": true,
+      "status": "ready",
+      "path": ".env.demo.example",
+      "present": true
+    },
+    {
+      "key": "local_stack_helper",
+      "label": "Local stack helper",
+      "category": "script",
+      "description": "One-command API/Web Forge/Quest Vite/ADB reverse/smoke setup helper.",
+      "required": true,
+      "status": "ready",
+      "path": "tools/start_exhibition_local_stack.ps1",
+      "present": true
+    },
+    {
+      "key": "adb_reverse_helper",
+      "label": "Quest ADB reverse helper",
+      "category": "script",
+      "description": "USB Quest reverse-port helper for 5173 and 8010.",
+      "required": true,
+      "status": "ready",
+      "path": "tools/start_quest_adb_reverse.ps1",
+      "present": true
+    },
+    {
+      "key": "runbook",
+      "label": "Exhibition PC runbook",
+      "category": "operator_docs",
+      "description": "Operator runbook for local stack, Quest USB, smoke checks, and recovery.",
+      "required": true,
+      "status": "ready",
+      "path": "docs/exhibition-pc-runbook-2026-05-04.md",
+      "present": true
+    },
+    {
+      "key": "service_contract_tool",
+      "label": "Service deployment contract tool",
+      "category": "qa_tool",
+      "description": "Local/external URL and env contract validator.",
+      "required": true,
+      "status": "ready",
+      "path": "tools/validate_service_deployment_contract.py",
+      "present": true
+    },
+    {
+      "key": "release_package_validator",
+      "label": "Release package validator",
+      "category": "qa_tool",
+      "description": "Release package completeness validator.",
+      "required": true,
+      "status": "ready",
+      "path": "tools/validate_exhibition_release_package.py",
+      "present": true
+    },
+    {
+      "key": "qa_release_manifest",
+      "label": "Release package QA manifest",
+      "category": "qa_artifact",
+      "description": "Latest release package QA JSON to carry beside the transferred package.",
+      "required": true,
+      "status": "ready",
+      "path": "qa/exhibition_release_package_latest.json",
+      "present": true
+    },
+    {
+      "key": "replay_qa_artifact",
+      "label": "Replay QA artifact",
+      "category": "qa_artifact",
+      "description": "Replay proof or prepared ReplayRecord QA artifact for Web/Replay validation.",
+      "required": true,
+      "status": "ready",
+      "patterns": [
+        "qa/replay/*.replay-record.json",
+        "qa/replay/*.summary.json",
+        "qa/replay-record-*.demo.json"
+      ],
+      "matched_count": 3,
+      "matched_paths": [
+        "qa/replay-record-3601.demo.json",
+        "qa/replay/3601.replay-record.json",
+        "qa/replay/replay-qa-3601.summary.json"
+      ],
+      "present": true
+    }
+  ],
+  "missing_items": [],
+  "manual_steps": [
+    "Copy or unzip the package to C:\\henshin-demo\\gavai-henshin on the exhibition PC.",
+    "Run npm install and python -m pip install -e \".[dev]\" on the exhibition PC.",
+    "Copy .env.demo.example to .env only on the exhibition PC, then fill venue-local placeholders if needed.",
+    "Run the release package validator and keep its JSON under qa/ before doors open.",
+    "Start the local stack helper with a fresh Web Forge code for the public visitor path.",
+    "Record local-pass/local-fail before evaluating service, PlayCanvas, or mocopi optional lanes."
+  ],
+  "urls": {
+    "web_forge": "http://127.0.0.1:8010/viewer/armor-forge/",
+    "api_health": "http://127.0.0.1:8010/api/health",
+    "quest_usb_template": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&code=<CODE>",
+    "quest_manual_entry_usb_adb": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1",
+    "quest_lan_fallback_template": "http://<PC_LAN_IP>:5173/viewer/quest-iw-demo/?newRoute=1&code=<CODE>"
+  },
+  "usb_quest_steps": [
+    "Connect the Quest to the exhibition PC with a USB-C data cable.",
+    "Put on the headset and accept the USB debugging prompt.",
+    "Run adb devices -l and confirm the state is device, not unauthorized or offline.",
+    "Run .\\tools\\start_quest_adb_reverse.ps1 -RecallCode <CODE> -CacheBust -LaunchBrowser.",
+    "Confirm adb reverse --list includes tcp:5173 tcp:5173 and tcp:8010 tcp:8010.",
+    "Open the Quest USB URL with the same fresh code that Web Forge generated."
+  ],
+  "do_not_copy_items": [
+    ".env files containing real provider secrets or venue-only credentials.",
+    "node_modules/, .venv/, venv/, __pycache__/, or .pytest_cache/ dependency caches.",
+    "Machine-local absolute paths such as C:\\dev\\codex\\gavai-henshin.",
+    "Old Quest Browser tabs, browser cache, or stale recall codes as QA evidence.",
+    "Downloaded cloud credential files or service account keys."
+  ],
+  "recommended_commands": [
+    "python tools/export_exhibition_pc_transfer_checklist.py --report-json",
+    "python tools/validate_exhibition_release_package.py --report-json > qa\\exhibition_release_package_external_pc.json",
+    ".\\tools\\start_exhibition_local_stack.ps1 -RecallCode <CODE> -LaunchQuest -RequireAdbReverseSmoke"
+  ],
+  "out": "C:/dev/codex/gavai-henshin/qa/exhibition-pc-transfer-checklist-latest.json",
+  "format": "json"
+}

@@ -27,6 +27,7 @@ from .user_profile_compiler import compile_operator_profile
 from .uv_guides import ensure_uv_guide_image, serialize_uv_guide
 from .uv_contracts import resolve_uv_contract, serialize_uv_contract
 from .validators import load_json
+from ._env import load_dotenv as _load_dotenv
 
 
 ProgressCallback = Callable[[dict[str, Any]], None]
@@ -75,6 +76,11 @@ class GenerationRequest:
     model_id: str | None = None
     api_key: str | None = None
     generation_brief: str | None = None
+    texture_prompt_contract: str | None = None
+    variant_prompt_summary: list[str] | None = None
+    selected_variant_keys: dict[str, str] | None = None
+    variant_selection: dict[str, Any] | None = None
+    surface_design_hints: dict[str, Any] | None = None
     emotion_profile: dict[str, Any] | None = None
     operator_profile_override: dict[str, Any] | None = None
     timeout: int = 90
@@ -94,19 +100,151 @@ class GenerationRequest:
     retry_count: int = 1
 
 
-def _load_dotenv(path: str | Path = ".env") -> dict[str, str]:
-    p = Path(path)
-    if not p.exists() or not p.is_file():
-        return {}
+def _generation_brief_with_surface_context(request: GenerationRequest) -> str | None:
+    """Fold Web Forge variant/topping context into the provider prompt brief."""
 
-    values: dict[str, str] = {}
-    for raw in p.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    chunks: list[str] = []
+    if request.generation_brief and request.generation_brief.strip():
+        chunks.append(request.generation_brief.strip())
+
+    prompt_summary = [
+        str(item).strip()
+        for item in (request.variant_prompt_summary or [])
+        if str(item).strip()
+    ]
+    if prompt_summary:
+        chunks.append(
+            "Variant/topping continuity for the whole hero suit: "
+            + " / ".join(prompt_summary[:8])
+        )
+
+    selected_variant_keys = request.selected_variant_keys if isinstance(request.selected_variant_keys, dict) else {}
+    if selected_variant_keys:
+        variant_text = " / ".join(
+            f"{module}={variant}"
+            for module, variant in sorted(selected_variant_keys.items())[:12]
+            if str(module).strip() and str(variant).strip()
+        )
+        if variant_text:
+            provider = ""
+            if isinstance(request.variant_selection, dict):
+                provider = str(request.variant_selection.get("llm_provider") or "").strip()
+            chunks.append(
+                "Selected armor variants for this texture pass"
+                + (f" ({provider})" if provider else "")
+                + f": {variant_text}"
+            )
+
+    hints = request.surface_design_hints if isinstance(request.surface_design_hints, dict) else {}
+    modules = hints.get("selected_modules") if isinstance(hints.get("selected_modules"), dict) else {}
+    module_lines: list[str] = []
+    for module in modules.values():
+        if not isinstance(module, dict):
             continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("'").strip('"')
-    return values
+        name = str(module.get("module") or "").strip()
+        variant_key = str(module.get("selected_variant_key") or "").strip()
+        motif = module.get("base_motif_link") if isinstance(module.get("base_motif_link"), dict) else {}
+        motif_name = str(motif.get("name") or "").strip()
+        slots = module.get("topping_slot_names") if isinstance(module.get("topping_slot_names"), list) else []
+        slot_text = ", ".join(str(slot).strip() for slot in slots[:3] if str(slot).strip())
+        if name:
+            module_lines.append(
+                f"{name}={variant_key or 'selected_variant'}"
+                + (f" motif={motif_name}" if motif_name else "")
+                + (f" slots={slot_text}" if slot_text else "")
+            )
+    if module_lines:
+        chunks.append(
+            "Surface design hints: treat the VRM base suit and overlay armor as one coherent tokusatsu design; "
+            "avoid a plain single-color undersuit. "
+            + " / ".join(module_lines[:12])
+        )
+
+    if request.texture_prompt_contract:
+        chunks.append(f"Texture prompt contract: {request.texture_prompt_contract}.")
+
+    if not chunks:
+        return None
+    return "\n".join(chunks)
+
+
+def _per_part_texture_contracts_from_hints(
+    hints: dict[str, Any] | None,
+    requested: list[str],
+) -> dict[str, dict[str, Any]]:
+    if not isinstance(hints, dict):
+        return {}
+    source = hints.get("per_part_texture_contracts")
+    if not isinstance(source, dict):
+        return {}
+    contracts: dict[str, dict[str, Any]] = {}
+    for part in requested:
+        record = source.get(part)
+        if isinstance(record, dict):
+            contracts[part] = record
+    return contracts
+
+
+def _per_part_texture_prompt_text(part: str, contract: dict[str, Any] | None) -> str:
+    if not isinstance(contract, dict):
+        return ""
+    lines = ["Web Forge per-part texture contract:"]
+    selected_variant = str(contract.get("selected_variant_key") or "").strip()
+    if selected_variant:
+        lines.append(f"- Selected variant: {selected_variant}.")
+    texture_prompt = str(contract.get("texture_prompt") or "").strip()
+    if texture_prompt:
+        lines.append(f"- Per-part prompt: {texture_prompt}")
+    shape_role = contract.get("shape_role") if isinstance(contract.get("shape_role"), dict) else {}
+    if shape_role:
+        role = str(shape_role.get("surface_role") or "").strip()
+        contact = str(shape_role.get("target_contact") or "").strip()
+        if role or contact:
+            lines.append(f"- Shape role: {role or part}; contact intent: {contact or 'body-following overlay'}.")
+    uv_availability = contract.get("uv_availability") if isinstance(contract.get("uv_availability"), dict) else {}
+    uv_policy = contract.get("uv_policy") if isinstance(contract.get("uv_policy"), dict) else {}
+    if uv_availability or uv_policy:
+        asset_case = str(uv_availability.get("asset_surface_case") or "").strip()
+        asset_format = str(uv_availability.get("asset_format") or "").strip()
+        if asset_case or asset_format:
+            lines.append(f"- Asset surface case: {asset_case or 'unknown'} ({asset_format or 'unknown'}).")
+        lines.append(
+            "- UV policy: "
+            f"uv0_status={uv_availability.get('uv0_status', 'unknown')}; "
+            f"mesh_uv_allowed={uv_availability.get('can_generate_mesh_uv_texture', 'unknown')}; "
+            f"primary_zone={uv_policy.get('primary_motif_zone', '')}; "
+            f"low_frequency_zone={uv_policy.get('low_frequency_zone', '')}; "
+            f"panel_flow={uv_policy.get('panel_flow_direction', '')}."
+        )
+    material_hints = contract.get("material_hints") if isinstance(contract.get("material_hints"), dict) else {}
+    if material_hints:
+        zones = material_hints.get("material_zones") if isinstance(material_hints.get("material_zones"), list) else []
+        zone_text = ", ".join(str(zone) for zone in zones if str(zone).strip())
+        default_language = str(material_hints.get("default_material_language") or "").strip()
+        if zone_text or default_language:
+            lines.append(f"- Material hints: zones={zone_text or 'declared slots'}; {default_language}")
+    lines.append("Use this record as the local authority for this part, above the whole-suit summary.")
+    return "\n".join(lines)
+
+
+def _apply_per_part_texture_contracts(
+    prompts: dict[str, str],
+    contracts: dict[str, dict[str, Any]],
+) -> dict[str, str]:
+    if not contracts:
+        return prompts
+    updated = dict(prompts)
+    for part, prompt in prompts.items():
+        context = _per_part_texture_prompt_text(part, contracts.get(part))
+        if context:
+            # The suitspec prompt builder may have already embedded the same
+            # per-part contract; never stack a second copy on top of it.
+            if "Web Forge per-part texture contract:" in prompt:
+                continue
+            if "Per-part Web Forge texture target:" in prompt:
+                continue
+            updated[part] = f"{prompt}\n{context}"
+    return updated
 
 
 def _setting(*keys: str, default: str) -> str:
@@ -194,7 +332,23 @@ def _source_label(provider_profile: str, phase: str) -> str:
 
 
 def _can_write_final_texture(info: dict[str, Any]) -> bool:
-    return info.get("texture_generation_status") in {TEXTURE_STATUS_GENERATED, TEXTURE_STATUS_CACHE_REUSED}
+    return (
+        info.get("texture_generation_status") in {TEXTURE_STATUS_GENERATED, TEXTURE_STATUS_CACHE_REUSED}
+        and info.get("uv_contract_allows_final_texture", True) is not False
+    )
+
+
+def _per_part_contract_allows_final_texture(contract: dict[str, Any] | None, *, texture_mode: str) -> bool:
+    if not isinstance(contract, dict):
+        return True
+    mode = str(contract.get("texture_mode") or texture_mode or "").strip()
+    if mode != "mesh_uv":
+        return True
+    uv_availability = contract.get("uv_availability") if isinstance(contract.get("uv_availability"), dict) else {}
+    if uv_availability.get("can_generate_mesh_uv_texture") is False:
+        return False
+    uv0_status = str(uv_availability.get("uv0_status") or "").strip().lower()
+    return uv0_status not in {"fail", "failed", "missing", "not_applicable", "unavailable"}
 
 
 def _texture_generation_summary(generated: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -498,9 +652,10 @@ def run_generate_parts(
         raise ValueError("No enabled parts found in suitspec.")
     operator_context = compile_operator_profile(spec.get("operator_profile"), request.operator_profile_override)
     user_armor_profile = operator_context["user_armor_profile"]
+    generation_brief_for_prompt = _generation_brief_with_surface_context(request)
     emotion_context = compile_emotion_request(
         request.emotion_profile,
-        request.generation_brief,
+        generation_brief_for_prompt,
         user_armor_profile=user_armor_profile,
     )
     effective_provider_profile_name = normalize_provider_profile_name(request.provider_profile)
@@ -528,6 +683,11 @@ def run_generate_parts(
         style_variation=style_variation,
         user_armor_profile=user_armor_profile,
     )
+    per_part_texture_contracts = _per_part_texture_contracts_from_hints(
+        request.surface_design_hints,
+        requested,
+    )
+    prompts = _apply_per_part_texture_contracts(prompts, per_part_texture_contracts)
     concept_prompts: dict[str, str] = {}
     refine_prompts: dict[str, str] = {}
     if request.uv_refine and request.texture_mode == "mesh_uv":
@@ -539,6 +699,7 @@ def run_generate_parts(
             style_variation=style_variation,
             user_armor_profile=user_armor_profile,
         )
+        concept_prompts = _apply_per_part_texture_contracts(concept_prompts, per_part_texture_contracts)
         refine_prompts = {
             part: build_uv_refine_prompt(
                 part,
@@ -549,6 +710,7 @@ def run_generate_parts(
             )
             for part in requested
         }
+        refine_prompts = _apply_per_part_texture_contracts(refine_prompts, per_part_texture_contracts)
 
     if request.dry_run:
         payload: dict[str, Any] = {
@@ -568,6 +730,11 @@ def run_generate_parts(
             "style_variation": style_variation,
             "resolved_defaults": emotion_context["resolved_defaults"],
             "generation_brief_raw": request.generation_brief,
+            "generation_brief_surface_context": generation_brief_for_prompt,
+            "texture_prompt_contract": request.texture_prompt_contract,
+            "variant_prompt_summary": request.variant_prompt_summary or [],
+            "surface_design_hints": request.surface_design_hints or {},
+            "per_part_texture_contracts": per_part_texture_contracts,
             "generation_brief_compiled": effective_generation_brief,
             "prompts": prompts,
             "design_dna": design_dna,
@@ -649,6 +816,11 @@ def run_generate_parts(
             "uv_guide_path": guide_display_path,
             "uv_guide_hash": guide_info["guide_hash"] if guide_info else None,
             "mesh_asset_ref": resolve_mesh_asset_ref(part, spec.get("modules", {}).get(part)),
+            "per_part_texture_contract": per_part_texture_contracts.get(part),
+            "uv_contract_allows_final_texture": _per_part_contract_allows_final_texture(
+                per_part_texture_contracts.get(part),
+                texture_mode=request.texture_mode,
+            ),
         }
 
         def attach_texture_quality(info: dict[str, Any]) -> None:
@@ -1017,6 +1189,11 @@ def run_generate_parts(
         generation["tracking_source"] = request.tracking_source
         generation["last_generation_brief"] = effective_generation_brief or ""
         generation["last_generation_brief_raw"] = request.generation_brief or ""
+        generation["last_generation_brief_surface_context"] = generation_brief_for_prompt or ""
+        generation["last_texture_prompt_contract"] = request.texture_prompt_contract or ""
+        generation["last_variant_prompt_summary"] = request.variant_prompt_summary or []
+        generation["last_surface_design_hints"] = request.surface_design_hints or {}
+        generation["last_per_part_texture_contracts"] = per_part_texture_contracts
         generation["last_operator_profile_raw"] = operator_context["operator_profile_raw"] or {}
         generation["last_operator_profile_resolved"] = operator_context["operator_profile_resolved"] or {}
         generation["last_user_armor_profile"] = user_armor_profile or {}
@@ -1066,6 +1243,11 @@ def run_generate_parts(
         "style_variation": style_variation,
         "resolved_defaults": emotion_context["resolved_defaults"],
         "generation_brief_raw": request.generation_brief,
+        "generation_brief_surface_context": generation_brief_for_prompt,
+        "texture_prompt_contract": request.texture_prompt_contract,
+        "variant_prompt_summary": request.variant_prompt_summary or [],
+        "surface_design_hints": request.surface_design_hints or {},
+        "per_part_texture_contracts": per_part_texture_contracts,
         "generation_brief": effective_generation_brief,
         "texture_mode": request.texture_mode,
         "uv_refine": bool(request.uv_refine),

@@ -4,28 +4,28 @@
   "part_id": "viewer.mesh.right_forearm.v1",
   "category": "arm",
   "bbox_m": {
-    "x": 0.09995999932289124,
-    "y": 0.25700800120830536,
-    "z": 0.10198000445961952,
+    "x": 0.09475473314523697,
+    "y": 0.26604001224040985,
+    "z": 0.0998893454670906,
     "size": [
-      0.09995999932289124,
-      0.25700800120830536,
-      0.10198000445961952
+      0.09475473314523697,
+      0.26604001224040985,
+      0.0998893454670906
     ],
     "dimensions": [
-      0.09995999932289124,
-      0.25700800120830536,
-      0.10198000445961952
+      0.09475473314523697,
+      0.26604001224040985,
+      0.0998893454670906
     ]
   },
-  "triangle_count": 332,
+  "triangle_count": 596,
   "material_zones": [
     "accent",
     "base_surface",
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_forearm_v001",
+  "mirror_of": "left_forearm",
   "vrm_attachment": {
     "primary_bone": "rightLowerArm",
     "offset_m": [
@@ -52,19 +52,100 @@
     "mirror_pair_dimension_delta_below_3_percent": "pass",
     "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 332,
-  "target_envelope_m": {
-    "x": 0.102,
-    "y": 0.2788,
-    "z": 0.102
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.028,
   "variant_key": "right_forearm:base",
   "part_family": "silver_hero",
   "base_motif_link": {
     "name": "wrist_band",
     "surface_zone": "accent"
   },
-  "topping_slots": [],
-  "attachment_offset_target_m": 0.04
+  "topping_slots": [
+    {
+      "topping_slot": "forearm_cuff",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          -0.12,
+          0.04
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.13,
+        "y": 0.08,
+        "z": 0.045
+      },
+      "conflicts_with": [],
+      "parent_module": "right_forearm"
+    },
+    {
+      "topping_slot": "wrist_module",
+      "slot_transform": {
+        "anchor": [
+          -0.035,
+          -0.08,
+          0.055
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.08,
+        "y": 0.1,
+        "z": 0.055
+      },
+      "conflicts_with": [],
+      "parent_module": "right_forearm"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_forearm",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_forearm body-follow geometry and attachment intent across X."
+  ],
+  "suit_silhouette_profile": {
+    "derive_from": "left_forearm",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source fitted-shell silhouette and density notes"
+    ]
+  },
+  "silhouette_review_notes": [
+    "Right-side mirror of left_forearm; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_forearm",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
+  "triangles": 596,
+  "target_envelope_m": {
+    "x": 0.102,
+    "y": 0.2788,
+    "z": 0.102
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Arm texture should preserve bend clearance while carrying a clean outer stripe."
+  }
 }

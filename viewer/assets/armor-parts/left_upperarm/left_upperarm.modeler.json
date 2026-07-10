@@ -4,27 +4,27 @@
   "part_id": "viewer.mesh.left_upperarm.v1",
   "category": "arm",
   "bbox_m": {
-    "x": 0.10000000149011612,
+    "x": 0.09630399942398071,
     "y": 0.28300800919532776,
-    "z": 0.10999999940395355,
+    "z": 0.1037449762225151,
     "size": [
-      0.10000000149011612,
+      0.09630399942398071,
       0.28300800919532776,
-      0.10999999940395355
+      0.1037449762225151
     ],
     "dimensions": [
-      0.10000000149011612,
+      0.09630399942398071,
       0.28300800919532776,
-      0.10999999940395355
+      0.1037449762225151
     ]
   },
-  "triangle_count": 332,
+  "triangle_count": 604,
   "material_zones": [
     "accent",
     "base_surface"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "right_upperarm",
+  "mirror_of": null,
   "vrm_attachment": {
     "primary_bone": "leftUpperArm",
     "offset_m": [
@@ -45,25 +45,85 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "pass",
+    "bbox_within_target_envelope": "warn",
     "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "pass",
     "mirror_pair_dimension_delta_below_3_percent": "pass",
     "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 332,
-  "target_envelope_m": {
-    "x": 0.1088,
-    "y": 0.2924,
-    "z": 0.1088
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.028,
   "variant_key": "left_upperarm:base",
   "part_family": "silver_hero",
   "base_motif_link": {
     "name": "arm_stripe",
     "surface_zone": "accent"
   },
-  "topping_slots": [],
-  "attachment_offset_target_m": 0.04
+  "topping_slots": [
+    {
+      "topping_slot": "bicep_band",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.06,
+          0.045
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.13,
+        "y": 0.045,
+        "z": 0.035
+      },
+      "conflicts_with": [],
+      "parent_module": "left_upperarm"
+    },
+    {
+      "topping_slot": "outer_plate",
+      "slot_transform": {
+        "anchor": [
+          0.04,
+          0.0,
+          0.045
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.09,
+        "y": 0.12,
+        "z": 0.035
+      },
+      "conflicts_with": [],
+      "parent_module": "left_upperarm"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "silhouette_review_notes": [
+    "Two body_wrap_arc segments (top/bottom) with a deliberate gap preserve elbow bend.",
+    "arc_deg=180 wraps the outer half-circumference; rear stays open for animation.",
+    "Lips and side accent maintain the directional read at distance."
+  ],
+  "triangles": 604,
+  "target_envelope_m": {
+    "x": 0.1088,
+    "y": 0.2924,
+    "z": 0.1088
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Arm texture should preserve bend clearance while carrying a clean outer stripe."
+  }
 }

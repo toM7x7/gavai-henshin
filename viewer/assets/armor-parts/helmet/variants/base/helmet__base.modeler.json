@@ -1,0 +1,53 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "helmet",
+  "variant_key": "helmet:base",
+  "variant_asset_key": "base",
+  "base_motif_link": {
+    "name": "head_crest_line",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "helmet",
+    "variant_key": "helmet:base"
+  },
+  "catalog_variant": {
+    "variant_key": "helmet:base",
+    "display_name": "Base hero fit",
+    "base_motif_link": {
+      "name": "head_crest_line",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "separate brow ridge, cheek guards, and mouth guard keep the face readable from front view",
+      "short crest and segmented faceplate break the helmet into heroic facial armor zones"
+    ],
+    "recommended_topping_slots": [
+      "crest",
+      "visor_trim",
+      "face_plate",
+      "faceplate",
+      "mouth_guard",
+      "cheek_guard",
+      "brow_ridge"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.2741760015487671,
+    "y": 0.24289602041244507,
+    "z": 0.34960000216960907
+  },
+  "triangle_count": 392,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_emissive",
+    "armor_accent",
+    "armor_trim"
+  ],
+  "source_canonical_module": "helmet",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

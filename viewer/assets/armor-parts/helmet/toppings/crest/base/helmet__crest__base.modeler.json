@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "helmet",
+  "topping_slot": "crest",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.16,
+      0.0
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.08,
+    "y": 0.18,
+    "z": 0.16
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "helmet",
+    "topping_slot": "crest",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "crest",
+    "slot_kind": "topping",
+    "allowed_count": {
+      "min": 0,
+      "max": 2
+    },
+    "anchor_hint": {
+      "body_anchor": "head",
+      "parent_surface": "top_center",
+      "placement": "forehead to crown ridge"
+    },
+    "max_bbox_m": {
+      "x": 0.08,
+      "y": 0.18,
+      "z": 0.16
+    },
+    "material_zone": "accent_trim",
+    "variant_examples": [
+      "short mohawk crest",
+      "twin antenna crest",
+      "blade crown crest"
+    ],
+    "conflicts_with": [],
+    "parent_module": "helmet"
+  },
+  "bbox_m": {
+    "x": 0.024800000712275505,
+    "y": 0.0935686994343996,
+    "z": 0.05579999089241028
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

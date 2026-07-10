@@ -295,6 +295,81 @@ export const FIT_CONTACT_PAIRS = Object.freeze([
   ["right_shin", "right_boot"],
 ]);
 
+const LIMB_SLEEVE_SURFACE_POLICY = Object.freeze({
+  role: "limb_sleeve",
+  vrmOffsetClamp: Object.freeze({ y: [-0.03, 0.03], z: [-0.025, 0.025] }),
+  questOffsetClamp: Object.freeze({ y: [-0.03, 0.03], z: [-0.025, 0.025] }),
+  targetContact: "centered around the limb axis with only small authoring offsets",
+});
+
+const HAND_SURFACE_POLICY = Object.freeze({
+  role: "hand_shell",
+  vrmOffsetClamp: Object.freeze({ y: [-0.02, 0.02], z: [-0.02, 0.026] }),
+  questOffsetClamp: Object.freeze({ y: [-0.02, 0.02], z: [-0.026, 0.02] }),
+  targetContact: "back-of-hand shell sits close without drifting into a floating prop",
+});
+
+export const BODY_SURFACE_FIT_POLICIES = Object.freeze({
+  helmet: Object.freeze({
+    role: "head_shell",
+    vrmOffsetClamp: Object.freeze({ x: [-0.02, 0.02], y: [0.04, 0.13], z: [0.06, 0.14] }),
+    questOffsetClamp: Object.freeze({ x: [-0.02, 0.02], y: [0.04, 0.13], z: [-0.14, -0.06] }),
+    targetContact: "helmet encloses the head reference instead of floating in front of the face",
+  }),
+  chest: Object.freeze({
+    role: "front_ribcage_shell",
+    vrmOffsetClamp: Object.freeze({ x: [-0.015, 0.015], y: [-0.03, 0.04], z: [0.04, 0.105] }),
+    questOffsetClamp: Object.freeze({ x: [-0.015, 0.015], y: [-0.03, 0.04], z: [-0.105, -0.04] }),
+    targetContact: "front shell rides over the sternum while leaving the body centerline clear",
+  }),
+  back: Object.freeze({
+    role: "rear_ribcage_shell",
+    vrmOffsetClamp: Object.freeze({ x: [-0.015, 0.015], y: [-0.03, 0.04], z: [-0.105, -0.04] }),
+    questOffsetClamp: Object.freeze({ x: [-0.015, 0.015], y: [-0.03, 0.04], z: [0.04, 0.105] }),
+    targetContact: "rear shell rides over the spine without crossing into the chest shell",
+  }),
+  waist: Object.freeze({
+    role: "pelvis_belt_loop",
+    vrmOffsetClamp: Object.freeze({ x: [-0.012, 0.012], y: [-0.02, 0.024], z: [-0.006, 0.014] }),
+    questOffsetClamp: Object.freeze({ x: [-0.012, 0.012], y: [-0.02, 0.024], z: [-0.014, 0.006] }),
+    targetContact: "front, side, and rear plates read as one close loop around the pelvis",
+  }),
+  left_shoulder: Object.freeze({
+    role: "left_deltoid_cup",
+    vrmOffsetClamp: Object.freeze({ y: [-0.005, 0.045], z: [-0.03, 0.04] }),
+    questOffsetClamp: Object.freeze({ y: [-0.005, 0.045], z: [-0.04, 0.03] }),
+    targetContact: "shoulder cup sits on the deltoid and seams into chest/back",
+  }),
+  right_shoulder: Object.freeze({
+    role: "right_deltoid_cup",
+    vrmOffsetClamp: Object.freeze({ y: [-0.005, 0.045], z: [-0.03, 0.04] }),
+    questOffsetClamp: Object.freeze({ y: [-0.005, 0.045], z: [-0.04, 0.03] }),
+    targetContact: "shoulder cup sits on the deltoid and seams into chest/back",
+  }),
+  left_upperarm: LIMB_SLEEVE_SURFACE_POLICY,
+  right_upperarm: LIMB_SLEEVE_SURFACE_POLICY,
+  left_forearm: LIMB_SLEEVE_SURFACE_POLICY,
+  right_forearm: LIMB_SLEEVE_SURFACE_POLICY,
+  left_thigh: LIMB_SLEEVE_SURFACE_POLICY,
+  right_thigh: LIMB_SLEEVE_SURFACE_POLICY,
+  left_shin: LIMB_SLEEVE_SURFACE_POLICY,
+  right_shin: LIMB_SLEEVE_SURFACE_POLICY,
+  left_hand: HAND_SURFACE_POLICY,
+  right_hand: HAND_SURFACE_POLICY,
+  left_boot: Object.freeze({
+    role: "left_foot_boot_shell",
+    vrmOffsetClamp: Object.freeze({ y: [-0.015, 0.025], z: [-0.012, 0.018] }),
+    questOffsetClamp: Object.freeze({ y: [-0.015, 0.025], z: [-0.018, 0.012] }),
+    targetContact: "boot stays grounded on the foot instead of sliding forward",
+  }),
+  right_boot: Object.freeze({
+    role: "right_foot_boot_shell",
+    vrmOffsetClamp: Object.freeze({ y: [-0.015, 0.025], z: [-0.012, 0.018] }),
+    questOffsetClamp: Object.freeze({ y: [-0.015, 0.025], z: [-0.018, 0.012] }),
+    targetContact: "boot stays grounded on the foot instead of sliding forward",
+  }),
+});
+
 export const VRM_HUMANOID_BONES = Object.freeze([
   "hips",
   "spine",
@@ -321,6 +396,35 @@ export const VRM_HUMANOID_BONES = Object.freeze([
 function numberOr(value, fallback) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function clampOffsetAxis(value, clampRange) {
+  if (!Array.isArray(clampRange) || clampRange.length < 2) return value;
+  const min = numberOr(clampRange[0], value);
+  const max = numberOr(clampRange[1], value);
+  return clampNumber(value, Math.min(min, max), Math.max(min, max));
+}
+
+export function wearableSurfaceFitPolicyForPart(partName) {
+  const key = String(partName || "").trim();
+  return BODY_SURFACE_FIT_POLICIES[key] || null;
+}
+
+export function clampSurfaceOffsetForPart(partName, offset, space = "vrm") {
+  const vector = normalizeVec3(offset, [0, 0, 0]);
+  const policy = wearableSurfaceFitPolicyForPart(partName);
+  const policySpace = space === "quest" ? "questOffsetClamp" : "vrmOffsetClamp";
+  const clampSet = policy?.[policySpace] || null;
+  if (!clampSet) return vector;
+  return [
+    clampOffsetAxis(vector[0], clampSet.x),
+    clampOffsetAxis(vector[1], clampSet.y),
+    clampOffsetAxis(vector[2], clampSet.z),
+  ];
 }
 
 export function normalizeVec3(input, fallback) {

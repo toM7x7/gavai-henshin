@@ -32,12 +32,33 @@ RUNTIME_ARMOR_MODULES: tuple[str, ...] = (
 )
 
 
-def armor_glb_asset_ref(module: str, repo_root: str | Path = ".") -> str | None:
-    """Return the canonical GLB asset_ref for a delivered armor module."""
+def _variant_slug_for_module(module: str, variant_key: str | None) -> str | None:
+    key = str(variant_key or "").strip()
+    if not key:
+        return None
+    if ":" in key:
+        key_module, slug = key.split(":", 1)
+        if key_module != module:
+            return None
+    else:
+        slug = key
+    slug = slug.strip()
+    if not slug or any(ch for ch in slug if not (ch.isalnum() or ch in {"_", "-"})):
+        return None
+    return slug
+
+
+def armor_glb_asset_ref(module: str, repo_root: str | Path = ".", *, variant_key: str | None = None) -> str | None:
+    """Return the selected variant GLB asset_ref, falling back to canonical GLB."""
 
     name = str(module or "").strip()
     if not name:
         return None
+    slug = _variant_slug_for_module(name, variant_key)
+    if slug:
+        rel = f"viewer/assets/armor-parts/{name}/variants/{slug}/{name}__{slug}.glb"
+        if (Path(repo_root) / rel).is_file():
+            return rel
     rel = f"viewer/assets/armor-parts/{name}/{name}.glb"
     return rel if (Path(repo_root) / rel).is_file() else None
 
@@ -46,6 +67,7 @@ def create_draft_suitspec(
     suit_id: str | None = None,
     *,
     style_tags: list[str] | None = None,
+    variant_keys: dict[str, str] | None = None,
     oath: str = "INTEGRITY_FIRST",
     model_id: str = "gemini-3-pro-image-preview",
     repo_root: str | Path = ".",
@@ -58,7 +80,8 @@ def create_draft_suitspec(
 
     modules: dict[str, dict[str, Any]] = {}
     for module_name in RUNTIME_ARMOR_MODULES:
-        asset_ref = armor_glb_asset_ref(module_name, repo_root=repo_root) or (
+        variant_key = str((variant_keys or {}).get(module_name) or "").strip()
+        asset_ref = armor_glb_asset_ref(module_name, repo_root=repo_root, variant_key=variant_key) or (
             f"viewer/assets/meshes/{module_name}.mesh.json"
         )
         modules[module_name] = {"enabled": True, "asset_ref": asset_ref}
@@ -99,6 +122,11 @@ def create_draft_suitspec(
             "model_id": model_id,
             "prompt": "Industrial armored suit blueprint, strict panel lines, no character face.",
             "seed": 1001,
+            "selected_variant_keys": {
+                module: key
+                for module, key in (variant_keys or {}).items()
+                if module in modules and str(key).strip()
+            },
             "part_prompts": {},
         },
     }

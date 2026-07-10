@@ -1,0 +1,53 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "helmet",
+  "variant_key": "helmet:sleek",
+  "variant_asset_key": "sleek",
+  "base_motif_link": {
+    "name": "head_crest_line",
+    "surface_zone": "emissive"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "helmet",
+    "variant_key": "helmet:sleek"
+  },
+  "catalog_variant": {
+    "variant_key": "helmet:sleek",
+    "display_name": "Sleek line variant",
+    "base_motif_link": {
+      "name": "head_crest_line",
+      "surface_zone": "emissive"
+    },
+    "detail_features": [
+      "thin brow ridge and inset visor trim frame the eyes without widening the helmet",
+      "small cheek guard seams and mouth grille vents add face density without bulky silhouette"
+    ],
+    "recommended_topping_slots": [
+      "crest",
+      "visor_trim",
+      "face_plate",
+      "faceplate",
+      "mouth_guard",
+      "cheek_guard",
+      "brow_ridge"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.27988800406455994,
+    "y": 0.25399109721183777,
+    "z": 0.34960000216960907
+  },
+  "triangle_count": 1100,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_emissive",
+    "armor_accent",
+    "armor_trim"
+  ],
+  "source_canonical_module": "helmet",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

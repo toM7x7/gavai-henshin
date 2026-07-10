@@ -1,0 +1,46 @@
+{
+  "contract_version": "modeler-part-variant-sidecar.v1",
+  "asset_kind": "variant",
+  "module": "left_shoulder",
+  "variant_key": "left_shoulder:base",
+  "variant_asset_key": "base",
+  "base_motif_link": {
+    "name": "shoulder_arc",
+    "surface_zone": "accent"
+  },
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "left_shoulder",
+    "variant_key": "left_shoulder:base"
+  },
+  "catalog_variant": {
+    "variant_key": "left_shoulder:base",
+    "display_name": "Base hero fit",
+    "base_motif_link": {
+      "name": "shoulder_arc",
+      "surface_zone": "accent"
+    },
+    "detail_features": [
+      "base suit motif line continues into armor surface",
+      "visible panel breakups on front, side, and 3Q views"
+    ],
+    "recommended_topping_slots": [
+      "shoulder_fin",
+      "edge_trim"
+    ]
+  },
+  "bbox_m": {
+    "x": 0.17716799676418304,
+    "y": 0.16820000112056732,
+    "z": 0.11800000444054604
+  },
+  "triangle_count": 204,
+  "material_zones": [
+    "armor_base_surface",
+    "armor_accent"
+  ],
+  "source_canonical_module": "left_shoulder",
+  "preserves_canonical_part": true,
+  "coordinate_frame": "glTF Y-up export; authored x=lateral, y=vertical, z=outward"
+}

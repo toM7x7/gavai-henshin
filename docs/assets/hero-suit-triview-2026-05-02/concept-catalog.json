@@ -1,0 +1,148 @@
+{
+  "contract_version": "hero-suit-triview-reference.v1",
+  "date": "2026-05-02",
+  "image_root": "docs/assets/hero-suit-triview-2026-05-02",
+  "runtime_policy": {
+    "preserve_canonical_modules": true,
+    "preserve_variant_catalog_order": true,
+    "base_variant_stays_canonical": true,
+    "texture_provider_profile": "nano_banana",
+    "concept_phase_keys": "Use proposed_variant_key/proposed_topping_key for creative proposals.",
+    "intake_phase_keys": "Map approved proposals to existing variant_catalog keys before Web/Quest intake.",
+    "delivery_manifest": "examples/modeler_delivery_manifest.sample.json"
+  },
+  "sheets": [
+    {
+      "sheet_id": "sheet-01",
+      "file": "sheet-01-concepts-01-03.png",
+      "concept_ids": ["c01", "c02", "c03"]
+    },
+    {
+      "sheet_id": "sheet-02",
+      "file": "sheet-02-concepts-04-06.png",
+      "concept_ids": ["c04", "c05", "c06"]
+    },
+    {
+      "sheet_id": "sheet-03",
+      "file": "sheet-03-concepts-07-09.png",
+      "concept_ids": ["c07", "c08", "c09"]
+    },
+    {
+      "sheet_id": "sheet-04",
+      "file": "sheet-04-concepts-10-12.png",
+      "concept_ids": ["c10", "c11", "c12"]
+    },
+    {
+      "sheet_id": "sheet-05",
+      "file": "sheet-05-concepts-13-15.png",
+      "concept_ids": ["c13", "c14", "c15"]
+    }
+  ],
+  "concepts": [
+    {
+      "concept_id": "c01",
+      "name": "Royal Insect Guardian",
+      "motif": ["insect", "emerald", "agile", "compound visor"],
+      "primary_modules": ["helmet", "chest", "back", "left_shoulder", "right_shoulder"],
+      "notes": "Use compound-eye helmet, emerald V chest core, wing-like dorsal shell, and agile white base suit."
+    },
+    {
+      "concept_id": "c02",
+      "name": "Rescue Knight Sleek",
+      "motif": ["pearl white", "cobalt", "rescue", "sleek armor"],
+      "primary_modules": ["chest", "back", "left_shoulder", "right_shoulder", "left_boot", "right_boot"],
+      "notes": "Protective but not bulky. Curved chest plate, shoulder lips, compact spine, cyan visor."
+    },
+    {
+      "concept_id": "c03",
+      "name": "Memory Ninja Light",
+      "motif": ["charcoal", "gold seams", "low profile", "cloth-like dorsal"],
+      "primary_modules": ["helmet", "back", "left_forearm", "right_forearm", "left_shin", "right_shin"],
+      "notes": "Quiet sharp silhouette. Thin seams, low shoulders, integrated scarf-like back panel."
+    },
+    {
+      "concept_id": "c04",
+      "name": "Dragon Scale Rescuer",
+      "motif": ["dragon", "crimson", "gold", "scale shell"],
+      "primary_modules": ["helmet", "chest", "back", "left_shoulder", "right_shoulder", "left_shin", "right_shin"],
+      "notes": "Swept horn visor and scale-like armor should remain tokusatsu clean, not fantasy medieval."
+    },
+    {
+      "concept_id": "c05",
+      "name": "Cyber Oath Runner",
+      "motif": ["graphite", "magenta", "cyan", "circuit seams"],
+      "primary_modules": ["base_suit_surface", "helmet", "chest", "left_forearm", "right_forearm", "left_boot", "right_boot"],
+      "notes": "Use asymmetric details only where intentional. Keep left/right runtime pairing compatible."
+    },
+    {
+      "concept_id": "c06",
+      "name": "Orbital Citizen Guardian",
+      "motif": ["white silver", "orange", "orbital", "compact back unit"],
+      "primary_modules": ["helmet", "chest", "back", "waist"],
+      "notes": "Astronaut influence is allowed, but the visor and chest core must remain sharp hero language."
+    },
+    {
+      "concept_id": "c07",
+      "name": "Flame Oath Form",
+      "motif": ["red", "white", "amber", "flame V"],
+      "primary_modules": ["base_suit_surface", "chest", "back", "left_shoulder", "right_shoulder"],
+      "notes": "Mechanical flame V, orange spine vents, controlled shoulder flares."
+    },
+    {
+      "concept_id": "c08",
+      "name": "Water Stream Form",
+      "motif": ["teal", "pearl", "aqua", "flowing shell"],
+      "primary_modules": ["base_suit_surface", "chest", "back", "left_shin", "right_shin"],
+      "notes": "Smooth flow lines, back fin kept close to the body, narrow elegant silhouette."
+    },
+    {
+      "concept_id": "c09",
+      "name": "Lightning Vector Form",
+      "motif": ["yellow", "black", "electric blue", "zigzag geometry"],
+      "primary_modules": ["helmet", "chest", "left_shin", "right_shin", "left_boot", "right_boot"],
+      "notes": "Sharp zigzags must be organized panel language, not random crack noise."
+    },
+    {
+      "concept_id": "c10",
+      "name": "Beast Guardian",
+      "motif": ["violet", "white", "clean claw", "beast visor"],
+      "primary_modules": ["helmet", "chest", "left_forearm", "right_forearm", "left_boot", "right_boot"],
+      "notes": "Heroic beast form, not monster. Claw accents should be clean and wearable."
+    },
+    {
+      "concept_id": "c11",
+      "name": "Avian Flight Form",
+      "motif": ["sky white", "navy", "wing line", "flight"],
+      "primary_modules": ["helmet", "chest", "back", "left_shoulder", "right_shoulder"],
+      "notes": "Mechanical feather fins, close-to-body back plates, narrow waist."
+    },
+    {
+      "concept_id": "c12",
+      "name": "Ancient Relic Oath",
+      "motif": ["ivory", "obsidian", "turquoise inscriptions", "ceremonial trim"],
+      "primary_modules": ["base_suit_surface", "chest", "waist", "back"],
+      "notes": "Modern tokusatsu relic finish. Avoid stone-statue heaviness."
+    },
+    {
+      "concept_id": "c13",
+      "name": "Medical Rescue Hero",
+      "motif": ["white", "mint", "coral", "sensor visor"],
+      "primary_modules": ["helmet", "chest", "waist", "left_forearm", "right_forearm"],
+      "notes": "Public service clarity, high-visibility lines, abstract rescue cross core."
+    },
+    {
+      "concept_id": "c14",
+      "name": "Prototype Shadow Hero",
+      "motif": ["black", "deep blue", "amber one-eye", "repaired edges"],
+      "primary_modules": ["helmet", "chest", "back", "left_forearm", "right_forearm"],
+      "notes": "Prototype asymmetry can be explored, but record intentional asymmetry in sidecar."
+    },
+    {
+      "concept_id": "c15",
+      "name": "Final Oath Form",
+      "motif": ["pearl", "gold", "cyan", "crown visor", "dense glow"],
+      "primary_modules": ["helmet", "chest", "back", "waist", "left_shoulder", "right_shoulder", "left_boot", "right_boot"],
+      "notes": "Majestic final-form silhouette, expanded but still sleek, with organized full-body glow flow."
+    }
+  ]
+}

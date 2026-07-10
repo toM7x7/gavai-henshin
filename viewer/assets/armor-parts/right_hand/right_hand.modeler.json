@@ -26,7 +26,7 @@
     "trim"
   ],
   "texture_provider_profile": "nano_banana",
-  "mirror_of": "armor_left_hand_v001",
+  "mirror_of": "left_hand",
   "vrm_attachment": {
     "primary_bone": "rightHand",
     "offset_m": [
@@ -52,6 +52,87 @@
     "mirror_pair_dimension_delta_below_3_percent": "pass",
     "no_body_intersection_at_reference_pose": "pass"
   },
+  "clearance_m": 0.014,
+  "shell_thickness_target_m": 0.02,
+  "variant_key": "right_hand:base",
+  "part_family": "silver_hero",
+  "base_motif_link": {
+    "name": "knuckle_glow",
+    "surface_zone": "emissive"
+  },
+  "topping_slots": [
+    {
+      "topping_slot": "knuckle",
+      "slot_transform": {
+        "anchor": [
+          -0.018,
+          -0.01,
+          0.065
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.035,
+        "y": 0.025,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "right_hand"
+    },
+    {
+      "topping_slot": "palm_emitter",
+      "slot_transform": {
+        "anchor": [
+          0.0,
+          0.0,
+          -0.035
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ]
+      },
+      "max_bbox_m": {
+        "x": 0.07,
+        "y": 0.07,
+        "z": 0.025
+      },
+      "conflicts_with": [],
+      "parent_module": "right_hand"
+    }
+  ],
+  "attachment_offset_target_m": 0.04,
+  "body_follow_profile": {
+    "mode": "mirror_source_body_follow",
+    "derive_from": "left_hand",
+    "mirror_axis": "x"
+  },
+  "fit_alignment_notes": [
+    "Mirrors left_hand body-follow geometry and attachment intent across X."
+  ],
+  "suit_silhouette_profile": {
+    "derive_from": "left_hand",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source fitted-shell silhouette and density notes"
+    ]
+  },
+  "silhouette_review_notes": [
+    "Right-side mirror of left_hand; pipeline negates x to derive geometry.",
+    "No independent panel data; keeps mirror pair dimension delta within QA tolerance."
+  ],
+  "visual_density_profile": {
+    "derive_from": "left_hand",
+    "mirror_axis": "x",
+    "profile_cues": [
+      "mirrors source hero-density panels and silhouette cues"
+    ]
+  },
   "triangles": 296,
   "target_envelope_m": {
     "x": 0.1156,
@@ -59,12 +140,12 @@
     "z": 0.136
   },
   "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
-  "variant_key": "right_hand:base",
-  "part_family": "silver_hero",
-  "base_motif_link": {
-    "name": "knuckle_glow",
-    "surface_zone": "emissive"
-  },
-  "topping_slots": [],
-  "attachment_offset_target_m": 0.04
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Glove texture should keep palm/finger motion clear while emphasizing back-of-hand glow."
+  }
 }

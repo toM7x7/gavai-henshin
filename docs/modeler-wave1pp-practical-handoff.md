@@ -2,24 +2,36 @@
 
 Updated: 2026-04-30
 
-この資料は、Wave 1++ の取り込み後にモデラーさんへ渡す短い実務ハンドオフです。詳細な数値仕様は `docs/modeler-new-route-acceptance-spec.md`、テクスチャ契約は `docs/nanobanana-texture-prompt-contract.md` を正本にします。
+この資料は、現在のWebプレビュー、モデル生成、モデラー納品の橋渡しです。詳細な思想は [modeler-wave1pp-analog-suit-addendum.md](modeler-wave1pp-analog-suit-addendum.md) を正本とし、このファイルでは実務上の確認項目と納品物を整理します。
 
-## 現状
+## 現在の判断
 
-Wave 1++ はローカルrepoへ取り込み済みです。
+18部位のGLB、metadata、Webプレビュー読み込みは成立しています。ただし、これだけではヒーロースーツとしては不十分です。現状の主な問題は、外装パーツが「体に沿って装着されている」よりも「周囲に置かれたパーツ」に見える点です。
+
+今回、Web側と生成側では次を修正しました。
+
+- 保存用SuitSpecは既存スキーマを守り、modeler sidecarはWeb preview recordへだけ展開。
+- Web Forgeで `attachment_offset_target_m` を配置ベクトルとして誤用しないように分離。
+- `vrm_attachment.offset_m` / `attachment_offset_m` を実配置に使い、部位ごとに装着深度を制限。
+- ブーツは床接地を優先し、足から離れた床オブジェクトに見えにくくした。
+- 胸、腰、背面、ブーツに部位別のsurface-worn clampを追加。
+- 背面ユニットは実測bbox zを `0.110m` から `0.135m` へ回復。
+
+## 検証状態
+
+2026-04-30の確認結果:
 
 - canonical armor module: 18/18
 - Web preview smoke: `previewGlbParts=18`, `previewFallbackParts=0`
-- intake: pass
-- bbox: failなし
-- mirror pair: pass
-- P0 metadata: 8 moduleで確認対象
+- armor intake: failなし、warnあり
+- pytest: `72 passed`
+- `back` bbox: target z `0.136m` / actual z `0.135m`
 
-残っている `warn` は、数値不合格ではなく「Webでヒーロースーツとして見えるか」を閉じるための視覚レビュー枠です。特に背面、すね、ブーツ、テクスチャ統一が次の山です。
+残warnは、胸、腰、上腕、すねが10% pass枠から少し外れているものです。15% fail枠は超えていません。次Waveでは、これを単純な数値合わせではなく、見た目の装着感改善として処理します。
 
-## P0 Metadata
+## モデラーさんに依頼したいP0確認
 
-P0 metadata対象は次の8 moduleです。
+P0部位:
 
 - `helmet`
 - `chest`
@@ -30,79 +42,62 @@ P0 metadata対象は次の8 moduleです。
 - `left_shin`
 - `right_shin`
 
-各P0 moduleは、少なくとも次の情報をsidecar相当メモまたは納品メモで持たせてください。
+各P0で確認したいこと:
 
-| key | 目的 |
-|---|---|
-| `module` | canonical module名を固定する |
-| `part_family` | UI/prompt上の大分類 |
-| `variant_key` | 同じfamily内の置き換えvariant名 |
-| `base_motif_link` | 基礎スーツ側のどの線、色面、発光ラインへ接続するか |
-| `topping_slots` | 後乗せ装飾の取り付けslot |
-| `conflicts_with` | 同時選択で干渉するvariant/topping |
-| `vrm_attachment` | 骨anchor、offset、rotation |
-| `texture_zone_notes` | Nanobananaへ渡すmaterial zone意図 |
+- front / side / back / 3Qで、人体に沿う内側面と外側面が読める。
+- 基礎スーツの線と外装の線が接続している。
+- 可動部に意図した逃げがある。偶然の隙間はNG。
+- `topping_slots` が親部位に自然に後乗せできる位置にある。
+- `clearance_m` と `shell_thickness_target_m` が外装として成立する。
 
-最小JSONイメージ:
+## 部位別の実務メモ
 
-```json
-{
-  "module": "chest",
-  "part_family": "chest",
-  "variant_key": "chest:base",
-  "base_motif_link": {"name": "chest_v_stripe", "surface_zone": "emissive"},
-  "topping_slots": [
-    {
-      "topping_slot": "chest_core",
-      "slot_transform": {"anchor": [0.0, 0.04, 0.07], "rotation_deg": [0, 0, 0]},
-      "max_bbox_m": {"x": 0.14, "y": 0.12, "z": 0.035},
-      "conflicts_with": ["rib_trim"],
-      "parent_module": "chest"
-    }
-  ],
-  "vrm_attachment": {
-    "primary_bone": "upperChest",
-    "offset_m": [0.0, 0.012, 0.064],
-    "rotation_deg": [0, 0, 0]
-  },
-  "texture_zone_notes": {
-    "base_surface": "main hard armor paint",
-    "accent": "edge color continued from base suit",
-    "emissive": "V-line glow continuation",
-    "trim": "rib and bevel separators"
-  }
-}
-```
+### Back
 
-## 次に依頼したい順番
+単なる背負い板ではなく、肩甲骨、脊柱、腰をつなぐdorsal shellです。側面から見たときに、背中に沿って厚みがあり、胸・腰と連続する必要があります。
 
-1. 背面ユニット
-   `back` を薄板ではなく、肩甲骨から腰へ流れる背中装甲として読ませる。側面/3Qで胸と腰をつなぐ厚みが見えること。
+今回の仮GLBでは、背面z厚みを仕様値まで戻しています。モデラー版では、中央spine ridge、左右scapula pad、lumbar clasp、side returnを面として整理してください。
 
-2. すね
-   `left_shin` / `right_shin` を脚プロキシの筒ではなく、ブーツへ自然につながる下腿装甲にする。下端はブーツカフで受けられる形にする。
+### Waist
 
-3. ブーツ
-   `left_boot` / `right_boot` は床面への接地感を優先する。つま先、かかと、足首カフが読め、左右の床面差が目立たないこと。
+前面だけの桶ではなく、骨盤を一周するbelt loopです。前面buckle、左右side clip、背面claspが同じ高さ帯でつながり、脚の可動を潰さない形にしてください。
 
-4. topping library
-   親moduleがtoppingなしで成立してから増やす。優先slotは `crest`, `visor_trim`, `chest_core`, `rib_trim`, `spine_ridge`, `rear_core`, `belt_buckle`, `side_clip`, `shoulder_fin`, `edge_trim`, `shin_spike`, `ankle_cuff_trim`。
+### Boots
 
-## Nanobanana方針
+足裏接地が最優先です。つま先、かかと、靴底、足首カフ、すね受けが見える必要があります。左右で高さや接地面がずれると、即座に玩具の置物に見えます。
 
-テクスチャ生成はNanobananaオンリーで進めます。
+### Chest / Shoulders
 
-- `base_suit_surface` は単色下地ではなく、VRM表面へ貼る完成ボディスーツとして扱う。
-- `armor_overlay_parts` は基礎スーツから独立した飾りにしない。外装の縁、段差、差し色、発光線は `base_motif_link` で基礎スーツの意匠につなげる。
-- 明るい特撮ヒーロー感を優先する。暗いSF倉庫、灰色proxy、透明bbox、泥っぽい低コントラストはnegativeとして避ける。
-- UV0とmaterial zonesは、Nanobanana入力とWeb preview確認に使える状態で残す。
+胸は胸郭ラップ、肩は三角筋キャップです。正面だけの板、肩に乗った球体、胸から背面へ線がつながらないものはNGです。
 
-## 納品時に確認したいもの
+### Shins
 
-- P0 metadataを含むsidecar相当メモ
-- front / side / back / 3Q preview
-- closeup preview
-- `base_motif_link` がどの基礎スーツ線へ接続するか分かるメモ
-- `topping_slots` の位置が分かるメモまたはannotation
+すねはブーツと接続する下腿シェルです。膝と足首に可動逃げを残しつつ、ブーツ上端に自然に入るsocket構造にしてください。
 
-最終判断は「Webで鎧立てとして成立し、Questで4桁コード呼び出ししたときに装着対象として読めるか」で行います。
+## 納品時に欲しいもの
+
+- 18部位GLB
+- 各部位の `modeler.json` 相当メモ
+- 全身 front / side / back / 3Q preview
+- P0 close-up front / side / back / 3Q
+- `base_motif_link` 図
+- `topping_slots` 図
+- 接触/クリアランス図
+- ブーツ接地図
+- Nanobanana texture board
+
+## Web側で確認するポイント
+
+Webプレビューでは次を見ます。
+
+- 側面で背面、腰、靴が体から離れていないか。
+- ぐりぐり回しても、装着物として破綻しないか。
+- 基礎スーツの線と外装の線がバラバラに見えないか。
+- Quest呼び出し時に、4桁コードで同じ装備が再現できるか。
+
+## 関連資料
+
+- [hero-suit-reference-analysis-2026-04-30.md](hero-suit-reference-analysis-2026-04-30.md)
+- [assets/hero-suit-surface-fit-concept.svg](assets/hero-suit-surface-fit-concept.svg)
+- [modeler-new-route-acceptance-spec.md](modeler-new-route-acceptance-spec.md)
+- [nanobanana-texture-prompt-contract.md](nanobanana-texture-prompt-contract.md)

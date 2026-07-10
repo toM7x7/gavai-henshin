@@ -1,0 +1,76 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "waist",
+  "part_id": "viewer.mesh.waist.v1",
+  "category": "waist",
+  "bbox_m": {
+    "x": 0.03999999910593033,
+    "y": 0.05000000074505806,
+    "z": 0.02199999988079071,
+    "size": [
+      0.03999999910593033,
+      0.05000000074505806,
+      0.02199999988079071
+    ],
+    "dimensions": [
+      0.03999999910593033,
+      0.05000000074505806,
+      0.02199999988079071
+    ]
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "trim"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": null,
+  "vrm_attachment": {
+    "primary_bone": "hips",
+    "offset_m": [
+      0,
+      0,
+      0.06
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "hips",
+      "spine"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 44,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "waist:side_clip:runner_clip",
+  "is_topping": true,
+  "parent_module": "waist",
+  "topping_slot": "side_clip",
+  "topping_key": "runner_clip",
+  "slot_transform": {
+    "anchor": [
+      0.18,
+      0.0,
+      0.0
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.06,
+    "y": 0.06,
+    "z": 0.03
+  }
+}

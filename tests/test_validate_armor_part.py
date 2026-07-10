@@ -173,6 +173,7 @@ def _write_sidecar(
     bbox_size: tuple[float, float, float],
     triangle_count: int,
     attachment_offset: tuple[float, float, float] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> Path:
     base = _module_dir(repo_root, module)
     sidecar_path = base / f"{module}.modeler.json"
@@ -185,6 +186,8 @@ def _write_sidecar(
         payload["vrm_attachment"] = {
             "offset_m": list(attachment_offset),
         }
+    if extra:
+        payload.update(extra)
     sidecar_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return sidecar_path
 
@@ -421,6 +424,194 @@ def test_wrap_around_torso_passes_body_intersection(tmp_path: Path) -> None:
     report = validator.validate_module(tmp_path, module)
 
     assert _gate_status(report, "no_body_intersection_at_reference_pose") == "pass"
+
+
+def test_waist_warns_with_belt_loop_clearance_context(tmp_path: Path) -> None:
+    module = "waist"
+    target = validator._reference_target_dimensions(module)
+    bbox = (
+        float(target["x"]) * 0.95,
+        float(target["y"]) * 0.95,
+        float(target["z"]) * 0.95,
+    )
+    glb_bytes = _build_glb_payload(
+        module,
+        bbox_size=bbox,
+        triangle_count=8,
+        materials=["base_surface"],
+    )
+    _write_glb(tmp_path, module, glb_bytes)
+    _write_sidecar(tmp_path, module, bbox_size=bbox, triangle_count=8)
+    _write_preview(tmp_path, module)
+
+    report = validator.validate_module(tmp_path, module)
+    body_gate = next(gate for gate in report.gates if gate.name == "no_body_intersection_at_reference_pose")
+
+    assert body_gate.status == "warn"
+    assert "waist belt-loop clearance unresolved" in body_gate.message
+    assert body_gate.detail["belt_loop_required_inner_diameter_m"] > 0.36
+    assert "belt_loop_inner_diameter_m" in body_gate.detail["belt_loop_missing_or_short_fields"]
+    assert "bbox.z" in body_gate.detail["belt_loop_missing_or_short_fields"]
+    assert body_gate.detail["body_wrap_loop_export_status"] == "export_status_not_declared"
+    assert body_gate.detail["body_wrap_loop_export_detail"]["acceptance_blocked"] is True
+    assert body_gate.detail["p1_acceptance"]["phase"] == "P1"
+    assert body_gate.detail["p1_acceptance"]["status"] == "blocked_until_declared"
+    assert body_gate.detail["p1_acceptance"]["package_gate_status"] == "warn_now_block_p1"
+    assert body_gate.detail["p1_acceptance"]["body_wrap_loop_export_required"] is True
+    handoff = body_gate.detail["runtime_placement_handoff"]
+    assert handoff["runtime_fields"]["inner_diameter_m"] == (
+        "modules.waist.runtime_placement.belt_loop_inner_diameter_m"
+    )
+    assert handoff["runtime_fields"]["clearance_m"] == (
+        "modules.waist.runtime_placement.belt_loop_clearance_m"
+    )
+    assert handoff["values"]["required_inner_diameter_m"] > 0.36
+
+
+def test_waist_belt_loop_sidecar_can_pass_body_intersection_gate() -> None:
+    glb = validator.GLBData(
+        mesh_names=["armor_waist_v001"],
+        root_mesh_name="armor_waist_v001",
+        material_names=["base_surface"],
+        image_count=0,
+        bbox_min=[-0.25, -0.08, -0.25],
+        bbox_max=[0.25, 0.08, 0.25],
+        triangle_count=12,
+        uv0_min=[0.0, 0.0],
+        uv0_max=[1.0, 1.0],
+        uv0_overlap_warning=None,
+        accessor_count=3,
+    )
+    sidecar = {
+        "body_wrap_loop_export_status": "glb_loop_exported",
+        "target_envelope": {
+            "shell_thickness_target_m": 0.034,
+            "belt_loop_inner_diameter_m": {"x": 0.38, "z": 0.38},
+        },
+    }
+
+    gate = validator._gate_no_body_intersection("waist", glb, sidecar)
+
+    assert gate.status == "pass"
+    assert "waist belt-loop clear" in gate.message
+    assert gate.detail["p1_acceptance"]["status"] == "accepted"
+    assert gate.detail["p1_acceptance"]["package_gate_status"] == "pass_p1"
+    assert gate.detail["body_wrap_loop_export_status"] == "glb_loop_exported"
+    assert gate.detail["runtime_placement_handoff"]["values"]["belt_loop_inner_diameter_m"] == [0.38, 0.38]
+    assert gate.detail["runtime_placement_handoff"]["values"]["shell_thickness_target_m"] == 0.034
+    assert gate.detail["belt_loop_outer_margin_x_m"] > 0
+    assert gate.detail["belt_loop_outer_margin_z_m"] > 0
+
+
+def test_waist_belt_loop_clearance_can_drive_runtime_handoff() -> None:
+    glb = validator.GLBData(
+        mesh_names=["armor_waist_v001"],
+        root_mesh_name="armor_waist_v001",
+        material_names=["base_surface"],
+        image_count=0,
+        bbox_min=[-0.25, -0.08, -0.25],
+        bbox_max=[0.25, 0.08, 0.25],
+        triangle_count=12,
+        uv0_min=[0.0, 0.0],
+        uv0_max=[1.0, 1.0],
+        uv0_overlap_warning=None,
+        accessor_count=3,
+    )
+    sidecar = {
+        "shell_thickness_target_m": 0.034,
+        "waist_fit": {
+            "belt_loop_clearance_m": 0.03,
+            "asset_status": "glb_loop_exported",
+        },
+    }
+
+    gate = validator._gate_no_body_intersection("waist", glb, sidecar)
+
+    assert gate.status == "pass"
+    assert gate.detail["belt_loop_declared_from_clearance"] is True
+    assert gate.detail["runtime_placement_handoff"]["values"]["belt_loop_clearance_m"] == 0.03
+    assert gate.detail["runtime_placement_handoff"]["quest_runtime_use"].startswith("Quest recall")
+
+
+def test_waist_metadata_only_body_wrap_loop_blocks_p1_acceptance() -> None:
+    glb = validator.GLBData(
+        mesh_names=["armor_waist_v001"],
+        root_mesh_name="armor_waist_v001",
+        material_names=["base_surface"],
+        image_count=0,
+        bbox_min=[-0.25, -0.08, -0.25],
+        bbox_max=[0.25, 0.08, 0.25],
+        triangle_count=12,
+        uv0_min=[0.0, 0.0],
+        uv0_max=[1.0, 1.0],
+        uv0_overlap_warning=None,
+        accessor_count=3,
+    )
+    sidecar = {
+        "shell_thickness_target_m": 0.034,
+        "waist_fit": {
+            "asset_status": "contract_metadata_only_glb_not_regenerated",
+            "belt_loop_inner_diameter_m": {"x": 0.38, "z": 0.38},
+        },
+        "body_wrap_loop_contract": {
+            "adoption_status": "primitive_available_not_applied_until_blender_rebuild",
+        },
+    }
+
+    gate = validator._gate_no_body_intersection("waist", glb, sidecar)
+
+    assert gate.status == "warn"
+    assert "P1 acceptance blocked until GLB loop exported" in gate.message
+    assert gate.detail["body_wrap_loop_export_status"] == (
+        "metadata_only_blocked_until_glb_loop_exported"
+    )
+    assert gate.detail["body_wrap_loop_export_detail"]["metadata_only"] is True
+    assert gate.detail["body_wrap_loop_export_detail"]["acceptance_blocked"] is True
+    assert gate.detail["p1_acceptance"]["status"] == "blocked_until_glb_loop_exported"
+    assert gate.detail["p1_acceptance"]["package_gate_status"] == "warn_now_block_p1"
+    assert gate.detail["p1_acceptance"]["body_wrap_loop_export_status"] == (
+        "metadata_only_blocked_until_glb_loop_exported"
+    )
+
+
+def test_waist_json_report_exposes_body_wrap_loop_export_status(tmp_path: Path, capsys) -> None:
+    module = "waist"
+    bbox = (0.44, 0.16, 0.19)
+    glb_bytes = _build_glb_payload(
+        module,
+        bbox_size=bbox,
+        triangle_count=8,
+        materials=["base_surface"],
+    )
+    _write_glb(tmp_path, module, glb_bytes)
+    _write_sidecar(
+        tmp_path,
+        module,
+        bbox_size=bbox,
+        triangle_count=8,
+        extra={
+            "shell_thickness_target_m": 0.034,
+            "waist_fit": {
+                "asset_status": "contract_metadata_only_glb_not_regenerated",
+                "belt_loop_inner_diameter_m": {"x": 0.38, "z": 0.38},
+            },
+            "body_wrap_loop_contract": {
+                "adoption_status": "primitive_available_not_applied_until_blender_rebuild",
+            },
+        },
+    )
+    _write_preview(tmp_path, module)
+
+    rc = validator.main([module, "--repo-root", str(tmp_path), "--report-json"])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == 0
+    module_payload = payload["modules"][0]
+    assert module_payload["body_wrap_loop_export_status"] == (
+        "metadata_only_blocked_until_glb_loop_exported"
+    )
+    assert module_payload["body_wrap_loop_export_detail"]["acceptance_blocked"] is True
 
 
 def test_main_cli_json_report(tmp_path: Path, capsys) -> None:

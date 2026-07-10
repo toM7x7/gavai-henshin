@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Hero suit surface-fit concept sheet</title>
+  <desc id="desc">A schematic showing a human silhouette, base body suit texture, body-wrapped armor shells, pelvis belt loop, dorsal shell, and grounded boot cuff.</desc>
+  <defs>
+    <linearGradient id="baseSuit" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#1251b8"/>
+      <stop offset="1" stop-color="#24b4c6"/>
+    </linearGradient>
+    <linearGradient id="armorShell" x1="0" x2="1">
+      <stop offset="0" stop-color="#f9fff0"/>
+      <stop offset="1" stop-color="#c9f353"/>
+    </linearGradient>
+    <style>
+      .bg { fill: #f7faf4; }
+      .panel { fill: rgba(255,255,255,0.72); stroke: #d9e4d6; stroke-width: 2; }
+      .human { fill: #f1d0aa; opacity: 0.42; stroke: #b77d5a; stroke-width: 1.5; }
+      .base { fill: url(#baseSuit); opacity: 0.86; stroke: #093a54; stroke-width: 2; }
+      .line { fill: none; stroke: #aaff20; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+      .armor { fill: url(#armorShell); opacity: 0.82; stroke: #8a9d14; stroke-width: 2.4; }
+      .shadow { fill: #06213a; opacity: 0.16; }
+      .guide { fill: none; stroke: #16a4b5; stroke-width: 2; stroke-dasharray: 8 8; opacity: 0.65; }
+      .arrow { stroke: #21302e; stroke-width: 2.5; marker-end: url(#arrow); fill: none; }
+      .note { font-family: system-ui, sans-serif; font-size: 18px; fill: #1d2b29; font-weight: 700; }
+      .sub { font-family: system-ui, sans-serif; font-size: 14px; fill: #53615f; }
+      .tag { font-family: system-ui, sans-serif; font-size: 13px; fill: #0d3d46; font-weight: 700; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#21302e"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="720"/>
+
+  <rect class="panel" x="36" y="36" width="340" height="640" rx="10"/>
+  <text class="note" x="62" y="76">A. 側面: 置くのではなく着る</text>
+  <text class="sub" x="62" y="104">人体表面 → 基礎スーツ → 外装シェル</text>
+  <ellipse class="shadow" cx="210" cy="626" rx="74" ry="14"/>
+  <path class="human" d="M211 105c31 0 51 22 51 50 0 25-14 43-37 50v37c34 11 58 41 61 81l13 191c2 35-12 66-35 83l-34 0c10-58 5-116-7-174h-25c-12 58-17 116-7 174h-34c-23-17-37-48-35-83l13-191c3-40 27-70 61-81v-37c-23-7-37-25-37-50 0-28 20-50 52-50z"/>
+  <path class="base" d="M211 118c25 0 40 17 40 39 0 20-12 35-31 42v45c30 10 51 37 54 73l12 184c2 28-9 55-28 70h-25c6-53 1-103-9-153h-27c-10 50-15 100-9 153h-25c-19-15-30-42-28-70l12-184c3-36 24-63 54-73v-45c-19-7-31-22-31-42 0-22 16-39 41-39z"/>
+  <path class="line" d="M196 132c21 28 37 64 45 106M178 290c43 24 77 53 101 86M151 422c38-8 78-9 120-4M181 520c24 9 43 23 58 42"/>
+  <path class="armor" d="M181 270c36-24 72-24 108 0l-15 94c-42 18-75 18-101 0z"/>
+  <path class="armor" d="M168 370c52 17 101 17 146 0l-12 58c-38 12-77 12-118 0z"/>
+  <path class="armor" d="M169 548h46l9 41h-62z"/>
+  <path class="armor" d="M228 548h46l7 41h-60z"/>
+  <path class="guide" d="M309 96v502"/>
+  <path class="arrow" d="M315 354c-25 0-44-9-55-28"/>
+  <text class="tag" x="64" y="642">判定: 横から見て胸/腰/足が体表に沿う</text>
+
+  <rect class="panel" x="430" y="36" width="340" height="640" rx="10"/>
+  <text class="note" x="456" y="76">B. 背面: 背中は薄板にしない</text>
+  <text class="sub" x="456" y="104">肩甲骨パッド + 脊椎キール + 腰クラスプ</text>
+  <ellipse class="shadow" cx="600" cy="626" rx="72" ry="14"/>
+  <path class="base" d="M600 118c25 0 40 17 40 39 0 22-13 37-34 43v39c34 8 59 37 63 79l12 190c2 29-10 55-29 69h-27c7-55 1-106-10-156h-30c-11 50-17 101-10 156h-27c-19-14-31-40-29-69l12-190c4-42 29-71 63-79v-39c-21-6-34-21-34-43 0-22 15-39 40-39z"/>
+  <path class="line" d="M600 128v451M553 276c31 12 62 17 94 0M542 423c39 15 79 15 120 0"/>
+  <path class="armor" d="M547 244c35-26 71-27 108-1l26 95c-54 31-108 31-160 0z"/>
+  <path class="armor" d="M567 271c24-13 46-13 67 0l12 246c-29 16-59 16-89 0z"/>
+  <path class="armor" d="M525 348c51 21 101 21 151 0l-10 74c-43 15-86 15-129 0z"/>
+  <path class="guide" d="M492 95v505M709 95v505"/>
+  <path class="arrow" d="M704 280c-33 4-60 2-80-7"/>
+  <text class="tag" x="456" y="642">判定: 背面が肩甲骨から腰まで連続し、厚みが見える</text>
+
+  <rect class="panel" x="824" y="36" width="340" height="640" rx="10"/>
+  <text class="note" x="850" y="76">C. ブーツ: 足元は接地と重心</text>
+  <text class="sub" x="850" y="104">足を包むソール + 足首カフ + すね受け</text>
+  <line x1="876" y1="594" x2="1116" y2="594" stroke="#d6c278" stroke-width="5"/>
+  <path class="human" d="M962 150c16 132 18 254 7 365l-20 58h-34l20-64c8-119 6-237-7-354z"/>
+  <path class="human" d="M1028 150c-16 132-18 254-7 365l20 58h34l-20-64c-8-119-6-237 7-354z"/>
+  <path class="base" d="M945 150c15 133 17 254 8 352l-19 69h-23l19-68c8-115 5-234-8-349z"/>
+  <path class="base" d="M1045 150c-15 133-17 254-8 352l19 69h23l-19-68c-8-115-5-234 8-349z"/>
+  <path class="armor" d="M900 497h74l18 79h-103z"/>
+  <path class="armor" d="M1016 497h74l20 79h-105z"/>
+  <path class="armor" d="M907 560h112l22 34H877z"/>
+  <path class="armor" d="M1023 560h112l23 34h-166z"/>
+  <path class="line" d="M934 510c24 10 44 10 61 0M1050 510c24 10 44 10 61 0"/>
+  <path class="guide" d="M994 128v466"/>
+  <path class="arrow" d="M1050 594c-17-39-16-72 3-97"/>
+  <text class="tag" x="850" y="642">判定: 底面が床に乗り、すね装甲へ受けが続く</text>
+</svg>

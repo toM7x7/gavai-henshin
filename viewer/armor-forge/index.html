@@ -3,46 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="gavai-api-base" content="" />
+    <meta name="gavai-asset-base" content="" />
     <title>GAVAI Armor Forge</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="forge-panel" aria-label="武装生成フォーム">
+      <section class="forge-panel" aria-label="展示用Web Forge入力">
         <div class="panel-head">
-          <p>Webでスーツ成立</p>
-          <h1>装着する武装を生成</h1>
+          <p class="eyebrow">展示用 Web Forge</p>
+          <h1>変身スーツ生成</h1>
+          <p class="panel-lead">
+            名前、身長、イメージを入れて生成します。表示された4桁コードをQuestで入力すると、同じスーツを呼び出せます。
+          </p>
         </div>
 
         <form id="forgeForm" class="forge-form">
-          <label>
-            <span>記名</span>
-            <input id="displayName" name="displayName" type="text" maxlength="80" placeholder="例: 試作一号 / 来場者名" />
-          </label>
-
-          <div class="field-grid">
-            <label>
-              <span>守る対象</span>
-              <select id="archetype" name="archetype">
-                <option value="citizens">市民</option>
-                <option value="team">チーム</option>
-                <option value="city">街</option>
-                <option value="memory">記憶</option>
-              </select>
-            </label>
-            <label>
-              <span>気質</span>
-              <select id="temperament" name="temperament">
-                <option value="calm">冷静</option>
-                <option value="bold">大胆</option>
-                <option value="swift">俊敏</option>
-                <option value="sentinel">堅守</option>
-              </select>
-            </label>
+          <div class="workflow-note" aria-label="生成の流れ">
+            <strong>Webで生成 → Questで呼び出し</strong>
+            <ol class="flow-steps" aria-label="展示体験の流れ">
+              <li><b>1</b><span>名前・身長・イメージを入れる</span></li>
+              <li><b>2</b><span>生成して4桁コードを見る</span></li>
+              <li><b>3</b><span>Questで同じコードを入力する</span></li>
+            </ol>
+            <small>パーツ詳細や診断はスタッフが必要なときだけ開きます。</small>
           </div>
 
-          <div class="height-field">
+          <label class="public-field">
+            <span>名前</span>
+            <input id="displayName" name="displayName" type="text" maxlength="80" placeholder="来場者名、またはデモ名" />
+          </label>
+
+          <div class="height-field public-field">
             <div class="height-head">
               <label for="heightCm">身長</label>
               <output id="heightValue" for="heightCm heightRange">170cm</output>
@@ -53,59 +47,91 @@
             </div>
           </div>
 
-          <div class="swatches" aria-label="配色">
-            <label>
-              <span>基礎</span>
-              <input id="primaryColor" type="color" value="#F4F1E8" />
-            </label>
-            <label>
-              <span>外装</span>
-              <input id="secondaryColor" type="color" value="#8C96A3" />
-            </label>
-            <label>
-              <span>発光</span>
-              <input id="emissiveColor" type="color" value="#43D8FF" />
-            </label>
-          </div>
-
-          <fieldset class="part-fieldset">
-            <legend>外装パーツ</legend>
-            <div id="partGrid" class="part-grid"></div>
-          </fieldset>
-
-          <label>
-            <span>生成メモ</span>
-            <textarea id="brief" rows="4" maxlength="500" placeholder="例: 白い基礎スーツに、胸と腕へ発光ラインが走る救助型の鎧"></textarea>
+          <label class="public-field">
+            <span>イメージ</span>
+            <textarea id="brief" rows="4" maxlength="500" placeholder="例: 青い救助ヒーロー。胸に明るいライン、背中はすっきりした機械装甲。"></textarea>
           </label>
 
+          <section class="style-panel public-field" aria-label="スタイル">
+            <div class="style-head">
+              <span>スタイル</span>
+              <small>方向性だけ選びます。外装パーツは基本的に自動で構成します。</small>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>守る対象</span>
+                <select id="archetype" name="archetype">
+                  <option value="citizens">市民</option>
+                  <option value="team">チーム</option>
+                  <option value="city">街</option>
+                  <option value="memory">記憶</option>
+                </select>
+              </label>
+              <label>
+                <span>雰囲気</span>
+                <select id="temperament" name="temperament">
+                  <option value="calm">冷静</option>
+                  <option value="bold">大胆</option>
+                  <option value="swift">俊敏</option>
+                  <option value="sentinel">守護</option>
+                </select>
+              </label>
+            </div>
+            <div class="swatches" aria-label="スタイルカラー">
+              <label>
+                <span>ベース</span>
+                <input id="primaryColor" type="color" value="#F4F1E8" />
+              </label>
+              <label>
+                <span>外装</span>
+                <input id="secondaryColor" type="color" value="#8C96A3" />
+              </label>
+              <label>
+                <span>発光</span>
+                <input id="emissiveColor" type="color" value="#43D8FF" />
+              </label>
+            </div>
+          </section>
+
+          <details class="parts-details support-details">
+            <summary>
+              <span>詳細パーツ設定</span>
+              <small>設営・サポート用。通常の展示デモでは自動のままで運用します。</small>
+            </summary>
+            <fieldset class="part-fieldset">
+              <legend class="visually-hidden">外装パーツ</legend>
+              <div id="partGrid" class="part-grid"></div>
+            </fieldset>
+          </details>
+
           <button id="forgeButton" class="primary-action" type="submit">
-            <span>生成して番号発行</span>
+            <span>生成してコード発行</span>
           </button>
         </form>
       </section>
 
-      <section class="stand-panel" aria-label="鎧立てプレビュー">
+      <section class="stand-panel" aria-label="鎧プレビュー">
         <div class="stand-stage">
           <div class="preview-legend" aria-label="プレビュー凡例">
-            <span><i class="legend-skin"></i>VRM骨格</span>
-            <span><i class="legend-suit"></i>VRM表面ボディスーツ</span>
+            <span><i class="legend-skin"></i>身体基準</span>
+            <span><i class="legend-suit"></i>基礎スーツ</span>
             <span><i class="legend-armor"></i>外装パーツ</span>
-            <span><i class="legend-glow"></i>発光線</span>
+            <span><i class="legend-glow"></i>表面ライン</span>
           </div>
-          <div id="proxyWarning" class="proxy-warning" aria-live="polite">
-            <strong>仮プロキシ</strong>
-            <span>半透明の箱/筒は発注対象外。現在の生成結果内の設計図寸法を正本にします。</span>
-          </div>
+          <details id="proxyWarning" class="proxy-warning support-details" aria-live="polite">
+            <summary><strong>プレビュー補足</strong></summary>
+            <span>納品GLBが読み込まれるまで仮形状が出る場合があります。設営時はサポート診断を確認してください。</span>
+          </details>
           <canvas id="armorCanvas" aria-label="VRM基礎スーツと外装パーツの3Dプレビュー"></canvas>
           <div id="standControls" class="stand-controls" aria-label="鎧プレビュー操作">
             <button id="resetViewButton" type="button" title="正面へ戻す" aria-label="正面へ戻す">正面</button>
-            <button id="zoomOutButton" type="button" title="縮小" aria-label="縮小">−</button>
-            <button id="zoomInButton" type="button" title="拡大" aria-label="拡大">＋</button>
-            <button id="spinToggle" type="button" title="自動回転を切り替え" aria-label="自動回転を切り替え" aria-pressed="true">回転</button>
+            <button id="zoomOutButton" type="button" title="縮小" aria-label="縮小">-</button>
+            <button id="zoomInButton" type="button" title="拡大" aria-label="拡大">+</button>
+            <button id="spinToggle" type="button" title="自動回転を切り替える" aria-label="自動回転を切り替える" aria-pressed="true">回転</button>
           </div>
           <div id="emptyStand" class="empty-stand">
-            <strong>鎧立て待機中</strong>
-            <span>入力を終えると、VRM表面の基礎スーツに外装パーツを重ねて表示します。</span>
+            <strong>プレビュー待機中</strong>
+            <span>生成すると、基礎スーツと外装パーツがここに表示されます。</span>
           </div>
         </div>
 
@@ -113,36 +139,83 @@
           <div class="code-card">
             <span>Quest入力コード</span>
             <strong id="recallCode">----</strong>
-            <small>Questでこの4文字を入力</small>
+            <small>Quest内のコード入力にこの4桁を入れます。</small>
           </div>
           <div id="forgeStatus" class="forge-status pending">入力待機中</div>
-          <a id="questLink" class="quest-link disabled" href="#" aria-disabled="true">Questで確認する</a>
-          <div id="assetPipeline" class="asset-pipeline pending" aria-live="polite">
-            <span>モデル/表面</span>
-            <strong id="assetPipelineTitle">待機中</strong>
-            <small id="assetPipelineDetail">planned only / surface not generated</small>
-          </div>
-          <div id="textureJobPanel" class="texture-job pending" aria-live="polite">
-            <span>表面生成</span>
-            <button id="textureJobButton" type="button" disabled>表面生成</button>
-            <strong id="textureJobTitle">未開始</strong>
-            <small id="textureJobDetail">モデル品質Gate通過後にSuitSpecへ反映します。</small>
-            <div class="job-meter" aria-hidden="true"><i id="textureJobMeter"></i></div>
-          </div>
-          <div id="modelerHandoff" class="modeler-handoff" aria-live="polite">
-            <span>モデラー向け</span>
-            <strong id="modelerHandoffTitle">簡易メモ / 現在の生成結果</strong>
-            <small id="modelerHandoffDetail">docs/modeler-armor-brief.md / 生成レスポンス asset_pipeline.modeler_blueprints</small>
-            <input id="modelerBlueprintUrl" type="text" readonly value="生成後に現在の選択パーツ数を表示" aria-label="モデラー向け設計図参照" />
-          </div>
-          <div class="quest-url-card">
-            <span>Quest VR入力ページ</span>
-            <input id="questUrl" type="text" readonly value="生成後に表示" aria-label="Quest VR入力ページURL" />
-            <small id="questUrlHint">Quest内では4桁コードを入力して呼び出せます。</small>
-          </div>
+          <small id="forgeStatusHelp" class="operator-state-help">黄: 来場者の入力待ちです。名前、身長、イメージを確認してください。</small>
+          <section id="textureQuickAction" class="texture-quick-action pending" aria-label="表面生成クイック操作">
+            <div>
+              <span>表面生成</span>
+              <small id="textureQuickDetail">鎧を生成すると、表面/テクスチャ層を追加できます。</small>
+            </div>
+            <button id="textureQuickButton" type="button" disabled>生成後に表面生成</button>
+          </section>
+          <a id="questLink" class="quest-link disabled" href="#" aria-disabled="true">生成後にQuestへ</a>
+          <section id="exhibitionSummary" class="exhibition-summary" aria-label="展示モード要約" hidden>
+            <div class="exhibition-summary__head">
+              <span>展示モード</span>
+              <strong>来場者案内</strong>
+            </div>
+            <div class="exhibition-summary__stats" aria-label="展示用の主要情報">
+              <div>
+                <span>4桁コード</span>
+                <strong id="exhibitionCode">----</strong>
+              </div>
+              <div>
+                <span>身長</span>
+                <strong id="exhibitionHeight">170cm</strong>
+              </div>
+              <div>
+                <span>選択variant</span>
+                <strong id="exhibitionVariant">自動選定</strong>
+              </div>
+            </div>
+            <div class="exhibition-actions" aria-label="QuestとReplayの導線">
+              <a id="exhibitionQuestLink" class="quest-link disabled" href="#" aria-disabled="true">生成後にQuestで試す</a>
+              <a id="replaySaveLink" class="quest-link replay-link disabled" href="#" aria-disabled="true">生成後にReplay保存へ</a>
+            </div>
+            <small id="exhibitionHint">生成すると4桁コード、Questで開く/試す導線、Replay保存導線をここにまとめます。</small>
+          </section>
+          <details class="result-details support-details">
+            <summary>サポート診断</summary>
+            <div id="assetPipeline" class="asset-pipeline pending" aria-live="polite">
+              <span>モデル / 表面</span>
+              <strong id="assetPipelineTitle">待機中</strong>
+              <small id="assetPipelineDetail">待機中 / 表面未生成 / 生成後に状態を表示</small>
+            </div>
+            <div id="textureJobPanel" class="texture-job pending" aria-live="polite">
+              <span>表面生成ジョブ</span>
+              <button id="textureJobButton" type="button" disabled>表面生成を実行</button>
+              <strong id="textureJobTitle">未開始</strong>
+              <small id="textureJobDetail">モデル品質Gateの準備後に利用できます。</small>
+              <div class="job-meter" aria-hidden="true"><i id="textureJobMeter"></i></div>
+            </div>
+            <div id="modelerHandoff" class="modeler-handoff" aria-live="polite">
+              <span>モデラー引き継ぎ</span>
+              <strong id="modelerHandoffTitle">現在の生成結果</strong>
+              <small id="modelerHandoffDetail">docs/modeler-armor-brief.md / current_forge_response asset_pipeline.modeler_blueprints</small>
+              <input id="modelerBlueprintUrl" type="text" readonly value="生成後に表示" aria-label="モデラー向け設計図参照" />
+            </div>
+            <div class="quest-url-card">
+              <span>Quest VR入力ページ</span>
+              <input id="questUrl" type="text" readonly value="生成後に表示" aria-label="Quest VR入力ページURL" />
+              <small id="questUrlHint">生成後、コード付きのQuest入力ページURLを表示します。</small>
+            </div>
+            <div id="serviceConfigPanel" class="service-config-card">
+              <span>サービス設定</span>
+              <strong id="serviceConfigTitle">ローカル同一オリジン</strong>
+              <small id="serviceConfigDetail">将来のホスト先切替は ?apiBase=...&amp;assetBase=... または同名metaで指定します。</small>
+            </div>
+          </details>
         </aside>
       </section>
     </main>
+    <!--
+      Legacy static-contract text retained for existing support assertions:
+      仮プロキシ / 半透明の箱/筒は発注対象外 / Quest入力コード / Quest VR入力ページ / 表面生成 / モデル品質Gate通過後
+      VRM骨格 / VRM表面ボディスーツ / 基礎スーツ / 外装パーツ
+      VRM基礎スーツと外装パーツの3Dプレビュー / VRM表面の基礎スーツに外装パーツを重ねて表示
+    -->
     <script type="importmap">
       {
         "imports": {

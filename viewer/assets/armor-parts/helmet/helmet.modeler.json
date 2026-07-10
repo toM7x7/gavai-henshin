@@ -54,13 +54,8 @@
     "mirror_pair_dimension_delta_below_3_percent": "skip",
     "no_body_intersection_at_reference_pose": "pass"
   },
-  "triangles": 1012,
-  "target_envelope_m": {
-    "x": 0.2856,
-    "y": 0.34,
-    "z": 0.2584
-  },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "clearance_m": 0.018,
+  "shell_thickness_target_m": 0.035,
   "variant_key": "helmet:base",
   "part_family": "silver_hero",
   "base_motif_link": {
@@ -115,5 +110,25 @@
       "parent_module": "helmet"
     }
   ],
-  "attachment_offset_target_m": 0.08
+  "attachment_offset_target_m": 0.08,
+  "silhouette_review_notes": [
+    "Ellipsoid dome reaches target depth z without a box silhouette.",
+    "Crest + visor + jaw form clear hero silhouette without antenna assets.",
+    "Ear vents stay dark to anchor silver dome."
+  ],
+  "triangles": 1012,
+  "target_envelope_m": {
+    "x": 0.2856,
+    "y": 0.34,
+    "z": 0.2584
+  },
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Face and visor zones must stay high contrast without muddying the helmet expression."
+  }
 }

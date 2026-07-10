@@ -1,0 +1,65 @@
+{
+  "contract_version": "modeler-part-sidecar.v1",
+  "module": "left_shoulder",
+  "part_id": "viewer.mesh.left_shoulder.v1",
+  "category": "shoulder",
+  "bbox_m": {
+    "x": 0.17716799676418304,
+    "y": 0.11800000071525574,
+    "z": 0.15068615972995758,
+    "size": [
+      0.17716799676418304,
+      0.11800000071525574,
+      0.15068615972995758
+    ],
+    "dimensions": [
+      0.17716799676418304,
+      0.11800000071525574,
+      0.15068615972995758
+    ]
+  },
+  "triangle_count": 268,
+  "material_zones": [
+    "accent",
+    "base_surface"
+  ],
+  "texture_provider_profile": "nano_banana",
+  "mirror_of": "right_shoulder",
+  "vrm_attachment": {
+    "primary_bone": "leftShoulder",
+    "offset_m": [
+      0.02,
+      0.02,
+      0.02
+    ],
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "fallback_bones": [
+      "leftShoulder",
+      "leftUpperArm",
+      "upperChest",
+      "chest"
+    ]
+  },
+  "qa_self_report": {
+    "stable_part_name": "pass",
+    "bbox_within_target_envelope": "warn",
+    "non_overlapping_uv0": "warn",
+    "single_surface_base_material_or_declared_slots": "pass",
+    "mirror_pair_dimension_delta_below_3_percent": "skip",
+    "no_body_intersection_at_reference_pose": "warn"
+  },
+  "triangles": 268,
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "variant_key": "left_shoulder:winged_fin",
+  "is_variant": true,
+  "parent_module": "left_shoulder",
+  "target_envelope_m": {
+    "x": 0.1904,
+    "y": 0.1224,
+    "z": 0.1632
+  }
+}

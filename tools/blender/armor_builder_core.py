@@ -204,6 +204,8 @@ def _p_body_wrap_arc(bm, spec):
        arc_deg          # default 90; how much of the cylinder it spans
        inner_radius     # default = chord_x / (2*sin(arc_deg/2*pi/180)); auto-fits chord
        segments         # default 14 (radial divisions)
+       y_segments       # default 1; vertical rows for suit-like curved shells
+       profile_scale    # optional [[y_norm, x_scale], ...] lateral row taper
        y_taper_top      # default 0.0; chord shrinks by this fraction at top
        y_taper_bottom   # default 0.0; chord shrinks by this fraction at bottom
        front_bulge      # default 0.05; pushes the center of the arc outward (Z+)
@@ -237,13 +239,41 @@ def _p_body_wrap_arc(bm, spec):
     if inner_radius <= 0:
         inner_radius = max(chord_x * 0.5, 1e-3)
     segments = max(2, int(spec.get("segments", 14)))
+    y_segments = max(1, int(spec.get("y_segments", 1)))
     y_taper_top = float(spec.get("y_taper_top", 0.0))
     y_taper_bottom = float(spec.get("y_taper_bottom", 0.0))
     front_bulge = float(spec.get("front_bulge", 0.05))
     bevel_m = float(spec.get("bevel_m", 0.006))
+    profile_scale_raw = spec.get("profile_scale") or []
+    profile_scale: list[tuple[float, float]] = []
+    if isinstance(profile_scale_raw, (list, tuple)):
+        for item in profile_scale_raw:
+            try:
+                yn = float(item[0])
+                scale = float(item[1])
+            except Exception:
+                continue
+            profile_scale.append((max(-1.0, min(1.0, yn)), max(0.05, scale)))
+    profile_scale.sort(key=lambda pair: pair[0])
 
     half_h = height_y * 0.5
     outer_r_base = inner_radius + depth_z
+
+    def _profile_multiplier(y_norm):
+        if not profile_scale:
+            return 1.0
+        if y_norm <= profile_scale[0][0]:
+            return profile_scale[0][1]
+        if y_norm >= profile_scale[-1][0]:
+            return profile_scale[-1][1]
+        for idx in range(len(profile_scale) - 1):
+            y0, s0 = profile_scale[idx]
+            y1, s1 = profile_scale[idx + 1]
+            if y0 <= y_norm <= y1:
+                span = y1 - y0
+                t = 0.0 if abs(span) < 1e-9 else (y_norm - y0) / span
+                return s0 + (s1 - s0) * t
+        return 1.0
 
     def _row_radii(y_norm):
         # y_norm in [-1, 1]: -1 = bottom, +1 = top
@@ -255,24 +285,29 @@ def _p_body_wrap_arc(bm, spec):
         orad = outer_r_base * chord_scale
         return ir, orad
 
-    # Two rib rows (top and bottom). For each row build segments+1 columns.
+    # Rib rows from bottom to top. Extra rows let armor read as fitted shells
+    # instead of straight extruded slabs while preserving the authored envelope.
     # Vertex layout: [row][col][inner=0/outer=1]
     grid: list[list[tuple] ] = []
-    rows_y = [(-half_h, -1.0), (half_h, 1.0)]
+    rows_y = []
+    for r in range(y_segments + 1):
+        y_norm = -1.0 + (2.0 * r / y_segments)
+        rows_y.append((half_h * y_norm, y_norm))
     for y_val, y_norm in rows_y:
         ir, orad = _row_radii(y_norm)
         col_pairs = []
         for c in range(segments + 1):
             t = c / segments
             theta = -half_arc + t * arc_rad
+            x_profile = _profile_multiplier(y_norm)
             # cos(theta=0) = 1 -> apex sits at +Z (outward) for both inner/outer skin.
             # bulge tapers off the center: peaks at theta=0, zero at +/-half_arc.
             bulge_factor = math.cos(theta) if half_arc > 1e-6 else 1.0
             bulge_factor = max(0.0, bulge_factor)
             extra = front_bulge * bulge_factor
-            inner_x = math.sin(theta) * ir
+            inner_x = math.sin(theta) * ir * x_profile
             inner_z = math.cos(theta) * ir + extra
-            outer_x = math.sin(theta) * orad
+            outer_x = math.sin(theta) * orad * x_profile
             outer_z = math.cos(theta) * orad + extra
             v_inner = bm.verts.new((inner_x, y_val, inner_z))
             v_outer = bm.verts.new((outer_x, y_val, outer_z))
@@ -285,26 +320,38 @@ def _p_body_wrap_arc(bm, spec):
     # Top/bottom caps: connect inner-outer at the same row.
     # Side caps: at c=0 and c=segments, bridge the two rows + inner/outer.
     faces = []
-    bottom_row, top_row = grid[0], grid[1]
+    for r in range(len(grid) - 1):
+        lower_row, upper_row = grid[r], grid[r + 1]
+        for c in range(segments):
+            # outer skin quad (winding so normal points along +outer_radial == outward)
+            lo0 = lower_row[c][1]
+            lo1 = lower_row[c + 1][1]
+            up1 = upper_row[c + 1][1]
+            up0 = upper_row[c][1]
+            try:
+                faces.append(bm.faces.new((lo0, up0, up1, lo1)))
+            except ValueError:
+                pass
+            # inner skin quad (reverse winding -> normal points inward, away from body)
+            li0 = lower_row[c][0]
+            li1 = lower_row[c + 1][0]
+            ui1 = upper_row[c + 1][0]
+            ui0 = upper_row[c][0]
+            try:
+                faces.append(bm.faces.new((li0, li1, ui1, ui0)))
+            except ValueError:
+                pass
+
+    bottom_row, top_row = grid[0], grid[-1]
     for c in range(segments):
-        # outer skin quad (winding so normal points along +outer_radial == outward)
-        bo0 = bottom_row[c][1]
-        bo1 = bottom_row[c + 1][1]
-        to1 = top_row[c + 1][1]
-        to0 = top_row[c][1]
-        try:
-            faces.append(bm.faces.new((bo0, to0, to1, bo1)))
-        except ValueError:
-            pass
-        # inner skin quad (reverse winding -> normal points inward, away from body)
         bi0 = bottom_row[c][0]
         bi1 = bottom_row[c + 1][0]
-        ti1 = top_row[c + 1][0]
+        bo0 = bottom_row[c][1]
+        bo1 = bottom_row[c + 1][1]
         ti0 = top_row[c][0]
-        try:
-            faces.append(bm.faces.new((bi0, bi1, ti1, ti0)))
-        except ValueError:
-            pass
+        ti1 = top_row[c + 1][0]
+        to0 = top_row[c][1]
+        to1 = top_row[c + 1][1]
         # top cap quad along this segment (between inner and outer of top row)
         try:
             faces.append(bm.faces.new((ti0, ti1, to1, to0)))
@@ -315,17 +362,20 @@ def _p_body_wrap_arc(bm, spec):
             faces.append(bm.faces.new((bi0, bo0, bo1, bi1)))
         except ValueError:
             pass
-    # Side caps (c=0 left edge, c=segments right edge): close inner+outer between top and bottom.
+
+    # Side caps (c=0 left edge, c=segments right edge): close inner+outer between rows.
     for c, reverse in ((0, False), (segments, True)):
-        bi = bottom_row[c][0]
-        bo = bottom_row[c][1]
-        ti = top_row[c][0]
-        to = top_row[c][1]
-        verts = (bi, bo, to, ti) if not reverse else (bi, ti, to, bo)
-        try:
-            faces.append(bm.faces.new(verts))
-        except ValueError:
-            pass
+        for r in range(len(grid) - 1):
+            lower_row, upper_row = grid[r], grid[r + 1]
+            li = lower_row[c][0]
+            lo = lower_row[c][1]
+            ui = upper_row[c][0]
+            uo = upper_row[c][1]
+            verts = (li, lo, uo, ui) if not reverse else (li, ui, uo, lo)
+            try:
+                faces.append(bm.faces.new(verts))
+            except ValueError:
+                pass
 
     bm.verts.index_update()
     bm.normal_update()
@@ -346,6 +396,145 @@ def _p_body_wrap_arc(bm, spec):
     if bevel_m > 0:
         boundary = [e for e in bm.edges if e.is_boundary]
         _bevel(bm, boundary, bevel_m, segments=1)
+
+
+def _p_body_wrap_loop(bm, spec):
+    """Closed elliptical body loop with real shell thickness.
+
+    This is for belt/cuff modules that must be validated as a continuous
+    wearable aperture. Unlike body_wrap_arc, it has no side caps: the seam is
+    connected with modulo faces around the full 360 degree loop.
+
+    spec keys:
+       size = (outer_x, height_y, outer_z)  # final local bbox target
+       shell_thickness_m                   # default 0.030
+       belt_loop_inner_diameter_m          # optional {"x": ..., "z": ...}
+       segments                            # default 32
+       y_segments                          # default 1
+       profile_scale                       # optional [[y_norm, x_scale], ...]
+       bevel_m                             # default 0.0
+    """
+    sx, sy, sz = spec.get("size", (0.42, 0.16, 0.32))
+    outer_x = max(float(sx), 1e-3)
+    height_y = max(float(sy), 1e-3)
+    outer_z = max(float(sz), 1e-3)
+    shell = float(
+        spec.get(
+            "shell_thickness_m",
+            spec.get("thickness_m", spec.get("depth_z", 0.030)),
+        )
+    )
+    shell = max(shell, 1e-4)
+
+    inner_raw = (
+        spec.get("belt_loop_inner_diameter_m")
+        or spec.get("inner_diameter_m")
+        or spec.get("inner_diameter")
+    )
+    inner_x = outer_x - shell * 2.0
+    inner_z = outer_z - shell * 2.0
+    if isinstance(inner_raw, dict):
+        inner_x = float(inner_raw.get("x", inner_x))
+        inner_z = float(inner_raw.get("z", inner_z))
+    elif isinstance(inner_raw, (list, tuple)) and len(inner_raw) >= 2:
+        inner_x = float(inner_raw[0])
+        inner_z = float(inner_raw[1])
+
+    inner_x = max(inner_x, 1e-3)
+    inner_z = max(inner_z, 1e-3)
+    outer_x = max(outer_x, inner_x + shell * 2.0)
+    outer_z = max(outer_z, inner_z + shell * 2.0)
+
+    segments = max(12, int(spec.get("segments", 32)))
+    y_segments = max(1, int(spec.get("y_segments", 1)))
+    bevel_m = float(spec.get("bevel_m", 0.0))
+    profile_scale_raw = spec.get("profile_scale") or []
+    profile_scale: list[tuple[float, float]] = []
+    if isinstance(profile_scale_raw, (list, tuple)):
+        for item in profile_scale_raw:
+            try:
+                yn = float(item[0])
+                scale = float(item[1])
+            except Exception:
+                continue
+            profile_scale.append((max(-1.0, min(1.0, yn)), max(0.05, scale)))
+    profile_scale.sort(key=lambda pair: pair[0])
+
+    def _profile_multiplier(y_norm):
+        if not profile_scale:
+            return 1.0
+        if y_norm <= profile_scale[0][0]:
+            return profile_scale[0][1]
+        if y_norm >= profile_scale[-1][0]:
+            return profile_scale[-1][1]
+        for idx in range(len(profile_scale) - 1):
+            y0, s0 = profile_scale[idx]
+            y1, s1 = profile_scale[idx + 1]
+            if y0 <= y_norm <= y1:
+                span = y1 - y0
+                t = 0.0 if abs(span) < 1e-9 else (y_norm - y0) / span
+                return s0 + (s1 - s0) * t
+        return 1.0
+
+    inner_rx = inner_x * 0.5
+    inner_rz = inner_z * 0.5
+    outer_rx = outer_x * 0.5
+    outer_rz = outer_z * 0.5
+    half_h = height_y * 0.5
+    grid: list[list[tuple]] = []
+
+    for r in range(y_segments + 1):
+        y_norm = -1.0 + (2.0 * r / y_segments)
+        y_val = half_h * y_norm
+        x_profile = _profile_multiplier(y_norm)
+        row = []
+        for c in range(segments):
+            theta = (math.tau * c) / segments
+            sin_t = math.sin(theta)
+            cos_t = math.cos(theta)
+            v_inner = bm.verts.new((sin_t * inner_rx * x_profile, y_val, cos_t * inner_rz))
+            v_outer = bm.verts.new((sin_t * outer_rx * x_profile, y_val, cos_t * outer_rz))
+            row.append((v_inner, v_outer))
+        grid.append(row)
+
+    faces = []
+    for r in range(len(grid) - 1):
+        lower_row, upper_row = grid[r], grid[r + 1]
+        for c in range(segments):
+            n = (c + 1) % segments
+            lo0, lo1 = lower_row[c][1], lower_row[n][1]
+            up0, up1 = upper_row[c][1], upper_row[n][1]
+            try:
+                faces.append(bm.faces.new((lo0, up0, up1, lo1)))
+            except ValueError:
+                pass
+            li0, li1 = lower_row[c][0], lower_row[n][0]
+            ui0, ui1 = upper_row[c][0], upper_row[n][0]
+            try:
+                faces.append(bm.faces.new((li0, li1, ui1, ui0)))
+            except ValueError:
+                pass
+
+    bottom_row, top_row = grid[0], grid[-1]
+    for c in range(segments):
+        n = (c + 1) % segments
+        bi0, bi1 = bottom_row[c][0], bottom_row[n][0]
+        bo0, bo1 = bottom_row[c][1], bottom_row[n][1]
+        ti0, ti1 = top_row[c][0], top_row[n][0]
+        to0, to1 = top_row[c][1], top_row[n][1]
+        try:
+            faces.append(bm.faces.new((ti0, ti1, to1, to0)))
+        except ValueError:
+            pass
+        try:
+            faces.append(bm.faces.new((bi0, bo0, bo1, bi1)))
+        except ValueError:
+            pass
+
+    bm.verts.index_update()
+    bm.normal_update()
+    if bevel_m > 0:
+        _bevel(bm, list(bm.edges), bevel_m, segments=1)
 
 
 def _p_solid_shell(bm, spec):
@@ -425,7 +614,7 @@ def _p_solid_shell(bm, spec):
 _PRIMS = {"rounded_box": _p_rounded_box, "wedge": _p_wedge,
           "shell_quad": _p_shell_quad, "fillet_cylinder": _p_fillet_cylinder,
           "trim_ridge": _p_trim_ridge, "ellipsoid": _p_ellipsoid, "body_wrap_arc": _p_body_wrap_arc,
-          "solid_shell": _p_solid_shell}
+          "body_wrap_loop": _p_body_wrap_loop, "solid_shell": _p_solid_shell}
 
 def build_panel(spec, parent_collection):
     """Build a panel mesh from ``spec`` (name, primitive, anchor, rotation_deg,
@@ -744,13 +933,19 @@ def _part_spec_sidecar_metadata(module):
         "part_family",
         "base_motif_link",
         "topping_slots",
+        "conflicts_with",
+        "texture_zone_notes",
         "attachment_offset_target_m",
         "body_follow_profile",
         "fit_alignment_notes",
+        "suit_silhouette_profile",
         "auxiliary_part_suggestions",
         "silhouette_review_notes",
         "visual_density_profile",
         "ground_contact_profile",
+        "waist_fit",
+        "body_wrap_loop_contract",
+        "body_wrap_coverage_contract",
     ):
         value = part_spec.get(key)
         if isinstance(value, (str, int, float, dict, list)) and not isinstance(value, bool):

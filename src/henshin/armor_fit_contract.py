@@ -8,6 +8,7 @@ from typing import Any, Iterable
 
 ARMOR_FIT_CONTRACT_VERSION = "armor-body-fit.v1"
 RUNTIME_VISUAL_LAYER_CONTRACT_VERSION = "base-suit-overlay.v1"
+BODY_SURFACE_FIT_POLICY_VERSION = "body-surface-fit-policy.v1"
 BASE_SUIT_LAYER_ID = "base_suit_surface"
 ARMOR_OVERLAY_LAYER_ID = "armor_overlay_parts"
 DEFAULT_VRM_BASELINE_REF = "viewer/assets/vrm/default.vrm"
@@ -269,6 +270,81 @@ SLOT_ALIASES: dict[str, str] = {
     "waist": "belt",
 }
 
+_LIMB_SLEEVE_SURFACE_POLICY = {
+    "role": "limb_sleeve",
+    "vrm_offset_clamp_m": {"y": [-0.03, 0.03], "z": [-0.025, 0.025]},
+    "quest_offset_clamp_m": {"y": [-0.03, 0.03], "z": [-0.025, 0.025]},
+    "target_contact": "centered around the limb axis with only small authoring offsets",
+}
+
+_HAND_SURFACE_POLICY = {
+    "role": "hand_shell",
+    "vrm_offset_clamp_m": {"y": [-0.02, 0.02], "z": [-0.02, 0.026]},
+    "quest_offset_clamp_m": {"y": [-0.02, 0.02], "z": [-0.026, 0.02]},
+    "target_contact": "back-of-hand shell sits close without drifting into a floating prop",
+}
+
+BODY_SURFACE_FIT_POLICIES: dict[str, dict[str, Any]] = {
+    "helmet": {
+        "role": "head_shell",
+        "vrm_offset_clamp_m": {"x": [-0.02, 0.02], "y": [0.04, 0.13], "z": [0.06, 0.14]},
+        "quest_offset_clamp_m": {"x": [-0.02, 0.02], "y": [0.04, 0.13], "z": [-0.14, -0.06]},
+        "target_contact": "helmet encloses the head reference instead of floating in front of the face",
+    },
+    "chest": {
+        "role": "front_ribcage_shell",
+        "vrm_offset_clamp_m": {"x": [-0.015, 0.015], "y": [-0.03, 0.04], "z": [0.04, 0.105]},
+        "quest_offset_clamp_m": {"x": [-0.015, 0.015], "y": [-0.03, 0.04], "z": [-0.105, -0.04]},
+        "target_contact": "front shell rides over the sternum while leaving the body centerline clear",
+    },
+    "back": {
+        "role": "rear_ribcage_shell",
+        "vrm_offset_clamp_m": {"x": [-0.015, 0.015], "y": [-0.03, 0.04], "z": [-0.105, -0.04]},
+        "quest_offset_clamp_m": {"x": [-0.015, 0.015], "y": [-0.03, 0.04], "z": [0.04, 0.105]},
+        "target_contact": "rear shell rides over the spine without crossing into the chest shell",
+    },
+    "waist": {
+        "role": "pelvis_belt_loop",
+        "vrm_offset_clamp_m": {"x": [-0.012, 0.012], "y": [-0.02, 0.024], "z": [-0.006, 0.014]},
+        "quest_offset_clamp_m": {"x": [-0.012, 0.012], "y": [-0.02, 0.024], "z": [-0.014, 0.006]},
+        "target_contact": "front, side, and rear plates read as one close loop around the pelvis",
+    },
+    "left_shoulder": {
+        "role": "left_deltoid_cup",
+        "vrm_offset_clamp_m": {"y": [-0.005, 0.045], "z": [-0.03, 0.04]},
+        "quest_offset_clamp_m": {"y": [-0.005, 0.045], "z": [-0.04, 0.03]},
+        "target_contact": "shoulder cup sits on the deltoid and seams into chest/back",
+    },
+    "right_shoulder": {
+        "role": "right_deltoid_cup",
+        "vrm_offset_clamp_m": {"y": [-0.005, 0.045], "z": [-0.03, 0.04]},
+        "quest_offset_clamp_m": {"y": [-0.005, 0.045], "z": [-0.04, 0.03]},
+        "target_contact": "shoulder cup sits on the deltoid and seams into chest/back",
+    },
+    "left_upperarm": _LIMB_SLEEVE_SURFACE_POLICY,
+    "right_upperarm": _LIMB_SLEEVE_SURFACE_POLICY,
+    "left_forearm": _LIMB_SLEEVE_SURFACE_POLICY,
+    "right_forearm": _LIMB_SLEEVE_SURFACE_POLICY,
+    "left_thigh": _LIMB_SLEEVE_SURFACE_POLICY,
+    "right_thigh": _LIMB_SLEEVE_SURFACE_POLICY,
+    "left_shin": _LIMB_SLEEVE_SURFACE_POLICY,
+    "right_shin": _LIMB_SLEEVE_SURFACE_POLICY,
+    "left_hand": _HAND_SURFACE_POLICY,
+    "right_hand": _HAND_SURFACE_POLICY,
+    "left_boot": {
+        "role": "left_foot_boot_shell",
+        "vrm_offset_clamp_m": {"y": [-0.015, 0.025], "z": [-0.012, 0.018]},
+        "quest_offset_clamp_m": {"y": [-0.015, 0.025], "z": [-0.018, 0.012]},
+        "target_contact": "boot stays grounded on the foot instead of sliding forward",
+    },
+    "right_boot": {
+        "role": "right_foot_boot_shell",
+        "vrm_offset_clamp_m": {"y": [-0.015, 0.025], "z": [-0.012, 0.018]},
+        "quest_offset_clamp_m": {"y": [-0.015, 0.025], "z": [-0.018, 0.012]},
+        "target_contact": "boot stays grounded on the foot instead of sliding forward",
+    },
+}
+
 
 def slot_specs_as_dict() -> dict[str, dict[str, Any]]:
     return {slot_id: spec.to_dict() for slot_id, spec in ARMOR_SLOT_SPECS.items()}
@@ -295,6 +371,37 @@ def recommend_slot_scales(
 ) -> dict[str, float]:
     selected_slots = _normalize_slot_collection(slots or MAJOR_ARMOR_SLOTS, fail_on_unknown=True)[0]
     return {slot: recommend_scale_for_height_cm(height_cm, slot) for slot in selected_slots}
+
+
+def body_surface_fit_policy_for_part(part_name: str) -> dict[str, Any] | None:
+    policy = BODY_SURFACE_FIT_POLICIES.get(str(part_name or "").strip())
+    if not isinstance(policy, dict):
+        return None
+    return {
+        "contract_version": BODY_SURFACE_FIT_POLICY_VERSION,
+        "role": policy.get("role"),
+        "vrm_offset_clamp_m": _clone_axis_clamp(policy.get("vrm_offset_clamp_m")),
+        "quest_offset_clamp_m": _clone_axis_clamp(policy.get("quest_offset_clamp_m")),
+        "target_contact": policy.get("target_contact"),
+    }
+
+
+def clamp_surface_offset_for_part(
+    part_name: str,
+    offset: Iterable[float],
+    *,
+    space: str = "vrm",
+) -> list[float]:
+    vector = _surface_vector3(offset)
+    policy = body_surface_fit_policy_for_part(part_name)
+    if not policy:
+        return vector
+    clamp_key = "quest_offset_clamp_m" if space == "quest" else "vrm_offset_clamp_m"
+    clamp_set = policy.get(clamp_key) if isinstance(policy.get(clamp_key), dict) else {}
+    result = []
+    for index, axis in enumerate(("x", "y", "z")):
+        result.append(_clamp_offset_axis(vector[index], clamp_set.get(axis)))
+    return result
 
 
 def audit_armor_fit_slots(
@@ -549,12 +656,53 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def _surface_vector3(offset: Iterable[float]) -> list[float]:
+    values = list(offset) if not isinstance(offset, str) else []
+    result = []
+    for index in range(3):
+        try:
+            result.append(round(float(values[index]), 6))
+        except (IndexError, TypeError, ValueError):
+            result.append(0.0)
+    return result
+
+
+def _clone_axis_clamp(value: Any) -> dict[str, list[float]]:
+    result: dict[str, list[float]] = {}
+    if not isinstance(value, dict):
+        return result
+    for axis in ("x", "y", "z"):
+        raw_range = value.get(axis)
+        if not isinstance(raw_range, (list, tuple)) or len(raw_range) < 2:
+            continue
+        try:
+            low = round(float(raw_range[0]), 6)
+            high = round(float(raw_range[1]), 6)
+        except (TypeError, ValueError):
+            continue
+        result[axis] = [min(low, high), max(low, high)]
+    return result
+
+
+def _clamp_offset_axis(value: float, clamp_range: Any) -> float:
+    if not isinstance(clamp_range, (list, tuple)) or len(clamp_range) < 2:
+        return round(value, 6)
+    try:
+        low = float(clamp_range[0])
+        high = float(clamp_range[1])
+    except (TypeError, ValueError):
+        return round(value, 6)
+    return round(_clamp(value, min(low, high), max(low, high)), 6)
+
+
 __all__ = [
     "ARMOR_FIT_CONTRACT_VERSION",
     "ARMOR_OVERLAY_LAYER_ID",
     "ARMOR_SLOT_SPECS",
     "ArmorSlotSpec",
     "BASELINE_HEIGHT_CM",
+    "BODY_SURFACE_FIT_POLICIES",
+    "BODY_SURFACE_FIT_POLICY_VERSION",
     "BASE_SUIT_LAYER_ID",
     "DEFAULT_VRM_BASELINE_REF",
     "MAJOR_ARMOR_SLOTS",
@@ -565,7 +713,9 @@ __all__ = [
     "RUNTIME_VISUAL_LAYER_CONTRACT_VERSION",
     "SLOT_ALIASES",
     "audit_armor_fit_slots",
+    "body_surface_fit_policy_for_part",
     "build_body_fit_contract",
+    "clamp_surface_offset_for_part",
     "normalize_slot_id",
     "recommend_scale_for_height_cm",
     "recommend_slot_scales",

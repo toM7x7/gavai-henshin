@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.left_boot.v1",
   "category": "foot",
   "bbox_m": {
-    "x": 0.11926399916410446,
+    "x": 0.11800000071525574,
     "y": 0.08999999985098839,
-    "z": 0.2900000065565109,
+    "z": 0.29099999368190765,
     "size": [
-      0.11926399916410446,
+      0.11800000071525574,
       0.08999999985098839,
-      0.2900000065565109
+      0.29099999368190765
     ],
     "dimensions": [
-      0.11926399916410446,
+      0.11800000071525574,
       0.08999999985098839,
-      0.2900000065565109
+      0.29099999368190765
     ]
   },
-  "triangle_count": 620,
+  "triangle_count": 764,
   "material_zones": [
     "accent",
     "base_surface",
@@ -119,23 +119,35 @@
     "follow_panels": [
       "boot_toe_cap",
       "boot_heel_cap",
+      "boot_vamp_shell",
       "boot_ankle_wrap",
       "boot_sole_flat"
     ],
-    "target_contact": "sole and side rails define contact in source geometry, not Web-only correction"
+    "target_contact": "toe, heel, vamp, ankle cuff, and sole overlap in source geometry so no part floats"
   },
   "fit_alignment_notes": [
-    "Sole rails widen the visual footprint while keeping the attachment offset inside target.",
+    "Toe, heel, vamp, cuff, and sole overlap to make one boot volume around the foot and ankle.",
     "Topping slots reserve toe fin and heel spur anchors for later boot silhouette upgrades."
   ],
+  "suit_silhouette_profile": {
+    "read": "fitted_tokusatsu_boot",
+    "primary_lines": [
+      "rounded toe cap",
+      "instep vamp",
+      "low ankle cuff",
+      "thin sole"
+    ],
+    "float_countermeasure": "sole is thin and overlapped by toe/heel/cuff geometry; no separate slab floats under the foot"
+  },
   "silhouette_review_notes": [
-    "Toe cap + heel cap + ankle wrap + flat sole keeps foot articulated.",
-    "Ankle wrap (arc 300\u00b0) gives true ground-up boot silhouette.",
-    "Sole plate anchors silver above to ground in profile views."
+    "Rounded toe + heel cup replace the old rectangular front/rear blocks.",
+    "Ankle wrap (arc 300°) gives true ground-up boot silhouette.",
+    "Thin sole and side rails anchor the boot to ground in profile views."
   ],
   "visual_density_profile": {
     "issue": "boot silhouette needed more planted footprint and add-on anchors",
     "hero_density_panels": [
+      "boot_vamp_shell",
       "boot_ankle_wrap",
       "boot_sole_flat",
       "boot_sole_outrigger_left",
@@ -143,8 +155,10 @@
       "boot_instep_accent"
     ],
     "profile_cues": [
-      "flat sole",
-      "side rails",
+      "rounded toe",
+      "heel cup",
+      "low ankle cuff",
+      "thin sole rails",
       "instep glow"
     ]
   },
@@ -157,11 +171,19 @@
     "local_bottom_y_m": -0.045,
     "stance_note": "Use the sole bottom as the foot contact reference in preview and fit QA."
   },
-  "triangles": 620,
+  "triangles": 764,
   "target_envelope_m": {
     "x": 0.1224,
     "y": 0.0884,
     "z": 0.2856
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Boot texture should make toe, heel, cuff, and sole feel grounded as one volume."
+  }
 }

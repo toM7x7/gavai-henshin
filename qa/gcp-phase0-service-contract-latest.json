@@ -1,0 +1,595 @@
+{
+  "contract_version": "gcp-phase0-service-contract.v1",
+  "ok": true,
+  "status": "pass",
+  "phase0_promotion_status": "ready",
+  "generated_at": "2026-05-04T12:22:21+00:00",
+  "mode": "local",
+  "env_file": ".env.demo.example",
+  "env_duplicate_keys": [],
+  "required_env": [
+    {
+      "key": "APP_ENV",
+      "required_now": true,
+      "present": true,
+      "current_value": "exhibition-local",
+      "phase0_gcp_value_hint": "Use staging/exhibition-service label; do not imply local fallback is replaced.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "PUBLIC_API_BASE_URL",
+      "required_now": true,
+      "present": true,
+      "current_value": "http://127.0.0.1:8010",
+      "phase0_gcp_value_hint": "External mode must be an HTTPS API origin.",
+      "secret_policy": "public_value_allowed_no_secret_semantics"
+    },
+    {
+      "key": "PUBLIC_ASSET_BASE_URL",
+      "required_now": true,
+      "present": true,
+      "current_value": "http://127.0.0.1:8010",
+      "phase0_gcp_value_hint": "HTTPS CDN/GCS/Cloud Run asset origin or approved artifact resolver.",
+      "secret_policy": "public_value_allowed_no_secret_semantics"
+    },
+    {
+      "key": "PUBLIC_VIEWER_BASE_URL",
+      "required_now": true,
+      "present": true,
+      "current_value": "http://127.0.0.1:8010",
+      "phase0_gcp_value_hint": "HTTPS Web Forge/Quest viewer origin.",
+      "secret_policy": "public_value_allowed_no_secret_semantics"
+    },
+    {
+      "key": "CORS_ALLOWED_ORIGINS",
+      "required_now": true,
+      "present": true,
+      "current_value": "http://127.0.0.1:8010,http://localhost:8010,http://localhost:5173",
+      "phase0_gcp_value_hint": "Explicit comma-separated Web and Quest origins; no wildcard in external mode.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "STORE_DRIVER",
+      "required_now": true,
+      "present": true,
+      "current_value": "json",
+      "phase0_gcp_value_hint": "json locally; cloudsql/postgres when Cloud SQL schema is ready.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "ARTIFACT_STORE_DRIVER",
+      "required_now": true,
+      "present": true,
+      "current_value": "local",
+      "phase0_gcp_value_hint": "local locally; gcs when artifact namespace is ready.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "QUEST_API_TARGET",
+      "required_now": true,
+      "present": true,
+      "current_value": "http://127.0.0.1:8010",
+      "phase0_gcp_value_hint": "Must match PUBLIC_API_BASE_URL for the viewer lane being tested.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "QUEST_VIEWER_PORT",
+      "required_now": true,
+      "present": true,
+      "current_value": "5173",
+      "phase0_gcp_value_hint": "5173 remains local-only; Cloud Run external mode uses public origin instead of fixed Vite port.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "DASHBOARD_PORT",
+      "required_now": true,
+      "present": true,
+      "current_value": "8010",
+      "phase0_gcp_value_hint": "8010 remains local-only; Cloud Run receives its PORT from platform runtime.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "REPLAY_ARTIFACT_ROOT",
+      "required_now": true,
+      "present": true,
+      "current_value": "qa/replay",
+      "phase0_gcp_value_hint": "Local QA path now; GCS prefix or replay artifact resolver later.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "GCP_PROJECT_ID",
+      "required_now": false,
+      "required_for_gcp_phase0": true,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "GCP project id for phase0 deployment records.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "CLOUD_RUN_SERVICE_URL",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Resolved public Cloud Run service URL after deployment.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "DATABASE_URL",
+      "required_now": false,
+      "required_for_gcp_phase0": true,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Secret Manager or connector-backed Cloud SQL credential; never public.",
+      "secret_policy": "blank_or_placeholder_in_demo_env_secret_manager_for_real_value"
+    },
+    {
+      "key": "ARTIFACT_BUCKET",
+      "required_now": false,
+      "required_for_gcp_phase0": true,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Cloud Storage bucket name or gs:// prefix for public artifacts.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "TASKS_QUEUE_NAME",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Cloud Tasks queue only after async jobs are promoted.",
+      "secret_policy": "non_secret_configuration"
+    },
+    {
+      "key": "SECRET_MANAGER_PREFIX",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": false,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Prefix/path for provider keys and deployment-only secrets.",
+      "secret_policy": "blank_or_placeholder_in_demo_env_secret_manager_for_real_value"
+    },
+    {
+      "key": "GEMINI_API_KEY",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": true,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Store real value in Secret Manager; keep release/demo env blank or placeholder.",
+      "secret_policy": "secret_manager_only_never_public"
+    },
+    {
+      "key": "OPENAI_API_KEY",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": true,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Store real value in Secret Manager; keep release/demo env blank or placeholder.",
+      "secret_policy": "secret_manager_only_never_public"
+    },
+    {
+      "key": "FAL_KEY",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": true,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Store real value in Secret Manager; keep release/demo env blank or placeholder.",
+      "secret_policy": "secret_manager_only_never_public"
+    },
+    {
+      "key": "SAKURA_AI_ENGINE_TOKEN",
+      "required_now": false,
+      "required_for_gcp_phase0": false,
+      "present": true,
+      "current_value": "",
+      "phase0_gcp_value_hint": "Store real value in Secret Manager; keep release/demo env blank or placeholder.",
+      "secret_policy": "secret_manager_only_never_public"
+    }
+  ],
+  "public_urls": {
+    "mode": "local",
+    "web_base_url": "http://127.0.0.1:8010",
+    "api_base_url": "http://127.0.0.1:8010",
+    "quest_base_url": "http://localhost:5173",
+    "asset_base_url": "http://127.0.0.1:8010",
+    "forge_url": "http://127.0.0.1:8010/viewer/armor-forge/",
+    "quest_url_template": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&code={code}",
+    "quest_manual_url": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1",
+    "quest_recall_api_template": "http://127.0.0.1:8010/v1/quest/recall/{code}",
+    "api_health": "http://127.0.0.1:8010/health",
+    "dashboard_health": "http://127.0.0.1:8010/api/health",
+    "cors_allowed_origins": [
+      "http://127.0.0.1:8010",
+      "http://localhost:8010",
+      "http://localhost:5173"
+    ],
+    "external_mode_policy": "HTTPS public origins only; no localhost, loopback, private LAN, or .local-style host.",
+    "local_mode_policy": "127.0.0.1:8010 and localhost:5173 are valid only for the exhibition-PC local fallback."
+  },
+  "api_endpoints": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "purpose": "Service health and contract metadata.",
+      "storage_domain": "health",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "purpose": "Dashboard/static server health.",
+      "storage_domain": "health",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime-info",
+      "purpose": "Operator runtime URL hints for Quest local/LAN paths.",
+      "storage_domain": "operator",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/suits/forge",
+      "purpose": "Public Web Forge suit creation and 4-digit code issue.",
+      "storage_domain": "suit",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/suits/issue-id",
+      "purpose": "Issue a suit id and recall code before saving a full suitspec.",
+      "storage_domain": "suit",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/suits",
+      "purpose": "Persist a suitspec under the canonical API contract.",
+      "storage_domain": "suit",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/suits/{suit_id}",
+      "purpose": "Read stored suit metadata by durable suit id.",
+      "storage_domain": "suit",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/suits/code/{code}",
+      "purpose": "Resolve a recall code to its active suit.",
+      "storage_domain": "recall_code",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/suits/{suit_id}/manifest",
+      "purpose": "Attach or update a suit manifest.",
+      "storage_domain": "suit_version",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/suits/{suit_id}/manifest",
+      "purpose": "Read latest manifest for a suit.",
+      "storage_domain": "suit_version",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/manifests/{manifest_id}",
+      "purpose": "Read manifest by durable manifest id.",
+      "storage_domain": "suit_version",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/quest/recall/{code}",
+      "purpose": "Quest/Web recall payload with runtime_package.",
+      "storage_domain": "quest_recall",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/catalog/parts",
+      "purpose": "Part catalog used by forge/modeler diagnostics.",
+      "storage_domain": "catalog",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/catalog/part-blueprints",
+      "purpose": "Modeler blueprint catalog.",
+      "storage_domain": "catalog",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/trials",
+      "purpose": "Create a transform trial/session.",
+      "storage_domain": "trial",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/trials",
+      "purpose": "List transform trials.",
+      "storage_domain": "trial",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/trials/latest",
+      "purpose": "Read latest transform trial.",
+      "storage_domain": "trial",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/trials/{trial_id}",
+      "purpose": "Read a transform trial by id.",
+      "storage_domain": "trial",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/trials/{trial_id}/events",
+      "purpose": "Append transform event rows.",
+      "storage_domain": "transform_event",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/trials/{trial_id}/replay",
+      "purpose": "Read replay script/record for a trial.",
+      "storage_domain": "replay",
+      "phase0_authority": "current Python NewRouteApi/dashboard_server contract",
+      "public_response_policy": "No machine-local paths, file:// refs, real secrets, raw provider payloads, or PlayCanvas write-back authority."
+    }
+  ],
+  "storage_future_mapping": [
+    {
+      "domain": "suit",
+      "local_now": "sessions/new-route/suits/*/suit.json",
+      "gcp_phase0": "Cloud SQL table suit",
+      "public_response_rule": "Return suit_id, display summary, current version pointer."
+    },
+    {
+      "domain": "suit_version",
+      "local_now": "suitspec/manifests/runtime_package JSON files",
+      "gcp_phase0": "Cloud SQL table suit_version plus GCS manifest/runtime snapshot",
+      "public_response_rule": "Return version ids, schema/runtime versions, and artifact refs."
+    },
+    {
+      "domain": "recall_code",
+      "local_now": "recall_code field in local suit JSON",
+      "gcp_phase0": "Cloud SQL table recall_code",
+      "public_response_rule": "4-digit code is a short-lived lookup handle, not durable identity."
+    },
+    {
+      "domain": "quest_recall",
+      "local_now": "Derived runtime_package from local JSON and viewer/assets",
+      "gcp_phase0": "Cloud SQL read plus GCS runtime snapshot/artifacts",
+      "public_response_rule": "Return selected variants, render placements, cache policy, portable asset refs."
+    },
+    {
+      "domain": "trial",
+      "local_now": "sessions/new-route/trials/*/transform-session.json",
+      "gcp_phase0": "Cloud SQL table trial",
+      "public_response_rule": "Return trial_id, state, safe device/session metadata class."
+    },
+    {
+      "domain": "transform_event",
+      "local_now": "Local append-only trial events",
+      "gcp_phase0": "Cloud SQL transform_event rows and optional GCS archive",
+      "public_response_rule": "Append-only event type, phase, motion source, error summary, artifact refs."
+    },
+    {
+      "domain": "replay",
+      "local_now": "qa/replay and local replay JSON bundles",
+      "gcp_phase0": "Cloud SQL replay index plus GCS JSON/media artifacts",
+      "public_response_rule": "Use relative, gs://, or approved https refs only."
+    },
+    {
+      "domain": "glb_texture_preview_artifacts",
+      "local_now": "viewer/assets and generated local artifact files",
+      "gcp_phase0": "Cloud Storage bucket namespace",
+      "public_response_rule": "Public payload uses logical artifact refs or HTTPS URLs, not physical file paths."
+    },
+    {
+      "domain": "generation_jobs",
+      "local_now": "In-memory/local job manager",
+      "gcp_phase0": "Cloud Tasks queue plus Cloud SQL job/audit rows",
+      "public_response_rule": "Only after synchronous behavior and idempotency keys are stable."
+    },
+    {
+      "domain": "provider_secrets",
+      "local_now": ".env on local PC",
+      "gcp_phase0": "Secret Manager",
+      "public_response_rule": "Never expose through PUBLIC_* env, Web/Quest payloads, or Replay records."
+    }
+  ],
+  "cloud_run_candidate_services": [
+    {
+      "service_id": "henshin-api-ui",
+      "phase0_status": "candidate_primary",
+      "role": "Single Cloud Run service hosting current API/UI/static boundary before any split.",
+      "owns_endpoint_prefixes": [
+        "/health",
+        "/api/",
+        "/v1/",
+        "/viewer/armor-forge/"
+      ],
+      "required_env_keys": [
+        "APP_ENV",
+        "PUBLIC_API_BASE_URL",
+        "PUBLIC_ASSET_BASE_URL",
+        "PUBLIC_VIEWER_BASE_URL",
+        "CORS_ALLOWED_ORIGINS",
+        "STORE_DRIVER",
+        "ARTIFACT_STORE_DRIVER",
+        "QUEST_API_TARGET",
+        "QUEST_VIEWER_PORT",
+        "DASHBOARD_PORT",
+        "REPLAY_ARTIFACT_ROOT"
+      ],
+      "promotion_gate": "validate_service_deployment_contract.py --mode external must pass with HTTPS public URLs and no real secrets in demo/release env files."
+    },
+    {
+      "service_id": "henshin-worker",
+      "phase0_status": "future_optional",
+      "role": "Narrow async generation/validation worker after idempotent job model exists.",
+      "owns_endpoint_prefixes": [],
+      "promotion_gate": "Do not introduce until Cloud Tasks queue and retry/idempotency contract are written."
+    },
+    {
+      "service_id": "quest-viewer-static",
+      "phase0_status": "optional_split_later",
+      "role": "Static Quest viewer delivery if one-service API/UI boundary becomes limiting.",
+      "owns_endpoint_prefixes": [
+        "/viewer/quest-iw-demo/"
+      ],
+      "promotion_gate": "Must preserve same /v1 Quest recall payload shape and CORS alignment."
+    }
+  ],
+  "blocked_until": [],
+  "local_to_gcp_delta": {
+    "urls": {
+      "local": "http://127.0.0.1:8010 for Web/API and http://localhost:5173 for Quest USB ADB reverse.",
+      "gcp_phase0": "HTTPS public origins for Web/API/Quest with explicit CORS alignment."
+    },
+    "runtime": {
+      "local": "python tools/run_henshin.py serve-dashboard --port 8010 plus Quest Vite on 5173.",
+      "gcp_phase0": "Cloud Run service handles the current API/UI boundary; Quest local fallback remains independent."
+    },
+    "store_driver": {
+      "local": "json",
+      "gcp_phase0": "cloudsql/postgres"
+    },
+    "artifact_store_driver": {
+      "local": "local",
+      "gcp_phase0": "gcs"
+    },
+    "queue_driver": {
+      "local": "inline",
+      "gcp_phase0": "cloud_tasks only after job idempotency is stable"
+    },
+    "secrets": {
+      "local": ".env with blank/placeholders for demo",
+      "gcp_phase0": "Secret Manager refs; never PUBLIC_*"
+    },
+    "playcanvas": {
+      "local": "Optional snapshot consumer validation only.",
+      "gcp_phase0": "Still snapshot consumer; no write-back or source-of-truth role."
+    }
+  },
+  "service_deployment_contract": {
+    "contract_version": "service-deployment-contract.v1",
+    "ok": true,
+    "status": "pass",
+    "mode": "local",
+    "urls": {
+      "web": {
+        "raw": "http://127.0.0.1:8010",
+        "url": "http://127.0.0.1:8010",
+        "scheme": "http",
+        "host": "127.0.0.1",
+        "port": 8010,
+        "path": "",
+        "origin": "http://127.0.0.1:8010",
+        "is_loopback": true,
+        "is_private_lan": true,
+        "is_private_name": false
+      },
+      "api": {
+        "raw": "http://127.0.0.1:8010",
+        "url": "http://127.0.0.1:8010",
+        "scheme": "http",
+        "host": "127.0.0.1",
+        "port": 8010,
+        "path": "",
+        "origin": "http://127.0.0.1:8010",
+        "is_loopback": true,
+        "is_private_lan": true,
+        "is_private_name": false
+      },
+      "quest": {
+        "raw": "http://localhost:5173",
+        "url": "http://localhost:5173",
+        "scheme": "http",
+        "host": "localhost",
+        "port": 5173,
+        "path": "",
+        "origin": "http://localhost:5173",
+        "is_loopback": true,
+        "is_private_lan": true,
+        "is_private_name": false
+      }
+    },
+    "operator_urls": {
+      "forge_url": "http://127.0.0.1:8010/viewer/armor-forge/",
+      "quest_url_template": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&code={code}",
+      "quest_recall_api_template": "http://127.0.0.1:8010/v1/quest/recall/{code}",
+      "api_health": "http://127.0.0.1:8010/health"
+    },
+    "env": {
+      "path": ".env.demo.example",
+      "present": true,
+      "required_keys": [
+        "APP_ENV",
+        "PUBLIC_API_BASE_URL",
+        "PUBLIC_ASSET_BASE_URL",
+        "PUBLIC_VIEWER_BASE_URL",
+        "CORS_ALLOWED_ORIGINS",
+        "STORE_DRIVER",
+        "ARTIFACT_STORE_DRIVER",
+        "QUEST_API_TARGET",
+        "QUEST_VIEWER_PORT",
+        "DASHBOARD_PORT",
+        "REPLAY_ARTIFACT_ROOT"
+      ],
+      "missing_keys": [],
+      "duplicate_keys": [],
+      "checked_key_count": 21,
+      "public_api_base_url": "http://127.0.0.1:8010",
+      "public_viewer_base_url": "http://127.0.0.1:8010",
+      "public_asset_base_url": "http://127.0.0.1:8010",
+      "quest_api_target": "http://127.0.0.1:8010",
+      "cors_allowed_origins": [
+        "http://127.0.0.1:8010",
+        "http://localhost:8010",
+        "http://localhost:5173"
+      ],
+      "secret_value_violation_count": 0
+    },
+    "http": {
+      "requested": false,
+      "checks": []
+    },
+    "reasons": [],
+    "warnings": []
+  },
+  "out": "qa/gcp-phase0-service-contract-latest.json"
+}

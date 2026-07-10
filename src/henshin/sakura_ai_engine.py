@@ -17,7 +17,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .gemini_image import _load_dotenv
+from ._env import load_dotenv as _load_dotenv
 
 
 DEFAULT_BASE_URL = "https://api.ai.sakura.ad.jp/v1"

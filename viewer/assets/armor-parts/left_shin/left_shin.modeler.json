@@ -4,21 +4,21 @@
   "part_id": "viewer.mesh.left_shin.v1",
   "category": "leg",
   "bbox_m": {
-    "x": 0.10779999941587448,
+    "x": 0.10172799974679947,
     "y": 0.4105119854211807,
-    "z": 0.11389999836683273,
+    "z": 0.1140519492328167,
     "size": [
-      0.10779999941587448,
+      0.10172799974679947,
       0.4105119854211807,
-      0.11389999836683273
+      0.1140519492328167
     ],
     "dimensions": [
-      0.10779999941587448,
+      0.10172799974679947,
       0.4105119854211807,
-      0.11389999836683273
+      0.1140519492328167
     ]
   },
-  "triangle_count": 440,
+  "triangle_count": 676,
   "material_zones": [
     "accent",
     "base_surface",
@@ -47,7 +47,7 @@
   },
   "qa_self_report": {
     "stable_part_name": "pass",
-    "bbox_within_target_envelope": "pass",
+    "bbox_within_target_envelope": "warn",
     "non_overlapping_uv0": "pass",
     "single_surface_base_material_or_declared_slots": "warn",
     "mirror_pair_dimension_delta_below_3_percent": "pass",
@@ -121,7 +121,8 @@
       "shin_outer_wrap",
       "shin_inner_wrap",
       "shin_ankle_lip",
-      "shin_boot_socket_shadow"
+      "shin_boot_socket_shadow",
+      "shin_ankle_cuff_shell"
     ],
     "target_contact": "lower socket visually receives the boot cuff instead of ending as a floating shin plate"
   },
@@ -129,6 +130,15 @@
     "Boot socket shadow creates a source-of-truth seam for Web preview grounding.",
     "Topping slots reserve shin spike and ankle cuff trim anchors for later add-ons."
   ],
+  "suit_silhouette_profile": {
+    "read": "fitted_shin_guard_with_integrated_ankle",
+    "primary_lines": [
+      "center V",
+      "knee dome",
+      "ankle cuff shell"
+    ],
+    "prop_countermeasure": "shin wraps taper into a boot socket instead of ending as a floating cylinder"
+  },
   "silhouette_review_notes": [
     "Front wrap + rear wrap split mirrors thigh construction.",
     "Knee dome adds a clear visual hinge between thigh and shin.",
@@ -140,19 +150,29 @@
       "shin_knee_dome",
       "shin_ankle_lip",
       "shin_center_v",
-      "shin_boot_socket_shadow"
+      "shin_boot_socket_shadow",
+      "shin_ankle_cuff_shell"
     ],
     "profile_cues": [
       "knee dome",
       "ankle lip",
+      "ankle cuff shell",
       "boot socket shadow"
     ]
   },
-  "triangles": 440,
+  "triangles": 676,
   "target_envelope_m": {
     "x": 0.1156,
     "y": 0.3956,
     "z": 0.1156
   },
-  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward"
+  "coordinate_frame": "glTF Y-up; x=lateral, y=vertical, z=outward",
+  "conflicts_with": [],
+  "texture_zone_notes": {
+    "base_surface": "Bright silver hard-shell area; keep it clean and readable as the main armor mass.",
+    "accent": "Cobalt/hero-color trim that continues the base suit motif across neighboring modules.",
+    "emissive": "Cyan glow guides, cores, visor lines, or power seams; keep masks thin and intentional.",
+    "trim": "Dark separation material for cuffs, sockets, vents, and underside shadows.",
+    "module_focus": "Leg texture should taper toward joints and keep speed lines aligned across thigh/shin."
+  }
 }

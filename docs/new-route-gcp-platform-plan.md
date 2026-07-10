@@ -1,8 +1,10 @@
 # 新規路線 GCP プラットフォーム段階移行計画
 
 Version: 0.1
-Status: Draft
-更新日: 2026-04-24
+Status: Superseded — スタック選定(Hono/Vertex AI/Unity)は撤回済み。
+現行の source of truth は [cloud-architecture-2026-07.md](cloud-architecture-2026-07.md)。
+データ境界の考え方(SQL正/GCSアーティファクト/Firestore live)は現行計画に継承。
+更新日: 2026-04-24 (supersede 記載: 2026-07-05)
 
 ## 0. この計画の立場
 

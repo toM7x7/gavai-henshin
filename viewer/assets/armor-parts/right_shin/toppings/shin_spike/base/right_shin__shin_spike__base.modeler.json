@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "right_shin",
+  "topping_slot": "shin_spike",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      0.04971
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.055,
+    "y": 0.1,
+    "z": 0.07
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "right_shin",
+    "topping_slot": "shin_spike",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "shin_spike",
+    "slot_kind": "topping",
+    "allowed_count": {
+      "min": 0,
+      "max": 3
+    },
+    "anchor_hint": {
+      "body_anchor": "right_lower_leg",
+      "parent_surface": "front_center",
+      "placement": "mirrored small spikes along shin ridge"
+    },
+    "max_bbox_m": {
+      "x": 0.055,
+      "y": 0.1,
+      "z": 0.07
+    },
+    "material_zone": "accent_trim",
+    "variant_examples": [
+      "single knee-down spike",
+      "triple low spikes",
+      "smooth blade ridge"
+    ],
+    "conflicts_with": [],
+    "parent_module": "right_shin"
+  },
+  "bbox_m": {
+    "x": 0.0170499999076128,
+    "y": 0.040290866047143936,
+    "z": 0.03099999949336052
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

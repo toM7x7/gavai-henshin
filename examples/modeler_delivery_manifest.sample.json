@@ -1,0 +1,22 @@
+{
+  "contract_version": "modeler-delivery-manifest.v1",
+  "delivery_id": "modeler-delivery-sample-helmet-sleek",
+  "source_concept_catalog": "docs/assets/hero-suit-triview-2026-05-02/concept-catalog.json",
+  "notes": "Sample manifest for validating a modeler-delivered variant before runtime activation.",
+  "assets": [
+    {
+      "asset_kind": "variant",
+      "module": "helmet",
+      "variant_key": "helmet:sleek",
+      "asset_key": "sleek",
+      "glb_path": "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.glb",
+      "sidecar_path": "viewer/assets/armor-parts/helmet/variants/sleek/helmet__sleek.modeler.json",
+      "source_blend_path": "viewer/assets/armor-parts/helmet/variants/sleek/source/helmet__sleek.blend",
+      "source_concept_ids": ["c01", "c05"],
+      "human_review_images": [
+        "docs/assets/hero-suit-triview-2026-05-02/sheet-01-concepts-01-03.png"
+      ],
+      "activate_runtime": false
+    }
+  ]
+}

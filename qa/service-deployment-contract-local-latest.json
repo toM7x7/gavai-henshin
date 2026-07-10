@@ -1,0 +1,86 @@
+﻿{
+  "contract_version": "service-deployment-contract.v1",
+  "ok": true,
+  "status": "pass",
+  "mode": "local",
+  "urls": {
+    "web": {
+      "raw": "http://127.0.0.1:8010",
+      "url": "http://127.0.0.1:8010",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 8010,
+      "path": "",
+      "origin": "http://127.0.0.1:8010",
+      "is_loopback": true,
+      "is_private_lan": true,
+      "is_private_name": false
+    },
+    "api": {
+      "raw": "http://127.0.0.1:8010",
+      "url": "http://127.0.0.1:8010",
+      "scheme": "http",
+      "host": "127.0.0.1",
+      "port": 8010,
+      "path": "",
+      "origin": "http://127.0.0.1:8010",
+      "is_loopback": true,
+      "is_private_lan": true,
+      "is_private_name": false
+    },
+    "quest": {
+      "raw": "http://localhost:5173",
+      "url": "http://localhost:5173",
+      "scheme": "http",
+      "host": "localhost",
+      "port": 5173,
+      "path": "",
+      "origin": "http://localhost:5173",
+      "is_loopback": true,
+      "is_private_lan": true,
+      "is_private_name": false
+    }
+  },
+  "operator_urls": {
+    "forge_url": "http://127.0.0.1:8010/viewer/armor-forge/",
+    "quest_url_template": "http://localhost:5173/viewer/quest-iw-demo/?newRoute=1&code={code}",
+    "quest_recall_api_template": "http://127.0.0.1:8010/v1/quest/recall/{code}",
+    "api_health": "http://127.0.0.1:8010/health"
+  },
+  "env": {
+    "path": ".env.demo.example",
+    "present": true,
+    "required_keys": [
+      "APP_ENV",
+      "PUBLIC_API_BASE_URL",
+      "PUBLIC_ASSET_BASE_URL",
+      "PUBLIC_VIEWER_BASE_URL",
+      "CORS_ALLOWED_ORIGINS",
+      "STORE_DRIVER",
+      "ARTIFACT_STORE_DRIVER",
+      "QUEST_API_TARGET",
+      "QUEST_VIEWER_PORT",
+      "DASHBOARD_PORT",
+      "REPLAY_ARTIFACT_ROOT"
+    ],
+    "missing_keys": [],
+    "duplicate_keys": [],
+    "checked_key_count": 21,
+    "public_api_base_url": "http://127.0.0.1:8010",
+    "public_viewer_base_url": "http://127.0.0.1:8010",
+    "public_asset_base_url": "http://127.0.0.1:8010",
+    "quest_api_target": "http://127.0.0.1:8010",
+    "cors_allowed_origins": [
+      "http://127.0.0.1:8010",
+      "http://localhost:8010",
+      "http://localhost:5173"
+    ],
+    "secret_value_violation_count": 0
+  },
+  "http": {
+    "requested": false,
+    "checks": []
+  },
+  "reasons": [],
+  "warnings": []
+}

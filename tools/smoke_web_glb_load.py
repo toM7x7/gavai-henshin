@@ -199,6 +199,62 @@ def _bbox_target_status(bbox: dict[str, float], target: dict[str, float]) -> str
     return "pass"
 
 
+def _bbox_warning_summary(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summary = []
+    for entry in entries:
+        if entry.get("glb_target_bbox_status") != "warn":
+            continue
+        axes = list(entry.get("glb_target_bbox_warn_axes") or [])
+        actual_bbox = entry.get("glb_bbox_m")
+        target_bbox = entry.get("target_bbox_m")
+        delta_pct = entry.get("glb_target_bbox_delta_pct")
+        if not axes or not isinstance(actual_bbox, dict) or not isinstance(target_bbox, dict):
+            continue
+        if not isinstance(delta_pct, dict):
+            continue
+        axis_acceptance = {}
+        for axis in axes:
+            actual = float(actual_bbox[axis])
+            target = float(target_bbox[axis])
+            pass_min = target * (1.0 - TARGET_BBOX_PASS_RATIO)
+            pass_max = target * (1.0 + TARGET_BBOX_PASS_RATIO)
+            if actual < pass_min:
+                minimum_change = pass_min - actual
+            elif actual > pass_max:
+                minimum_change = pass_max - actual
+            else:
+                minimum_change = 0.0
+            axis_acceptance[axis] = {
+                "actual_m": round(actual, 6),
+                "target_m": round(target, 6),
+                "pass_min_m": round(pass_min, 6),
+                "pass_max_m": round(pass_max, 6),
+                "minimum_change_to_pass_m": round(minimum_change, 6),
+            }
+        max_abs_delta = max(abs(float(delta_pct[axis])) for axis in axes)
+        axes_label = ", ".join(axes)
+        module = entry.get("module")
+        summary.append(
+            {
+                "module": module,
+                "status": "warn",
+                "axes": axes,
+                "delta_pct": {axis: float(delta_pct[axis]) for axis in ("x", "y", "z")},
+                "actual_bbox_m": {axis: round(float(actual_bbox[axis]), 6) for axis in ("x", "y", "z")},
+                "target_bbox_m": {axis: round(float(target_bbox[axis]), 6) for axis in ("x", "y", "z")},
+                "max_abs_delta_pct": round(max_abs_delta, 1),
+                "pass_tolerance_pct": TARGET_BBOX_PASS_RATIO * 100,
+                "fail_tolerance_pct": TARGET_BBOX_TOLERANCE_RATIO * 100,
+                "axis_acceptance": axis_acceptance,
+                "task": (
+                    f"Reorder {module} bbox axes {axes_label} into +/-"
+                    f"{TARGET_BBOX_PASS_RATIO * 100:.1f}% pass envelope while preserving GLB/sidecar bbox match."
+                ),
+            }
+        )
+    return summary
+
+
 def _bbox_axes_outside_abs_delta(
     a: dict[str, float],
     b: dict[str, float],
@@ -792,6 +848,7 @@ def smoke_check_web_glb_load(
     warnings.extend(preview_contract.get("warnings", []))
     if not preview_contract.get("ok", False):
         failures.extend(str(reason) for reason in preview_contract.get("reasons", []))
+    bbox_summary = _bbox_warning_summary(per_module)
 
     # The "preview" counters intentionally mirror the canvas dataset names used
     # by the browser viewer (see docs/armor-runtime-pipeline.md).
@@ -804,6 +861,8 @@ def smoke_check_web_glb_load(
         "ok": fallback_used == 0 and not failures,
         "failures": failures,
         "warnings": warnings,
+        "bbox_warning_count": len(bbox_summary),
+        "bbox_warning_summary": bbox_summary,
         "mirror_pair_checks": mirror_checks,
         "modules": per_module,
         "reference_height_cm": 170,
@@ -826,6 +885,14 @@ def _format_human_summary(report: dict[str, Any]) -> str:
         lines.append("Failures:")
         for failure in report["failures"]:
             lines.append(f"  - {failure}")
+    if report.get("bbox_warning_summary"):
+        lines.append("BBox warning summary:")
+        for warn in report["bbox_warning_summary"]:
+            axes = ",".join(warn.get("axes", []))
+            lines.append(
+                f"  - {warn['module']}: axes={axes} "
+                f"max_abs_delta_pct={warn['max_abs_delta_pct']} task={warn['task']}"
+            )
     if report["warnings"]:
         lines.append("Warnings:")
         for warn in report["warnings"]:

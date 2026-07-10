@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "waist",
+  "topping_slot": "side_clip",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.17626,
+      0.0,
+      0.0
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.055,
+    "y": 0.085,
+    "z": 0.035
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "waist",
+    "topping_slot": "side_clip",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "side_clip",
+    "slot_kind": "micro",
+    "allowed_count": {
+      "min": 0,
+      "max": 4
+    },
+    "anchor_hint": {
+      "body_anchor": "hips",
+      "parent_surface": "left_right_sides",
+      "placement": "small clips along belt side line"
+    },
+    "max_bbox_m": {
+      "x": 0.055,
+      "y": 0.085,
+      "z": 0.035
+    },
+    "material_zone": "side_trim",
+    "variant_examples": [
+      "flat belt latch",
+      "raised utility tab",
+      "small side reactor clip"
+    ],
+    "conflicts_with": [],
+    "parent_module": "waist"
+  },
+  "bbox_m": {
+    "x": 0.0340999960899353,
+    "y": 0.021700002253055573,
+    "z": 0.05270000174641609
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_trim"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

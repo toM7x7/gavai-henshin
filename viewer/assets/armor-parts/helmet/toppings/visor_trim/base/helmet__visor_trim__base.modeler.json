@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "helmet",
+  "topping_slot": "visor_trim",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.119,
+      0.11111
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.25,
+    "y": 0.075,
+    "z": 0.04
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "helmet",
+    "topping_slot": "visor_trim",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "visor_trim",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "head",
+      "parent_surface": "front_upper",
+      "placement": "horizontal band across eye line"
+    },
+    "max_bbox_m": {
+      "x": 0.25,
+      "y": 0.075,
+      "z": 0.04
+    },
+    "material_zone": "lens",
+    "variant_examples": [
+      "single slit visor",
+      "dual eye lens",
+      "wraparound tactical visor"
+    ],
+    "conflicts_with": [],
+    "parent_module": "helmet"
+  },
+  "bbox_m": {
+    "x": 0.1550000011920929,
+    "y": 0.02199999988079071,
+    "z": 0.04650000482797623
+  },
+  "triangle_count": 44,
+  "material_zones": [
+    "armor_emissive"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

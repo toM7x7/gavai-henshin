@@ -76,6 +76,35 @@ create table if not exists transform_events (
   unique (session_id, idempotency_key)
 );
 
+-- Recall codes are the product's central lookup flow (Web Forge -> Quest).
+-- One active code maps to one suit; expired/rotated codes stay for audit.
+create table if not exists recall_codes (
+  recall_code text not null,
+  suit_id text not null references suits(suit_id),
+  status text not null default 'ACTIVE', -- ACTIVE / EXPIRED / REVOKED
+  issued_at timestamptz not null default now(),
+  expires_at timestamptz,
+  primary key (recall_code, issued_at)
+);
+
+create unique index if not exists idx_recall_codes_active
+  on recall_codes(recall_code) where status = 'ACTIVE';
+
+-- Texture/part generation jobs (currently in-memory GenerationJobManager;
+-- this table is the durable replacement for multi-instance Cloud Run).
+create table if not exists generation_jobs (
+  job_id text primary key,
+  suit_id text references suits(suit_id),
+  status text not null default 'PENDING', -- PENDING / RUNNING / DONE / FAILED / CANCELLED
+  provider_profile text not null,
+  request_json jsonb not null,
+  result_json jsonb,
+  error_text text,
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  finished_at timestamptz
+);
+
 create table if not exists audit_logs (
   audit_id bigserial primary key,
   subject_type text not null,
@@ -89,3 +118,5 @@ create table if not exists audit_logs (
 create index if not exists idx_suit_versions_manifest_id on suit_versions(manifest_id);
 create index if not exists idx_transform_sessions_suit_id on transform_sessions(suit_id);
 create index if not exists idx_transform_events_session_sequence on transform_events(session_id, sequence);
+create index if not exists idx_recall_codes_suit_id on recall_codes(suit_id);
+create index if not exists idx_generation_jobs_suit_id on generation_jobs(suit_id);

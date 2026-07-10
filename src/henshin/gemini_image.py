@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+from ._env import load_dotenv as _load_dotenv
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,23 +32,6 @@ class GeminiImageResult:
 class GeminiReferenceImage:
     mime_type: str
     image_bytes: bytes
-
-
-def _load_dotenv(path: str | Path = ".env") -> dict[str, str]:
-    p = Path(path)
-    if not p.exists() or not p.is_file():
-        return {}
-
-    values: dict[str, str] = {}
-    for raw in p.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip("'").strip('"')
-        values[key] = value
-    return values
 
 
 def resolve_api_key(explicit: str | None = None, dotenv_path: str | Path = ".env") -> str:

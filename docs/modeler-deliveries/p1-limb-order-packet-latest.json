@@ -1,0 +1,1411 @@
+{
+  "contract_version": "p1-modeler-order-packet.v1",
+  "source": {
+    "tool": "tools/validate_modeler_variant_order_manifest.py",
+    "manifest": "docs/modeler-deliveries/p1-limb-three-line-variants-2026-05-03.order-manifest.json",
+    "validator_status": "warn",
+    "validator_ok": true,
+    "missing_matrix_contract": "p1-limb-missing-matrix.v1",
+    "axis": [
+      "line_id",
+      "limb_family",
+      "side"
+    ]
+  },
+  "summary": {
+    "order_item_count": 24,
+    "p1_blocked_asset_count": 24,
+    "runtime_activation_blocked_count": 24,
+    "current_stop_counts": {
+      "order": 0,
+      "delivery": 24,
+      "catalog_registration": 0,
+      "runtime_activation": 0
+    }
+  },
+  "order_items": [
+    {
+      "order_item_id": "P1-LIMB-RK-UPPERARM-LEFT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "upperarm",
+      "side": "left",
+      "module": "left_upperarm",
+      "asset_key": "rescue_upperarm_stream",
+      "variant_key": "left_upperarm:rescue_upperarm_stream",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/left_upperarm__rescue_upperarm_stream.glb",
+        "sidecar": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/left_upperarm__rescue_upperarm_stream.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/source/left_upperarm__rescue_upperarm_stream.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_upperarm/variants/rescue_upperarm_stream/preview/left_upperarm__rescue_upperarm_stream.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-UPPERARM-RIGHT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "upperarm",
+      "side": "right",
+      "module": "right_upperarm",
+      "asset_key": "rescue_upperarm_stream",
+      "variant_key": "right_upperarm:rescue_upperarm_stream",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/right_upperarm__rescue_upperarm_stream.glb",
+        "sidecar": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/right_upperarm__rescue_upperarm_stream.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/source/right_upperarm__rescue_upperarm_stream.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_upperarm/variants/rescue_upperarm_stream/preview/right_upperarm__rescue_upperarm_stream.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-FOREARM-LEFT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "forearm",
+      "side": "left",
+      "module": "left_forearm",
+      "asset_key": "rescue_vambrace",
+      "variant_key": "left_forearm:rescue_vambrace",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/left_forearm__rescue_vambrace.glb",
+        "sidecar": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/left_forearm__rescue_vambrace.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/source/left_forearm__rescue_vambrace.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_forearm/variants/rescue_vambrace/preview/left_forearm__rescue_vambrace.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-FOREARM-RIGHT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "forearm",
+      "side": "right",
+      "module": "right_forearm",
+      "asset_key": "rescue_vambrace",
+      "variant_key": "right_forearm:rescue_vambrace",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/right_forearm__rescue_vambrace.glb",
+        "sidecar": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/right_forearm__rescue_vambrace.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/source/right_forearm__rescue_vambrace.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_forearm/variants/rescue_vambrace/preview/right_forearm__rescue_vambrace.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-HAND-LEFT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "hand",
+      "side": "left",
+      "module": "left_hand",
+      "asset_key": "rescue_cuff_lock",
+      "variant_key": "left_hand:rescue_cuff_lock",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/left_hand__rescue_cuff_lock.glb",
+        "sidecar": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/left_hand__rescue_cuff_lock.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/source/left_hand__rescue_cuff_lock.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_hand/variants/rescue_cuff_lock/preview/left_hand__rescue_cuff_lock.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-HAND-RIGHT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "hand",
+      "side": "right",
+      "module": "right_hand",
+      "asset_key": "rescue_cuff_lock",
+      "variant_key": "right_hand:rescue_cuff_lock",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/right_hand__rescue_cuff_lock.glb",
+        "sidecar": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/right_hand__rescue_cuff_lock.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/source/right_hand__rescue_cuff_lock.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_hand/variants/rescue_cuff_lock/preview/right_hand__rescue_cuff_lock.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-THIGH-LEFT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "thigh",
+      "side": "left",
+      "module": "left_thigh",
+      "asset_key": "rescue_speed_plate",
+      "variant_key": "left_thigh:rescue_speed_plate",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/left_thigh__rescue_speed_plate.glb",
+        "sidecar": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/left_thigh__rescue_speed_plate.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/source/left_thigh__rescue_speed_plate.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_thigh/variants/rescue_speed_plate/preview/left_thigh__rescue_speed_plate.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RK-THIGH-RIGHT",
+      "line_id": "line_rescue_knight",
+      "line_label": "Rescue Knight Sleek",
+      "source_concept_ids": [
+        "c02"
+      ],
+      "limb_family": "thigh",
+      "side": "right",
+      "module": "right_thigh",
+      "asset_key": "rescue_speed_plate",
+      "variant_key": "right_thigh:rescue_speed_plate",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/right_thigh__rescue_speed_plate.glb",
+        "sidecar": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/right_thigh__rescue_speed_plate.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/source/right_thigh__rescue_speed_plate.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_thigh/variants/rescue_speed_plate/preview/right_thigh__rescue_speed_plate.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-UPPERARM-LEFT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "upperarm",
+      "side": "left",
+      "module": "left_upperarm",
+      "asset_key": "guardian_upperarm_ridge",
+      "variant_key": "left_upperarm:guardian_upperarm_ridge",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/left_upperarm__guardian_upperarm_ridge.glb",
+        "sidecar": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/left_upperarm__guardian_upperarm_ridge.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/source/left_upperarm__guardian_upperarm_ridge.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_upperarm/variants/guardian_upperarm_ridge/preview/left_upperarm__guardian_upperarm_ridge.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-UPPERARM-RIGHT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "upperarm",
+      "side": "right",
+      "module": "right_upperarm",
+      "asset_key": "guardian_upperarm_ridge",
+      "variant_key": "right_upperarm:guardian_upperarm_ridge",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/right_upperarm__guardian_upperarm_ridge.glb",
+        "sidecar": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/right_upperarm__guardian_upperarm_ridge.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/source/right_upperarm__guardian_upperarm_ridge.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_upperarm/variants/guardian_upperarm_ridge/preview/right_upperarm__guardian_upperarm_ridge.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-FOREARM-LEFT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "forearm",
+      "side": "left",
+      "module": "left_forearm",
+      "asset_key": "guardian_forearm_shell",
+      "variant_key": "left_forearm:guardian_forearm_shell",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/left_forearm__guardian_forearm_shell.glb",
+        "sidecar": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/left_forearm__guardian_forearm_shell.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/source/left_forearm__guardian_forearm_shell.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_forearm/variants/guardian_forearm_shell/preview/left_forearm__guardian_forearm_shell.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-FOREARM-RIGHT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "forearm",
+      "side": "right",
+      "module": "right_forearm",
+      "asset_key": "guardian_forearm_shell",
+      "variant_key": "right_forearm:guardian_forearm_shell",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/right_forearm__guardian_forearm_shell.glb",
+        "sidecar": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/right_forearm__guardian_forearm_shell.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/source/right_forearm__guardian_forearm_shell.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_forearm/variants/guardian_forearm_shell/preview/right_forearm__guardian_forearm_shell.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-HAND-LEFT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "hand",
+      "side": "left",
+      "module": "left_hand",
+      "asset_key": "guardian_knuckle",
+      "variant_key": "left_hand:guardian_knuckle",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/left_hand__guardian_knuckle.glb",
+        "sidecar": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/left_hand__guardian_knuckle.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/source/left_hand__guardian_knuckle.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_hand/variants/guardian_knuckle/preview/left_hand__guardian_knuckle.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-HAND-RIGHT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "hand",
+      "side": "right",
+      "module": "right_hand",
+      "asset_key": "guardian_knuckle",
+      "variant_key": "right_hand:guardian_knuckle",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/right_hand__guardian_knuckle.glb",
+        "sidecar": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/right_hand__guardian_knuckle.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/source/right_hand__guardian_knuckle.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_hand/variants/guardian_knuckle/preview/right_hand__guardian_knuckle.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-THIGH-LEFT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "thigh",
+      "side": "left",
+      "module": "left_thigh",
+      "asset_key": "guardian_outer_guard",
+      "variant_key": "left_thigh:guardian_outer_guard",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/left_thigh__guardian_outer_guard.glb",
+        "sidecar": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/left_thigh__guardian_outer_guard.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/source/left_thigh__guardian_outer_guard.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_thigh/variants/guardian_outer_guard/preview/left_thigh__guardian_outer_guard.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-RI-THIGH-RIGHT",
+      "line_id": "line_royal_insect",
+      "line_label": "Royal Insect Guardian",
+      "source_concept_ids": [
+        "c01"
+      ],
+      "limb_family": "thigh",
+      "side": "right",
+      "module": "right_thigh",
+      "asset_key": "guardian_outer_guard",
+      "variant_key": "right_thigh:guardian_outer_guard",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/right_thigh__guardian_outer_guard.glb",
+        "sidecar": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/right_thigh__guardian_outer_guard.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/source/right_thigh__guardian_outer_guard.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_thigh/variants/guardian_outer_guard/preview/right_thigh__guardian_outer_guard.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-UPPERARM-LEFT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "upperarm",
+      "side": "left",
+      "module": "left_upperarm",
+      "asset_key": "oath_upperarm_guard",
+      "variant_key": "left_upperarm:oath_upperarm_guard",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/left_upperarm__oath_upperarm_guard.glb",
+        "sidecar": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/left_upperarm__oath_upperarm_guard.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/source/left_upperarm__oath_upperarm_guard.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_upperarm/variants/oath_upperarm_guard/preview/left_upperarm__oath_upperarm_guard.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-UPPERARM-RIGHT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "upperarm",
+      "side": "right",
+      "module": "right_upperarm",
+      "asset_key": "oath_upperarm_guard",
+      "variant_key": "right_upperarm:oath_upperarm_guard",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/right_upperarm__oath_upperarm_guard.glb",
+        "sidecar": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/right_upperarm__oath_upperarm_guard.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/source/right_upperarm__oath_upperarm_guard.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_upperarm/variants/oath_upperarm_guard/preview/right_upperarm__oath_upperarm_guard.mesh.json"
+      },
+      "acceptance_focus": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+      "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+      "evidence_required": [
+        "paired_front",
+        "side_elbow_clearance",
+        "3q_line_identity"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-FOREARM-LEFT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "forearm",
+      "side": "left",
+      "module": "left_forearm",
+      "asset_key": "oath_gauntlet",
+      "variant_key": "left_forearm:oath_gauntlet",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/left_forearm__oath_gauntlet.glb",
+        "sidecar": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/left_forearm__oath_gauntlet.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/source/left_forearm__oath_gauntlet.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_forearm/variants/oath_gauntlet/preview/left_forearm__oath_gauntlet.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-FOREARM-RIGHT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "forearm",
+      "side": "right",
+      "module": "right_forearm",
+      "asset_key": "oath_gauntlet",
+      "variant_key": "right_forearm:oath_gauntlet",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/right_forearm__oath_gauntlet.glb",
+        "sidecar": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/right_forearm__oath_gauntlet.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/source/right_forearm__oath_gauntlet.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_forearm/variants/oath_gauntlet/preview/right_forearm__oath_gauntlet.mesh.json"
+      },
+      "acceptance_focus": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+      "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+      "evidence_required": [
+        "paired_front",
+        "side_wrist_rotation",
+        "controller_clearance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-HAND-LEFT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "hand",
+      "side": "left",
+      "module": "left_hand",
+      "asset_key": "oath_palm_core",
+      "variant_key": "left_hand:oath_palm_core",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/left_hand__oath_palm_core.glb",
+        "sidecar": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/left_hand__oath_palm_core.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/source/left_hand__oath_palm_core.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_hand/variants/oath_palm_core/preview/left_hand__oath_palm_core.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-HAND-RIGHT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "hand",
+      "side": "right",
+      "module": "right_hand",
+      "asset_key": "oath_palm_core",
+      "variant_key": "right_hand:oath_palm_core",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/right_hand__oath_palm_core.glb",
+        "sidecar": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/right_hand__oath_palm_core.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/source/right_hand__oath_palm_core.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_hand/variants/oath_palm_core/preview/right_hand__oath_palm_core.mesh.json"
+      },
+      "acceptance_focus": "palm, knuckle, cuff/core read, gesture and controller clearance",
+      "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+      "evidence_required": [
+        "palm_closeup",
+        "side_depth",
+        "controller_grip"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-THIGH-LEFT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "thigh",
+      "side": "left",
+      "module": "left_thigh",
+      "asset_key": "oath_gold_flow",
+      "variant_key": "left_thigh:oath_gold_flow",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/left_thigh__oath_gold_flow.glb",
+        "sidecar": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/left_thigh__oath_gold_flow.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/source/left_thigh__oath_gold_flow.blend",
+        "preview_mesh": "viewer/assets/armor-parts/left_thigh/variants/oath_gold_flow/preview/left_thigh__oath_gold_flow.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    },
+    {
+      "order_item_id": "P1-LIMB-FO-THIGH-RIGHT",
+      "line_id": "line_final_oath",
+      "line_label": "Final Oath Form",
+      "source_concept_ids": [
+        "c15"
+      ],
+      "limb_family": "thigh",
+      "side": "right",
+      "module": "right_thigh",
+      "asset_key": "oath_gold_flow",
+      "variant_key": "right_thigh:oath_gold_flow",
+      "current_stop_stage": "delivery",
+      "blocked_stages": [
+        "delivery",
+        "catalog_registration",
+        "runtime_activation"
+      ],
+      "statuses": {
+        "order": "ordered",
+        "delivery": "missing",
+        "catalog_registration": "missing",
+        "runtime_activation": "runtime_activation_blocked_by_order_manifest"
+      },
+      "required_files": {
+        "glb": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/right_thigh__oath_gold_flow.glb",
+        "sidecar": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/right_thigh__oath_gold_flow.modeler.json",
+        "source_blend": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/source/right_thigh__oath_gold_flow.blend",
+        "preview_mesh": "viewer/assets/armor-parts/right_thigh/variants/oath_gold_flow/preview/right_thigh__oath_gold_flow.mesh.json"
+      },
+      "acceptance_focus": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+      "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+      "evidence_required": [
+        "paired_front",
+        "side_hip_knee",
+        "3q_walk_stance"
+      ],
+      "stage_reasons": {
+        "order": [],
+        "delivery": [],
+        "catalog_registration": [],
+        "runtime_activation": []
+      }
+    }
+  ],
+  "acceptance_checks": {
+    "delivery_fileset": {
+      "required": [
+        "GLB",
+        "modeler sidecar JSON",
+        "source .blend",
+        "preview .mesh.json"
+      ],
+      "reject_if_missing": true
+    },
+    "sidecar_fields": {
+      "required": [
+        "line_id",
+        "source_concept_ids",
+        "design_intent",
+        "fidelity_notes",
+        "bbox_m",
+        "target_envelope_m",
+        "vrm_attachment"
+      ],
+      "reject_if_missing": true
+    },
+    "review_packet": {
+      "required_views": [
+        "front",
+        "side",
+        "back",
+        "3q",
+        "closeup"
+      ],
+      "left_right_pair_review_required": true
+    },
+    "numeric_fit": {
+      "axis_target_pass_pct": 10,
+      "axis_target_fail_pct": 15,
+      "left_right_pair_delta_max_pct": 3,
+      "glb_sidecar_preview_bbox_delta_max_m": 0.002
+    },
+    "family_checks": {
+      "upperarm": {
+        "primary_review": "shoulder-to-elbow read, shoulder lift, elbow clearance",
+        "reject_if": "shoulder lift or elbow bend is blocked, or the part reads as a flat stripe",
+        "evidence": [
+          "paired_front",
+          "side_elbow_clearance",
+          "3q_line_identity"
+        ]
+      },
+      "forearm": {
+        "primary_review": "worn vambrace/gauntlet fit, elbow bend, wrist rotation, controller sightline",
+        "reject_if": "the asset floats as a wrist prop or hides controller grip/readability",
+        "evidence": [
+          "paired_front",
+          "side_wrist_rotation",
+          "controller_clearance"
+        ]
+      },
+      "hand": {
+        "primary_review": "palm, knuckle, cuff/core read, gesture and controller clearance",
+        "reject_if": "hand depth exceeds the accepted envelope without reviewer-only waiver",
+        "evidence": [
+          "palm_closeup",
+          "side_depth",
+          "controller_grip"
+        ]
+      },
+      "thigh": {
+        "primary_review": "waist-to-shin continuity, hip flex, knee bend, walking stance",
+        "reject_if": "the plate bridges hip/knee as a rigid bar or intersects the body",
+        "evidence": [
+          "paired_front",
+          "side_hip_knee",
+          "3q_walk_stance"
+        ]
+      }
+    },
+    "catalog_registration": {
+      "required_before_p1_acceptance": true,
+      "variant_key_must_match_manifest": true,
+      "fallback_or_proxy_does_not_satisfy_order": true
+    }
+  },
+  "blocked_by_stage": {
+    "order": {
+      "count": 0,
+      "items": [],
+      "next_action": "Fix manifest order rows before sending work to modelers."
+    },
+    "delivery": {
+      "count": 24,
+      "items": [
+        {
+          "order_item_id": "P1-LIMB-RK-UPPERARM-LEFT",
+          "variant_key": "left_upperarm:rescue_upperarm_stream",
+          "line_id": "line_rescue_knight",
+          "limb_family": "upperarm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-UPPERARM-RIGHT",
+          "variant_key": "right_upperarm:rescue_upperarm_stream",
+          "line_id": "line_rescue_knight",
+          "limb_family": "upperarm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-FOREARM-LEFT",
+          "variant_key": "left_forearm:rescue_vambrace",
+          "line_id": "line_rescue_knight",
+          "limb_family": "forearm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-FOREARM-RIGHT",
+          "variant_key": "right_forearm:rescue_vambrace",
+          "line_id": "line_rescue_knight",
+          "limb_family": "forearm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-HAND-LEFT",
+          "variant_key": "left_hand:rescue_cuff_lock",
+          "line_id": "line_rescue_knight",
+          "limb_family": "hand",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-HAND-RIGHT",
+          "variant_key": "right_hand:rescue_cuff_lock",
+          "line_id": "line_rescue_knight",
+          "limb_family": "hand",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-THIGH-LEFT",
+          "variant_key": "left_thigh:rescue_speed_plate",
+          "line_id": "line_rescue_knight",
+          "limb_family": "thigh",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RK-THIGH-RIGHT",
+          "variant_key": "right_thigh:rescue_speed_plate",
+          "line_id": "line_rescue_knight",
+          "limb_family": "thigh",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-UPPERARM-LEFT",
+          "variant_key": "left_upperarm:guardian_upperarm_ridge",
+          "line_id": "line_royal_insect",
+          "limb_family": "upperarm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-UPPERARM-RIGHT",
+          "variant_key": "right_upperarm:guardian_upperarm_ridge",
+          "line_id": "line_royal_insect",
+          "limb_family": "upperarm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-FOREARM-LEFT",
+          "variant_key": "left_forearm:guardian_forearm_shell",
+          "line_id": "line_royal_insect",
+          "limb_family": "forearm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-FOREARM-RIGHT",
+          "variant_key": "right_forearm:guardian_forearm_shell",
+          "line_id": "line_royal_insect",
+          "limb_family": "forearm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-HAND-LEFT",
+          "variant_key": "left_hand:guardian_knuckle",
+          "line_id": "line_royal_insect",
+          "limb_family": "hand",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-HAND-RIGHT",
+          "variant_key": "right_hand:guardian_knuckle",
+          "line_id": "line_royal_insect",
+          "limb_family": "hand",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-THIGH-LEFT",
+          "variant_key": "left_thigh:guardian_outer_guard",
+          "line_id": "line_royal_insect",
+          "limb_family": "thigh",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-RI-THIGH-RIGHT",
+          "variant_key": "right_thigh:guardian_outer_guard",
+          "line_id": "line_royal_insect",
+          "limb_family": "thigh",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-UPPERARM-LEFT",
+          "variant_key": "left_upperarm:oath_upperarm_guard",
+          "line_id": "line_final_oath",
+          "limb_family": "upperarm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-UPPERARM-RIGHT",
+          "variant_key": "right_upperarm:oath_upperarm_guard",
+          "line_id": "line_final_oath",
+          "limb_family": "upperarm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-FOREARM-LEFT",
+          "variant_key": "left_forearm:oath_gauntlet",
+          "line_id": "line_final_oath",
+          "limb_family": "forearm",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-FOREARM-RIGHT",
+          "variant_key": "right_forearm:oath_gauntlet",
+          "line_id": "line_final_oath",
+          "limb_family": "forearm",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-HAND-LEFT",
+          "variant_key": "left_hand:oath_palm_core",
+          "line_id": "line_final_oath",
+          "limb_family": "hand",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-HAND-RIGHT",
+          "variant_key": "right_hand:oath_palm_core",
+          "line_id": "line_final_oath",
+          "limb_family": "hand",
+          "side": "right",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-THIGH-LEFT",
+          "variant_key": "left_thigh:oath_gold_flow",
+          "line_id": "line_final_oath",
+          "limb_family": "thigh",
+          "side": "left",
+          "status": "missing"
+        },
+        {
+          "order_item_id": "P1-LIMB-FO-THIGH-RIGHT",
+          "variant_key": "right_thigh:oath_gold_flow",
+          "line_id": "line_final_oath",
+          "limb_family": "thigh",
+          "side": "right",
+          "status": "missing"
+        }
+      ],
+      "next_action": "Ask modelers to deliver GLB, sidecar, source blend, preview mesh, and review views."
+    },
+    "catalog_registration": {
+      "count": 0,
+      "items": [],
+      "next_action": "Register the delivered variant_key in variant_catalog.json without changing the manifest key."
+    },
+    "runtime_activation": {
+      "count": 0,
+      "items": [],
+      "next_action": "Keep P1 accepted assets reviewer-only until a separate Web/Quest runtime activation change."
+    }
+  },
+  "runtime_activation_policy": {
+    "runtime_activation_allowed": false,
+    "runtime_activation_label": "runtime_activation_blocked_by_order_manifest",
+    "source_runtime_activation_allowed": false,
+    "requires_separate_change": true,
+    "public_activation_blocked_while": [
+      "p1_blocked_asset_count > 0",
+      "package_gate_status == warn_now_block_p1",
+      "Web/Quest/Replay exact variant_key proof is missing"
+    ],
+    "current_counts": {
+      "p1_blocked_asset_count": 24,
+      "runtime_activation_blocked_count": 24
+    }
+  },
+  "modeler_message_outline": {
+    "title": "P1 limb three-line variant order packet",
+    "audience": "modeler delivery and intake reviewers",
+    "opening": "Deliver 24 P1 limb assets across three suit lines, four limb families, and left/right sides.",
+    "send_to_modeler": [
+      "Use the order_items table as the authoritative line/family/side checklist.",
+      "Each item needs GLB, modeler sidecar JSON, source .blend, preview .mesh.json, and review views.",
+      "Do not submit base assets, toppings, proxies, or color-only swaps as P1 line variants."
+    ],
+    "intake_reviewer_notes": [
+      "24 item(s) currently stop at delivery.",
+      "0 item(s) currently stop at catalog registration.",
+      "Runtime activation is intentionally blocked even after P1 acceptance."
+    ]
+  }
+}

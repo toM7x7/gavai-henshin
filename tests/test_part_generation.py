@@ -299,6 +299,91 @@ class TestPartGeneration(unittest.TestCase):
         self.assertEqual(summary["texture_generation_summary"]["generated_now_count"], 1)
         self.assertEqual(summary["texture_generation_summary"]["final_texture_writeable_count"], 1)
 
+    def test_uv_contract_fail_prevents_final_texture_path_write(self) -> None:
+        def fake_provider(*args, **kwargs):
+            return GeneratedImage(
+                provider="gemini",
+                model_id="gemini-2.5-flash-image",
+                mime_type="image/png",
+                image_bytes=b"fakepng",
+                prompt=kwargs["prompt"],
+                response_id="resp-uv-block",
+                timestamp="2026-04-09T00:00:00+00:00",
+                queue_wait_ms=12,
+                inference_ms=34,
+                total_ms=46,
+            )
+
+        blocked_contract = {
+            "contract_version": "web-forge-per-part-texture.v1",
+            "part": "helmet",
+            "texture_mode": "mesh_uv",
+            "selected_variant_key": "helmet:test",
+            "uv_availability": {"uv0_status": "fail", "can_generate_mesh_uv_texture": False},
+            "uv_policy": {"primary_motif_zone": "visor band"},
+            "texture_prompt": "Per-part texture target: helmet with failed UV.",
+        }
+
+        with (
+            patch("henshin.part_generation._provider_attempt", side_effect=fake_provider),
+            patch("henshin.part_generation.audit_viewer_mesh_assets", return_value={"status": "pass"}),
+        ):
+            result = run_generate_parts(
+                GenerationRequest(
+                    suitspec="spec.json",
+                    root="sessions",
+                    session_id="S-UV-BLOCKS-FINAL",
+                    parts=["helmet"],
+                    use_cache=False,
+                    texture_mode="mesh_uv",
+                    provider_profile="exhibition",
+                    update_suitspec=True,
+                    writes_final_texture=True,
+                    surface_design_hints={"per_part_texture_contracts": {"helmet": blocked_contract}},
+                ),
+                repo_root=self.root,
+            )
+
+        self.assertTrue(result["ok"])
+        saved_spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        self.assertNotIn("texture_path", saved_spec["modules"]["helmet"])
+        summary = json.loads((self.root / result["summary_path"]).read_text(encoding="utf-8"))
+        generated = summary["generated"]["helmet"]
+        self.assertFalse(generated["uv_contract_allows_final_texture"])
+        self.assertFalse(generated["per_part_texture_contract"]["uv_availability"]["can_generate_mesh_uv_texture"])
+        self.assertEqual(summary["texture_generation_summary"]["final_texture_writeable_count"], 0)
+
+    def test_per_part_texture_prompt_marker_is_not_duplicated(self) -> None:
+        contract = {
+            "contract_version": "web-forge-per-part-texture.v1",
+            "part": "helmet",
+            "texture_mode": "mesh_uv",
+            "selected_variant_key": "helmet:test",
+            "uv_availability": {"uv0_status": "pass", "can_generate_mesh_uv_texture": True},
+            "uv_policy": {"primary_motif_zone": "visor band"},
+            "texture_prompt": "Per-part texture target: helmet with selected variant helmet:test.",
+        }
+        spec = json.loads(self.spec_path.read_text(encoding="utf-8"))
+        spec["generation"]["surface_design_hints"] = {"per_part_texture_contracts": {"helmet": contract}}
+        self.spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        result = run_generate_parts(
+            GenerationRequest(
+                suitspec="spec.json",
+                root="sessions",
+                session_id="S-PROMPT-IDEMPOTENT",
+                parts=["helmet"],
+                dry_run=True,
+                texture_mode="mesh_uv",
+                surface_design_hints={"per_part_texture_contracts": {"helmet": contract}},
+            ),
+            repo_root=self.root,
+        )
+
+        prompt = result["prompts"]["helmet"]
+        marker_count = prompt.count("Per-part Web Forge texture target:") + prompt.count("Web Forge per-part texture contract:")
+        self.assertEqual(marker_count, 1)
+
     def test_fallback_asset_is_not_written_as_final_nano_banana_texture(self) -> None:
         fallback_dir = self.root / "fallback"
         fallback_dir.mkdir()

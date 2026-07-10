@@ -1,0 +1,68 @@
+{
+  "contract_version": "modeler-topping-sidecar.v1",
+  "asset_kind": "topping",
+  "parent_module": "back",
+  "topping_slot": "spine_ridge",
+  "topping_key": "base",
+  "slot_transform": {
+    "anchor": [
+      0.0,
+      0.0,
+      -0.05848
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "max_bbox_m": {
+    "x": 0.09,
+    "y": 0.44,
+    "z": 0.07
+  },
+  "conflicts_with": [],
+  "catalog_ref": {
+    "path": "viewer/assets/armor-parts/variant_catalog.json",
+    "contract_version": "armor-part-variant-catalog.v1",
+    "module": "back",
+    "topping_slot": "spine_ridge",
+    "topping_key": "base"
+  },
+  "catalog_topping_slot": {
+    "topping_slot": "spine_ridge",
+    "slot_kind": "detail",
+    "allowed_count": {
+      "min": 0,
+      "max": 1
+    },
+    "anchor_hint": {
+      "body_anchor": "spine_chest",
+      "parent_surface": "rear_center",
+      "placement": "vertical ridge from upper back to waist"
+    },
+    "max_bbox_m": {
+      "x": 0.09,
+      "y": 0.44,
+      "z": 0.07
+    },
+    "material_zone": "spine_accent",
+    "variant_examples": [
+      "segmented vertebra ridge",
+      "smooth dorsal rail",
+      "glowing spine strip"
+    ],
+    "conflicts_with": [],
+    "parent_module": "back"
+  },
+  "bbox_m": {
+    "x": 0.055799998342990875,
+    "y": 0.04340001195669174,
+    "z": 0.2727999985218048
+  },
+  "triangle_count": 108,
+  "material_zones": [
+    "armor_accent"
+  ],
+  "coordinate_frame": "parent-module local authored frame; glTF Y-up export"
+}

@@ -197,6 +197,13 @@ export default function SuitViewer() {
             fontSize: 14, cursor: depositing ? 'default' : 'pointer', letterSpacing: '0.25em',
           }}>蒸着</button>
         {manifest && manifest.files.vrm && (
+          <a href={`/mirror/${code}`} style={{
+            background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
+            borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',
+            letterSpacing: '0.1em',
+          }}>鏡で体連携</a>
+        )}
+        {manifest && manifest.files.vrm && (
           <a href={fileUrl(code, manifest.files.vrm)} download={`${code}.vrm`} style={{
             background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
             borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',

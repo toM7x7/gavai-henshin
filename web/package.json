@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.14",
     "@pixiv/three-vrm": "^3.1.4",
     "next": "^15.5.20",
     "react": "^19.0.0",

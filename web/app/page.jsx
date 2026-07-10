@@ -38,8 +38,13 @@ export default function Home() {
           cursor: 'pointer', letterSpacing: '0.2em',
         }}>召喚</button>
       </form>
+      <a href="/forge" style={{
+        color: '#9fdcff', fontSize: 14, textDecoration: 'none',
+        border: '1px solid #24425a', borderRadius: 8, padding: '10px 18px',
+        letterSpacing: '0.15em',
+      }}>言葉から鍛造する →</a>
       <div style={{ color: '#5a7284', fontSize: 12 }}>
-        鎧はローカルForgeで鍛造 → <code>package_suit_for_web.py</code> で登録する
+        または ローカルForge + <code>package_suit_for_web.py</code> で登録
       </div>
     </main>
   );

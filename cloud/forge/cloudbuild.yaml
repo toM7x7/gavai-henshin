@@ -1,0 +1,9 @@
+# リポジトリルートから: gcloud builds submit --config cloud/forge/cloudbuild.yaml \
+#   --substitutions=_IMAGE=asia-northeast1-docker.pkg.dev/<PROJECT_ID>/forge/henshin-forge:latest
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "cloud/forge/Dockerfile", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]
+timeout: 1800s
+substitutions:
+  _IMAGE: ""

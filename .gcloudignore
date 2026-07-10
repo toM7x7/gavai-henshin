@@ -1,0 +1,20 @@
+# Cloud Build へ送るコンテキストの絞り込み(鍛造コンテナに要る物だけ)。
+# これが無いと .gitignore が使われ、必要物が欠けたり巨大物が上がったりする。
+.git/
+.playwright-cli/
+output/
+webdrop/
+sessions/
+node_modules/
+web/
+docs/
+tests/
+infra/
+viewer/assets/armor-parts/
+viewer/quest-iw-demo/
+viewer/armor-forge/
+*.blend
+*.psd
+.env
+.env.*
+!.env.example

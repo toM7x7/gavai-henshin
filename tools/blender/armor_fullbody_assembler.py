@@ -1605,7 +1605,19 @@ def main():
     body_height = 1.74
     studio(Vector((0.0, 0.0, body_height * 0.5)), body_height, palette)
     os.makedirs(out_dir, exist_ok=True)
-    views = render_views(out_dir, label, body_height)
+    # --render-views: 1=必須(既定) / 0=省略 / soft=試して失敗しても続行。
+    # Cloud Run等のGPU無しヘッドレスでは EEVEE が立たないことがある — soft なら
+    # レンダ(とVRMサムネイル)を諦めてビルド自体は完走する
+    rv = str(args.get("render-views", "1")).lower()
+    views = {}
+    if rv not in ("0", "false"):
+        try:
+            views = render_views(out_dir, label, body_height)
+        except Exception as exc:  # noqa: BLE001
+            if rv == "soft":
+                print(f"RENDER_VIEWS_FAILED (soft, continuing): {exc}")
+            else:
+                raise
 
     blend_path = ""
     if args.get("save-blend"):

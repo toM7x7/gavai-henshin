@@ -9,6 +9,27 @@ Vercel の `/forge` ページ → `/api/forge`(プロキシ)→ ここ、とい�
 - gcloud CLI(未導入なら https://cloud.google.com/sdk/docs/install)
 - リージョンは `asia-northeast1`(東京)で統一
 
+### 0a. gcloud CLI の導入(Windows・未導入の場合)
+
+1. https://cloud.google.com/sdk/docs/install から `GoogleCloudSDKInstaller.exe` を実行
+   (または `winget install Google.CloudSDK`)
+2. インストール後、**新しい PowerShell を開いて** `gcloud --version` が通ることを確認
+
+### 0b. PROJECT_ID の確認/作成
+
+- https://console.cloud.google.com → 画面上部のプロジェクト選択 → 「ID」列が PROJECT_ID
+  (表示名ではなく `xxxx-123456` のような英数字ID)
+- 新規なら「新しいプロジェクト」→ 名前 gavai-henshin → 作成後にIDを控える
+- 「お支払い」でプロジェクトに請求先アカウントがリンクされていること
+  (リンクが無いと Cloud Build/Run が有効化できない)
+
+### 0c. FORGE_TOKEN の生成(合言葉。自分で決めるランダム文字列)
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+出力された文字列を控える(Cloud Run と Vercel の両方に同じ値を設定する)。
+
 ## 1. 初回セットアップ(1回だけ)
 
 ```powershell
@@ -36,9 +57,11 @@ gcloud run deploy henshin-forge `
   --region asia-northeast1 --memory 4Gi --cpu 4 --timeout 900 `
   --max-instances 1 --min-instances 0 --no-cpu-throttling `
   --allow-unauthenticated `
-  --set-env-vars "SUPABASE_URL=https://<ref>.supabase.co,FORGE_TOKEN=<長いランダム文字列>" `
-  --set-env-vars "SUPABASE_SERVICE_KEY=<service_roleキー>"
+  --set-env-vars "SUPABASE_URL=<SupabaseのプロジェクトURL>,FORGE_TOKEN=<0cで生成した文字列>,SUPABASE_SERVICE_KEY=<.envと同じservice_roleキー>"
 ```
+
+⚠ `--set-env-vars` は**1回のフラグに全部まとめる**(2回書くと後の指定が前を上書きする)。
+成功すると最後に `Service URL: https://henshin-forge-....run.app` が出る — これを控える。
 
 重要なフラグの意味:
 - `--no-cpu-throttling`: 応答を返した後もビルドスレッドがCPUを使い続けられる(ジョブ方式の要)

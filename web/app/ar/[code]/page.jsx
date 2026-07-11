@@ -26,6 +26,7 @@ export default function VrChamber() {
   const { code } = useParams();
   const mountRef = useRef(null);
   const [status, setStatus] = useState('転送装置を起動中…');
+  const [inVr, setInVr] = useState(false);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -37,6 +38,8 @@ export default function VrChamber() {
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.xr.enabled = true;
+    renderer.xr.addEventListener('sessionstart', () => setInVr(true));
+    renderer.xr.addEventListener('sessionend', () => setInVr(false));
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -497,19 +500,53 @@ export default function VrChamber() {
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
-      <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000' }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / 蒸着チャンバー(VR)</div>
-        <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
-        <div style={{ fontSize: 12, color: '#8fa7b8', marginTop: 6, maxWidth: 360, lineHeight: 1.9 }}>
-          {status}<br />
-          入場後: 鎧は君の体に重なる。右トリガー=蒸着の儀 / 左トリガー=解除。
-          正面の鏡に全身が映る(自分の視界には兜は出ない)。
-        </div>
-      </div>
-      <nav className="topnav">
-        <a href="/">⌂ 扉へ</a>
-        <a href={`/s/${code}`}>← 蒸着室</a>
-      </nav>
+
+      {!inVr && (
+        <>
+          <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000' }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / VR</div>
+            <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
+          </div>
+          <nav className="topnav">
+            <a href="/">⌂ 扉へ</a>
+            <a href={`/s/${code}`}>← 蒸着室</a>
+          </nav>
+
+          {/* チャンバー入口(DOMはVR外の窓口 — VR内の案内は空間パネルが担う) */}
+          <section className="rise" style={{
+            position: 'absolute', left: '50%', top: '46%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(460px, 92vw)', border: '1px solid #24425a', borderRadius: 12,
+            padding: '24px 22px', background: 'rgba(7,14,22,0.9)',
+            display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: '0.45em', color: '#5fc7e8' }}>CHAMBER GATE</div>
+              <h1 style={{ fontSize: 22, margin: '6px 0 0', letterSpacing: '0.14em' }}>蒸着チャンバー 入場手順</h1>
+            </div>
+            <div className="entry-steps">
+              <div className="st"><span className="n">1</span>
+                <span className="t">Quest の Browser でこのページを開く
+                  <small>PCブラウザでは空間の下見のみ(VR入場はQuest)</small></span></div>
+              <div className="st"><span className="n">2</span>
+                <span className="t">マイクを許可する
+                  <small>蒸着の儀は音声認証 — 君の「蒸着!」が鍵になる</small></span></div>
+              <div className="st"><span className="n">3</span>
+                <span className="t">下の ENTER VR で入場
+                  <small>鎧は君の体に重なる。身長は自動調整</small></span></div>
+              <div className="st"><span className="n">4</span>
+                <span className="t">右トリガー → 「蒸着!」と唱える
+                  <small>正面の鏡に全身が映る(自分の視界に兜は出ない)/ 左トリガーで解除</small></span></div>
+            </div>
+            <div style={{
+              fontSize: 12, color: status.includes('READY') ? '#7ee2a8' : '#8fa7b8',
+              letterSpacing: '0.08em', borderTop: '1px solid #16283a', paddingTop: 12,
+            }}>
+              {status}
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }

@@ -16,10 +16,16 @@ RUN curl -fsSL "$BLENDER_URL" | tar -xJ -C /opt \
     && ln -s /opt/blender-*-linux-x64 /opt/blender
 ENV HENSHIN_BLENDER_EXE=/opt/blender/blender
 
-# VRMアドオン(エクスポートに必須。ビルド時にネットワークが要る)
-RUN /opt/blender/blender --background --command extension install vrm \
-    || /opt/blender/blender --command extension install vrm
-RUN /opt/blender/blender --background --command extension list 2>/dev/null | grep -i vrm
+# VRMアドオン(エクスポートに必須。ビルド時にネットワークが要る)。
+# 新品プロファイルはリポジトリ索引が未同期で install が
+# 「Package not found / sync required!」になる — sync を必ず先行させる
+RUN /opt/blender/blender --background --command extension sync \
+    && (/opt/blender/blender --background --command extension install vrm --enable \
+        || /opt/blender/blender --background --command extension install vrm)
+# 有効化をユーザープリファレンスに永続化し、実際にimportできることを検証
+# (bpy.ops の hasattr は遅延スタブで偽陽性 — module import が本物の証拠)
+RUN /opt/blender/blender --background --python-expr "import bpy, addon_utils; addon_utils.enable('bl_ext.blender_org.vrm', default_set=True, persistent=True); bpy.ops.wm.save_userpref(); import bl_ext.blender_org.vrm; print('VRM_ADDON_OK')" \
+    | grep VRM_ADDON_OK
 
 WORKDIR /app
 COPY src ./src

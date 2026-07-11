@@ -579,6 +579,28 @@ export default function Mirror() {
         <a href="/">⌂ 扉へ</a>
         <a href={`/s/${code}`}>← 蒸着室</a>
       </nav>
+
+      {!running && (
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%',
+          transform: 'translate(-50%, -50%)', textAlign: 'center',
+          display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
+          background: 'rgba(7,14,22,0.82)', border: '1px solid #24425a',
+          borderRadius: 12, padding: '26px 30px',
+        }}>
+          <div style={{ fontSize: 13, color: '#8fa7b8', lineHeight: 2 }}>
+            素体が待機している。カメラを開始し、<br />
+            <b style={{ color: '#9fdcff' }}>「蒸着!」</b>と唱えれば君の動きと共に鎧が装着される。
+          </div>
+          <button className="btn-main" style={{ fontSize: 16, padding: '13px 30px' }}
+            onClick={() => apiRef.current.toggle && apiRef.current.toggle()}>
+            カメラを開始する
+          </button>
+          <div style={{ fontSize: 11, color: '#5a7284' }}>
+            映像は表示・保存しません(点群のみ)。「実写に重ねる」で実写合成モード
+          </div>
+        </div>
+      )}
     </main>
   );
 }

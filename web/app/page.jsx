@@ -14,10 +14,12 @@ export default function Home() {
       .then((items) => Array.isArray(items) && setGallery(items.slice(0, 8)))
       .catch(() => {});
   }, []);
+  // 入力はGAVAI-の続き5文字だけ。フル呼出符を貼り付けても自動で剥がす
+  const normalize = (v) => v.toUpperCase().replace(/^GAVAI-?/, '').replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const go = (e) => {
     e.preventDefault();
-    const c = code.trim().toUpperCase();
-    if (c) router.push(`/s/${c}`);
+    const c = normalize(code);
+    if (c) router.push(`/s/GAVAI-${c}`);
   };
   return (
     <main style={{
@@ -56,16 +58,25 @@ export default function Home() {
           <span className="kicker">SUMMON</span>
           <h2>呼出符で召喚する</h2>
           <p>発行済みの呼出符を唱えると、保管庫から鎧が転送され蒸着する。</p>
-          <form onSubmit={go} style={{ display: 'flex', gap: 8 }}>
+          <form onSubmit={go} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{
+              color: '#5fc7e8', fontSize: 16, letterSpacing: '0.14em',
+              fontFamily: 'monospace', flex: 'none',
+            }}>GAVAI-</span>
             <input
               className="input-code"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="GAVAI-XXXXX"
-              aria-label="呼出符"
+              onChange={(e) => setCode(normalize(e.target.value))}
+              placeholder="XXXXX"
+              maxLength={5}
+              aria-label="呼出符(GAVAI-の続き5文字)"
+              style={{ letterSpacing: '0.3em', fontFamily: 'monospace' }}
             />
             <button type="submit" className="btn-main" style={{ whiteSpace: 'nowrap' }}>召喚</button>
           </form>
+          <a href="/vr" style={{ color: '#5a7284', fontSize: 12, textDecoration: 'none' }}>
+            🥽 Questから来た人はこちら(VR直行入口)→
+          </a>
         </div>
       </div>
 

@@ -16,7 +16,7 @@ import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerM
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
-import { TRIGGER_RE, announce, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
+import { TRIGGER_LOOSE_RE, announce, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 const FP_LAYER = 9;    // firstPersonOnly(自分視点にだけ映る)
 const TP_LAYER = 10;   // thirdPersonOnly(鏡・他者にだけ映る = 頭部)
@@ -147,8 +147,11 @@ export default function VrChamber() {
       const h = vrm.humanoid;
       const g = (n) => h.getNormalizedBoneNode(n);
       const b = {
-        head: g('head'), lUp: g('leftUpperArm'), lLo: g('leftLowerArm'), lHand: g('leftHand'),
+        head: g('head'), hips: g('hips'),
+        lUp: g('leftUpperArm'), lLo: g('leftLowerArm'), lHand: g('leftHand'),
         rUp: g('rightUpperArm'), rLo: g('rightLowerArm'), rHand: g('rightHand'),
+        lUpLeg: g('leftUpperLeg'), lLoLeg: g('leftLowerLeg'), lFoot: g('leftFoot'),
+        rUpLeg: g('rightUpperLeg'), rLoLeg: g('rightLowerLeg'), rFoot: g('rightFoot'),
       };
       for (const k in b) {
         const bn = b[k];
@@ -165,9 +168,20 @@ export default function VrChamber() {
       const seg = (a, c) => (a && c) ? wp(c).sub(wp(a)).normalize() : null;
       const len = (a, c) => (a && c) ? wp(c).distanceTo(wp(a)) : 0;
       b.rest = { lUp: seg(b.lUp, b.lLo), lLo: seg(b.lLo, b.lHand),
-                 rUp: seg(b.rUp, b.rLo), rLo: seg(b.rLo, b.rHand) };
+                 rUp: seg(b.rUp, b.rLo), rLo: seg(b.rLo, b.rHand),
+                 lUpLeg: seg(b.lUpLeg, b.lLoLeg), lLoLeg: seg(b.lLoLeg, b.lFoot),
+                 rUpLeg: seg(b.rUpLeg, b.rLoLeg), rLoLeg: seg(b.rLoLeg, b.rFoot) };
       b.len = { lUp: len(b.lUp, b.lLo), lLo: len(b.lLo, b.lHand),
-                rUp: len(b.rUp, b.rLo), rLo: len(b.rLo, b.rHand) };
+                rUp: len(b.rUp, b.rLo), rLo: len(b.rLo, b.rHand),
+                lUpLeg: len(b.lUpLeg, b.lLoLeg), lLoLeg: len(b.lLoLeg, b.lFoot),
+                rUpLeg: len(b.rUpLeg, b.rLoLeg), rLoLeg: len(b.rLoLeg, b.rFoot) };
+      // しゃがみ追従の基準: バインド時の腰高さと、足のルート相対位置(足はここに残す)
+      if (b.hips) b.hips.userData.bindY = b.hips.position.y;
+      const inv = vrm.scene.matrixWorld.clone().invert();
+      b.footLocal = {
+        l: b.lFoot ? wp(b.lFoot).applyMatrix4(inv) : null,
+        r: b.rFoot ? wp(b.rFoot).applyMatrix4(inv) : null,
+      };
       return b;
     };
     const _pq = new THREE.Quaternion();
@@ -180,14 +194,14 @@ export default function VrChamber() {
       const delta = new THREE.Quaternion().setFromUnitVectors(restDir, d.clone().normalize());
       worldToLocal(bone, delta.multiply(bone.userData.bindWorldQ), s);
     };
-    // コントローラ位置を手首目標にした Two-Bone IK(肘は下向きポール)
-    const solveArmWorld = (up, lo, rest, lenUp, lenLo, T, s) => {
+    // 汎用 Two-Bone IK(腕=肘は下向きポール、脚=膝は前向きポール)
+    const solveArmWorld = (up, lo, rest, lenUp, lenLo, T, s, poleHint) => {
       if (!up || !lo || !rest || !(lenUp > 1e-4) || !(lenLo > 1e-4)) return;
       const S = up.getWorldPosition(new THREE.Vector3());
       const d = THREE.MathUtils.clamp(S.distanceTo(T),
         Math.abs(lenUp - lenLo) + 1e-3, lenUp + lenLo - 1e-3);
       const n = T.clone().sub(S).normalize();
-      let pole = new THREE.Vector3(0, -1, 0);
+      let pole = poleHint ? poleHint.clone() : new THREE.Vector3(0, -1, 0);
       pole.sub(n.clone().multiplyScalar(pole.dot(n)));
       if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1);
       pole.normalize();
@@ -295,7 +309,8 @@ export default function VrChamber() {
         phase = 'thinking';
         updatePanel();
         const text = await transcribe(blob);
-        if (TRIGGER_RE.test(text)) {
+        // VRは押して唱える方式なので外れ値許容(それっぽければ通す)
+        if (TRIGGER_LOOSE_RE.test(text)) {
           announce('音声認証、成立。');
           phase = 'ready';
           henshin();
@@ -426,6 +441,24 @@ export default function VrChamber() {
             solveArmWorld(bones.rUp, bones.rLo,
               { up: bones.rest.rUp, lo: bones.rest.rLo },
               bones.len.rUp, bones.len.rLo, t.clone(), 0.6);
+          }
+          // 下半身 v1(T8): しゃがみ追従 — 腰が頭の高さに連動して沈み、
+          // 足はバインド時の場所(ルート相対)に残して膝二骨IKで曲げる
+          if (bones.hips && calibScale) {
+            const eye = AVATAR_EYE * calibScale;
+            const crouch = THREE.MathUtils.clamp(camPos.y - eye, -0.55, 0.1);
+            bones.hips.position.y = bones.hips.userData.bindY + crouch / calibScale;
+            vrm.scene.updateMatrixWorld(true);
+            const fwd = new THREE.Vector3(Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
+            for (const side of ['l', 'r']) {
+              const fl = bones.footLocal[side];
+              if (!fl) continue;
+              const target = fl.clone().applyMatrix4(vrm.scene.matrixWorld);
+              solveArmWorld(bones[`${side}UpLeg`], bones[`${side}LoLeg`],
+                { up: bones.rest[`${side}UpLeg`], lo: bones.rest[`${side}LoLeg`] },
+                bones.len[`${side}UpLeg`], bones.len[`${side}LoLeg`],
+                target, 0.6, fwd);   // 膝は体の前へ折れる
+            }
           }
         }
       }

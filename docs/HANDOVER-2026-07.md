@@ -86,10 +86,10 @@ Status: Active — このファイルが「いまのシステムの正」。次�
 | T3 | /mirror起動直後「素体だけ+右上UIだけ」で迷う | ✅ 中央に大きな開始CTA(カメラ開始→蒸着の導線)実装 |
 | T4 | VRで開くべきURLの案内が不親切 | ✅ /vr(Quest向け入口: 5文字入力→チャンバー直行)+扉にQuest導線 |
 | T5 | 呼出符のGAVAI-は毎回打ちたくない | ✅ 入力欄をプレフィックス固定+5文字入力に(貼り付け時は自動正規化) |
-| T6 | VR内音声認識が厳しすぎる | ✅ VR(押して唱える方式)のみ外れ値許容の緩い照合(TRIGGER_LOOSE_RE)。鏡の常時聞き取りは誤発火防止で厳密のまま |
-| T7 | VR内がまだずんだもん | env設定の問題: Vercelに TTS_PROVIDER=aivis + AIVIS_API_KEY → Redeploy(コードはAivis優先済み) |
-| T8 | 下半身トラッキングがない | ✅ v1実装: しゃがみ追従(腰が頭の高さに連動)+足を床に残す膝二骨IK。**本物のWebXR Body Tracking API(Quest)の調査は未** |
-| T9 | 一人称で腕・胴の鎧が見えるべき | 仕様上は見える(firstPersonが隠すのは頭部のみ)。実機で見えない場合はfirstPersonの分割粒度を調査 |
+| T6 | VR内音声認識が厳しすぎる/音声なしモードに落ちる | ✅ 緩照合(TRIGGER_LOOSE_RE)+真因修正: ページ読込時のgetUserMediaをQuestが無言拒否していた→**トリガーの瞬間(ユーザー操作内)に取得**。音声障害時も恒久降格せず「2度引きで強行」の明示2段階。儀式(唱える)は必ず通る |
+| T7 | VR内がまだずんだもん | ✅ 真因=ブラウザキャッシュ(max-age 86400で旧声が残存)→ announce()にv=キャッシュバスター+max-age 3600。あわせてenv: TTS_PROVIDER=aivis + AIVIS_API_KEY 必須 |
+| T8 | 下半身トラッキングがない | ✅ v1(しゃがみ+膝IK)+**WebXR Body Tracking API対応**(optionalFeatures body-tracking、frame.bodyのhips/left-foot/right-footで実関節駆動、無ければ手続き式へ自動フォールバック)— Quest実機で要確認 |
+| T9 | VR内で自分のスーツが全く見えない(2Dでは首なしが見える) | ✅ 作り替え: three-vrm firstPersonレイヤ方式を廃止 → **首クリッピング平面**(自分のアバターは頭のすぐ下から上をclippingPlaneで刈る。素体ごと残るので指も見える。鏡クローンは無加工=頭込み全身) |
 | T10 | VR内で呼出符を書き込みたい(3Dキーボード) | 未 — IWSDK/UIKit導入時の候補 |
 | T11 | 「ギャバントリガー」的なコントローラUIアイテム | 未 — 空間内の持てる変身アイテム(掴む→構える→発声)として設計予定 |
 

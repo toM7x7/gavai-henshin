@@ -108,7 +108,7 @@ export async function GET(req) {
   return new Response(out.buf, {
     headers: {
       'content-type': out.type,
-      'cache-control': 'public, max-age=86400',  // 定型句はブラウザに覚えさせる
+      'cache-control': 'public, max-age=3600',  // 声の切替が翌日まで残らない程度に
     },
   });
 }

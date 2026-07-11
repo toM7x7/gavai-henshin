@@ -536,12 +536,12 @@ export default function Mirror() {
     <main style={{ position: 'fixed', inset: 0 }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
       {flashKey > 0 && <div key={flashKey} className="henshin-flash" />}
-      <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000' }}>
+      <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000', zIndex: 5 }}>
         <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / MIRROR</div>
         <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
       </div>
       <div style={{
-        position: 'absolute', bottom: 18, left: 18, display: 'flex', gap: 10,
+        position: 'absolute', bottom: 18, left: 18, display: 'flex', gap: 10, zIndex: 5,
         alignItems: 'center', flexWrap: 'wrap',
       }}>
         <button onClick={() => apiRef.current.toggle && apiRef.current.toggle()} style={{
@@ -582,7 +582,7 @@ export default function Mirror() {
 
       {!running && (
         <div style={{
-          position: 'absolute', left: '50%', top: '50%',
+          position: 'absolute', left: '50%', top: '50%', zIndex: 6,
           transform: 'translate(-50%, -50%)', textAlign: 'center',
           display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
           background: 'rgba(7,14,22,0.82)', border: '1px solid #24425a',

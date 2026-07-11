@@ -12,12 +12,15 @@ export const TRIGGER_RE = /蒸着|じょうちゃく|ジョウチャク|定着|�
 // ※常時聞き取りの鏡では使わない(誤発火する)
 export const TRIGGER_LOOSE_RE = /着|ちゃく|チャク|chaku|じょう|ジョウ|しょう|ショウ|ちょう|チョウ|変身|へん|ヘン|しん|シン|hen|jyo|jo/i;
 
-// 管制アナウンス(Sakura TTS)。/api/tts が未設定なら静かに何もしない
+// 管制アナウンス。/api/tts が未設定なら静かに何もしない。
+// v= はキャッシュバスター: プロバイダ切替時に旧声(ずんだもん)が
+// ブラウザキャッシュから蘇る事故を防ぐ — 声を替えたらこの数字を上げる
+const ANNOUNCE_V = 2;
 let _ttsOk = null;
 export const announce = async (text) => {
   try {
     if (_ttsOk === false) return;
-    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}&v=${ANNOUNCE_V}`);
     if (!r.ok) { if (r.status === 503) _ttsOk = false; return; }
     _ttsOk = true;
     const blob = await r.blob();

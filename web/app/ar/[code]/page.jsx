@@ -18,8 +18,6 @@ import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-v
 import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
 import { TRIGGER_LOOSE_RE, announce, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
-const FP_LAYER = 9;    // firstPersonOnly(自分視点にだけ映る)
-const TP_LAYER = 10;   // thirdPersonOnly(鏡・他者にだけ映る = 頭部)
 const MIRROR_Z = -2.1; // 鏡の位置(目の前 2.1m)
 const AVATAR_EYE = 1.58; // default.vrm の目の高さ(身長キャリブレーション基準)
 
@@ -39,9 +37,15 @@ export default function VrChamber() {
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.xr.enabled = true;
+    renderer.localClippingEnabled = true;  // 一人称の首クリッピングに使う
     renderer.xr.addEventListener('sessionstart', () => setInVr(true));
     renderer.xr.addEventListener('sessionend', () => setInVr(false));
     mount.appendChild(renderer.domElement);
+
+    // 一人称の見え方(T9, 2026-07-11作り替え): three-vrmのfirstPersonレイヤ方式は
+    // 実機で全身不可視になった — 代わりに自分のアバターだけ「首から上」を
+    // クリッピング平面で刈る。素体ごと残るので指先も見える。鏡クローンは無加工=全身
+    const selfClip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 999);  // y<=定数 を表示
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x04080d);
@@ -296,11 +300,26 @@ export default function VrChamber() {
       updatePanel();
     };
 
-    // 蒸着の儀: 右トリガー → (音声があれば)3秒唱える → 照合 → 蒸着
+    // 蒸着の儀: 右トリガー → 3秒唱える → 照合 → 蒸着。
+    // 「必ず唱えさせる」が原則(2026-07-11 T4/T6)。マイク取得はトリガーの
+    // 瞬間に行う — ページ読込時の要求はQuestが無言拒否する(音声なしモード化の真因)。
+    // 音声系がどうしても使えない時だけ「もう一度トリガーで強行」の明示2段階
+    let overrideArm = false;
     const ritual = async () => {
       if (phase !== 'ready') return;
       if (worn) { henshin(); return; }   // 装着中の右トリガー=見得の再演
-      if (!voiceMode || !micStream) { henshin(); return; }
+      if (!voiceMode) { henshin(); return; }  // STT未設定の環境のみ直行
+      if (overrideArm) { overrideArm = false; henshin(); return; }
+      if (!micStream) {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {
+          overrideArm = true;
+          drawPanel('マイクが使えない', ['Quest設定のマイク許可を確認せよ',
+            'それでも蒸着するなら もう一度トリガー'], '#ff9a8a');
+          return;
+        }
+      }
       phase = 'listening';
       listenLeft = 3;
       updatePanel();
@@ -322,8 +341,9 @@ export default function VrChamber() {
         }
       } catch {
         phase = 'ready';
-        voiceMode = false;  // 音声系の障害時は直接蒸着に降格
-        drawPanel('音声系 障害', ['音声なしモードに切替', '右トリガーで直接蒸着'], '#ff9a8a');
+        overrideArm = true;  // 恒久降格はしない — 次回も儀式から
+        drawPanel('音声解析に失敗', ['もう一度トリガーで唱え直すか',
+          '続けて2度引きで強行蒸着'], '#ff9a8a');
         setTimeout(updatePanel, 2600);
       }
     };
@@ -362,7 +382,7 @@ export default function VrChamber() {
     const camPos = new THREE.Vector3();
     const camEuler = new THREE.Euler(0, 0, 0, 'YXZ');
     const wrapPi = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-    renderer.setAnimationLoop(() => {
+    renderer.setAnimationLoop((_time, frame) => {
       if (disposed) return;
       const dt = clock.getDelta();
       if (mixer) mixer.update(dt);
@@ -390,15 +410,14 @@ export default function VrChamber() {
       }
 
       const presenting = renderer.xr.isPresenting;
-      // 一人称レイヤ: 自分の視点では頭部(TP_LAYER)を映さない。
-      // 非VRのプレビューでは全部見せる
-      camera.layers.enable(FP_LAYER);
-      if (presenting) camera.layers.disable(TP_LAYER);
-      else camera.layers.enable(TP_LAYER);
       const xrCam = renderer.xr.getCamera();
-      for (const c of xrCam.cameras) {
-        c.layers.enable(FP_LAYER);
-        c.layers.disable(TP_LAYER);
+      // 一人称の首クリッピング: VR中だけ、頭のすぐ下から上を刈る。
+      // 非VRのプレビューでは無効(999 = 全身表示)
+      if (presenting && bones && bones.head) {
+        const hy = bones.head.getWorldPosition(new THREE.Vector3()).y;
+        selfClip.constant = hy - 0.04;
+      } else {
+        selfClip.constant = 999;
       }
 
       // --- 体の埋め込み(3点トラッキング) ---
@@ -442,9 +461,42 @@ export default function VrChamber() {
               { up: bones.rest.rUp, lo: bones.rest.rLo },
               bones.len.rUp, bones.len.rLo, t.clone(), 0.6);
           }
-          // 下半身 v1(T8): しゃがみ追従 — 腰が頭の高さに連動して沈み、
+          // 下半身(T8): WebXR Body Tracking(Quest実験API)があれば実関節、
+          // 無ければ手続き式(しゃがみ追従+膝IK)
+          let bodyApi = false;
+          if (frame && frame.body) {
+            try {
+              const ref = renderer.xr.getReferenceSpace();
+              const jp = (n) => {
+                const sp = frame.body.get(n);
+                const pose = sp && frame.getPose(sp, ref);
+                return pose ? new THREE.Vector3(
+                  pose.transform.position.x, pose.transform.position.y,
+                  pose.transform.position.z) : null;
+              };
+              const hp = jp('hips');
+              const fwd = new THREE.Vector3(Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
+              if (hp && bones.hips && calibScale) {
+                bones.hips.position.y = THREE.MathUtils.clamp(
+                  hp.y / calibScale, bones.hips.userData.bindY - 0.6,
+                  bones.hips.userData.bindY + 0.15);
+                vrm.scene.updateMatrixWorld(true);
+                bodyApi = true;
+              }
+              for (const [side, joint] of [['l', 'left-foot'], ['r', 'right-foot']]) {
+                const fp = jp(joint);
+                if (!fp) continue;
+                solveArmWorld(bones[`${side}UpLeg`], bones[`${side}LoLeg`],
+                  { up: bones.rest[`${side}UpLeg`], lo: bones.rest[`${side}LoLeg`] },
+                  bones.len[`${side}UpLeg`], bones.len[`${side}LoLeg`],
+                  fp, 0.6, fwd);
+                bodyApi = true;
+              }
+            } catch { bodyApi = false; }
+          }
+          // 下半身 v1(手続き式): しゃがみ追従 — 腰が頭の高さに連動して沈み、
           // 足はバインド時の場所(ルート相対)に残して膝二骨IKで曲げる
-          if (bones.hips && calibScale) {
+          if (!bodyApi && bones.hips && calibScale) {
             const eye = AVATAR_EYE * calibScale;
             const crouch = THREE.MathUtils.clamp(camPos.y - eye, -0.55, 0.1);
             bones.hips.position.y = bones.hips.userData.bindY + crouch / calibScale;
@@ -487,7 +539,13 @@ export default function VrChamber() {
         VRMUtils.rotateVRM0(vrm);
         scene.add(vrm.scene);
         setArmorVisible(vrm.scene, false);
-        vrm.firstPerson.setup();  // 頭部を TP_LAYER(10) へ分割(兜含む)
+        // 自分のアバターの全マテリアルに首クリッピングを適用(鏡クローンは対象外)
+        vrm.scene.traverse((o) => {
+          if (o.isMesh && o.material) {
+            (Array.isArray(o.material) ? o.material : [o.material])
+              .forEach((mat) => { mat.clippingPlanes = [selfClip]; });
+          }
+        });
         // 鏡像クローン(2体目のロード — キャッシュ済みなので軽い)
         const g2 = await mkLoader().loadAsync(url);
         mirrorVrm = g2.userData.vrm;
@@ -507,17 +565,17 @@ export default function VrChamber() {
             vrmaData = (ag.userData.vrmAnimations || [])[0] || null;
           } catch { vrmaData = null; }
         }
-        // 音声認証の準備(XR入場前にマイク許可を取る)
-        voiceMode = await sttEnabled();
-        if (voiceMode && pickAudioMime()) {
-          try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-          catch { voiceMode = false; }
-        } else { voiceMode = false; }
+        // 音声認証の可否だけ確認(マイク取得はしない — トリガーの瞬間に行う。
+        // ページ読込時のgetUserMediaはQuestが無言拒否し「音声なしモード」化していた)
+        voiceMode = (await sttEnabled()) && !!pickAudioMime();
 
         const xr = navigator.xr;
         const vrOK = xr && await xr.isSessionSupported('immersive-vr').catch(() => false);
         if (vrOK) {
-          document.body.appendChild(VRButton.createButton(renderer));
+          // body-tracking はQuestの実験的WebXR機能 — あれば下半身を実関節で駆動
+          document.body.appendChild(VRButton.createButton(renderer, {
+            optionalFeatures: ['body-tracking'],
+          }));
           setStatus('READY — 「ENTER VR」で蒸着チャンバーへ');
         } else {
           setStatus('この端末はWebXR(VR)非対応です。Quest Browserで開いてください');
@@ -578,7 +636,7 @@ export default function VrChamber() {
                 <span className="t">Quest の Browser でこのページを開く
                   <small>PCブラウザでは空間の下見のみ(VR入場はQuest)</small></span></div>
               <div className="st"><span className="n">2</span>
-                <span className="t">マイクを許可する
+                <span className="t">初回トリガー時にマイクを許可する
                   <small>蒸着の儀は音声認証 — 君の「蒸着!」が鍵になる</small></span></div>
               <div className="st"><span className="n">3</span>
                 <span className="t">下の ENTER VR で入場

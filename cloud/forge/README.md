@@ -1,5 +1,36 @@
 # 鍛造工場 (henshin-forge) — Cloud Run デプロイ手順
 
+## ⚡ いつもの反映手順(コード更新のたびにこれだけ)
+
+```powershell
+# 0. リポジトリルートで最新を取得
+cd <リポジトリルート>          # 例: D:\personal_dev\gavai-henshin\gavai-henshin
+git pull
+
+# 1. 工場イメージを再ビルド(cloud/forge/ や src/ tools/ を触った時)
+gcloud builds submit --config cloud/forge/cloudbuild.yaml `
+  --substitutions=_IMAGE=asia-northeast1-docker.pkg.dev/<PROJECT_ID>/forge/henshin-forge:latest
+
+# 2. 再デプロイ(env等は前リビジョンから引き継がれる — イメージ指定だけでよい)
+gcloud run deploy henshin-forge `
+  --image asia-northeast1-docker.pkg.dev/<PROJECT_ID>/forge/henshin-forge:latest `
+  --region asia-northeast1
+
+# 3. 稼働確認
+Invoke-RestMethod https://<FORGE_URL>/health
+```
+
+- **web/ だけ触った時**: 上記は不要。git push で Vercel が自動デプロイ
+- **Vercel の環境変数を変えた時**: Deployments → 最新 → … → Redeploy が必要
+  (NEXT_PUBLIC_ 系はビルド時に焼き込まれるため)
+- **工場の環境変数だけ変えたい時**(再ビルド不要):
+  ```powershell
+  gcloud run services update henshin-forge --region asia-northeast1 `
+    --update-env-vars "KEY=VALUE"
+  ```
+- 現在の値: `<PROJECT_ID>` = gen-lang-client-0563328676 /
+  `<FORGE_URL>` = henshin-forge-409522874712.asia-northeast1.run.app
+
 言葉 → **設計局AI(Gemini)による設計図解釈** → Blender鍛造 → Supabase格納 →
 呼出符発行 を行うジョブAPI。Vercel の `/forge` → `/api/forge`(プロキシ)→ ここ。
 
@@ -132,6 +163,20 @@ Vercel → Settings → Environment Variables に(**NEXT_PUBLIC_を付けない*
   `gcloud run services update henshin-forge --region asia-northeast1 --min-instances 1`
 - 呼出符はランダム5桁英数字(`GAVAI-XXXXX`、紛らわしい0/O/1/Iを除外・約3,350万通り)。
   連番は URL 推測で他人の鎧に届くため廃止(2026-07-11)
+
+### 次の一手: 二段階納品(体感を5分→90秒級にする本命案)
+
+アセンブラは1回のBlender実行の中で **GLB→(リギング・デシメート)→VRM** の順に
+書き出す。つまり GLB はビルド中盤で既にディスクにある。forge_server が
+サブプロセス実行中に GLB の出現を監視し:
+
+1. GLB が現れた時点で **assembly.glb + 暫定マニフェスト(vrm無し)をアップロード
+   → 呼出符を即発行** → ユーザーは蒸着室で回し始められる
+2. VRM 完成後にマニフェストを差し替え(鏡/VRM持ち出しが解禁される)
+
+ビューアは既に「manifestに無いファイルのボタンは出さない」設計なので
+フロント変更は最小(蒸着室でのmanifest再取得のみ)。実装はforge_serverの
+ジョブスレッドにファイル監視を足すだけで、アセンブラは無改造。
 
 ## コストの目安
 

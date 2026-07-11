@@ -48,8 +48,8 @@ export default function VrChamber() {
     const selfClip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 999);  // y<=定数 を表示
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x04080d);
-    scene.fog = new THREE.Fog(0x04080d, 4, 14);
+    scene.background = new THREE.Color(0x9aa3ac);  // チャンバー内も明るいグレー(黒素体の視認性)
+    scene.fog = new THREE.Fog(0x9aa3ac, 5, 16);
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     const camera = new THREE.PerspectiveCamera(50, mount.clientWidth / mount.clientHeight, 0.01, 60);
@@ -57,7 +57,7 @@ export default function VrChamber() {
     camera.lookAt(0, 1.2, MIRROR_Z);
 
     // --- チャンバーの空間 ---
-    scene.add(new THREE.GridHelper(10, 40, 0x1a3448, 0x0d1c28));
+    scene.add(new THREE.GridHelper(10, 40, 0x7b8790, 0x8d97a0));
     const key = new THREE.DirectionalLight(0xffffff, 1.1);
     key.position.set(1.5, 3, 1.5);
     scene.add(key);

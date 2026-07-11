@@ -63,13 +63,13 @@ export default function Mirror() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x04080d);
+    scene.background = new THREE.Color(0x9aa3ac);  // 素体(黒)が沈まないスタジオグレー
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     const camera = new THREE.PerspectiveCamera(40, mount.clientWidth / mount.clientHeight, 0.01, 50);
     camera.position.set(0, 1.25, 2.6);
     camera.lookAt(0, 0.95, 0);
-    const grid = new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28);
+    const grid = new THREE.GridHelper(4, 24, 0x7b8790, 0x8d97a0);
     scene.add(grid);
     const key = new THREE.DirectionalLight(0xffffff, 1.4);
     key.position.set(2, 3, 2);
@@ -389,7 +389,7 @@ export default function Mirror() {
     // 実写モードの見た目切替: カメラ映像を背景に出し、WebGLを透過させる
     apiRef.current.applyAr = () => {
       const ar = apiRef.current.ar;
-      scene.background = ar ? null : new THREE.Color(0x04080d);
+      scene.background = ar ? null : new THREE.Color(0x9aa3ac);
       grid.visible = !ar;
       if (video) {
         video.style.display = ar ? 'block' : 'none';

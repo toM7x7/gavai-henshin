@@ -36,7 +36,7 @@ export default function SuitViewer() {
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x04080d);
+    scene.background = new THREE.Color(0x9aa3ac);  // 素体(黒)が沈まないスタジオグレー
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
@@ -50,7 +50,7 @@ export default function SuitViewer() {
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(2, 3, 2);
     scene.add(key);
-    scene.add(new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28));
+    scene.add(new THREE.GridHelper(4, 24, 0x7b8790, 0x8d97a0));
 
     let vrm = null, vrmaData = null, mixer = null;
     let suit = null;            // GLBフォールバック用

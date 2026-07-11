@@ -279,7 +279,7 @@ export default function SuitViewer() {
           <a className="menu-tile" href={`/ar/${code}`}>
             <span className="ic">🥽</span>
             VRで蒸着
-            <span className="sub">Quest — 現実空間で装着</span>
+            <span className="sub">Quest — 自分の体で変身する</span>
           </a>
         )}
         {manifest?.files?.vrm && (

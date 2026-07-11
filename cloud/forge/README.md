@@ -99,8 +99,8 @@ gcloud run services update henshin-forge --region asia-northeast1 `
 ## 4. 疎通確認
 
 ```powershell
-# ヘルスチェック
-curl https://henshin-forge-xxxx.a.run.app/healthz
+# ヘルスチェック(※/healthz は使わない — Googleが予約していて404になる)
+curl https://henshin-forge-xxxx.a.run.app/health
 # 鍛造(2〜4分)
 curl -X POST https://henshin-forge-xxxx.a.run.app/forge `
   -H "Content-Type: application/json" -H "X-Forge-Token: <TOKEN>" `

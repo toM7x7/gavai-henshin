@@ -5,7 +5,9 @@ Vercel の /api/forge がここへプロキシする(ブラウザ直叩きはさ
 
   POST /forge   {"text": "..."}  + X-Forge-Token   → {"job_id": "..."}
   GET  /job?id=<job_id>                            → {"status", "phase", "code", ...}
-  GET  /healthz                                    → ok
+  GET  /health                                     → ok
+  (※/healthz は不可 — Googleフロントエンドが run.app 上で予約していて
+    コンテナに届く前に404を返す。2026-07-11実測)
 
 Blenderは重いのでビルドは直列(_BUILD_LOCK)。Cloud Run は
 --max-instances 1 --no-cpu-throttling で運用する(応答後もスレッドが走る)。
@@ -172,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path == "/healthz":
+        if parsed.path in ("/health", "/healthz"):  # healthz はローカル専用(GFEが予約)
             self._json({"ok": True})
             return
         if parsed.path == "/job":

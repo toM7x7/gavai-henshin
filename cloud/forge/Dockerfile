@@ -29,6 +29,9 @@ RUN /opt/blender/blender --background --online-mode --command extension sync \
 RUN /opt/blender/blender --background --python-expr "import bpy, addon_utils; addon_utils.enable('bl_ext.blender_org.vrm', default_set=True, persistent=True); bpy.ops.wm.save_userpref(); import bl_ext.blender_org.vrm; print('VRM_ADDON_OK')" \
     | grep VRM_ADDON_OK
 
+# ルートB(Gemini解釈)の設計図スキーマ検証に必須
+RUN pip install --no-cache-dir jsonschema
+
 WORKDIR /app
 COPY src ./src
 COPY schemas ./schemas

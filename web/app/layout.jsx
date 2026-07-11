@@ -1,4 +1,5 @@
 import './globals.css';
+import UiSound from './ui-sound';
 
 export const metadata = {
   title: '蒸着執行録 — GAVAI HENSHIN',
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
         color: '#dce8f2',
         fontFamily: '"Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif',
       }}>
+        <UiSound />
         {children}
       </body>
     </html>

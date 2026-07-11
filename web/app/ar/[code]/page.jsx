@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
@@ -312,19 +313,34 @@ export default function VrChamber() {
       }
     };
 
-    // コントローラ(handednessは connected イベントで判明)
+    // コントローラ(handednessは connected イベントで判明)。
+    // 実機モデルを表示し、手元からレイを出す — 「トリガーがそこにある」ことが
+    // 見えるだけで操作の迷いが消える
+    const cmf = new XRControllerModelFactory();
+    const rayGeo = new THREE.BufferGeometry().setFromPoints(
+      [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
     for (const i of [0, 1]) {
       const c = renderer.xr.getController(i);
+      const ray = new THREE.Line(rayGeo, new THREE.LineBasicMaterial({
+        color: 0x5fc7e8, transparent: true, opacity: 0.5,
+      }));
+      ray.scale.z = 1.6;
+      c.add(ray);
       c.addEventListener('connected', (e) => {
         c.userData.hand = e.data && e.data.handedness;
         if (c.userData.hand === 'left') hands.left = c;
         if (c.userData.hand === 'right') hands.right = c;
+        // 左=解除(赤系) / 右=蒸着(シアン)でレイを色分け
+        ray.material.color.set(c.userData.hand === 'left' ? 0xd97a5f : 0x5fc7e8);
       });
       c.addEventListener('select', () => {
         if (c.userData.hand === 'left') release();
         else ritual();
       });
       scene.add(c);
+      const grip = renderer.xr.getControllerGrip(i);
+      grip.add(cmf.createControllerModel(grip));
+      scene.add(grip);
     }
 
     const clock = new THREE.Clock();

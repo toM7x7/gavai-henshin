@@ -4,6 +4,7 @@
 // 完了後は自動遷移しない — 呼出符を写す「間」が体験の一部(2026-07-11)
 import { useEffect, useRef, useState } from 'react';
 import { announce } from '../../lib/stt';
+import { sfx, loopStart, loopStop } from '../../lib/audio';
 
 const STEPS = [
   { n: 1, key: 'interpret', name: '解釈', sub: '設計局AIが言葉を読む' },
@@ -70,6 +71,22 @@ export default function Forge() {
 
   const stage = state?.status === 'done' ? 5 : (state?.stage || (job ? 1 : 0));
   const running = job && (!state || !['done', 'error'].includes(state.status));
+
+  // フェーズ連動SE: 鍛造(stage2)の間だけ鍛冶ループを低めに流し、
+  // 工程が進むたびに合いの手(stage1〜4.mp3、置いた分だけ鳴る)
+  const prevStage = useRef(0);
+  useEffect(() => {
+    if (!job) { loopStop('forging-loop'); prevStage.current = 0; return; }
+    if (stage !== prevStage.current) {
+      prevStage.current = stage;
+      if (stage >= 1 && stage <= 4) sfx(`stage${stage}`, 0.6);
+      if (stage === 2) loopStart('forging-loop', 0.32, 1.6);
+      if (stage >= 3) loopStop('forging-loop', 1.2);
+    }
+    if (state?.status === 'error') loopStop('forging-loop', 0.5);
+    return undefined;
+  }, [stage, job, state?.status]);
+  useEffect(() => () => loopStop('forging-loop', 0.3), []);
   const mm = Math.floor(elapsed / 60);
   const ss = String(elapsed % 60).padStart(2, '0');
   const timings = state?.timings || {};

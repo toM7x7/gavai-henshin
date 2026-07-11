@@ -48,8 +48,11 @@ Invoke-RestMethod https://<FORGE_URL>/health
 | `FORGE_TOKEN` | ✅ | 自分で生成する合言葉(0c参照。Vercelにも同じ値) |
 | `GEMINI_TEXT_MODEL` | 任意 | 解釈モデルの差し替えノブ。未設定なら `gemini-2.5-flash`。上位モデル(例: gemini-3系flash/pro)へ自由に変更可 — 設計図の方言修復レイヤが吸収する |
 
-**Vercel側に置くのは `FORGE_URL` / `FORGE_TOKEN` / `NEXT_PUBLIC_SUPABASE_URL` の3つだけ。**
-GeminiキーとSupabase秘密キーは工場(Cloud Run)にしか置かない。
+**Vercel側のenv**(すべてサーバ専用 — NEXT_PUBLIC を付けない):
+`FORGE_URL` / `FORGE_TOKEN` / `SAKURA_AI_ENGINE_TOKEN`(音声認証+TTS)/
+`TTS_PROVIDER`(sakura|gemini)/ `GEMINI_API_KEY`(TTS_PROVIDER=gemini の時のみ)/
+`GEMINI_TTS_VOICE`(既定 Charon)。公開してよいのは `NEXT_PUBLIC_SUPABASE_URL` だけ。
+**Supabase の service key は書き込み権限が強力なので Cloud Run 限定のまま。**
 
 ## 0. 前提
 

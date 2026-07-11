@@ -1,13 +1,18 @@
 // 管制アナウンス — プロバイダ切替式TTSプロキシ。
-//   TTS_PROVIDER=sakura (既定: ずんだもん等) / gemini (真面目な管制ボイス)
+//   TTS_PROVIDER=aivis (本命・Aivis Cloud) / sakura / gemini
 // 定型句ホワイトリスト制: 任意文言の読み上げ装置として乱用されない。
 // 鍵はすべてサーバ専用env(NEXT_PUBLIC禁止)。
+// Aivisのクレジット方針(2026-07-11): 自動追加しない。残高切れ(402/429)は
+// 「今日は喋らない日」— 利用者には一切通知せず無音で続行し、
+// サーバログ(AIVIS_CREDIT_OUT)にだけ残して管理者が後で確認する
 import { rateLimit, clientIp } from '../../../lib/ratelimit';
 
+const AIVIS_KEY = process.env.AIVIS_API_KEY || '';
 const SAKURA_TOKEN = process.env.SAKURA_AI_ENGINE_TOKEN || process.env.SAKURA_AI_ENGINE_API_KEY || '';
 const SAKURA_BASE = (process.env.SAKURA_AI_ENGINE_BASE_URL || 'https://api.ai.sakura.ad.jp/v1').replace(/\/+$/, '');
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
-const PROVIDER = process.env.TTS_PROVIDER || (SAKURA_TOKEN ? 'sakura' : GEMINI_KEY ? 'gemini' : '');
+const PROVIDER = process.env.TTS_PROVIDER
+  || (AIVIS_KEY ? 'aivis' : SAKURA_TOKEN ? 'sakura' : GEMINI_KEY ? 'gemini' : '');
 
 const ALLOWED = new Set([
   '蒸着、完了。',
@@ -26,6 +31,26 @@ const wavWrap = (pcm, rate = 24000) => {
   h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
   return Buffer.concat([h, pcm]);
 };
+
+async function aivisTts(text) {
+  // https://api.aivis-project.com/v1/docs — POST /v1/tts/synthesize
+  const model = process.env.AIVIS_MODEL_UUID
+    || 'a59cb814-0083-4369-8542-f51a29e72af7';  // 公式既定モデル(Anneli)
+  const r = await fetch('https://api.aivis-project.com/v1/tts/synthesize', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${AIVIS_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model_uuid: model, text, output_format: 'mp3' }),
+  });
+  if (r.status === 402 || r.status === 429) {
+    console.log(`AIVIS_CREDIT_OUT: HTTP ${r.status}`);  // 管理者向けの痕跡のみ
+    return { silent: true };
+  }
+  if (!r.ok) {
+    console.log(`AIVIS_TTS_FAILED: HTTP ${r.status}`);
+    return null;
+  }
+  return { buf: Buffer.from(await r.arrayBuffer()), type: 'audio/mpeg' };
+}
 
 async function sakuraTts(text) {
   const model = process.env.SAKURA_TTS_MODEL || 'zundamon';
@@ -73,7 +98,12 @@ export async function GET(req) {
   }
   const text = (new URL(req.url).searchParams.get('text') || '').slice(0, 80);
   if (!ALLOWED.has(text)) return Response.json({ ok: false, error: 'phrase not allowed' }, { status: 400 });
-  const out = PROVIDER === 'gemini' ? await geminiTts(text) : await sakuraTts(text);
+  const out = PROVIDER === 'aivis' ? await aivisTts(text)
+    : PROVIDER === 'gemini' ? await geminiTts(text)
+    : await sakuraTts(text);
+  // クレジット切れ: 503を返すとクライアント(announce)はこのセッション中
+  // 静かに黙る — 利用者への通知はしない
+  if (out && out.silent) return Response.json({ ok: false }, { status: 503 });
   if (!out) return Response.json({ ok: false, error: 'tts failed' }, { status: 502 });
   return new Response(out.buf, {
     headers: {

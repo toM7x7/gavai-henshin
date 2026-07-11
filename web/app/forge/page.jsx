@@ -79,7 +79,7 @@ export default function Forge() {
     if (!job) { loopStop('forging-loop'); prevStage.current = 0; return; }
     if (stage !== prevStage.current) {
       prevStage.current = stage;
-      if (stage >= 1 && stage <= 4) sfx(`stage${stage}`, 0.6);
+      if (stage >= 1 && stage <= 4) sfx('stage', 0.6);  // 工程が進んだ合いの手
       if (stage === 2) loopStart('forging-loop', 0.32, 1.6);
       if (stage >= 3) loopStop('forging-loop', 1.2);
     }

@@ -43,13 +43,14 @@ export default function Mirror() {
   const [voiceOn, setVoiceOn] = useState(false);
   const [flashKey, setFlashKey] = useState(0);
   const [worn, setWorn] = useState(false);
+  const [arMode, setArMode] = useState(false);  // 実写合成(カメラ映像に重ねる)
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
     let disposed = false;
     const mount = mountRef.current;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -61,7 +62,8 @@ export default function Mirror() {
     const camera = new THREE.PerspectiveCamera(40, mount.clientWidth / mount.clientHeight, 0.01, 50);
     camera.position.set(0, 1.25, 2.6);
     camera.lookAt(0, 0.95, 0);
-    scene.add(new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28));
+    const grid = new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28);
+    scene.add(grid);
     const key = new THREE.DirectionalLight(0xffffff, 1.4);
     key.position.set(2, 3, 2);
     scene.add(key);
@@ -77,6 +79,7 @@ export default function Mirror() {
       const g = (n) => h.getNormalizedBoneNode(n);
       const b = {
         head: g('head'), chest: g('upperChest') || g('chest'), hips: g('hips'),
+        hipsNode: g('hips'),
         lUp: g('leftUpperArm'), lLo: g('leftLowerArm'), lHand: g('leftHand'),
         rUp: g('rightUpperArm'), rLo: g('rightLowerArm'), rHand: g('rightHand'),
         lMid: g('leftMiddleProximal'), rMid: g('rightMiddleProximal'),
@@ -279,6 +282,41 @@ export default function Mirror() {
           { up: bones.rest.rUp, lo: bones.rest.rLo, hand: bones.rest.rHand },
           bones.len.rUp, bones.len.rLo, w[R.sh], w[R.el], w[R.wr], w[R.pk], w[R.ix], 0.45);
       }
+
+      // ---- 実写AR合成: カメラ映像内の体にスーツを整列 ----
+      // 2Dランドマーク(画面座標)を z=0 平面へ逆投影し、腰の位置と
+      // 肩-腰スパンでアバターの位置・スケールを実写の体に合わせる。
+      // v1は遮蔽なしオーバーレイ(前後関係は Image Segmenter 導入のv2で)
+      const lm2d = apiRef.current.ar && poseRes && poseRes.landmarks && poseRes.landmarks[0];
+      if (lm2d && bones.hipsNode) {
+        const toWorld = (nx, ny) => {
+          const v = new THREE.Vector3((mir ? 1 - nx : nx) * 2 - 1, -(ny * 2 - 1), 0.5)
+            .unproject(camera);
+          const dir = v.sub(camera.position).normalize();
+          const t = (0 - camera.position.z) / dir.z;   // z=0 平面と交差
+          return camera.position.clone().add(dir.multiplyScalar(t));
+        };
+        const hipW = toWorld((lm2d[23].x + lm2d[24].x) / 2, (lm2d[23].y + lm2d[24].y) / 2);
+        const shW = toWorld((lm2d[11].x + lm2d[12].x) / 2, (lm2d[11].y + lm2d[12].y) / 2);
+        const span = hipW.distanceTo(shW);
+        // アバター側の同スパン(肩=両上腕付根の中点)
+        const aHip = bones.hipsNode.getWorldPosition(new THREE.Vector3());
+        const aSh = bones.lUp.getWorldPosition(new THREE.Vector3())
+          .add(bones.rUp.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+        const aSpan = Math.max(1e-3, aHip.distanceTo(aSh));
+        const cur = vrm.scene.scale.x || 1;
+        const target = THREE.MathUtils.clamp(cur * (span / aSpan), 0.4, 3.0);
+        const next = cur + (target - cur) * 0.15;   // 呼吸レベルの揺れは均す
+        if (Math.abs(next / cur - 1) > 1e-4) {
+          const f = next / cur;
+          vrm.scene.scale.setScalar(next);
+          for (const k in bones.len) bones.len[k] *= f;  // IKの腕長も追従
+        }
+        vrm.scene.updateMatrixWorld(true);
+        const aHip2 = bones.hipsNode.getWorldPosition(new THREE.Vector3());
+        const shift = hipW.sub(aHip2);
+        vrm.scene.position.add(shift.multiplyScalar(0.35));  // 位置も滑らかに寄せる
+      }
     };
 
     const drawLandmarks = (poseRes) => {
@@ -304,6 +342,28 @@ export default function Mirror() {
       drawLandmarks(pr);
       drive(pr);
       requestAnimationFrame(loop);
+    };
+
+    // 実写モードの見た目切替: カメラ映像を背景に出し、WebGLを透過させる
+    apiRef.current.applyAr = () => {
+      const ar = apiRef.current.ar;
+      scene.background = ar ? null : new THREE.Color(0x04080d);
+      grid.visible = !ar;
+      if (video) {
+        video.style.display = ar ? 'block' : 'none';
+        Object.assign(video.style, {
+          position: 'fixed', inset: '0', width: '100%', height: '100%',
+          objectFit: 'cover', zIndex: '0',
+          transform: apiRef.current.mirror ? 'scaleX(-1)' : 'none',
+        });
+      }
+      mount.style.zIndex = '1';
+      if (!ar && vrm) {
+        // 点群モードに戻す時は定位置へ
+        vrm.scene.position.set(0, 0, 0);
+        vrm.scene.scale.setScalar(1);
+        bones = null;
+      }
     };
 
     apiRef.current.toggle = async () => {
@@ -336,7 +396,10 @@ export default function Mirror() {
         await video.play();
         run = true; bones = null; euro = null;
         setRunning(true);
-        setStatus('追跡中 — Two-Bone IK + One Euro(映像は表示・保存しません)');
+        apiRef.current.applyAr();
+        setStatus(apiRef.current.ar
+          ? '実写合成 — 君の体にスーツが重なる。「蒸着!」と唱えよ'
+          : '追跡中 — Two-Bone IK + One Euro(映像は表示・保存しません)');
         loop();
       } catch (e) {
         setStatus('カメラ起動失敗: ' + (e.message || e));
@@ -466,7 +529,8 @@ export default function Mirror() {
     };
   }, [code]);
 
-  useEffect(() => { apiRef.current.mirror = mirrorMode; }, [mirrorMode]);
+  useEffect(() => { apiRef.current.mirror = mirrorMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [mirrorMode]);
+  useEffect(() => { apiRef.current.ar = arMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [arMode]);
 
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
@@ -502,6 +566,10 @@ export default function Mirror() {
         <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
           <input type="checkbox" checked={mirrorMode}
             onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像
+        </label>
+        <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
+          <input type="checkbox" checked={arMode}
+            onChange={(e) => setArMode(e.target.checked)} /> 実写に重ねる(AR)
         </label>
         <canvas ref={canvasRef} width={192} height={144}
           style={{ border: '1px solid #24425a', background: '#04080d', borderRadius: 4 }} />

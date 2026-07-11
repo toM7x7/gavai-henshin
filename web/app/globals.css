@@ -1,0 +1,145 @@
+:root {
+  --cyan: #5fc7e8;
+  --cyan-dim: #2c8fbf;
+  --deep: #04080d;
+  --line: #24425a;
+  --amber: #d9b45f;
+  --ok: #7ee2a8;
+  --text: #dce8f2;
+  --dim: #8fa7b8;
+}
+
+html, body { height: 100%; }
+
+body {
+  background:
+    radial-gradient(1100px 520px at 50% -8%, #0b1c2e 0%, transparent 60%),
+    linear-gradient(rgba(95, 199, 232, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 199, 232, 0.045) 1px, transparent 1px),
+    #04080d;
+  background-size: auto, 44px 44px, 44px 44px, auto;
+  background-attachment: fixed;
+}
+
+/* 走査線 — ブラウン管の記憶 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, rgba(4, 8, 13, 0.18) 0 1px, transparent 1px 4px);
+  z-index: 9999;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spinR { to { transform: rotate(-360deg); } }
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes glowSweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 300% 0; }
+}
+@keyframes flashOut { from { opacity: 0.9; } to { opacity: 0; } }
+
+.rise { animation: riseIn 0.5s ease both; }
+.pulse { animation: pulse 1.2s ease-in-out infinite; }
+
+/* 二択カード(召喚/鍛造) */
+.choice {
+  display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 26px 24px; background: rgba(7, 14, 22, 0.82);
+  text-decoration: none; color: var(--text);
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  position: relative; overflow: hidden;
+}
+.choice:hover {
+  border-color: var(--cyan);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 40px rgba(44, 143, 191, 0.25);
+}
+.choice::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  background-size: 50% 100%; background-repeat: no-repeat;
+  animation: glowSweep 3.2s linear infinite;
+}
+.choice .kicker { font-size: 11px; letter-spacing: 0.45em; color: var(--cyan); }
+.choice h2 { font-size: 22px; letter-spacing: 0.12em; margin: 0; }
+.choice p { font-size: 13px; color: var(--dim); line-height: 1.9; margin: 0; }
+
+.btn-main {
+  background: linear-gradient(135deg, #1d5f8a, #2c8fbf);
+  color: #fff; border: none; border-radius: 8px;
+  padding: 12px 22px; font-size: 15px; cursor: pointer; letter-spacing: 0.25em;
+}
+.btn-main:disabled { background: #123246; cursor: default; }
+.btn-ghost {
+  background: rgba(10, 18, 28, 0.8); color: var(--cyan);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 18px; font-size: 13px; cursor: pointer;
+  letter-spacing: 0.15em; text-decoration: none; display: inline-block;
+}
+.btn-ghost:hover { border-color: var(--cyan); }
+
+.input-code {
+  background: #0a121c; color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px 14px; font-size: 16px;
+  letter-spacing: 0.14em; text-transform: uppercase; outline: none; width: 100%;
+}
+.input-code:focus { border-color: var(--cyan); }
+
+/* 鍛造炉コア(回転リング) */
+.forge-core { position: relative; width: 118px; height: 118px; margin: 0 auto; }
+.forge-core .ring, .forge-core .ring2 {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid transparent;
+}
+.forge-core .ring {
+  border-top-color: var(--cyan); border-right-color: var(--cyan);
+  animation: spin 1.6s linear infinite;
+}
+.forge-core .ring2 {
+  inset: 12px;
+  border-bottom-color: var(--amber); border-left-color: var(--amber);
+  animation: spinR 2.6s linear infinite;
+}
+.forge-core .heart {
+  position: absolute; inset: 34px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(95, 199, 232, 0.85), rgba(44, 143, 191, 0.12) 70%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* 工程トラッカー */
+.tracker { display: flex; align-items: flex-start; gap: 0; width: 100%; }
+.tracker .step { flex: 1; text-align: center; position: relative; }
+.tracker .step:not(:last-child)::after {
+  content: ''; position: absolute; top: 15px; left: calc(50% + 18px);
+  width: calc(100% - 36px); height: 2px; background: var(--line);
+}
+.tracker .step.done:not(:last-child)::after { background: var(--cyan-dim); }
+.tracker .dot {
+  width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 8px;
+  border: 2px solid var(--line); background: #0a121c;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--dim); position: relative; z-index: 1;
+}
+.tracker .step.done .dot { border-color: var(--cyan); color: var(--ok); }
+.tracker .step.now .dot {
+  border-color: var(--cyan); color: var(--cyan);
+  box-shadow: 0 0 14px rgba(95, 199, 232, 0.6);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.tracker .name { font-size: 12px; letter-spacing: 0.2em; color: var(--text); }
+.tracker .sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+/* 蒸着フラッシュ(変身の瞬間) */
+.henshin-flash {
+  position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: radial-gradient(circle, rgba(159, 220, 255, 0.95), rgba(95, 199, 232, 0.25) 55%, transparent 75%);
+  animation: flashOut 0.9s ease-out forwards;
+}

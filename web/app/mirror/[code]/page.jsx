@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { fetchManifest, fileUrl } from '../../../lib/suit';
 
 // ---- One Euro Filter(速度適応平滑化) ----
@@ -38,6 +39,8 @@ export default function Mirror() {
   const [status, setStatus] = useState('鏡を準備中…');
   const [running, setRunning] = useState(false);
   const [mirrorMode, setMirrorMode] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [flashKey, setFlashKey] = useState(0);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -63,6 +66,7 @@ export default function Mirror() {
 
     let vrm = null, bones = null, euro = null;
     let pose = null, video = null, run = false;
+    let vrmaData = null, mixer = null, motionPlaying = false, particles = null;
 
     // VRM Humanoid 正規化リグからボーンを取得し、バインド情報を実測
     const grabBones = () => {
@@ -157,7 +161,54 @@ export default function Mirror() {
       }
     };
 
+    // ---- 変身(蒸着): 粒子収束 + フラッシュ + VRMAモーション + SE ----
+    // SE は web/public/se/henshin.mp3 を置けば鳴る(無ければ静かに変身)
+    const henshin = () => {
+      if (!vrm || motionPlaying) return;
+      motionPlaying = true;
+      setFlashKey((k) => k + 1);
+      try { new Audio('/se/henshin.mp3').play().catch(() => {}); } catch {}
+      // 粒子収束(蒸着エネルギー)
+      const N = 1600;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const r = 1.2 + Math.random() * 2.2, a = Math.random() * 6.283;
+        pos[i * 3] = Math.cos(a) * r;
+        pos[i * 3 + 1] = Math.random() * 2.0;
+        pos[i * 3 + 2] = Math.sin(a) * r;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      particles = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: 0x9fdcff, size: 0.02, transparent: true, opacity: 0.95,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      particles.userData = { start: pos.slice(), t: 0 };
+      scene.add(particles);
+      // ヘンシンモーション(henshin.vrma — 構え→溜め→十字受け→展開→見得)
+      if (vrmaData) {
+        const clip = createVRMAnimationClip(vrmaData, vrm);
+        mixer = new THREE.AnimationMixer(vrm.scene);
+        const action = mixer.clipAction(clip);
+        action.setLoop(THREE.LoopOnce);
+        action.clampWhenFinished = true;
+        mixer.addEventListener('finished', () => {
+          mixer.stopAllAction();
+          mixer = null;
+          bones = null;   // 追跡再開時にバインドポーズへ戻して再実測
+          motionPlaying = false;
+          setStatus('蒸着完了 — 体連携を再開');
+        });
+        action.play();
+        setStatus('蒸着 — ヘンシンモーション実行中');
+      } else {
+        setTimeout(() => { motionPlaying = false; }, 2400);
+      }
+    };
+    apiRef.current.henshin = henshin;
+
     const drive = (poseRes) => {
+      if (motionPlaying) return;  // 見得の最中は追跡を握らせない
       if (!bones) bones = grabBones();
       if (!bones) return;
       const mir = apiRef.current.mirror;
@@ -281,10 +332,56 @@ export default function Mirror() {
     const animate = () => {
       if (disposed) return;
       requestAnimationFrame(animate);
-      if (vrm) vrm.update(clock.getDelta());
+      const dt = clock.getDelta();
+      if (mixer) mixer.update(dt);
+      if (particles) {
+        const u = particles.userData;
+        u.t += dt;
+        const k = Math.min(1, u.t / 1.6);
+        const p = particles.geometry.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          p.array[i * 3] = u.start[i * 3] * (1 - k * 0.985);
+          p.array[i * 3 + 2] = u.start[i * 3 + 2] * (1 - k * 0.985);
+        }
+        p.needsUpdate = true;
+        particles.material.opacity = 0.95 * (1 - k);
+        if (k >= 1) { scene.remove(particles); particles = null; }
+      }
+      if (vrm) vrm.update(dt);
       renderer.render(scene, camera);
     };
     animate();
+
+    // ---- 音声認証: 「変身」「蒸着」で henshin() を発火(Web Speech API)----
+    let rec = null, wantVoice = false;
+    apiRef.current.voiceToggle = () => {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { setStatus('この端末は音声認識に未対応です(Chrome推奨)'); return; }
+      if (wantVoice) {
+        wantVoice = false;
+        try { rec && rec.stop(); } catch {}
+        setVoiceOn(false);
+        return;
+      }
+      rec = new SR();
+      rec.lang = 'ja-JP';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (/変身|へんしん|ヘンシン|蒸着|じょうちゃく/.test(t)) {
+            henshin();
+            break;
+          }
+        }
+      };
+      rec.onend = () => { if (wantVoice && !disposed) { try { rec.start(); } catch {} } };
+      rec.onerror = () => {};
+      wantVoice = true;
+      try { rec.start(); setVoiceOn(true); setStatus('音声認証 待機中 — 「変身!」と唱えよ'); }
+      catch { wantVoice = false; }
+    };
 
     (async () => {
       try {
@@ -296,11 +393,18 @@ export default function Mirror() {
         setStatus('鎧データを転送中…');
         const loader = new GLTFLoader();
         loader.register((parser) => new VRMLoaderPlugin(parser));
+        loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
         const gltf = await loader.loadAsync(fileUrl(code, m.files.vrm));
         vrm = gltf.userData.vrm;
         VRMUtils.rotateVRM0(vrm);  // VRM0はZ+向き — VRM1と同じ向きに揃える
         scene.add(vrm.scene);
-        setStatus('準備完了 — カメラを開始してください');
+        if (m.files.vrma) {
+          try {
+            const ag = await loader.loadAsync(fileUrl(code, m.files.vrma));
+            vrmaData = (ag.userData.vrmAnimations || [])[0] || null;
+          } catch { vrmaData = null; }
+        }
+        setStatus('準備完了 — カメラを開始し、「変身!」と唱えよ');
       } catch (e) {
         setStatus(String(e.message || e));
       }
@@ -326,6 +430,7 @@ export default function Mirror() {
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+      {flashKey > 0 && <div key={flashKey} className="henshin-flash" />}
       <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000' }}>
         <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / MIRROR</div>
         <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
@@ -339,6 +444,17 @@ export default function Mirror() {
           color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px',
           fontSize: 14, cursor: 'pointer', letterSpacing: '0.2em',
         }}>{running ? '停止' : 'カメラ開始'}</button>
+        <button onClick={() => apiRef.current.voiceToggle && apiRef.current.voiceToggle()} style={{
+          background: voiceOn ? 'linear-gradient(135deg,#7a5a1d,#bf8f2c)' : '#0a121c',
+          color: voiceOn ? '#fff' : '#d9b45f', border: '1px solid #4a3a1a',
+          borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer',
+          letterSpacing: '0.15em',
+        }}>{voiceOn ? '音声認証 待機中' : '音声認証 ON'}</button>
+        <button onClick={() => apiRef.current.henshin && apiRef.current.henshin()} style={{
+          background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
+          borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer',
+          letterSpacing: '0.25em',
+        }}>変身</button>
         <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
           <input type="checkbox" checked={mirrorMode}
             onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像

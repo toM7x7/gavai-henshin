@@ -18,10 +18,12 @@ from __future__ import annotations
 import glob
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -66,39 +68,52 @@ def find_blender() -> str:
     raise FileNotFoundError("Blender not found. Set HENSHIN_BLENDER_EXE.")
 
 
-def _next_code() -> str:
-    """呼出符の採番: 台帳の最大値+1(GAVAI-0001形式は9999まで辞書順=数値順)。"""
+# 紛らわしい 0/O/1/I を除いた32文字。5桁で約3,350万通り —
+# 連番(GAVAI-0001)はURL推測で他人の鎧に届いてしまう(2026-07-11指摘)
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _code_taken(code: str) -> bool:
     base = os.environ["SUPABASE_URL"].rstrip("/")
     key = os.environ["SUPABASE_SERVICE_KEY"]
     req = urllib.request.Request(
-        f"{base}/rest/v1/recall_codes?select=recall_code&order=recall_code.desc&limit=1",
+        f"{base}/rest/v1/recall_codes?select=recall_code&recall_code=eq.{code}",
         headers={"apikey": key, "Authorization": f"Bearer {key}"})
     with urllib.request.urlopen(req, timeout=30) as resp:
-        rows = json.load(resp)
-    last = 0
-    if rows:
-        tail = str(rows[0].get("recall_code", "")).rsplit("-", 1)[-1]
-        if tail.isdigit():
-            last = int(tail)
-    return f"GAVAI-{last + 1:04d}"
+        return bool(json.load(resp))
+
+
+def _next_code() -> str:
+    """呼出符の発行: 推測不能なランダム5桁英数字(衝突は台帳照会で回避)。"""
+    for _ in range(8):
+        code = "GAVAI-" + "".join(secrets.choice(_CODE_ALPHABET) for _ in range(5))
+        if not _code_taken(code):
+            return code
+    raise RuntimeError("recall code allocation failed (collisions)")
 
 
 def _forge_job(job_id: str, text: str) -> None:
     with _BUILD_LOCK:
         workdir = WORK / job_id
+        timings: dict[str, float] = {}
+        t0 = time.time()
         try:
-            _set(job_id, status="forging", phase="設計局AIが言葉を解釈しています")
+            _set(job_id, status="forging", stage=1,
+                 phase="設計局AIが言葉を解釈しています")
             # 言葉→設計図の解釈はコンセプトの肝 — ルートB(Gemini)が必須本線
             # (2026-07-11方針)。モデルは GEMINI_TEXT_MODEL で差し替え可能。
             # Gemini側の障害時のみ compile_blueprint_llm が規範解釈(ルートA)へ
             # 自動フォールバックし、route にその事実が記録される
             bp, route = compile_blueprint_llm(text)
-            _set(job_id, route=route)
+            timings["interpret"] = round(time.time() - t0, 1)
+            _set(job_id, route=route, timings=dict(timings))
             workdir.mkdir(parents=True, exist_ok=True)
             bp_path = workdir / "blueprint.json"
             bp_path.write_text(json.dumps(bp, ensure_ascii=False, indent=2), encoding="utf-8")
 
-            _set(job_id, status="forging", phase="鍛造中(装甲を成形し適合審査しています)",
+            t1 = time.time()
+            _set(job_id, status="forging", stage=2,
+                 phase="鍛造中(装甲を成形し適合審査しています)",
                  blueprint_id=bp["blueprint_id"])
             fb_dir = workdir / "fullbody"
             cmd = [find_blender(), "--background", "--python", str(ASSEMBLER), "--",
@@ -116,8 +131,11 @@ def _forge_job(job_id: str, text: str) -> None:
             if result is None or not result.get("ok"):
                 tail = (proc.stdout or "")[-600:] + (proc.stderr or "")[-300:]
                 raise RuntimeError(f"assembler failed: {tail}")
+            timings["build"] = round(time.time() - t1, 1)
 
-            _set(job_id, status="uploading", phase="保管庫へ格納しています")
+            t2 = time.time()
+            _set(job_id, status="uploading", stage=3,
+                 phase="保管庫へ格納しています", timings=dict(timings))
             files: dict[str, Path] = {}
             glb = result.get("glb") or ""
             if glb and Path(glb).exists():
@@ -151,9 +169,13 @@ def _forge_job(job_id: str, text: str) -> None:
                             json.dumps(manifest, ensure_ascii=False).encode("utf-8"),
                             "application/json")
             register_code(manifest)
+            timings["upload"] = round(time.time() - t2, 1)
+            timings["total"] = round(time.time() - t0, 1)
             fs = result.get("fit_summary", {})
-            _set(job_id, status="done", code=code, phase="蒸着準備完了",
+            _set(job_id, status="done", stage=4, code=code, phase="蒸着準備完了",
+                 timings=dict(timings),
                  fit=f"{fs.get('parts_pass', '?')}/{fs.get('parts_total', '?')}")
+            print(f"FORGE_DONE: {code} timings={json.dumps(timings)}")
         except Exception as exc:  # noqa: BLE001
             _set(job_id, status="error", error=str(exc)[-500:])
         finally:

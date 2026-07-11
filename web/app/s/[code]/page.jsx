@@ -58,6 +58,7 @@ export default function SuitViewer() {
       if (!suit || depositT >= 0) return;
       depositT = 0;
       setDepositing(true);
+      try { new Audio('/se/deposit.mp3').play().catch(() => {}); } catch {}
       const geo = new THREE.BufferGeometry();
       const N = 2200;
       const pos = new Float32Array(N * 3);
@@ -196,6 +197,13 @@ export default function SuitViewer() {
             color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px',
             fontSize: 14, cursor: depositing ? 'default' : 'pointer', letterSpacing: '0.25em',
           }}>蒸着</button>
+        {manifest && manifest.files.vrm && (
+          <a href={`/ar/${code}`} style={{
+            background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
+            borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',
+            letterSpacing: '0.1em',
+          }}>VR/ARで装着</a>
+        )}
         {manifest && manifest.files.vrm && (
           <a href={`/mirror/${code}`} style={{
             background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',

@@ -118,6 +118,21 @@ Vercel → Settings → Environment Variables に(**NEXT_PUBLIC_を付けない*
 
 → Redeploy 後、`/forge` ページから言葉入力→鍛造→自動で `/s/<呼出符>` へ。
 
+## 速度チューニング(2026-07-11〜)
+
+ジョブJSONに **stage(1解釈/2鍛造/3格納/4公示)と timings(各工程の秒数)** が
+載るようになった。まず1体鍛造して `FORGE_DONE: ... timings=...`(Cloud Runログ)を
+見てから、効く場所に手を入れる:
+
+- **鍛造(build)が支配的な場合**: `--cpu 8 --memory 8Gi` に上げる(Cloud Run上限。
+  Blenderのモディファイア/BVHはマルチコアが効く)
+- **点火(コールドスタート ~30-60秒)が気になる場合**: `--min-instances 1`。
+  ただし --no-cpu-throttling 併用ではアイドル課金が発生する(月数十ドル級)ので、
+  体験会など「使う日」だけONにする運用を推奨:
+  `gcloud run services update henshin-forge --region asia-northeast1 --min-instances 1`
+- 呼出符はランダム5桁英数字(`GAVAI-XXXXX`、紛らわしい0/O/1/Iを除外・約3,350万通り)。
+  連番は URL 推測で他人の鎧に届くため廃止(2026-07-11)
+
 ## コストの目安
 
 - Cloud Run無料枠: 月180,000 vCPU秒 / 360,000 GiB秒。1体 ≈ 4vCPU×3分 ≈ 720 vCPU秒

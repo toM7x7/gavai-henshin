@@ -216,10 +216,10 @@ export default function ArExperience() {
         <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
         <div style={{ fontSize: 12, color: '#8fa7b8', marginTop: 6, maxWidth: 340 }}>{status}</div>
       </div>
-      <a href={`/s/${code}`} style={{
-        position: 'absolute', top: 16, right: 18, color: '#5a7284', fontSize: 12,
-        textDecoration: 'none',
-      }}>← ビューアへ</a>
+      <nav className="topnav">
+        <a href="/">⌂ 扉へ</a>
+        <a href={`/s/${code}`}>← 蒸着室</a>
+      </nav>
     </main>
   );
 }

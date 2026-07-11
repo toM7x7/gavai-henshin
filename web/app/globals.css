@@ -137,6 +137,43 @@ body::after {
 .tracker .name { font-size: 12px; letter-spacing: 0.2em; color: var(--text); }
 .tracker .sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
 
+/* 画面右上の共通ナビ(扉へ/鍛造炉へ/ビューアへ) */
+.topnav { position: absolute; top: 14px; right: 18px; display: flex; gap: 8px; z-index: 10; }
+.topnav a {
+  color: #8fa7b8; font-size: 12px; text-decoration: none;
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px;
+  background: rgba(7, 14, 22, 0.75); letter-spacing: 0.1em;
+  transition: color 0.2s, border-color 0.2s;
+}
+.topnav a:hover { color: #9fdcff; border-color: var(--cyan); }
+
+/* 鎧ページの主メニュー(おまけボタンではなく「操作卓」) */
+.menu {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; width: min(740px, 94vw); z-index: 10;
+}
+.menu-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 13px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: rgba(7, 14, 22, 0.88); color: var(--text);
+  text-decoration: none; cursor: pointer; text-align: center;
+  font-size: 13px; letter-spacing: 0.12em; font-family: inherit;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.menu-tile:hover {
+  border-color: var(--cyan); transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(44, 143, 191, 0.25);
+}
+.menu-tile .ic { font-size: 22px; line-height: 1.2; }
+.menu-tile .sub { font-size: 10px; color: var(--dim); letter-spacing: 0.04em; }
+.menu-tile.primary {
+  background: linear-gradient(135deg, #1d5f8a, #2c8fbf);
+  border-color: #2c8fbf; color: #fff;
+}
+.menu-tile.primary .sub { color: rgba(255, 255, 255, 0.75); }
+.menu-tile:disabled { opacity: 0.55; cursor: default; transform: none; }
+
 /* 蒸着フラッシュ(変身の瞬間) */
 .henshin-flash {
   position: fixed; inset: 0; pointer-events: none; z-index: 50;

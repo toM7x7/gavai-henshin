@@ -1,13 +1,17 @@
 'use client';
-// /s/<code> — 呼出符ビューア: オービット + IBL + 蒸着エフェクト。
-// 検証コンソール(tools/armor_lab_server.py の V3D)の Web 移植版 M2。
+// /s/<code> — 蒸着室(呼出符ビューア)。
+// スタートは素体。蒸着ボタンで 閃光+SE+粒子収束+鎧マテリアライズ+
+// ヘンシンモーション(henshin.vrma)が一体で走る。解除で素体に戻る。
+// VRMがあればVRM+VRMAで動かし、無い古いパッケージはassembly.glbに退避。
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { fetchManifest, fileUrl, armorMeshes } from '../../../lib/suit';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+import { fetchManifest, fileUrl, armorMeshes, setArmorVisible } from '../../../lib/suit';
 import { announce } from '../../../lib/stt';
 
 export default function SuitViewer() {
@@ -16,8 +20,9 @@ export default function SuitViewer() {
   const apiRef = useRef({});
   const [manifest, setManifest] = useState(null);
   const [status, setStatus] = useState('呼出符を照合中…');
-  const [depositing, setDepositing] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [worn, setWorn] = useState(false);
+  const [flashKey, setFlashKey] = useState(0);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -28,7 +33,6 @@ export default function SuitViewer() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -46,24 +50,14 @@ export default function SuitViewer() {
     const key = new THREE.DirectionalLight(0xffffff, 1.6);
     key.position.set(2, 3, 2);
     scene.add(key);
-    scene.add(new THREE.DirectionalLight(0x88bbee, 0.7).translateX(-2).translateY(1.5).translateZ(-1));
+    scene.add(new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28));
 
-    const grid = new THREE.GridHelper(4, 24, 0x1a3448, 0x0d1c28);
-    scene.add(grid);
-
-    let suit = null;
-    let particles = null;
-    let depositT = -1;
-
-    // 蒸着: 素体はそこに立っている — 粒子が収束し、鎧だけが
-    // 下から上へマテリアライズする(スタートは必ず未変身から)
+    let vrm = null, vrmaData = null, mixer = null;
+    let suit = null;            // GLBフォールバック用
     let armor = [];
-    const deposit = () => {
-      if (!suit || depositT >= 0 || !armor.length) return;
-      depositT = 0;
-      setDepositing(true);
-      try { new Audio('/se/deposit.mp3').play().catch(() => {}); } catch {}
-      const geo = new THREE.BufferGeometry();
+    let particles = null, fadeT = -1, motionPlaying = false;
+
+    const burst = () => {
       const N = 2200;
       const pos = new Float32Array(N * 3);
       for (let i = 0; i < N; i++) {
@@ -72,32 +66,72 @@ export default function SuitViewer() {
         pos[i * 3 + 1] = Math.random() * 2.2;
         pos[i * 3 + 2] = Math.sin(a) * r;
       }
+      const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       particles = new THREE.Points(geo, new THREE.PointsMaterial({
         color: 0x9fdcff, size: 0.02, transparent: true, opacity: 0.95,
         blending: THREE.AdditiveBlending, depthWrite: false,
       }));
-      particles.userData.start = pos.slice();
+      particles.userData = { start: pos.slice(), t: 0 };
       scene.add(particles);
-      // 部位の正規化高さは開始時に一度だけ測る(毎フレームの
-      // Box3.setFromObject は 34万tris 全走査でレンダラが凍る)
-      const box = new THREE.Box3().setFromObject(suit);
-      const span = Math.max(1e-3, box.max.y - box.min.y);
-      const wp = new THREE.Vector3();
-      for (const o of armor) {
-        o.material = o.material.clone();
-        o.material.transparent = true;
-        o.material.opacity = 0;
-        o.userData.h = (o.getWorldPosition(wp).y - box.min.y) / span;
-        o.visible = true;
+    };
+
+    // 蒸着 — 変身モーションと共に装着する(体験の主役ボタン)
+    const deposit = () => {
+      if ((!vrm && !suit) || motionPlaying || fadeT >= 0 || !armor.length) return;
+      setBusy(true);
+      setFlashKey((k) => k + 1);
+      try { new Audio('/se/deposit.mp3').play().catch(() => {}); } catch {}
+      burst();
+      if (vrm) {
+        setArmorVisible(vrm.scene, true);   // 閃光の中で鎧が現れる
+        if (vrmaData) {
+          motionPlaying = true;
+          const clip = createVRMAnimationClip(vrmaData, vrm);
+          mixer = new THREE.AnimationMixer(vrm.scene);
+          const action = mixer.clipAction(clip);
+          action.setLoop(THREE.LoopOnce);
+          action.clampWhenFinished = true;
+          mixer.addEventListener('finished', () => {
+            mixer.stopAllAction();
+            mixer = null;
+            motionPlaying = false;
+            setBusy(false);
+            setWorn(true);
+            setStatus('');
+            announce('蒸着、完了。');
+          });
+          action.play();
+          setStatus('蒸着 — ヘンシンモーション実行中');
+        } else {
+          setTimeout(() => {
+            setBusy(false); setWorn(true); setStatus('');
+            announce('蒸着、完了。');
+          }, 2400);
+        }
+      } else {
+        // GLBフォールバック: 下から上へのマテリアライズ
+        fadeT = 0;
+        const box = new THREE.Box3().setFromObject(suit);
+        const span = Math.max(1e-3, box.max.y - box.min.y);
+        const wp = new THREE.Vector3();
+        for (const o of armor) {
+          o.material = o.material.clone();
+          o.material.transparent = true;
+          o.material.opacity = 0;
+          o.userData.h = (o.getWorldPosition(wp).y - box.min.y) / span;
+          o.visible = true;
+        }
       }
     };
     apiRef.current.deposit = deposit;
 
-    // 解除: 鎧を還して素体に戻す(何度でも蒸着できる)
+    // 解除 — 鎧を還して素体に戻す(何度でも蒸着できる)
     apiRef.current.release = () => {
-      if (!suit || depositT >= 0) return;
-      for (const o of armor) o.visible = false;
+      if (motionPlaying || fadeT >= 0) return;
+      setFlashKey((k) => k + 1);
+      const root = vrm ? vrm.scene : suit;
+      if (root) for (const o of armor) o.visible = false;
       setWorn(false);
       setStatus('素体待機 — 蒸着せよ');
     };
@@ -107,32 +141,36 @@ export default function SuitViewer() {
       if (disposed) return;
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
-      if (depositT >= 0) {
-        depositT += dt;
-        const k = Math.min(1, depositT / 2.4);
-        if (particles) {
-          const p = particles.geometry.attributes.position;
-          const s = particles.userData.start;
-          for (let i = 0; i < p.count; i++) {
-            p.array[i * 3] = s[i * 3] * (1 - k * 0.985);
-            p.array[i * 3 + 2] = s[i * 3 + 2] * (1 - k * 0.985);
-          }
-          p.needsUpdate = true;
-          particles.material.opacity = 0.95 * (1 - k);
+      if (mixer) mixer.update(dt);
+      if (particles) {
+        const u = particles.userData;
+        u.t += dt;
+        const k = Math.min(1, u.t / 2.0);
+        const p = particles.geometry.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          p.array[i * 3] = u.start[i * 3] * (1 - k * 0.985);
+          p.array[i * 3 + 2] = u.start[i * 3 + 2] * (1 - k * 0.985);
         }
+        p.needsUpdate = true;
+        particles.material.opacity = 0.95 * (1 - k);
+        if (k >= 1) { scene.remove(particles); particles = null; }
+      }
+      if (fadeT >= 0) {
+        fadeT += dt;
+        const k = Math.min(1, fadeT / 2.4);
         for (const o of armor) {
           o.material.opacity = Math.min(1, Math.max(0, (k * 1.4 - o.userData.h * 0.5)));
         }
         if (k >= 1) {
-          if (particles) { scene.remove(particles); particles = null; }
           for (const o of armor) { o.material.opacity = 1; o.material.transparent = false; }
-          depositT = -1;
-          setDepositing(false);
+          fadeT = -1;
+          setBusy(false);
           setWorn(true);
           setStatus('');
           announce('蒸着、完了。');
         }
       }
+      if (vrm) vrm.update(dt);
       controls.update();
       renderer.render(scene, camera);
     };
@@ -144,13 +182,32 @@ export default function SuitViewer() {
         if (disposed) return;
         setManifest(m);
         setStatus('鎧データを転送中…');
-        const file = m.files.assembly || m.files.lod1;
-        const gltf = await new GLTFLoader().loadAsync(fileUrl(code, file));
-        if (disposed) return;
-        suit = gltf.scene;
-        scene.add(suit);
-        armor = armorMeshes(suit);
-        for (const o of armor) o.visible = false;  // 素体だけがそこに立つ
+        if (m.files.vrm) {
+          const loader = new GLTFLoader();
+          loader.register((parser) => new VRMLoaderPlugin(parser));
+          loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+          const gltf = await loader.loadAsync(fileUrl(code, m.files.vrm));
+          if (disposed) return;
+          vrm = gltf.userData.vrm;
+          VRMUtils.rotateVRM0(vrm);
+          scene.add(vrm.scene);
+          armor = armorMeshes(vrm.scene);
+          setArmorVisible(vrm.scene, false);
+          if (m.files.vrma) {
+            try {
+              const ag = await loader.loadAsync(fileUrl(code, m.files.vrma));
+              vrmaData = (ag.userData.vrmAnimations || [])[0] || null;
+            } catch { vrmaData = null; }
+          }
+        } else {
+          const file = m.files.assembly || m.files.lod1;
+          const gltf = await new GLTFLoader().loadAsync(fileUrl(code, file));
+          if (disposed) return;
+          suit = gltf.scene;
+          scene.add(suit);
+          armor = armorMeshes(suit);
+          for (const o of armor) o.visible = false;
+        }
         setStatus('素体待機 — 蒸着せよ');
       } catch (e) {
         setStatus(String(e.message || e));
@@ -176,11 +233,13 @@ export default function SuitViewer() {
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+      {flashKey > 0 && <div key={flashKey} className="henshin-flash" />}
+
       <div style={{
         position: 'absolute', top: 14, left: 18, pointerEvents: 'none',
         textShadow: '0 1px 6px #000',
       }}>
-        <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録</div>
+        <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / 蒸着室</div>
         <div style={{ fontSize: 20, letterSpacing: '0.12em' }}>{code}</div>
         {manifest && (
           <div style={{ fontSize: 12, color: '#8fa7b8', marginTop: 4 }}>
@@ -190,6 +249,12 @@ export default function SuitViewer() {
           </div>
         )}
       </div>
+
+      <nav className="topnav">
+        <a href="/">⌂ 扉へ</a>
+        <a href="/forge">⚒ 鍛造炉</a>
+      </nav>
+
       {status && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
@@ -197,40 +262,39 @@ export default function SuitViewer() {
           letterSpacing: '0.2em', pointerEvents: 'none', textShadow: '0 1px 6px #000',
         }}>{status}</div>
       )}
-      <div style={{ position: 'absolute', bottom: 18, left: 18, display: 'flex', gap: 10 }}>
+
+      <div className="menu">
         <button
+          className={`menu-tile ${worn ? '' : 'primary'}`}
           onClick={() => (worn
             ? apiRef.current.release && apiRef.current.release()
             : apiRef.current.deposit && apiRef.current.deposit())}
-          disabled={depositing}
-          style={{
-            background: depositing ? '#123246'
-              : worn ? '#0a121c' : 'linear-gradient(135deg,#1d5f8a,#2c8fbf)',
-            color: worn ? '#9fdcff' : '#fff',
-            border: worn ? '1px solid #24425a' : 'none', borderRadius: 8,
-            padding: '10px 18px', fontSize: 14,
-            cursor: depositing ? 'default' : 'pointer', letterSpacing: '0.25em',
-          }}>{depositing ? '蒸着中…' : worn ? '解除' : '蒸着'}</button>
-        {manifest && manifest.files.vrm && (
-          <a href={`/ar/${code}`} style={{
-            background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
-            borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',
-            letterSpacing: '0.1em',
-          }}>VR/ARで装着</a>
+          disabled={busy}
+        >
+          <span className="ic">{worn ? '↺' : '⚡'}</span>
+          {busy ? '蒸着中…' : worn ? '解除' : '蒸着'}
+          <span className="sub">{worn ? '素体に戻す' : '変身モーションと共に装着'}</span>
+        </button>
+        {manifest?.files?.vrm && (
+          <a className="menu-tile" href={`/ar/${code}`}>
+            <span className="ic">🥽</span>
+            VRで蒸着
+            <span className="sub">Quest — 現実空間で装着</span>
+          </a>
         )}
-        {manifest && manifest.files.vrm && (
-          <a href={`/mirror/${code}`} style={{
-            background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
-            borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',
-            letterSpacing: '0.1em',
-          }}>鏡で体連携</a>
+        {manifest?.files?.vrm && (
+          <a className="menu-tile" href={`/mirror/${code}`}>
+            <span className="ic">📷</span>
+            Webカメラで変身体験
+            <span className="sub">体の動きと鎧がリンク</span>
+          </a>
         )}
-        {manifest && manifest.files.vrm && (
-          <a href={fileUrl(code, manifest.files.vrm)} download={`${code}.vrm`} style={{
-            background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
-            borderRadius: 8, padding: '10px 18px', fontSize: 14, textDecoration: 'none',
-            letterSpacing: '0.1em',
-          }}>VRMを持ち出す</a>
+        {manifest?.files?.vrm && (
+          <a className="menu-tile" href={fileUrl(code, manifest.files.vrm)} download={`${code}.vrm`}>
+            <span className="ic">💾</span>
+            VRMエクスポート
+            <span className="sub">メタバースへ持ち出す</span>
+          </a>
         )}
       </div>
     </main>

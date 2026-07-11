@@ -507,10 +507,10 @@ export default function Mirror() {
           style={{ border: '1px solid #24425a', background: '#04080d', borderRadius: 4 }} />
         <span style={{ fontSize: 12, color: '#8fa7b8', maxWidth: 380 }}>{status}</span>
       </div>
-      <a href={`/s/${code}`} style={{
-        position: 'absolute', top: 16, right: 18, color: '#5a7284', fontSize: 12,
-        textDecoration: 'none',
-      }}>← ビューアへ</a>
+      <nav className="topnav">
+        <a href="/">⌂ 扉へ</a>
+        <a href={`/s/${code}`}>← 蒸着室</a>
+      </nav>
     </main>
   );
 }

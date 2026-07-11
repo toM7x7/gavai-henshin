@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { fetchManifest, fileUrl } from '../../../lib/suit';
+import { fetchManifest, fileUrl, armorMeshes } from '../../../lib/suit';
+import { announce } from '../../../lib/stt';
 
 export default function SuitViewer() {
   const { code } = useParams();
@@ -16,6 +17,7 @@ export default function SuitViewer() {
   const [manifest, setManifest] = useState(null);
   const [status, setStatus] = useState('呼出符を照合中…');
   const [depositing, setDepositing] = useState(false);
+  const [worn, setWorn] = useState(false);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -53,9 +55,11 @@ export default function SuitViewer() {
     let particles = null;
     let depositT = -1;
 
-    // 蒸着: 粒子収束 + 下から上へのフェード(V3D deposit の移植・簡易版)
+    // 蒸着: 素体はそこに立っている — 粒子が収束し、鎧だけが
+    // 下から上へマテリアライズする(スタートは必ず未変身から)
+    let armor = [];
     const deposit = () => {
-      if (!suit || depositT >= 0) return;
+      if (!suit || depositT >= 0 || !armor.length) return;
       depositT = 0;
       setDepositing(true);
       try { new Audio('/se/deposit.mp3').play().catch(() => {}); } catch {}
@@ -80,17 +84,23 @@ export default function SuitViewer() {
       const box = new THREE.Box3().setFromObject(suit);
       const span = Math.max(1e-3, box.max.y - box.min.y);
       const wp = new THREE.Vector3();
-      suit.traverse((o) => {
-        if (o.isMesh) {
-          o.material = o.material.clone();
-          o.material.transparent = true;
-          o.material.opacity = 0;
-          o.userData.h = (o.getWorldPosition(wp).y - box.min.y) / span;
-        }
-      });
-      suit.visible = true;
+      for (const o of armor) {
+        o.material = o.material.clone();
+        o.material.transparent = true;
+        o.material.opacity = 0;
+        o.userData.h = (o.getWorldPosition(wp).y - box.min.y) / span;
+        o.visible = true;
+      }
     };
     apiRef.current.deposit = deposit;
+
+    // 解除: 鎧を還して素体に戻す(何度でも蒸着できる)
+    apiRef.current.release = () => {
+      if (!suit || depositT >= 0) return;
+      for (const o of armor) o.visible = false;
+      setWorn(false);
+      setStatus('素体待機 — 蒸着せよ');
+    };
 
     const clock = new THREE.Clock();
     const animate = () => {
@@ -110,18 +120,17 @@ export default function SuitViewer() {
           p.needsUpdate = true;
           particles.material.opacity = 0.95 * (1 - k);
         }
-        if (suit) {
-          suit.traverse((o) => {
-            if (o.isMesh) {
-              o.material.opacity = Math.min(1, Math.max(0, (k * 1.4 - o.userData.h * 0.5)));
-            }
-          });
+        for (const o of armor) {
+          o.material.opacity = Math.min(1, Math.max(0, (k * 1.4 - o.userData.h * 0.5)));
         }
         if (k >= 1) {
           if (particles) { scene.remove(particles); particles = null; }
-          suit && suit.traverse((o) => { if (o.isMesh) { o.material.opacity = 1; o.material.transparent = false; } });
+          for (const o of armor) { o.material.opacity = 1; o.material.transparent = false; }
           depositT = -1;
           setDepositing(false);
+          setWorn(true);
+          setStatus('');
+          announce('蒸着、完了。');
         }
       }
       controls.update();
@@ -139,10 +148,10 @@ export default function SuitViewer() {
         const gltf = await new GLTFLoader().loadAsync(fileUrl(code, file));
         if (disposed) return;
         suit = gltf.scene;
-        suit.visible = false;
         scene.add(suit);
-        setStatus('');
-        deposit();
+        armor = armorMeshes(suit);
+        for (const o of armor) o.visible = false;  // 素体だけがそこに立つ
+        setStatus('素体待機 — 蒸着せよ');
       } catch (e) {
         setStatus(String(e.message || e));
       }
@@ -190,13 +199,18 @@ export default function SuitViewer() {
       )}
       <div style={{ position: 'absolute', bottom: 18, left: 18, display: 'flex', gap: 10 }}>
         <button
-          onClick={() => apiRef.current.deposit && apiRef.current.deposit()}
+          onClick={() => (worn
+            ? apiRef.current.release && apiRef.current.release()
+            : apiRef.current.deposit && apiRef.current.deposit())}
           disabled={depositing}
           style={{
-            background: depositing ? '#123246' : 'linear-gradient(135deg,#1d5f8a,#2c8fbf)',
-            color: '#fff', border: 'none', borderRadius: 8, padding: '10px 18px',
-            fontSize: 14, cursor: depositing ? 'default' : 'pointer', letterSpacing: '0.25em',
-          }}>蒸着</button>
+            background: depositing ? '#123246'
+              : worn ? '#0a121c' : 'linear-gradient(135deg,#1d5f8a,#2c8fbf)',
+            color: worn ? '#9fdcff' : '#fff',
+            border: worn ? '1px solid #24425a' : 'none', borderRadius: 8,
+            padding: '10px 18px', fontSize: 14,
+            cursor: depositing ? 'default' : 'pointer', letterSpacing: '0.25em',
+          }}>{depositing ? '蒸着中…' : worn ? '解除' : '蒸着'}</button>
         {manifest && manifest.files.vrm && (
           <a href={`/ar/${code}`} style={{
             background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',

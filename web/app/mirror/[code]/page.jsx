@@ -11,8 +11,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
-import { fetchManifest, fileUrl } from '../../../lib/suit';
-import { TRIGGER_RE, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
+import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
+import { TRIGGER_RE, announce, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 // ---- One Euro Filter(速度適応平滑化) ----
 class OneEuro {
@@ -42,6 +42,7 @@ export default function Mirror() {
   const [mirrorMode, setMirrorMode] = useState(true);
   const [voiceOn, setVoiceOn] = useState(false);
   const [flashKey, setFlashKey] = useState(0);
+  const [worn, setWorn] = useState(false);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -162,13 +163,16 @@ export default function Mirror() {
       }
     };
 
-    // ---- 変身(蒸着): 粒子収束 + フラッシュ + VRMAモーション + SE ----
-    // SE は web/public/se/henshin.mp3 を置けば鳴る(無ければ静かに変身)
+    // ---- 蒸着: 素体に鎧が装着される瞬間 ----
+    // フラッシュ + SE + 粒子収束 + 鎧マテリアライズ + ヘンシンモーション。
+    // スタートは必ず「変身していない状態」から(2026-07-11方針)
     const henshin = () => {
       if (!vrm || motionPlaying) return;
       motionPlaying = true;
       setFlashKey((k) => k + 1);
       try { new Audio('/se/henshin.mp3').play().catch(() => {}); } catch {}
+      setArmorVisible(vrm.scene, true);   // 閃光の中で鎧が現れる
+      setWorn(true);
       // 粒子収束(蒸着エネルギー)
       const N = 1600;
       const pos = new Float32Array(N * 3);
@@ -199,14 +203,24 @@ export default function Mirror() {
           bones = null;   // 追跡再開時にバインドポーズへ戻して再実測
           motionPlaying = false;
           setStatus('蒸着完了 — 体連携を再開');
+          announce('蒸着、完了。');
         });
         action.play();
         setStatus('蒸着 — ヘンシンモーション実行中');
       } else {
-        setTimeout(() => { motionPlaying = false; }, 2400);
+        setTimeout(() => { motionPlaying = false; announce('蒸着、完了。'); }, 2400);
       }
     };
     apiRef.current.henshin = henshin;
+
+    // 解除: 鎧を還す(巻き戻し)。素体に戻って何度でも蒸着できる
+    apiRef.current.release = () => {
+      if (!vrm || motionPlaying) return;
+      setFlashKey((k) => k + 1);
+      setArmorVisible(vrm.scene, false);
+      setWorn(false);
+      setStatus('蒸着解除 — 素体待機。「蒸着!」でいつでも装着');
+    };
 
     const drive = (poseRes) => {
       if (motionPlaying) return;  // 見得の最中は追跡を握らせない
@@ -363,7 +377,7 @@ export default function Mirror() {
       try {
         whisperStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch { setStatus('マイクを起動できません'); wantVoice = false; setVoiceOn(false); return; }
-      setStatus('音声認証 待機中(Sakura Whisper)—「変身!」と唱えよ');
+      setStatus('音声認証 待機中(Sakura Whisper)—「蒸着!」と唱えよ');
       while (wantVoice && !disposed) {
         try {
           const blob = await recordChunk(whisperStream, 2600, mime);
@@ -397,7 +411,7 @@ export default function Mirror() {
         rec.onend = () => { if (wantVoice && !disposed) { try { rec.start(); } catch {} } };
         rec.onerror = () => {};
         wantVoice = true;
-        try { rec.start(); setVoiceOn(true); setStatus('音声認証 待機中 — 「変身!」と唱えよ'); }
+        try { rec.start(); setVoiceOn(true); setStatus('音声認証 待機中 — 「蒸着!」と唱えよ'); }
         catch { wantVoice = false; }
       } else if (await sttEnabled()) {
         wantVoice = true;
@@ -429,7 +443,9 @@ export default function Mirror() {
             vrmaData = (ag.userData.vrmAnimations || [])[0] || null;
           } catch { vrmaData = null; }
         }
-        setStatus('準備完了 — カメラを開始し、「変身!」と唱えよ');
+        setArmorVisible(vrm.scene, false);  // スタートは素体から — これが儀式の前提
+        setWorn(false);
+        setStatus('素体待機 — カメラを開始し、「蒸着!」と唱えよ');
       } catch (e) {
         setStatus(String(e.message || e));
       }
@@ -475,11 +491,14 @@ export default function Mirror() {
           borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer',
           letterSpacing: '0.15em',
         }}>{voiceOn ? '音声認証 待機中' : '音声認証 ON'}</button>
-        <button onClick={() => apiRef.current.henshin && apiRef.current.henshin()} style={{
-          background: '#0a121c', color: '#9fdcff', border: '1px solid #24425a',
+        <button onClick={() => (worn
+          ? apiRef.current.release && apiRef.current.release()
+          : apiRef.current.henshin && apiRef.current.henshin())} style={{
+          background: worn ? '#0a121c' : 'linear-gradient(135deg,#1d5f8a,#2c8fbf)',
+          color: worn ? '#9fdcff' : '#fff', border: '1px solid #24425a',
           borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer',
           letterSpacing: '0.25em',
-        }}>変身</button>
+        }}>{worn ? '解除' : '蒸着'}</button>
         <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
           <input type="checkbox" checked={mirrorMode}
             onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像

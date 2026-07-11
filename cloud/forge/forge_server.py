@@ -92,6 +92,30 @@ def _next_code() -> str:
     raise RuntimeError("recall code allocation failed (collisions)")
 
 
+def _update_gallery(manifest: dict) -> None:
+    """鍛造記録 — 直近の鎧をトップページの一覧に載せる(公開gallery.json)。
+    失敗しても鍛造自体は成立させる(呼び出し側でtry/except)。"""
+    base = os.environ["SUPABASE_URL"].rstrip("/")
+    entry = {
+        "code": manifest["recall_code"],
+        "blueprint_id": manifest["blueprint_id"],
+        "intent": str(manifest.get("design_intent", ""))[:40],
+        "palette": manifest.get("palette", {}),
+        "created_at": manifest["created_at"],
+    }
+    items: list = []
+    try:
+        with urllib.request.urlopen(
+                f"{base}/storage/v1/object/public/suits/gallery.json", timeout=15) as r:
+            items = json.load(r)
+    except Exception:  # noqa: BLE001 — 初回は無いのが正常
+        items = []
+    items = [entry] + [i for i in items if i.get("code") != entry["code"]]
+    upload_supabase("gallery.json",
+                    json.dumps(items[:24], ensure_ascii=False).encode("utf-8"),
+                    "application/json")
+
+
 def _forge_job(job_id: str, text: str) -> None:
     with _BUILD_LOCK:
         workdir = WORK / job_id
@@ -169,6 +193,10 @@ def _forge_job(job_id: str, text: str) -> None:
                             json.dumps(manifest, ensure_ascii=False).encode("utf-8"),
                             "application/json")
             register_code(manifest)
+            try:
+                _update_gallery(manifest)
+            except Exception as exc:  # noqa: BLE001
+                print(f"GALLERY_UPDATE_FAILED: {exc}")
             timings["upload"] = round(time.time() - t2, 1)
             timings["total"] = round(time.time() - t0, 1)
             fs = result.get("fit_summary", {})

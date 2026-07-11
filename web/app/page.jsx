@@ -1,10 +1,19 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { galleryUrl } from '../lib/suit';
 
 export default function Home() {
   const [code, setCode] = useState('');
+  const [gallery, setGallery] = useState([]);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch(galleryUrl(), { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((items) => Array.isArray(items) && setGallery(items.slice(0, 8)))
+      .catch(() => {});
+  }, []);
   const go = (e) => {
     e.preventDefault();
     const c = code.trim().toUpperCase();
@@ -59,6 +68,33 @@ export default function Home() {
           </form>
         </div>
       </div>
+
+      {gallery.length > 0 && (
+        <section className="rise" style={{ width: 'min(760px, 94vw)', animationDelay: '0.2s' }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8', marginBottom: 10 }}>
+            鍛造記録 / RECENT FORGE
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {gallery.map((g) => (
+              <a key={g.code} href={`/s/${g.code}`} style={{
+                display: 'flex', flexDirection: 'column', gap: 4,
+                border: '1px solid #24425a', borderRadius: 8, padding: '10px 14px',
+                textDecoration: 'none', background: 'rgba(7,14,22,0.8)',
+              }}>
+                <span style={{ display: 'flex', gap: 4 }}>
+                  {['base_surface', 'accent', 'emissive'].map((k) => g.palette?.[k] && (
+                    <i key={k} style={{
+                      width: 10, height: 10, borderRadius: 2, background: g.palette[k],
+                    }} />
+                  ))}
+                </span>
+                <span style={{ color: '#9fdcff', fontSize: 14, letterSpacing: '0.12em' }}>{g.code}</span>
+                {g.intent && <span style={{ color: '#5a7284', fontSize: 11 }}>{g.intent}</span>}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="rise" style={{ color: '#5a7284', fontSize: 11, letterSpacing: '0.2em', animationDelay: '0.24s' }}>
         SEAL: READY — COSMIC FORGE NETWORK

@@ -3,7 +3,25 @@
 // 二次: MediaRecorder で音声を録り /api/stt(Sakura Whisper)で文字起こし
 //       — Questブラウザ等 Web Speech の無い環境の道
 
-export const TRIGGER_RE = /変身|へんしん|ヘンシン|蒸着|じょうちゃく/;
+// 合言葉は「蒸着!」がメイン(2026-07-11方針)。音声認識は じょうちゃく を
+// 定着/常着 等に聞き間違えるので、その揺れも拾う。「変身」も言い間違い救済で許容
+export const TRIGGER_RE = /蒸着|じょうちゃく|ジョウチャク|定着|常着|ていちゃく|上着|変身|へんしん|ヘンシン/;
+
+// 管制アナウンス(Sakura TTS)。/api/tts が未設定なら静かに何もしない
+let _ttsOk = null;
+export const announce = async (text) => {
+  try {
+    if (_ttsOk === false) return;
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    if (!r.ok) { if (r.status === 503) _ttsOk = false; return; }
+    _ttsOk = true;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    a.onended = () => URL.revokeObjectURL(url);
+    a.play().catch(() => {});
+  } catch { /* 無音で続行 */ }
+};
 
 export const hasNativeSR = () =>
   typeof window !== 'undefined' &&

@@ -11,8 +11,8 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
-import { fetchManifest, fileUrl } from '../../../lib/suit';
-import { TRIGGER_RE, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
+import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
+import { TRIGGER_RE, announce, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 export default function ArExperience() {
   const { code } = useParams();
@@ -48,6 +48,7 @@ export default function ArExperience() {
       if (!vrm || motionPlaying) return;
       motionPlaying = true;
       try { new Audio('/se/henshin.mp3').play().catch(() => {}); } catch {}
+      setArmorVisible(vrm.scene, true);   // 素体に鎧が装着される
       const N = 1800;
       const pos = new Float32Array(N * 3);
       const base = vrm.scene.position;
@@ -71,10 +72,13 @@ export default function ArExperience() {
         const action = mixer.clipAction(clip);
         action.setLoop(THREE.LoopOnce);
         action.clampWhenFinished = true;
-        mixer.addEventListener('finished', () => { motionPlaying = false; });
+        mixer.addEventListener('finished', () => {
+          motionPlaying = false;
+          announce('蒸着、完了。');
+        });
         action.play();
       } else {
-        setTimeout(() => { motionPlaying = false; }, 2400);
+        setTimeout(() => { motionPlaying = false; announce('蒸着、完了。'); }, 2400);
       }
     };
 
@@ -86,7 +90,7 @@ export default function ArExperience() {
       if (motionPlaying || listening) return;
       if (!voiceMode || !micStream) { henshin(); return; }
       listening = true;
-      setStatus('唱えよ —「変身!」(3秒)');
+      setStatus('唱えよ —「蒸着!」(3秒)');
       try {
         const blob = await recordChunk(micStream, 3000, pickAudioMime());
         setStatus('Sakura Whisperで音声解析中…');
@@ -145,6 +149,7 @@ export default function ArExperience() {
         VRMUtils.rotateVRM0(vrm);
         vrm.scene.position.set(0, 0, -1.6);   // 目の前1.6mに立つ
         scene.add(vrm.scene);
+        setArmorVisible(vrm.scene, false);    // スタートは素体 — 儀式で装着する
         if (m.files.vrma) {
           try {
             const ag = await loader.loadAsync(fileUrl(code, m.files.vrma));
@@ -160,7 +165,7 @@ export default function ArExperience() {
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           } catch { voiceMode = false; }
         } else { voiceMode = false; }
-        const ritual = voiceMode ? 'トリガーを引いて「変身!」と唱えよ' : 'トリガーで蒸着';
+        const ritual = voiceMode ? 'トリガーを引いて「蒸着!」と唱えよ' : 'トリガーで蒸着';
 
         // AR(パススルー)優先、非対応なら VR、それも無ければ案内のみ
         const xr = navigator.xr;

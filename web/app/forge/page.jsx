@@ -1,8 +1,9 @@
 'use client';
 // /forge — 言葉から鎧を鍛造する。工場のジョブ進行(stage/timings)を
 // 工程トラッカーで見せる: 待ち時間は「儀式の進行」であって空白ではない。
+// 完了後は自動遷移しない — 呼出符を写す「間」が体験の一部(2026-07-11)
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { announce } from '../../lib/stt';
 
 const STEPS = [
   { n: 1, key: 'interpret', name: '解釈', sub: '設計局AIが言葉を読む' },
@@ -16,8 +17,8 @@ export default function Forge() {
   const [job, setJob] = useState(null);
   const [state, setState] = useState(null);
   const [elapsed, setElapsed] = useState(0);
+  const [copied, setCopied] = useState(false);
   const timerRef = useRef(null);
-  const router = useRouter();
 
   const start = async (e) => {
     e.preventDefault();
@@ -46,8 +47,9 @@ export default function Forge() {
         const s = await r.json();
         setState(s);
         if (s.status === 'done') {
-          setTimeout(() => router.push(`/s/${s.code}`), 2200);
-          return;
+          clearInterval(timerRef.current);
+          announce('鍛造、完了。適合審査、通過。呼出符を発行する。');
+          return;   // 自動遷移しない — 呼出符を控えてから自分の足で蒸着室へ
         }
         if (s.status === 'error') return;
       } catch {}
@@ -55,7 +57,16 @@ export default function Forge() {
     };
     poll();
     return () => { stop = true; clearInterval(timerRef.current); };
-  }, [job, router]);
+  }, [job]);
+
+  const copyCode = async () => {
+    if (!state?.code) return;
+    try {
+      await navigator.clipboard.writeText(state.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   const stage = state?.status === 'done' ? 5 : (state?.stage || (job ? 1 : 0));
   const running = job && (!state || !['done', 'error'].includes(state.status));
@@ -127,10 +138,22 @@ export default function Forge() {
                 ■ 鍛造完了 — 適合審査 {state.fit}
                 {state.route && state.route.startsWith('llm') && ' — 設計局AI解釈'}
               </div>
-              <div style={{ fontSize: 26, letterSpacing: '0.2em', color: '#9fdcff' }}>{state.code}</div>
-              <div style={{ color: '#8fa7b8', fontSize: 13 }}>この呼出符が君の鎧の名だ。蒸着室へ移動する…</div>
+              <div style={{ fontSize: 30, letterSpacing: '0.22em', color: '#9fdcff', textShadow: '0 0 18px rgba(95,199,232,0.5)' }}>
+                {state.code}
+              </div>
+              <div style={{ color: '#8fa7b8', fontSize: 13 }}>
+                この呼出符が君の鎧の名だ。控えよ — 何度でも召喚できる。
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+                <button className="btn-ghost" onClick={copyCode} style={{ cursor: 'pointer' }}>
+                  {copied ? '✓ コピーした' : '呼出符をコピー'}
+                </button>
+                <a className="btn-main" href={`/s/${state.code}`} style={{ textDecoration: 'none' }}>
+                  蒸着室へ →
+                </a>
+              </div>
               {state.route && state.route.startsWith('rule_fallback') && (
-                <div style={{ color: '#d9b45f', fontSize: 12 }}>
+                <div style={{ color: '#d9b45f', fontSize: 12, marginTop: 8 }}>
                   ※設計局AIが応答せず、規範解釈で鍛造されました
                 </div>
               )}

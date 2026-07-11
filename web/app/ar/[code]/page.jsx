@@ -12,6 +12,7 @@ import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { fetchManifest, fileUrl } from '../../../lib/suit';
+import { TRIGGER_RE, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 export default function ArExperience() {
   const { code } = useParams();
@@ -77,11 +78,35 @@ export default function ArExperience() {
       }
     };
 
-    // コントローラのトリガー(画面タップも select になる)で蒸着
+    // コントローラのトリガー(画面タップも select になる)。
+    // Whisper設定済みなら「トリガーを引いて唱える」儀式(旧展示UX):
+    // 3秒録音→Sakura Whisper→合言葉照合→蒸着。未設定ならトリガー=直接蒸着
+    let voiceMode = false, micStream = null, listening = false;
+    const onSelect = async () => {
+      if (motionPlaying || listening) return;
+      if (!voiceMode || !micStream) { henshin(); return; }
+      listening = true;
+      setStatus('唱えよ —「変身!」(3秒)');
+      try {
+        const blob = await recordChunk(micStream, 3000, pickAudioMime());
+        setStatus('Sakura Whisperで音声解析中…');
+        const text = await transcribe(blob);
+        if (TRIGGER_RE.test(text)) {
+          henshin();
+          setStatus('音声認証 成立 — 蒸着');
+        } else {
+          setStatus(`「${text || '…'}」— 合言葉未検出。もう一度トリガー`);
+        }
+      } catch {
+        setStatus('音声解析に失敗 — もう一度トリガー(無音でも蒸着したい時は2連続で引く)');
+        voiceMode = false;  // 障害時は次のトリガーで直接蒸着に切替
+      }
+      listening = false;
+    };
     const c0 = renderer.xr.getController(0);
     const c1 = renderer.xr.getController(1);
-    c0.addEventListener('select', henshin);
-    c1.addEventListener('select', henshin);
+    c0.addEventListener('select', onSelect);
+    c1.addEventListener('select', onSelect);
     scene.add(c0); scene.add(c1);
 
     const clock = new THREE.Clock();
@@ -127,6 +152,16 @@ export default function ArExperience() {
           } catch { vrmaData = null; }
         }
 
+        // 音声認証(Sakura Whisper)が使えるならXR入場前にマイク許可を取っておく
+        // (セッション内での許可ダイアログは体験を折る)
+        voiceMode = await sttEnabled();
+        if (voiceMode && pickAudioMime()) {
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          } catch { voiceMode = false; }
+        } else { voiceMode = false; }
+        const ritual = voiceMode ? 'トリガーを引いて「変身!」と唱えよ' : 'トリガーで蒸着';
+
         // AR(パススルー)優先、非対応なら VR、それも無ければ案内のみ
         const xr = navigator.xr;
         const arOK = xr && await xr.isSessionSupported('immersive-ar').catch(() => false);
@@ -135,14 +170,14 @@ export default function ArExperience() {
           document.body.appendChild(ARButton.createButton(renderer, {
             requiredFeatures: ['local-floor'],
           }));
-          setStatus('READY — 「START AR」で転送。トリガーで蒸着');
+          setStatus(`READY — 「START AR」で転送。${ritual}`);
         } else if (vrOK) {
           // VRは無背景だと寂しいので床グリッドを敷く
           vrGrid = new THREE.GridHelper(6, 30, 0x1a3448, 0x0d1c28);
           scene.add(vrGrid);
           scene.background = new THREE.Color(0x04080d);
           document.body.appendChild(VRButton.createButton(renderer));
-          setStatus('READY — 「ENTER VR」で転送。トリガーで蒸着');
+          setStatus(`READY — 「ENTER VR」で転送。${ritual}`);
         } else {
           setStatus('この端末はWebXR非対応です。Quest Browserで開いてください');
         }
@@ -159,6 +194,7 @@ export default function ArExperience() {
     window.addEventListener('resize', onResize);
     return () => {
       disposed = true;
+      if (micStream) micStream.getTracks().forEach((t) => t.stop());
       window.removeEventListener('resize', onResize);
       renderer.setAnimationLoop(null);
       renderer.dispose(); pmrem.dispose();

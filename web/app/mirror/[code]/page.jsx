@@ -12,6 +12,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { fetchManifest, fileUrl } from '../../../lib/suit';
+import { TRIGGER_RE, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 // ---- One Euro Filter(速度適応平滑化) ----
 class OneEuro {
@@ -352,35 +353,59 @@ export default function Mirror() {
     };
     animate();
 
-    // ---- 音声認証: 「変身」「蒸着」で henshin() を発火(Web Speech API)----
-    let rec = null, wantVoice = false;
-    apiRef.current.voiceToggle = () => {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) { setStatus('この端末は音声認識に未対応です(Chrome推奨)'); return; }
+    // ---- 音声認証(ハイブリッド) ----
+    // 一次: Web Speech(Chrome系 — 低遅延・無料)
+    // 二次: Sakura Whisper(/api/stt 経由。Questブラウザ等 Web Speech 不在の道)
+    let rec = null, wantVoice = false, whisperStream = null;
+    const whisperLoop = async () => {
+      const mime = pickAudioMime();
+      if (!mime) { setStatus('この端末は録音に未対応です'); wantVoice = false; setVoiceOn(false); return; }
+      try {
+        whisperStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch { setStatus('マイクを起動できません'); wantVoice = false; setVoiceOn(false); return; }
+      setStatus('音声認証 待機中(Sakura Whisper)—「変身!」と唱えよ');
+      while (wantVoice && !disposed) {
+        try {
+          const blob = await recordChunk(whisperStream, 2600, mime);
+          if (!wantVoice || disposed) break;
+          const text = await transcribe(blob);
+          if (TRIGGER_RE.test(text)) henshin();
+        } catch { /* 一時失敗は無視して次のチャンクへ */ }
+      }
+      if (whisperStream) { whisperStream.getTracks().forEach((t) => t.stop()); whisperStream = null; }
+    };
+    apiRef.current.voiceToggle = async () => {
       if (wantVoice) {
         wantVoice = false;
         try { rec && rec.stop(); } catch {}
         setVoiceOn(false);
+        setStatus('音声認証 OFF');
         return;
       }
-      rec = new SR();
-      rec.lang = 'ja-JP';
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.onresult = (e) => {
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (/変身|へんしん|ヘンシン|蒸着|じょうちゃく/.test(t)) {
-            henshin();
-            break;
+      if (hasNativeSR()) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        rec = new SR();
+        rec.lang = 'ja-JP';
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.onresult = (e) => {
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (TRIGGER_RE.test(t)) { henshin(); break; }
           }
-        }
-      };
-      rec.onend = () => { if (wantVoice && !disposed) { try { rec.start(); } catch {} } };
-      rec.onerror = () => {};
-      wantVoice = true;
-      try { rec.start(); setVoiceOn(true); setStatus('音声認証 待機中 — 「変身!」と唱えよ'); }
-      catch { wantVoice = false; }
+        };
+        rec.onend = () => { if (wantVoice && !disposed) { try { rec.start(); } catch {} } };
+        rec.onerror = () => {};
+        wantVoice = true;
+        try { rec.start(); setVoiceOn(true); setStatus('音声認証 待機中 — 「変身!」と唱えよ'); }
+        catch { wantVoice = false; }
+      } else if (await sttEnabled()) {
+        wantVoice = true;
+        setVoiceOn(true);
+        whisperLoop();
+      } else {
+        setStatus('この端末は音声認識に未対応です(Whisper未設定 — Vercel に SAKURA_AI_ENGINE_TOKEN を)');
+      }
     };
 
     (async () => {

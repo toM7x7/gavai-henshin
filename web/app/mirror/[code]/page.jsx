@@ -36,6 +36,7 @@ export default function Mirror() {
   const { code } = useParams();
   const mountRef = useRef(null);
   const canvasRef = useRef(null);
+  const debugRef = useRef(null);   // dev用: AR整列の十字マーカー描画先
   const apiRef = useRef({});
   const [status, setStatus] = useState('鏡を準備中…');
   const [running, setRunning] = useState(false);
@@ -44,6 +45,12 @@ export default function Mirror() {
   const [flashKey, setFlashKey] = useState(0);
   const [worn, setWorn] = useState(false);
   const [arMode, setArMode] = useState(false);  // 実写合成(カメラ映像に重ねる)
+  // 実写ARは整列品質が未達のためユーザー向けには非公開(2026-07-11 T12)。
+  // /mirror/<code>?dev=1 でのみトグルが現れる — 機能は温存し裏で磨く
+  const [devMode, setDevMode] = useState(false);
+  useEffect(() => {
+    setDevMode(new URLSearchParams(window.location.search).has('dev'));
+  }, []);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -289,15 +296,50 @@ export default function Mirror() {
       // v1は遮蔽なしオーバーレイ(前後関係は Image Segmenter 導入のv2で)
       const lm2d = apiRef.current.ar && poseRes && poseRes.landmarks && poseRes.landmarks[0];
       if (lm2d && bones.hipsNode) {
+        // ★整列の生命線(T12根本原因): 映像は object-fit:cover でクロップ表示
+        // されるが、ランドマークはクロップ前の動画フレーム正規化座標。
+        // 「動画内座標 → 画面座標」のcover写像を挟まないと必ずズレる
+        const W = mount.clientWidth, H = mount.clientHeight;
+        const coverMap = (nx, ny) => {
+          const vw = video && video.videoWidth, vh = video && video.videoHeight;
+          if (!vw || !vh) return { x: nx, y: ny };
+          const s = Math.max(W / vw, H / vh);
+          return {
+            x: (nx * vw * s + (W - vw * s) / 2) / W,
+            y: (ny * vh * s + (H - vh * s) / 2) / H,
+          };
+        };
+        const toScreen = (nx, ny) => {
+          const m = coverMap(nx, ny);
+          return { x: mir ? 1 - m.x : m.x, y: m.y };  // CSSのscaleX(-1)と同じ向き
+        };
         const toWorld = (nx, ny) => {
-          const v = new THREE.Vector3((mir ? 1 - nx : nx) * 2 - 1, -(ny * 2 - 1), 0.5)
+          const p = toScreen(nx, ny);
+          const v = new THREE.Vector3(p.x * 2 - 1, -(p.y * 2 - 1), 0.5)
             .unproject(camera);
           const dir = v.sub(camera.position).normalize();
           const t = (0 - camera.position.z) / dir.z;   // z=0 平面と交差
           return camera.position.clone().add(dir.multiplyScalar(t));
         };
-        const hipW = toWorld((lm2d[23].x + lm2d[24].x) / 2, (lm2d[23].y + lm2d[24].y) / 2);
-        const shW = toWorld((lm2d[11].x + lm2d[12].x) / 2, (lm2d[11].y + lm2d[12].y) / 2);
+        const hip2d = { x: (lm2d[23].x + lm2d[24].x) / 2, y: (lm2d[23].y + lm2d[24].y) / 2 };
+        const sh2d = { x: (lm2d[11].x + lm2d[12].x) / 2, y: (lm2d[11].y + lm2d[12].y) / 2 };
+        const hipW = toWorld(hip2d.x, hip2d.y);
+        const shW = toWorld(sh2d.x, sh2d.y);
+        // dev検証: 写像した腰(橙)/肩(シアン)を画面に直接描く —
+        // 十字が実写の体に乗っていれば写像は正しい
+        const dbg = apiRef.current.debugCanvas;
+        if (dbg) {
+          if (dbg.width !== W || dbg.height !== H) { dbg.width = W; dbg.height = H; }
+          const ctx = dbg.getContext('2d');
+          ctx.clearRect(0, 0, W, H);
+          for (const [pt, color] of [[toScreen(hip2d.x, hip2d.y), '#ffa23f'],
+                                     [toScreen(sh2d.x, sh2d.y), '#5fc7e8']]) {
+            ctx.strokeStyle = color; ctx.lineWidth = 2;
+            const px = pt.x * W, py = pt.y * H;
+            ctx.beginPath(); ctx.moveTo(px - 12, py); ctx.lineTo(px + 12, py);
+            ctx.moveTo(px, py - 12); ctx.lineTo(px, py + 12); ctx.stroke();
+          }
+        }
         const span = hipW.distanceTo(shW);
         // アバター側の同スパン(肩=両上腕付根の中点)
         const aHip = bones.hipsNode.getWorldPosition(new THREE.Vector3());
@@ -531,10 +573,17 @@ export default function Mirror() {
 
   useEffect(() => { apiRef.current.mirror = mirrorMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [mirrorMode]);
   useEffect(() => { apiRef.current.ar = arMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [arMode]);
+  useEffect(() => { apiRef.current.debugCanvas = (devMode && arMode) ? debugRef.current : null; }, [devMode, arMode]);
 
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
+      {devMode && (
+        <canvas ref={debugRef} style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          pointerEvents: 'none', zIndex: 3,
+        }} />
+      )}
       {flashKey > 0 && <div key={flashKey} className="henshin-flash" />}
       <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000', zIndex: 5 }}>
         <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8' }}>蒸着執行録 / MIRROR</div>
@@ -567,10 +616,12 @@ export default function Mirror() {
           <input type="checkbox" checked={mirrorMode}
             onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像
         </label>
-        <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
-          <input type="checkbox" checked={arMode}
-            onChange={(e) => setArMode(e.target.checked)} /> 実写に重ねる(AR)
-        </label>
+        {devMode && (
+          <label style={{ fontSize: 12, color: '#d9b45f', cursor: 'pointer' }}>
+            <input type="checkbox" checked={arMode}
+              onChange={(e) => setArMode(e.target.checked)} /> 実写に重ねる(AR/dev)
+          </label>
+        )}
         <canvas ref={canvasRef} width={192} height={144}
           style={{ border: '1px solid #24425a', background: '#04080d', borderRadius: 4 }} />
         <span style={{ fontSize: 12, color: '#8fa7b8', maxWidth: 380 }}>{status}</span>
@@ -597,7 +648,7 @@ export default function Mirror() {
             カメラを開始する
           </button>
           <div style={{ fontSize: 11, color: '#5a7284' }}>
-            映像は表示・保存しません(点群のみ)。「実写に重ねる」で実写合成モード
+            映像は表示・保存しません(点群のみ)
           </div>
         </div>
       )}

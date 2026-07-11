@@ -1,6 +1,8 @@
 // 音声認識プロキシ — Sakura AI Engine Whisper(OpenAI互換)。
 // Web Speech API が無い環境(Questブラウザ等)の変身音声認証がここを通る。
 // トークンはサーバ専用env: SAKURA_AI_ENGINE_TOKEN(ブラウザには出さない)。
+import { rateLimit, clientIp } from '../../../lib/ratelimit';
+
 const TOKEN = process.env.SAKURA_AI_ENGINE_TOKEN || process.env.SAKURA_AI_ENGINE_API_KEY || '';
 const BASE = (process.env.SAKURA_AI_ENGINE_BASE_URL || 'https://api.ai.sakura.ad.jp/v1').replace(/\/+$/, '');
 const MODEL = process.env.SAKURA_WHISPER_MODEL || 'whisper-large-v3-turbo';
@@ -13,6 +15,10 @@ export async function GET() {
 export async function POST(req) {
   if (!TOKEN) {
     return Response.json({ ok: false, error: 'STT未設定(SAKURA_AI_ENGINE_TOKEN)' }, { status: 503 });
+  }
+  // 正規利用は約20req/分(2.6秒チャンクの連続認識)— 余裕を見て40/分
+  if (!rateLimit(`stt:${clientIp(req)}`, 40, 60 * 1000)) {
+    return Response.json({ ok: false, error: 'rate limited' }, { status: 429 });
   }
   const buf = await req.arrayBuffer();
   if (!buf.byteLength || buf.byteLength > MAX_BYTES) {

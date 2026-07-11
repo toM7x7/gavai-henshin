@@ -16,6 +16,7 @@ env: SUPABASE_URL / SUPABASE_SERVICE_KEY / FORGE_TOKEN / HENSHIN_BLENDER_EXE
 from __future__ import annotations
 
 import glob
+import hmac
 import json
 import os
 import secrets
@@ -36,7 +37,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "tools"))
 
-from henshin.armor_blueprint import compile_blueprint, compile_blueprint_llm  # noqa: E402
+from henshin.armor_blueprint import compile_blueprint_llm  # noqa: E402
 from package_suit_for_web import glb_triangles, register_code, upload_supabase  # noqa: E402
 
 ASSEMBLER = REPO / "tools" / "blender" / "armor_fullbody_assembler.py"
@@ -240,11 +241,16 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path != "/forge":
             self.send_error(404)
             return
-        if TOKEN and self.headers.get("X-Forge-Token", "") != TOKEN:
+        # 定数時間比較(タイミング攻撃対策)
+        if TOKEN and not hmac.compare_digest(
+                self.headers.get("X-Forge-Token", ""), TOKEN):
             self._json({"ok": False, "error": "forbidden"}, 403)
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
+            if length > 65536:  # 言葉は400文字まで — 巨大ボディはメモリDoS
+                self._json({"ok": False, "error": "body too large"}, 413)
+                return
             payload = json.loads(self.rfile.read(length) or b"{}")
         except (ValueError, json.JSONDecodeError):
             self._json({"ok": False, "error": "bad json"}, 400)
@@ -252,6 +258,15 @@ class Handler(BaseHTTPRequestHandler):
         text = str(payload.get("text", "")).strip()[:MAX_TEXT]
         if not text:
             self._json({"ok": False, "error": "言葉を入力してください"}, 400)
+            return
+        # キュー深度上限: 炉は直列 — 積み上げ放題だと1クライアントが
+        # 何十分も占拠できてしまう(コストDoS兼サービスDoS)
+        with _JOBS_LOCK:
+            active = sum(1 for j in _JOBS.values()
+                         if j.get("status") in ("queued", "forging", "uploading"))
+        if active >= 3:
+            self._json({"ok": False,
+                        "error": "鍛造炉が混み合っている — 数分後に再点火を"}, 429)
             return
         job_id = uuid.uuid4().hex[:12]
         _set(job_id, status="queued", phase="鍛造炉の順番待ち", text=text[:80])

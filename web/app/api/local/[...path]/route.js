@@ -14,11 +14,18 @@ const MIME = {
 };
 
 export async function GET(_req, { params }) {
+  // ローカル開発専用ルート — 本番(Vercel)では常に404
+  // (ファイルシステム読み出しを外部に露出させない)
+  if (process.env.NODE_ENV === 'production') {
+    return new Response('not found', { status: 404 });
+  }
   const { path: parts } = await params;
   const rel = (parts || []).join('/');
-  // パス走査を遮断してから webdrop 配下だけを許可
+  // パス走査を遮断してから webdrop 配下だけを許可。
+  // startsWith 単体は `webdrop-evil` のような兄弟ディレクトリを通すので
+  // 「完全一致 or 区切り文字付き前方一致」で判定する
   const full = path.resolve(WEBDROP, rel);
-  if (!full.startsWith(WEBDROP)) {
+  if (full !== WEBDROP && !full.startsWith(WEBDROP + path.sep)) {
     return new Response('forbidden', { status: 403 });
   }
   const target = (parts || []).length === 1

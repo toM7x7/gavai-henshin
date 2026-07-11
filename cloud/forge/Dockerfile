@@ -19,9 +19,11 @@ ENV HENSHIN_BLENDER_EXE=/opt/blender/blender
 # VRMアドオン(エクスポートに必須。ビルド時にネットワークが要る)。
 # 新品プロファイルはリポジトリ索引が未同期で install が
 # 「Package not found / sync required!」になる — sync を必ず先行させる
-RUN /opt/blender/blender --background --command extension sync \
-    && (/opt/blender/blender --background --command extension install vrm --enable \
-        || /opt/blender/blender --background --command extension install vrm)
+# --online-mode: 新品プロファイルは「オンラインアクセス」既定OFFで
+# repo_sync_all が RuntimeError になる(Blender 4.2+の仕様)
+RUN /opt/blender/blender --background --online-mode --command extension sync \
+    && (/opt/blender/blender --background --online-mode --command extension install vrm --enable \
+        || /opt/blender/blender --background --online-mode --command extension install vrm)
 # 有効化をユーザープリファレンスに永続化し、実際にimportできることを検証
 # (bpy.ops の hasattr は遅延スタブで偽陽性 — module import が本物の証拠)
 RUN /opt/blender/blender --background --python-expr "import bpy, addon_utils; addon_utils.enable('bl_ext.blender_org.vrm', default_set=True, persistent=True); bpy.ops.wm.save_userpref(); import bl_ext.blender_org.vrm; print('VRM_ADDON_OK')" \

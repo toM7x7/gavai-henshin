@@ -11,7 +11,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
-import { fetchManifest, fileUrl, setArmorVisible } from '../../../lib/suit';
+import { fetchManifest, fileUrl, setArmorVisible, setBodyVisible } from '../../../lib/suit';
 import { TRIGGER_RE, announce, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
 // ---- One Euro Filter(速度適応平滑化) ----
@@ -78,6 +78,7 @@ export default function Mirror() {
     let vrm = null, bones = null, euro = null;
     let pose = null, video = null, run = false;
     let vrmaData = null, mixer = null, motionPlaying = false, particles = null;
+    let wornFlag = false;   // React stateはクロージャで古くなるため、applyAr用に生フラグを持つ
 
     // VRM Humanoid 正規化リグからボーンを取得し、バインド情報を実測
     const grabBones = () => {
@@ -90,6 +91,8 @@ export default function Mirror() {
         lUp: g('leftUpperArm'), lLo: g('leftLowerArm'), lHand: g('leftHand'),
         rUp: g('rightUpperArm'), rLo: g('rightLowerArm'), rHand: g('rightHand'),
         lMid: g('leftMiddleProximal'), rMid: g('rightMiddleProximal'),
+        lUpLeg: g('leftUpperLeg'), lLoLeg: g('leftLowerLeg'), lFoot: g('leftFoot'),
+        rUpLeg: g('rightUpperLeg'), rLoLeg: g('rightLowerLeg'), rFoot: g('rightFoot'),
       };
       for (const k in b) {
         const bn = b[k];
@@ -108,10 +111,14 @@ export default function Mirror() {
       b.rest = {
         lUp: seg(b.lUp, b.lLo), lLo: seg(b.lLo, b.lHand), lHand: seg(b.lHand, b.lMid),
         rUp: seg(b.rUp, b.rLo), rLo: seg(b.rLo, b.rHand), rHand: seg(b.rHand, b.rMid),
+        lUpLeg: seg(b.lUpLeg, b.lLoLeg), lLoLeg: seg(b.lLoLeg, b.lFoot),
+        rUpLeg: seg(b.rUpLeg, b.rLoLeg), rLoLeg: seg(b.rLoLeg, b.rFoot),
       };
       b.len = {
         lUp: len(b.lUp, b.lLo), lLo: len(b.lLo, b.lHand),
         rUp: len(b.rUp, b.rLo), rLo: len(b.rLo, b.rHand),
+        lUpLeg: len(b.lUpLeg, b.lLoLeg), lLoLeg: len(b.lLoLeg, b.lFoot),
+        rUpLeg: len(b.rUpLeg, b.rLoLeg), rLoLeg: len(b.rLoLeg, b.rFoot),
       };
       return b;
     };
@@ -183,6 +190,7 @@ export default function Mirror() {
       try { new Audio('/se/henshin.mp3').play().catch(() => {}); } catch {}
       setArmorVisible(vrm.scene, true);   // 閃光の中で鎧が現れる
       setWorn(true);
+      wornFlag = true;
       // 粒子収束(蒸着エネルギー)
       const N = 1600;
       const pos = new Float32Array(N * 3);
@@ -229,7 +237,17 @@ export default function Mirror() {
       setFlashKey((k) => k + 1);
       setArmorVisible(vrm.scene, false);
       setWorn(false);
+      wornFlag = false;
       setStatus('蒸着解除 — 素体待機。「蒸着!」でいつでも装着');
+    };
+
+    // 2Dアンカー用の平滑化バンク(worldとは別 — 実写ARの吸い付き用)
+    let euro2d = null;
+    const sm2 = (i, pt) => {
+      if (!euro2d) euro2d = {};
+      if (!euro2d[i]) euro2d[i] = { x: new OneEuro(1.4, 0.9), y: new OneEuro(1.4, 0.9) };
+      const t = performance.now() / 1000;
+      return { x: euro2d[i].x.f(pt.x, t), y: euro2d[i].y.f(pt.y, t) };
     };
 
     const drive = (poseRes) => {
@@ -237,14 +255,73 @@ export default function Mirror() {
       if (!bones) bones = grabBones();
       if (!bones) return;
       const mir = apiRef.current.mirror;
+      const ar = apiRef.current.ar;
       const wRaw = poseRes && poseRes.worldLandmarks && poseRes.worldLandmarks[0];
       const w = smoothWorld(wRaw, performance.now() / 1000);
-      const L = mir ? { sh: 12, el: 14, wr: 16, hip: 24, ear: 8, pk: 18, ix: 20 }
-                    : { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19 };
-      const R = mir ? { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19 }
-                    : { sh: 12, el: 14, wr: 16, hip: 24, ear: 8, pk: 18, ix: 20 };
+      const lm2d = poseRes && poseRes.landmarks && poseRes.landmarks[0];
+      const L = mir ? { sh: 12, el: 14, wr: 16, hip: 24, ear: 8, pk: 18, ix: 20, kn: 26, an: 28 }
+                    : { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19, kn: 25, an: 27 };
+      const R = mir ? { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19, kn: 25, an: 27 }
+                    : { sh: 12, el: 14, wr: 16, hip: 24, ear: 8, pk: 18, ix: 20, kn: 26, an: 28 };
       if (!w) return;
-      // 頭: 鼻+両耳から推定(変身後はマスク — 体優先)
+      const vis = (i) => wRaw && wRaw[i] && (wRaw[i].visibility ?? 1) > 0.35;
+      const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+      // ---- 画面写像(実写AR): cover crop 補正 + ミラー ----
+      // ★T12根本原因: 映像は object-fit:cover でクロップ表示されるが、
+      // ランドマークはクロップ前の動画フレーム正規化座標
+      const W = mount.clientWidth, H = mount.clientHeight;
+      const coverMap = (nx, ny) => {
+        const vw = video && video.videoWidth, vh = video && video.videoHeight;
+        if (!vw || !vh) return { x: nx, y: ny };
+        const cs = Math.max(W / vw, H / vh);
+        return {
+          x: (nx * vw * cs + (W - vw * cs) / 2) / W,
+          y: (ny * vh * cs + (H - vh * cs) / 2) / H,
+        };
+      };
+      const toScreen = (nx, ny) => {
+        const m = coverMap(nx, ny);
+        return { x: mir ? 1 - m.x : m.x, y: m.y };  // CSSのscaleX(-1)と同じ向き
+      };
+      // 画面点を通るレイ上の、指定ワールドZの点(横位置=画面精度、奥行きは別供給)
+      const rayAtZ = (scr, z) => {
+        const v = new THREE.Vector3(scr.x * 2 - 1, -(scr.y * 2 - 1), 0.5).unproject(camera);
+        const dir = v.sub(camera.position).normalize();
+        const t = (z - camera.position.z) / dir.z;
+        return camera.position.clone().add(dir.multiplyScalar(t));
+      };
+
+      // ---- 実写AR: 全身の配置を最初に確定(奥行き+体の向き) ----
+      // スケールは等倍固定 — 見かけサイズは「カメラからの距離」で表現する。
+      // 距離 = 焦点距離(px) × アバターの肩腰スパン(m) ÷ 画面上のスパン(px)。
+      // 近寄る/離れるが遠近として正しく出る(連続リスケールは廃止)
+      if (ar && lm2d && bones.hipsNode && bones.lUp && bones.rUp) {
+        const h23 = sm2(23, lm2d[23]), h24 = sm2(24, lm2d[24]);
+        const s11 = sm2(11, lm2d[11]), s12 = sm2(12, lm2d[12]);
+        const hipS = toScreen((h23.x + h24.x) / 2, (h23.y + h24.y) / 2);
+        const shS = toScreen((s11.x + s12.x) / 2, (s11.y + s12.y) / 2);
+        const pixSpan = Math.max(1, Math.hypot((hipS.x - shS.x) * W, (hipS.y - shS.y) * H));
+        vrm.scene.updateMatrixWorld(true);
+        const aHip = bones.hipsNode.getWorldPosition(new THREE.Vector3());
+        const aSh = bones.lUp.getWorldPosition(new THREE.Vector3())
+          .add(bones.rUp.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
+        const aSpan = Math.max(1e-3, aHip.distanceTo(aSh));
+        const fpx = 0.5 * H / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+        const dist = THREE.MathUtils.clamp(fpx * aSpan / pixSpan, 0.8, 8);
+        const ndcV = new THREE.Vector3(hipS.x * 2 - 1, -(hipS.y * 2 - 1), 0.5).unproject(camera);
+        const dir = ndcV.sub(camera.position).normalize();
+        const hipTarget = camera.position.clone().add(dir.multiplyScalar(dist));
+        vrm.scene.position.add(hipTarget.sub(aHip).multiplyScalar(0.45));
+        // 体の向き: 腰ラインのyawでルートごと回す(胸だけ捻る方式を廃止 —
+        // 横を向いた時に脚・胴が実写と揃うための土台)
+        const hd = mp2three(w[L.hip]).sub(mp2three(w[R.hip]));
+        const rootYaw = -Math.atan2(hd.z, hd.x);
+        vrm.scene.rotation.y += wrapA(rootYaw - vrm.scene.rotation.y) * 0.25;
+        vrm.scene.updateMatrixWorld(true);
+      }
+
+      // ---- 頭: 鼻+両耳から推定(変身後はマスク — 体優先) ----
       if (bones.head) {
         const earL = mp2three(w[L.ear]), earR = mp2three(w[R.ear]), nose = mp2three(w[0]);
         const E = earL.clone().sub(earR);
@@ -258,7 +335,8 @@ export default function Mirror() {
           new THREE.Euler(-pitch * 0.9, -yaw * 0.9, -roll * 0.9, 'YXZ'));
         worldToLocal(bones.head, qh.multiply(bones.head.userData.bindWorldQ), 0.35);
       }
-      // 胴: 肩線+腰線
+
+      // ---- 胴: 肩線+腰線 ----
       if (bones.chest) {
         const shL = mp2three(w[L.sh]), shR = mp2three(w[R.sh]);
         const hipL = mp2three(w[L.hip]), hipR = mp2three(w[R.hip]);
@@ -272,92 +350,80 @@ export default function Mirror() {
         const qT = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(pitch * 0.8, -yaw * 0.7, -roll * 0.8, 'YXZ'));
         worldToLocal(bones.chest, qT.multiply(bones.chest.userData.bindWorldQ), 0.25);
-        if (bones.hips) {
+        if (!ar && bones.hips) {   // ARではルートyawが体の向きを担う
           const qH = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -yaw * 0.3, 0));
           worldToLocal(bones.hips, qH.multiply(bones.hips.userData.bindWorldQ), 0.2);
         }
       }
       vrm.scene.updateMatrixWorld(true);
-      const vis = (i) => wRaw && wRaw[i] && (wRaw[i].visibility ?? 1) > 0.35;
-      if (vis(L.sh) && vis(L.el) && vis(L.wr)) {
-        solveArm(bones.lUp, bones.lLo, bones.lHand,
-          { up: bones.rest.lUp, lo: bones.rest.lLo, hand: bones.rest.lHand },
-          bones.len.lUp, bones.len.lLo, w[L.sh], w[L.el], w[L.wr], w[L.pk], w[L.ix], 0.45);
-      }
-      if (vis(R.sh) && vis(R.el) && vis(R.wr)) {
-        solveArm(bones.rUp, bones.rLo, bones.rHand,
-          { up: bones.rest.rUp, lo: bones.rest.rLo, hand: bones.rest.rHand },
-          bones.len.rUp, bones.len.rLo, w[R.sh], w[R.el], w[R.wr], w[R.pk], w[R.ix], 0.45);
+
+      if (!ar) {
+        // ---- 点群モード: 従来のworld空間IK(腕のみ) ----
+        if (vis(L.sh) && vis(L.el) && vis(L.wr)) {
+          solveArm(bones.lUp, bones.lLo, bones.lHand,
+            { up: bones.rest.lUp, lo: bones.rest.lLo, hand: bones.rest.lHand },
+            bones.len.lUp, bones.len.lLo, w[L.sh], w[L.el], w[L.wr], w[L.pk], w[L.ix], 0.45);
+        }
+        if (vis(R.sh) && vis(R.el) && vis(R.wr)) {
+          solveArm(bones.rUp, bones.rLo, bones.rHand,
+            { up: bones.rest.rUp, lo: bones.rest.rLo, hand: bones.rest.rHand },
+            bones.len.rUp, bones.len.rLo, w[R.sh], w[R.el], w[R.wr], w[R.pk], w[R.ix], 0.45);
+        }
+        return;
       }
 
-      // ---- 実写AR合成: カメラ映像内の体にスーツを整列 ----
-      // 2Dランドマーク(画面座標)を z=0 平面へ逆投影し、腰の位置と
-      // 肩-腰スパンでアバターの位置・スケールを実写の体に合わせる。
-      // v1は遮蔽なしオーバーレイ(前後関係は Image Segmenter 導入のv2で)
-      const lm2d = apiRef.current.ar && poseRes && poseRes.landmarks && poseRes.landmarks[0];
-      if (lm2d && bones.hipsNode) {
-        // ★整列の生命線(T12根本原因): 映像は object-fit:cover でクロップ表示
-        // されるが、ランドマークはクロップ前の動画フレーム正規化座標。
-        // 「動画内座標 → 画面座標」のcover写像を挟まないと必ずズレる
-        const W = mount.clientWidth, H = mount.clientHeight;
-        const coverMap = (nx, ny) => {
-          const vw = video && video.videoWidth, vh = video && video.videoHeight;
-          if (!vw || !vh) return { x: nx, y: ny };
-          const s = Math.max(W / vw, H / vh);
-          return {
-            x: (nx * vw * s + (W - vw * s) / 2) / W,
-            y: (ny * vh * s + (H - vh * s) / 2) / H,
-          };
+      // ---- 実写AR: 画面空間拘束IK — 手足を実写の手足そのものに重ねる ----
+      // 目標(手首/足首)と中間関節(肘/膝)は「2Dランドマークを通るレイ」上に置く。
+      // 横位置は画面ピクセル精度、奥行きだけworldランドマークの相対Zを使う
+      if (!lm2d) return;
+      const ik2d = (upK, loK, SH, EL, WR, str) => {
+        const up = bones[upK], lo = bones[loK];
+        const restUp = bones.rest[upK], restLo = bones.rest[loK];
+        const lenUp = bones.len[upK], lenLo = bones.len[loK];
+        if (!up || !lo || !restUp || !restLo || !(lenUp > 1e-4) || !(lenLo > 1e-4)) return null;
+        if (!vis(SH) || !vis(EL) || !vis(WR)) return null;
+        const S = up.getWorldPosition(new THREE.Vector3());
+        const e2 = sm2(EL, lm2d[EL]), t2 = sm2(WR, lm2d[WR]);
+        const T = rayAtZ(toScreen(t2.x, t2.y), S.z - (w[WR].z - w[SH].z));
+        const P = rayAtZ(toScreen(e2.x, e2.y), S.z - (w[EL].z - w[SH].z));
+        const d = THREE.MathUtils.clamp(S.distanceTo(T),
+          Math.abs(lenUp - lenLo) + 1e-3, lenUp + lenLo - 1e-3);
+        const n = T.clone().sub(S).normalize();
+        let pole = P.clone().sub(S);
+        pole.sub(n.clone().multiplyScalar(pole.dot(n)));
+        if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1);
+        pole.normalize();
+        const cosA = THREE.MathUtils.clamp(
+          (lenUp * lenUp + d * d - lenLo * lenLo) / (2 * lenUp * d), -1, 1);
+        const sinA = Math.sqrt(1 - cosA * cosA);
+        const E = S.clone().add(n.clone().multiplyScalar(lenUp * cosA))
+          .add(pole.clone().multiplyScalar(lenUp * sinA));
+        driveDir(up, restUp, E.clone().sub(S), str);
+        driveDir(lo, restLo, T.clone().sub(E), str);
+        return t2;
+      };
+      const lw = ik2d('lUp', 'lLo', L.sh, L.el, L.wr, 0.5);
+      const rw = ik2d('rUp', 'rLo', R.sh, R.el, R.wr, 0.5);
+      const la = ik2d('lUpLeg', 'lLoLeg', L.hip, L.kn, L.an, 0.5);
+      const ra = ik2d('rUpLeg', 'rLoLeg', R.hip, R.kn, R.an, 0.5);
+
+      // dev検証: 腰(橙)/肩(シアン)/手首(白)/足首(緑)の十字 —
+      // 十字が実写の体に乗っていれば写像は正しく、残差はモデル側
+      const dbg = apiRef.current.debugCanvas;
+      if (dbg) {
+        if (dbg.width !== W || dbg.height !== H) { dbg.width = W; dbg.height = H; }
+        const ctx = dbg.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        const cross = (scr, color) => {
+          ctx.strokeStyle = color; ctx.lineWidth = 2;
+          const px = scr.x * W, py = scr.y * H;
+          ctx.beginPath(); ctx.moveTo(px - 12, py); ctx.lineTo(px + 12, py);
+          ctx.moveTo(px, py - 12); ctx.lineTo(px, py + 12); ctx.stroke();
         };
-        const toScreen = (nx, ny) => {
-          const m = coverMap(nx, ny);
-          return { x: mir ? 1 - m.x : m.x, y: m.y };  // CSSのscaleX(-1)と同じ向き
-        };
-        const toWorld = (nx, ny) => {
-          const p = toScreen(nx, ny);
-          const v = new THREE.Vector3(p.x * 2 - 1, -(p.y * 2 - 1), 0.5)
-            .unproject(camera);
-          const dir = v.sub(camera.position).normalize();
-          const t = (0 - camera.position.z) / dir.z;   // z=0 平面と交差
-          return camera.position.clone().add(dir.multiplyScalar(t));
-        };
-        const hip2d = { x: (lm2d[23].x + lm2d[24].x) / 2, y: (lm2d[23].y + lm2d[24].y) / 2 };
-        const sh2d = { x: (lm2d[11].x + lm2d[12].x) / 2, y: (lm2d[11].y + lm2d[12].y) / 2 };
-        const hipW = toWorld(hip2d.x, hip2d.y);
-        const shW = toWorld(sh2d.x, sh2d.y);
-        // dev検証: 写像した腰(橙)/肩(シアン)を画面に直接描く —
-        // 十字が実写の体に乗っていれば写像は正しい
-        const dbg = apiRef.current.debugCanvas;
-        if (dbg) {
-          if (dbg.width !== W || dbg.height !== H) { dbg.width = W; dbg.height = H; }
-          const ctx = dbg.getContext('2d');
-          ctx.clearRect(0, 0, W, H);
-          for (const [pt, color] of [[toScreen(hip2d.x, hip2d.y), '#ffa23f'],
-                                     [toScreen(sh2d.x, sh2d.y), '#5fc7e8']]) {
-            ctx.strokeStyle = color; ctx.lineWidth = 2;
-            const px = pt.x * W, py = pt.y * H;
-            ctx.beginPath(); ctx.moveTo(px - 12, py); ctx.lineTo(px + 12, py);
-            ctx.moveTo(px, py - 12); ctx.lineTo(px, py + 12); ctx.stroke();
-          }
-        }
-        const span = hipW.distanceTo(shW);
-        // アバター側の同スパン(肩=両上腕付根の中点)
-        const aHip = bones.hipsNode.getWorldPosition(new THREE.Vector3());
-        const aSh = bones.lUp.getWorldPosition(new THREE.Vector3())
-          .add(bones.rUp.getWorldPosition(new THREE.Vector3())).multiplyScalar(0.5);
-        const aSpan = Math.max(1e-3, aHip.distanceTo(aSh));
-        const cur = vrm.scene.scale.x || 1;
-        const target = THREE.MathUtils.clamp(cur * (span / aSpan), 0.4, 3.0);
-        const next = cur + (target - cur) * 0.15;   // 呼吸レベルの揺れは均す
-        if (Math.abs(next / cur - 1) > 1e-4) {
-          const f = next / cur;
-          vrm.scene.scale.setScalar(next);
-          for (const k in bones.len) bones.len[k] *= f;  // IKの腕長も追従
-        }
-        vrm.scene.updateMatrixWorld(true);
-        const aHip2 = bones.hipsNode.getWorldPosition(new THREE.Vector3());
-        const shift = hipW.sub(aHip2);
-        vrm.scene.position.add(shift.multiplyScalar(0.35));  // 位置も滑らかに寄せる
+        cross(toScreen((lm2d[23].x + lm2d[24].x) / 2, (lm2d[23].y + lm2d[24].y) / 2), '#ffa23f');
+        cross(toScreen((lm2d[11].x + lm2d[12].x) / 2, (lm2d[11].y + lm2d[12].y) / 2), '#5fc7e8');
+        for (const pt of [lw, rw]) if (pt) cross(toScreen(pt.x, pt.y), '#ffffff');
+        for (const pt of [la, ra]) if (pt) cross(toScreen(pt.x, pt.y), '#7ee2a8');
       }
     };
 
@@ -386,7 +452,8 @@ export default function Mirror() {
       requestAnimationFrame(loop);
     };
 
-    // 実写モードの見た目切替: カメラ映像を背景に出し、WebGLを透過させる
+    // 実写モードの切替: カメラ映像を背景に出し、WebGLを透過させる。
+    // 実写ARでは「実写の体が素体」— VRMの素体は隠し、蒸着したら鎧だけ重ねる
     apiRef.current.applyAr = () => {
       const ar = apiRef.current.ar;
       scene.background = ar ? null : new THREE.Color(0x9aa3ac);
@@ -400,11 +467,18 @@ export default function Mirror() {
         });
       }
       mount.style.zIndex = '1';
-      if (!ar && vrm) {
-        // 点群モードに戻す時は定位置へ
-        vrm.scene.position.set(0, 0, 0);
-        vrm.scene.scale.setScalar(1);
+      if (vrm) {
+        setBodyVisible(vrm.scene, !ar);
+        setArmorVisible(vrm.scene, wornFlag);
+        if (!ar) {
+          // 点群モードに戻す時は定位置へ(ARが動かした配置・向きを破棄)
+          vrm.scene.position.set(0, 0, 0);
+          vrm.scene.rotation.set(0, 0, 0);
+          vrm.scene.scale.setScalar(1);
+        }
         bones = null;
+        euro = null;
+        euro2d = null;
       }
     };
 
@@ -436,11 +510,11 @@ export default function Mirror() {
           { video: { width: 640, height: 480 }, audio: false });
         video.srcObject = stream;
         await video.play();
-        run = true; bones = null; euro = null;
+        run = true; bones = null; euro = null; euro2d = null;
         setRunning(true);
         apiRef.current.applyAr();
         setStatus(apiRef.current.ar
-          ? '実写合成 — 君の体にスーツが重なる。「蒸着!」と唱えよ'
+          ? '実写合成 — 素体は君自身。「蒸着!」で体に鎧が装着される'
           : '追跡中 — Two-Bone IK + One Euro(映像は表示・保存しません)');
         loop();
       } catch (e) {
@@ -550,6 +624,7 @@ export default function Mirror() {
         }
         setArmorVisible(vrm.scene, false);  // スタートは素体から — これが儀式の前提
         setWorn(false);
+        apiRef.current.applyAr();  // AR中に読み込み完了した場合の素体非表示も反映
         setStatus('素体待機 — カメラを開始し、「蒸着!」と唱えよ');
       } catch (e) {
         setStatus(String(e.message || e));
@@ -619,7 +694,10 @@ export default function Mirror() {
         {devMode && (
           <label style={{ fontSize: 12, color: '#d9b45f', cursor: 'pointer' }}>
             <input type="checkbox" checked={arMode}
-              onChange={(e) => setArMode(e.target.checked)} /> 実写に重ねる(AR/dev)
+              onChange={(e) => {
+                setArMode(e.target.checked);
+                setFlashKey((k) => k + 1);  // モード切替の瞬間を閃光で包む
+              }} /> 実写に重ねる(AR/dev)
           </label>
         )}
         <canvas ref={canvasRef} width={192} height={144}

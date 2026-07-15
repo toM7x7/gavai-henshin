@@ -46,3 +46,8 @@ export const armorMeshes = (root) => {
 
 export const setArmorVisible = (root, visible) =>
   armorMeshes(root).forEach((m) => { m.visible = visible; });
+
+// 素体(非armor)メッシュの表示切替 — 実写ARでは実写の体が素体を務めるので
+// VRMの素体は隠し、鎧だけを重ねる(2026-07-12 T12)
+export const setBodyVisible = (root, visible) =>
+  root.traverse((o) => { if (o.isMesh && !isArmorObject(o)) o.visible = visible; });

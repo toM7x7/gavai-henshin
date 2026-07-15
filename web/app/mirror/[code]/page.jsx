@@ -65,6 +65,7 @@ export default function Mirror() {
   const [dbgSkel, setDbgSkel] = useState(true);
   const [dbgResid, setDbgResid] = useState(true);
   const [dbgModel, setDbgModel] = useState(true);
+  const [dbgMask, setDbgMask] = useState(true);   // ③蒸着後の実写マスク(自分を沈める)
   const devInfoRef = useRef(null);
 
   useEffect(() => {
@@ -76,11 +77,18 @@ export default function Mirror() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    // レイヤ規約: mount内 video=0 / WebGL=1、mount外 debug=3 / HUD=5 / CTA=6 / 計測=7 / nav=10。
+    // レイヤ規約: mount内 video=0 / マスクfx=1 / WebGL=2、mount外 debug=3 / HUD=5 / CTA=6 / 計測=7 / nav=10。
     // videoは必ずmountの中に置く — body直下だとfixedのmainがstacking contextになり
     // (Chromium)、後入れのvideoがUI全部の上に描画される事故になる
-    Object.assign(renderer.domElement.style, { position: 'absolute', inset: '0', zIndex: '1' });
+    Object.assign(renderer.domElement.style, { position: 'absolute', inset: '0', zIndex: '2' });
     mount.appendChild(renderer.domElement);
+    // 実写マスク中間レイヤ: 蒸着後、実写の自分をシルエットに沈める(ヒーロー像の成立)
+    const fxCan = document.createElement('canvas');
+    Object.assign(fxCan.style, {
+      position: 'absolute', inset: '0', width: '100%', height: '100%',
+      pointerEvents: 'none', zIndex: '1',
+    });
+    mount.appendChild(fxCan);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x9aa3ac);  // 素体(黒)が沈まないスタジオグレー
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -210,6 +218,7 @@ export default function Mirror() {
       setFlashKey((k) => k + 1);
       try { new Audio('/se/henshin.mp3').play().catch(() => {}); } catch {}
       setArmorVisible(vrm.scene, true);   // 閃光の中で鎧が現れる
+      setBodyVisible(vrm.scene, true);    // AR: 素体(アンダースーツ)ごと現れる — 空洞の鎧を防ぐ
       setWorn(true);
       wornFlag = true;
       // 粒子収束(蒸着エネルギー)
@@ -229,8 +238,14 @@ export default function Mirror() {
       }));
       particles.userData = { start: pos.slice(), t: 0 };
       scene.add(particles);
-      // ヘンシンモーション(henshin.vrma — 構え→溜め→十字受け→展開→見得)
-      if (vrmaData) {
+      // ヘンシンモーション(henshin.vrma — 構え→溜め→十字受け→展開→見得)。
+      // 実写ARでは体が主役: 数秒の缶詰モーションは実写とズレて破綻するので
+      // スキップし、追跡を途切れさせない(閃光+粒子+マスクが演出を担う)
+      if (apiRef.current.ar) {
+        motionPlaying = false;
+        setStatus('蒸着完了 — 君がヒーローだ');
+        setTimeout(() => announce('蒸着、完了。'), 900);
+      } else if (vrmaData) {
         const clip = createVRMAnimationClip(vrmaData, vrm);
         mixer = new THREE.AnimationMixer(vrm.scene);
         const action = mixer.clipAction(clip);
@@ -257,6 +272,7 @@ export default function Mirror() {
       if (!vrm || motionPlaying) return;
       setFlashKey((k) => k + 1);
       setArmorVisible(vrm.scene, false);
+      setBodyVisible(vrm.scene, !apiRef.current.ar);  // ARでは素の自分に戻る
       setWorn(false);
       wornFlag = false;
       setStatus('蒸着解除 — 素体待機。「蒸着!」でいつでも装着');
@@ -323,6 +339,8 @@ export default function Mirror() {
         const t = (z - camera.position.z) / dir.z;
         return camera.position.clone().add(dir.multiplyScalar(t));
       };
+      const rayDir = (scr) => new THREE.Vector3(scr.x * 2 - 1, -(scr.y * 2 - 1), 0.5)
+        .unproject(camera).sub(camera.position).normalize();
 
       // ---- 実写AR: 全身の配置を最初に確定(奥行き+体の向き) ----
       // スケールは等倍固定 — 見かけサイズは「カメラからの距離」で表現する。
@@ -417,7 +435,24 @@ export default function Mirror() {
         if (!vis(SH) || !vis(EL) || !vis(WR)) return null;
         const S = up.getWorldPosition(new THREE.Vector3());
         const e2 = sm2(EL, lm2d[EL]), t2 = sm2(WR, lm2d[WR]);
-        const T = rayAtZ(toScreen(t2.x, t2.y), S.z - (w[WR].z - w[SH].z));
+        // 目標=「2Dレイ上で、届く範囲のうち希望奥行きに最も近い点」。
+        // 固定奥行き+後段の腕長クランプだと、腕を伸ばした時に届かず
+        // 画面上でズレる(実測残差40px級の正体)— レイ×到達球の交差で解く
+        const reach = lenUp + lenLo - 1e-3;
+        const rd = rayDir(toScreen(t2.x, t2.y));
+        const ro = camera.position;
+        const wantT = (S.z - (w[WR].z - w[SH].z) - ro.z) / rd.z;
+        const oc = ro.clone().sub(S);
+        const bq = oc.dot(rd);
+        const disc = bq * bq - (oc.lengthSq() - reach * reach);
+        let tPick;
+        if (disc >= 0) {
+          const sq = Math.sqrt(disc);
+          tPick = THREE.MathUtils.clamp(wantT, -bq - sq + 1e-3, -bq + sq - 1e-3);
+        } else {
+          tPick = -bq;   // 幾何的に届かない: レイ上の最近点=画面ズレ最小の妥協
+        }
+        const T = ro.clone().add(rd.clone().multiplyScalar(Math.max(0.1, tPick)));
         const P = rayAtZ(toScreen(e2.x, e2.y), S.z - (w[EL].z - w[SH].z));
         const d = THREE.MathUtils.clamp(S.distanceTo(T),
           Math.abs(lenUp - lenLo) + 1e-3, lenUp + lenLo - 1e-3);
@@ -435,10 +470,10 @@ export default function Mirror() {
         driveDir(lo, restLo, T.clone().sub(E), str);
         return t2;
       };
-      ik2d('lUp', 'lLo', L.sh, L.el, L.wr, 0.5);
-      ik2d('rUp', 'rLo', R.sh, R.el, R.wr, 0.5);
-      ik2d('lUpLeg', 'lLoLeg', L.hip, L.kn, L.an, 0.5);
-      ik2d('rUpLeg', 'rLoLeg', R.hip, R.kn, R.an, 0.5);
+      ik2d('lUp', 'lLo', L.sh, L.el, L.wr, 0.6);
+      ik2d('rUp', 'rLo', R.sh, R.el, R.wr, 0.6);
+      ik2d('lUpLeg', 'lLoLeg', L.hip, L.kn, L.an, 0.55);
+      ik2d('rUpLeg', 'rLoLeg', R.hip, R.kn, R.an, 0.55);
 
       // ---- dev計測: ①体取得 ②モデル追従 を分離して検証する可視化 ----
       // 骨格(緑系)が実写の体に乗る → 検出+cover写像は正しい。
@@ -530,7 +565,52 @@ export default function Mirror() {
       catch (e) { detectErr = String((e && e.message) || e); }  // 黙殺しない — dev計測に出す
       drawLandmarks(pr);
       drive(pr);
+      maskFx(pr);
+      if (pr && pr.segmentationMasks) {
+        for (const m of pr.segmentationMasks) { try { m.close(); } catch {} }
+      }
       requestAnimationFrame(loop);
+    };
+
+    // ---- 実写マスク: 蒸着後、人物領域をシルエットに沈める ----
+    // 「変身した以上、素の自分が映っていてはいけない」— 人物セグメンテーションで
+    // 自分の写り込み(袖・肌)を暗いシルエットに落とし、その上にモデル(素体+鎧)が乗る。
+    // マスクはぼかして広めに取り、端の写り込みを柔らかく包む
+    let mCan = null, mCtx = null;
+    const maskFx = (pr) => {
+      const W = mount.clientWidth, H = mount.clientHeight;
+      if (fxCan.width !== W || fxCan.height !== H) { fxCan.width = W; fxCan.height = H; }
+      const fctx = fxCan.getContext('2d');
+      fctx.clearRect(0, 0, W, H);
+      const mask = pr && pr.segmentationMasks && pr.segmentationMasks[0];
+      const active = apiRef.current.ar && wornFlag &&
+        (apiRef.current.dbgOpts || {}).mask !== false;
+      if (!active || !mask || !video || !video.videoWidth) return;
+      const mw = mask.width, mh = mask.height;
+      if (!mCan) { mCan = document.createElement('canvas'); mCtx = mCan.getContext('2d'); }
+      if (mCan.width !== mw || mCan.height !== mh) { mCan.width = mw; mCan.height = mh; }
+      const data = mask.getAsFloat32Array();
+      const img = mCtx.createImageData(mw, mh);
+      const px = img.data;
+      for (let i = 0; i < data.length; i++) {
+        const a = data[i];
+        px[i * 4 + 3] = a > 0.15 ? Math.min(255, a * 300) : 0;
+      }
+      mCtx.putImageData(img, 0, 0);
+      // videoと同じcover写像+ミラーで重ねる
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const cs = Math.max(W / vw, H / vh);
+      const dx = (W - vw * cs) / 2, dy = (H - vh * cs) / 2;
+      fctx.save();
+      if (apiRef.current.mirror) { fctx.translate(W, 0); fctx.scale(-1, 1); }
+      fctx.filter = 'blur(10px)';
+      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);
+      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);  // 2度描き=濃度を上げ実効的に拡張
+      fctx.filter = 'none';
+      fctx.globalCompositeOperation = 'source-in';
+      fctx.filter = 'brightness(0.22) saturate(0.25)';
+      fctx.drawImage(video, dx, dy, vw * cs, vh * cs);
+      fctx.restore();
     };
 
     // 実写モードの切替: カメラ映像を背景に出し、WebGLを透過させる。
@@ -545,7 +625,7 @@ export default function Mirror() {
       }
       if (vrm) {
         vrm.scene.visible = true;   // AR計測トグルで消していても復帰
-        setBodyVisible(vrm.scene, !ar);
+        setBodyVisible(vrm.scene, !ar || wornFlag);  // AR素体待機=モデル全隠し、蒸着後=素体+鎧
         setArmorVisible(vrm.scene, wornFlag);
         if (!ar) {
           // 点群モードに戻す時は定位置へ(ARが動かした配置・向きを破棄)
@@ -571,12 +651,14 @@ export default function Mirror() {
         const vision = await import('@mediapipe/tasks-vision');
         const files = await vision.FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+        const devFlag = new URLSearchParams(window.location.search).has('dev');
         const mkPose = (delegate) => vision.PoseLandmarker.createFromOptions(files, {
           baseOptions: {
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
             delegate,
           },
           runningMode: 'VIDEO', numPoses: 1,
+          outputSegmentationMasks: devFlag,   // マスク合成のコストはdev(AR)時のみ負担
         });
         try { pose = await mkPose('GPU'); }
         catch { pose = await mkPose('CPU'); }  // WebGL不調端末はCPU推論で続行
@@ -726,6 +808,7 @@ export default function Mirror() {
       window.removeEventListener('resize', onResize);
       renderer.dispose(); pmrem.dispose();
       mount.removeChild(renderer.domElement);
+      mount.removeChild(fxCan);
       if (video && video.parentNode === mount) mount.removeChild(video);
     };
   }, [code]);
@@ -734,7 +817,7 @@ export default function Mirror() {
   useEffect(() => { apiRef.current.ar = arMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [arMode]);
   useEffect(() => { apiRef.current.debugCanvas = (devMode && arMode) ? debugRef.current : null; }, [devMode, arMode]);
   useEffect(() => {   // 計測トグルと表示先は毎レンダ同期(条件マウントの取りこぼし防止)
-    apiRef.current.dbgOpts = { skel: dbgSkel, resid: dbgResid, model: dbgModel };
+    apiRef.current.dbgOpts = { skel: dbgSkel, resid: dbgResid, model: dbgModel, mask: dbgMask };
     apiRef.current.devInfo = devInfoRef.current;
   });
 
@@ -765,6 +848,10 @@ export default function Mirror() {
           <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
             <input type="checkbox" checked={dbgModel} onChange={(e) => setDbgModel(e.target.checked)} />
             {' '}モデル表示(OFFで骨格だけを検証)
+          </label>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgMask} onChange={(e) => setDbgMask(e.target.checked)} />
+            {' '}実写マスク — ③蒸着後、素の自分をシルエットに沈める
           </label>
           <div ref={devInfoRef} style={{
             marginTop: 6, color: '#8fa7b8', fontFamily: 'ui-monospace, monospace',

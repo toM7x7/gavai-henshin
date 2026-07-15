@@ -14,6 +14,15 @@ import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-v
 import { fetchManifest, fileUrl, setArmorVisible, setBodyVisible } from '../../../lib/suit';
 import { TRIGGER_RE, announce, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
+// MediaPipe Pose 33点の骨格辺(dev計測: 体取得検証オーバーレイ用)
+const SKEL = [
+  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
+  [11, 23], [12, 24], [23, 24],
+  [23, 25], [25, 27], [24, 26], [26, 28],
+  [27, 29], [27, 31], [28, 30], [28, 32],
+  [0, 7], [0, 8],
+];
+
 // ---- One Euro Filter(速度適応平滑化) ----
 class OneEuro {
   constructor(minCutoff, beta) {
@@ -51,6 +60,12 @@ export default function Mirror() {
   useEffect(() => {
     setDevMode(new URLSearchParams(window.location.search).has('dev'));
   }, []);
+  // AR計測パネル(dev): ①骨格=体を撮れているかの検証 ②残差=モデル追従の検証。
+  // 二つを分離して確かめられることが「がっちゃんこ」前の前提
+  const [dbgSkel, setDbgSkel] = useState(true);
+  const [dbgResid, setDbgResid] = useState(true);
+  const [dbgModel, setDbgModel] = useState(true);
+  const devInfoRef = useRef(null);
 
   useEffect(() => {
     if (!mountRef.current || !code) return;
@@ -61,6 +76,10 @@ export default function Mirror() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // レイヤ規約: mount内 video=0 / WebGL=1、mount外 debug=3 / HUD=5 / CTA=6 / 計測=7 / nav=10。
+    // videoは必ずmountの中に置く — body直下だとfixedのmainがstacking contextになり
+    // (Chromium)、後入れのvideoがUI全部の上に描画される事故になる
+    Object.assign(renderer.domElement.style, { position: 'absolute', inset: '0', zIndex: '1' });
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x9aa3ac);  // 素体(黒)が沈まないスタジオグレー
@@ -79,6 +98,8 @@ export default function Mirror() {
     let pose = null, video = null, run = false;
     let vrmaData = null, mixer = null, motionPlaying = false, particles = null;
     let wornFlag = false;   // React stateはクロージャで古くなるため、applyAr用に生フラグを持つ
+    let arDbg = { dist: 0, yaw: 0 };                    // dev計測パネルに出す配置推定値
+    let detectErr = null, fpsT = 0, fpsV = 0, infoT = 0;
 
     // VRM Humanoid 正規化リグからボーンを取得し、バインド情報を実測
     const grabBones = () => {
@@ -263,7 +284,18 @@ export default function Mirror() {
                     : { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19, kn: 25, an: 27 };
       const R = mir ? { sh: 11, el: 13, wr: 15, hip: 23, ear: 7, pk: 17, ix: 19, kn: 25, an: 27 }
                     : { sh: 12, el: 14, wr: 16, hip: 24, ear: 8, pk: 18, ix: 20, kn: 26, an: 28 };
-      if (!w) return;
+      if (!w) {
+        // 体が取れていない — dev計測に明示(体取得検証の第一関門)
+        if (ar) {
+          const dbg0 = apiRef.current.debugCanvas;
+          if (dbg0) dbg0.getContext('2d').clearRect(0, 0, dbg0.width, dbg0.height);
+          const info0 = apiRef.current.devInfo;
+          if (info0) info0.textContent = detectErr
+            ? `推論エラー: ${detectErr}`
+            : '捕捉 ✗ 体が見つからない — 全身が入る距離・明るさに';
+        }
+        return;
+      }
       const vis = (i) => wRaw && wRaw[i] && (wRaw[i].visibility ?? 1) > 0.35;
       const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
@@ -319,6 +351,7 @@ export default function Mirror() {
         const rootYaw = -Math.atan2(hd.z, hd.x);
         vrm.scene.rotation.y += wrapA(rootYaw - vrm.scene.rotation.y) * 0.25;
         vrm.scene.updateMatrixWorld(true);
+        arDbg.dist = dist; arDbg.yaw = vrm.scene.rotation.y;
       }
 
       // ---- 頭: 鼻+両耳から推定(変身後はマスク — 体優先) ----
@@ -402,28 +435,75 @@ export default function Mirror() {
         driveDir(lo, restLo, T.clone().sub(E), str);
         return t2;
       };
-      const lw = ik2d('lUp', 'lLo', L.sh, L.el, L.wr, 0.5);
-      const rw = ik2d('rUp', 'rLo', R.sh, R.el, R.wr, 0.5);
-      const la = ik2d('lUpLeg', 'lLoLeg', L.hip, L.kn, L.an, 0.5);
-      const ra = ik2d('rUpLeg', 'rLoLeg', R.hip, R.kn, R.an, 0.5);
+      ik2d('lUp', 'lLo', L.sh, L.el, L.wr, 0.5);
+      ik2d('rUp', 'rLo', R.sh, R.el, R.wr, 0.5);
+      ik2d('lUpLeg', 'lLoLeg', L.hip, L.kn, L.an, 0.5);
+      ik2d('rUpLeg', 'rLoLeg', R.hip, R.kn, R.an, 0.5);
 
-      // dev検証: 腰(橙)/肩(シアン)/手首(白)/足首(緑)の十字 —
-      // 十字が実写の体に乗っていれば写像は正しく、残差はモデル側
+      // ---- dev計測: ①体取得 ②モデル追従 を分離して検証する可視化 ----
+      // 骨格(緑系)が実写の体に乗る → 検出+cover写像は正しい。
+      // その上でマゼンタ○(モデル関節の投影)が骨格に重なる → 追従も正しい。
+      // 骨格が乗らなければ取得/写像の問題、骨格は乗るが○がズレるならIK/配置の問題
       const dbg = apiRef.current.debugCanvas;
+      const opts = apiRef.current.dbgOpts || {};
+      vrm.scene.visible = opts.model !== false;
       if (dbg) {
         if (dbg.width !== W || dbg.height !== H) { dbg.width = W; dbg.height = H; }
         const ctx = dbg.getContext('2d');
         ctx.clearRect(0, 0, W, H);
-        const cross = (scr, color) => {
-          ctx.strokeStyle = color; ctx.lineWidth = 2;
-          const px = scr.x * W, py = scr.y * H;
-          ctx.beginPath(); ctx.moveTo(px - 12, py); ctx.lineTo(px + 12, py);
-          ctx.moveTo(px, py - 12); ctx.lineTo(px, py + 12); ctx.stroke();
-        };
-        cross(toScreen((lm2d[23].x + lm2d[24].x) / 2, (lm2d[23].y + lm2d[24].y) / 2), '#ffa23f');
-        cross(toScreen((lm2d[11].x + lm2d[12].x) / 2, (lm2d[11].y + lm2d[12].y) / 2), '#5fc7e8');
-        for (const pt of [lw, rw]) if (pt) cross(toScreen(pt.x, pt.y), '#ffffff');
-        for (const pt of [la, ra]) if (pt) cross(toScreen(pt.x, pt.y), '#7ee2a8');
+        const P2 = (i) => toScreen(lm2d[i].x, lm2d[i].y);
+        if (opts.skel !== false) {
+          for (const [a, bIdx] of SKEL) {
+            const va = wRaw[a] ? (wRaw[a].visibility ?? 1) : 0;
+            const vb = wRaw[bIdx] ? (wRaw[bIdx].visibility ?? 1) : 0;
+            const v2 = Math.min(va, vb);
+            ctx.strokeStyle = v2 > 0.6 ? 'rgba(65,224,127,0.9)'
+              : v2 > 0.35 ? 'rgba(224,195,65,0.9)' : 'rgba(224,83,65,0.55)';
+            ctx.lineWidth = 3;
+            const pa = P2(a), pb = P2(bIdx);
+            ctx.beginPath();
+            ctx.moveTo(pa.x * W, pa.y * H); ctx.lineTo(pb.x * W, pb.y * H);
+            ctx.stroke();
+          }
+          for (let i = 0; i < 33; i++) {
+            const p = P2(i);
+            ctx.fillStyle = vis(i) ? '#41e07f' : '#e05341';
+            ctx.beginPath(); ctx.arc(p.x * W, p.y * H, 4, 0, 6.283); ctx.fill();
+          }
+        }
+        let residTxt = '';
+        if (opts.resid !== false) {
+          vrm.scene.updateMatrixWorld(true);   // IK直後のボーン位置で投影する
+          const v3 = new THREE.Vector3();
+          const jointPairs = [
+            [bones.lHand || bones.lLo, L.wr, '手L'], [bones.rHand || bones.rLo, R.wr, '手R'],
+            [bones.lFoot, L.an, '足L'], [bones.rFoot, R.an, '足R'],
+          ];
+          for (const [bone, li, tag] of jointPairs) {
+            if (!bone || !vis(li)) continue;
+            bone.getWorldPosition(v3).project(camera);
+            const mx = (v3.x * 0.5 + 0.5) * W, my = (0.5 - v3.y * 0.5) * H;
+            const lp = P2(li);
+            ctx.strokeStyle = '#ff5fd0'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(mx, my, 8, 0, 6.283); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,95,208,0.5)';
+            ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(lp.x * W, lp.y * H); ctx.stroke();
+            residTxt += ` ${tag}${Math.round(Math.hypot(mx - lp.x * W, my - lp.y * H))}`;
+          }
+        }
+        const now2 = performance.now();
+        fpsV = fpsT ? fpsV * 0.9 + (1000 / Math.max(1, now2 - fpsT)) * 0.1 : 0;
+        fpsT = now2;
+        const info = apiRef.current.devInfo;
+        if (info && now2 - infoT > 200) {
+          infoT = now2;
+          let nVis = 0;
+          for (let i = 0; i < 33; i++) if (vis(i)) nVis++;
+          info.textContent =
+            `捕捉 ✓ 可視 ${nVis}/33 | ${fpsV.toFixed(1)}fps\n` +
+            `距離 ${arDbg.dist.toFixed(2)}m | 体yaw ${(arDbg.yaw * 57.3).toFixed(0)}°\n` +
+            (residTxt ? `残差px${residTxt}` : '残差 — 手足が画面外/低確度');
+        }
       }
     };
 
@@ -446,7 +526,8 @@ export default function Mirror() {
     const loop = () => {
       if (disposed || !run) return;
       let pr = null;
-      try { pr = pose.detectForVideo(video, performance.now()); } catch {}
+      try { pr = pose.detectForVideo(video, performance.now()); detectErr = null; }
+      catch (e) { detectErr = String((e && e.message) || e); }  // 黙殺しない — dev計測に出す
       drawLandmarks(pr);
       drive(pr);
       requestAnimationFrame(loop);
@@ -460,14 +541,10 @@ export default function Mirror() {
       grid.visible = !ar;
       if (video) {
         video.style.display = ar ? 'block' : 'none';
-        Object.assign(video.style, {
-          position: 'fixed', inset: '0', width: '100%', height: '100%',
-          objectFit: 'cover', zIndex: '0',
-          transform: apiRef.current.mirror ? 'scaleX(-1)' : 'none',
-        });
+        video.style.transform = apiRef.current.mirror ? 'scaleX(-1)' : 'none';
       }
-      mount.style.zIndex = '1';
       if (vrm) {
+        vrm.scene.visible = true;   // AR計測トグルで消していても復帰
         setBodyVisible(vrm.scene, !ar);
         setArmorVisible(vrm.scene, wornFlag);
         if (!ar) {
@@ -494,17 +571,23 @@ export default function Mirror() {
         const vision = await import('@mediapipe/tasks-vision');
         const files = await vision.FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
-        pose = await vision.PoseLandmarker.createFromOptions(files, {
+        const mkPose = (delegate) => vision.PoseLandmarker.createFromOptions(files, {
           baseOptions: {
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
-            delegate: 'GPU',
+            delegate,
           },
           runningMode: 'VIDEO', numPoses: 1,
         });
+        try { pose = await mkPose('GPU'); }
+        catch { pose = await mkPose('CPU'); }  // WebGL不調端末はCPU推論で続行
         if (!video) {
           video = document.createElement('video');
-          video.style.display = 'none'; video.muted = true; video.playsInline = true;
-          document.body.appendChild(video);
+          video.muted = true; video.playsInline = true;
+          Object.assign(video.style, {
+            position: 'absolute', inset: '0', width: '100%', height: '100%',
+            objectFit: 'cover', display: 'none', zIndex: '0',
+          });
+          mount.insertBefore(video, renderer.domElement);
         }
         const stream = await navigator.mediaDevices.getUserMedia(
           { video: { width: 640, height: 480 }, audio: false });
@@ -643,12 +726,17 @@ export default function Mirror() {
       window.removeEventListener('resize', onResize);
       renderer.dispose(); pmrem.dispose();
       mount.removeChild(renderer.domElement);
+      if (video && video.parentNode === mount) mount.removeChild(video);
     };
   }, [code]);
 
   useEffect(() => { apiRef.current.mirror = mirrorMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [mirrorMode]);
   useEffect(() => { apiRef.current.ar = arMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [arMode]);
   useEffect(() => { apiRef.current.debugCanvas = (devMode && arMode) ? debugRef.current : null; }, [devMode, arMode]);
+  useEffect(() => {   // 計測トグルと表示先は毎レンダ同期(条件マウントの取りこぼし防止)
+    apiRef.current.dbgOpts = { skel: dbgSkel, resid: dbgResid, model: dbgModel };
+    apiRef.current.devInfo = devInfoRef.current;
+  });
 
   return (
     <main style={{ position: 'fixed', inset: 0 }}>
@@ -658,6 +746,31 @@ export default function Mirror() {
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           pointerEvents: 'none', zIndex: 3,
         }} />
+      )}
+      {devMode && arMode && (
+        <div style={{
+          position: 'absolute', top: 64, left: 18, zIndex: 7, maxWidth: 330,
+          background: 'rgba(4,9,14,0.82)', border: '1px solid #24425a',
+          borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#dce8f2',
+        }}>
+          <div style={{ color: '#d9b45f', letterSpacing: '0.25em', marginBottom: 6 }}>AR計測 / dev</div>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgSkel} onChange={(e) => setDbgSkel(e.target.checked)} />
+            {' '}骨格オーバーレイ — ①体を撮れているか(実写に乗ればOK)
+          </label>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgResid} onChange={(e) => setDbgResid(e.target.checked)} />
+            {' '}モデル残差 — ②追従できているか(○が骨格に重なればOK)
+          </label>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgModel} onChange={(e) => setDbgModel(e.target.checked)} />
+            {' '}モデル表示(OFFで骨格だけを検証)
+          </label>
+          <div ref={devInfoRef} style={{
+            marginTop: 6, color: '#8fa7b8', fontFamily: 'ui-monospace, monospace',
+            whiteSpace: 'pre-wrap', lineHeight: 1.7,
+          }}>計測待機 — カメラを開始せよ</div>
+        </div>
       )}
       {flashKey > 0 && <div key={flashKey} className="henshin-flash" />}
       <div style={{ position: 'absolute', top: 14, left: 18, textShadow: '0 1px 6px #000', zIndex: 5 }}>

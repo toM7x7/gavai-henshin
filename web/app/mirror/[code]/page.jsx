@@ -66,6 +66,7 @@ export default function Mirror() {
   const [dbgResid, setDbgResid] = useState(true);
   const [dbgModel, setDbgModel] = useState(true);
   const [dbgMask, setDbgMask] = useState(true);   // ③蒸着後の実写マスク(自分を沈める)
+  const [dbgFlip, setDbgFlip] = useState(false);  // 前後判定の保険: 逆なら実機でONにして報告
   const devInfoRef = useRef(null);
 
   useEffect(() => {
@@ -363,10 +364,13 @@ export default function Mirror() {
         const dir = ndcV.sub(camera.position).normalize();
         const hipTarget = camera.position.clone().add(dir.multiplyScalar(dist));
         vrm.scene.position.add(hipTarget.sub(aHip).multiplyScalar(0.45));
-        // 体の向き: 腰ラインのyawでルートごと回す(胸だけ捻る方式を廃止 —
-        // 横を向いた時に脚・胴が実写と揃うための土台)
+        // 体の向き: 腰ライン×上ベクトルから前方ベクトルを作りyawへ。
+        // 正面=0(顔がカメラへ)、背中を向けたら±180°でモデルも背中を見せる。
+        // 実機で逆に見える時はdevパネル「前後反転」で確認→符号を恒久化する
         const hd = mp2three(w[L.hip]).sub(mp2three(w[R.hip]));
-        const rootYaw = -Math.atan2(hd.z, hd.x);
+        const fwdV = new THREE.Vector3().crossVectors(hd, new THREE.Vector3(0, 1, 0));
+        let rootYaw = Math.atan2(fwdV.x, fwdV.z);
+        if ((apiRef.current.dbgOpts || {}).flip) rootYaw += Math.PI;
         vrm.scene.rotation.y += wrapA(rootYaw - vrm.scene.rotation.y) * 0.25;
         vrm.scene.updateMatrixWorld(true);
         arDbg.dist = dist; arDbg.yaw = vrm.scene.rotation.y;
@@ -576,7 +580,7 @@ export default function Mirror() {
     // 「変身した以上、素の自分が映っていてはいけない」— 人物セグメンテーションで
     // 自分の写り込み(袖・肌)を暗いシルエットに落とし、その上にモデル(素体+鎧)が乗る。
     // マスクはぼかして広めに取り、端の写り込みを柔らかく包む
-    let mCan = null, mCtx = null;
+    let mCan = null, mCtx = null, mPrevA = null;
     const maskFx = (pr) => {
       const W = mount.clientWidth, H = mount.clientHeight;
       if (fxCan.width !== W || fxCan.height !== H) { fxCan.width = W; fxCan.height = H; }
@@ -590,11 +594,13 @@ export default function Mirror() {
       if (!mCan) { mCan = document.createElement('canvas'); mCtx = mCan.getContext('2d'); }
       if (mCan.width !== mw || mCan.height !== mh) { mCan.width = mw; mCan.height = mh; }
       const data = mask.getAsFloat32Array();
+      if (!mPrevA || mPrevA.length !== data.length) mPrevA = new Float32Array(data.length);
       const img = mCtx.createImageData(mw, mh);
       const px = img.data;
       for (let i = 0; i < data.length; i++) {
-        const a = data[i];
-        px[i * 4 + 3] = a > 0.15 ? Math.min(255, a * 300) : 0;
+        const a = Math.max(data[i], mPrevA[i] * 0.8);   // 時間方向の粘り=輪郭ちらつき抑制
+        mPrevA[i] = a;
+        px[i * 4 + 3] = a > 0.3 ? 255 : a > 0.12 ? Math.min(255, a * 600) : 0;
       }
       mCtx.putImageData(img, 0, 0);
       // videoと同じcover写像+ミラーで重ねる
@@ -603,13 +609,15 @@ export default function Mirror() {
       const dx = (W - vw * cs) / 2, dy = (H - vh * cs) / 2;
       fctx.save();
       if (apiRef.current.mirror) { fctx.translate(W, 0); fctx.scale(-1, 1); }
-      fctx.filter = 'blur(10px)';
+      fctx.filter = 'blur(6px)';
       fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);
-      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);  // 2度描き=濃度を上げ実効的に拡張
+      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);
+      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);  // 3度描き=広めに拡張+内部を塗り切る
       fctx.filter = 'none';
       fctx.globalCompositeOperation = 'source-in';
-      fctx.filter = 'brightness(0.22) saturate(0.25)';
-      fctx.drawImage(video, dx, dy, vw * cs, vh * cs);
+      // 完全不透明の蒸着フィールド — 「うっすら見える」は不可。素の自分は一切残さない
+      fctx.fillStyle = '#0b1118';
+      fctx.fillRect(0, 0, W, H);
       fctx.restore();
     };
 
@@ -679,7 +687,7 @@ export default function Mirror() {
         setRunning(true);
         apiRef.current.applyAr();
         setStatus(apiRef.current.ar
-          ? '実写合成 — 素体は君自身。「蒸着!」で体に鎧が装着される'
+          ? '実写合成(撮影向き) — 素体は君自身。「蒸着!」で体に鎧が装着される'
           : '追跡中 — Two-Bone IK + One Euro(映像は表示・保存しません)');
         loop();
       } catch (e) {
@@ -817,7 +825,9 @@ export default function Mirror() {
   useEffect(() => { apiRef.current.ar = arMode; apiRef.current.applyAr && apiRef.current.applyAr(); }, [arMode]);
   useEffect(() => { apiRef.current.debugCanvas = (devMode && arMode) ? debugRef.current : null; }, [devMode, arMode]);
   useEffect(() => {   // 計測トグルと表示先は毎レンダ同期(条件マウントの取りこぼし防止)
-    apiRef.current.dbgOpts = { skel: dbgSkel, resid: dbgResid, model: dbgModel, mask: dbgMask };
+    apiRef.current.dbgOpts = {
+      skel: dbgSkel, resid: dbgResid, model: dbgModel, mask: dbgMask, flip: dbgFlip,
+    };
     apiRef.current.devInfo = devInfoRef.current;
   });
 
@@ -853,6 +863,10 @@ export default function Mirror() {
             <input type="checkbox" checked={dbgMask} onChange={(e) => setDbgMask(e.target.checked)} />
             {' '}実写マスク — ③蒸着後、素の自分をシルエットに沈める
           </label>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgFlip} onChange={(e) => setDbgFlip(e.target.checked)} />
+            {' '}前後反転(モデルが背中を向けている時にON→報告を)
+          </label>
           <div ref={devInfoRef} style={{
             marginTop: 6, color: '#8fa7b8', fontFamily: 'ui-monospace, monospace',
             whiteSpace: 'pre-wrap', lineHeight: 1.7,
@@ -887,15 +901,19 @@ export default function Mirror() {
           borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer',
           letterSpacing: '0.25em',
         }}>{worn ? '解除' : '蒸着'}</button>
-        <label style={{ fontSize: 12, color: '#dce8f2', cursor: 'pointer' }}>
-          <input type="checkbox" checked={mirrorMode}
-            onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像
+        <label style={{ fontSize: 12, color: arMode ? '#5a7284' : '#dce8f2', cursor: 'pointer' }}>
+          <input type="checkbox" checked={mirrorMode} disabled={arMode}
+            onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像{arMode ? '(ARは撮影向き固定)' : ''}
         </label>
         {devMode && (
           <label style={{ fontSize: 12, color: '#d9b45f', cursor: 'pointer' }}>
             <input type="checkbox" checked={arMode}
               onChange={(e) => {
-                setArMode(e.target.checked);
+                const on = e.target.checked;
+                setArMode(on);
+                // AR=撮影向き(Zoomアバター式)固定。鏡像はCSS反転×左右入替×座標反転の
+                // 三重合わせになり、腕の左右食い違い・前後捻れの温床 — ARでは使わない
+                setMirrorMode(!on);
                 setFlashKey((k) => k + 1);  // モード切替の瞬間を閃光で包む
               }} /> 実写に重ねる(AR/dev)
           </label>

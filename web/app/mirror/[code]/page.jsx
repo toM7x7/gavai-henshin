@@ -14,6 +14,12 @@ import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-v
 import { fetchManifest, fileUrl, setArmorVisible, setBodyVisible } from '../../../lib/suit';
 import { TRIGGER_RE, announce, hasNativeSR, pickAudioMime, recordChunk, transcribe, sttEnabled } from '../../../lib/stt';
 
+// HandLandmarker 21点 → VRM指ボーンの対応(MCP/PIP/DIP/TIPのチェーン)
+const FINGER_CHAINS = [
+  ['Index', 5, 6, 7, 8], ['Middle', 9, 10, 11, 12],
+  ['Ring', 13, 14, 15, 16], ['Little', 17, 18, 19, 20],
+];
+
 // MediaPipe Pose 33点の骨格辺(dev計測: 体取得検証オーバーレイ用)
 const SKEL = [
   [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
@@ -67,6 +73,7 @@ export default function Mirror() {
   const [dbgModel, setDbgModel] = useState(true);
   const [dbgMask, setDbgMask] = useState(true);   // ③蒸着後の実写マスク(自分を沈める)
   const [dbgFlip, setDbgFlip] = useState(false);  // 前後判定の保険: 逆なら実機でONにして報告
+  const [dbgFingers, setDbgFingers] = useState(true);  // 手指トラッキング(HandLandmarker)
   const devInfoRef = useRef(null);
 
   useEffect(() => {
@@ -104,7 +111,10 @@ export default function Mirror() {
     scene.add(key);
 
     let vrm = null, bones = null, euro = null;
-    let pose = null, video = null, run = false;
+    let pose = null, handLm = null, video = null, run = false;
+    // ★正対の基準yaw。rotateVRM0はVRM0のルートをrotation.y=πにして正対を作る —
+    // 「yaw 0=正対」と仮定するとARで常に180°逆(背面+腕が常時交差)になる。実測して持つ
+    let baseYaw = 0;
     let vrmaData = null, mixer = null, motionPlaying = false, particles = null;
     let wornFlag = false;   // React stateはクロージャで古くなるため、applyAr用に生フラグを持つ
     let arDbg = { dist: 0, yaw: 0 };                    // dev計測パネルに出す配置推定値
@@ -288,12 +298,28 @@ export default function Mirror() {
       return { x: euro2d[i].x.f(pt.x, t), y: euro2d[i].y.f(pt.y, t) };
     };
 
-    const drive = (poseRes) => {
+    // 指の曲げ: 手の3D点列から関節角を実測し、指ボーンをカール(顔より手を丁寧に)
+    const _fq = new THREE.Quaternion();
+    const _fe = new THREE.Euler();
+    const segAngle = (p, a, b, c) => {
+      const v1 = new THREE.Vector3(p[b].x - p[a].x, p[b].y - p[a].y, p[b].z - p[a].z);
+      const v2 = new THREE.Vector3(p[c].x - p[b].x, p[c].y - p[b].y, p[c].z - p[b].z);
+      return (v1.lengthSq() > 1e-10 && v2.lengthSq() > 1e-10) ? v1.angleTo(v2) : 0;
+    };
+    const fingerRot = (boneName, sign, ang) => {
+      const bn = vrm.humanoid.getNormalizedBoneNode(boneName);
+      if (!bn) return;   // 指ボーンが無いVRMは黙って素通し
+      _fq.setFromEuler(_fe.set(0, 0, sign * Math.min(1.6, ang)));
+      bn.quaternion.slerp(_fq, 0.5);
+    };
+
+    const drive = (poseRes, hr) => {
       if (motionPlaying) return;  // 見得の最中は追跡を握らせない
       if (!bones) bones = grabBones();
       if (!bones) return;
       const mir = apiRef.current.mirror;
       const ar = apiRef.current.ar;
+      const opts = apiRef.current.dbgOpts || {};
       const wRaw = poseRes && poseRes.worldLandmarks && poseRes.worldLandmarks[0];
       const w = smoothWorld(wRaw, performance.now() / 1000);
       const lm2d = poseRes && poseRes.landmarks && poseRes.landmarks[0];
@@ -364,16 +390,15 @@ export default function Mirror() {
         const dir = ndcV.sub(camera.position).normalize();
         const hipTarget = camera.position.clone().add(dir.multiplyScalar(dist));
         vrm.scene.position.add(hipTarget.sub(aHip).multiplyScalar(0.45));
-        // 体の向き: 腰ライン×上ベクトルから前方ベクトルを作りyawへ。
-        // 正面=0(顔がカメラへ)、背中を向けたら±180°でモデルも背中を見せる。
-        // 実機で逆に見える時はdevパネル「前後反転」で確認→符号を恒久化する
+        // 体の向き: 正対=baseYaw(rotateVRM0後の実測)を基準に、腰ラインの偏差だけ回す。
+        // カメラに正対した人 → 偏差0 → モデルはbaseYaw=顔がこちら向き
         const hd = mp2three(w[L.hip]).sub(mp2three(w[R.hip]));
         const fwdV = new THREE.Vector3().crossVectors(hd, new THREE.Vector3(0, 1, 0));
-        let rootYaw = Math.atan2(fwdV.x, fwdV.z);
-        if ((apiRef.current.dbgOpts || {}).flip) rootYaw += Math.PI;
+        let rootYaw = baseYaw + Math.atan2(fwdV.x, fwdV.z);
+        if (opts.flip) rootYaw += Math.PI;   // 保険: 実機で背面ならON→符号を恒久化
         vrm.scene.rotation.y += wrapA(rootYaw - vrm.scene.rotation.y) * 0.25;
         vrm.scene.updateMatrixWorld(true);
-        arDbg.dist = dist; arDbg.yaw = vrm.scene.rotation.y;
+        arDbg.dist = dist; arDbg.yaw = wrapA(vrm.scene.rotation.y - baseYaw);
       }
 
       // ---- 頭: 鼻+両耳から推定(変身後はマスク — 体優先) ----
@@ -411,6 +436,34 @@ export default function Mirror() {
         }
       }
       vrm.scene.updateMatrixWorld(true);
+
+      // ---- 手指: HandLandmarkerの3D点列から各指のカール角を実測して駆動 ----
+      // 左右はhandednessでなく「ポーズ手首との画面距離」で対応付ける
+      // (鏡像/生映像でhandedness規約を取り違える事故を構造的に回避)
+      if (hr && hr.landmarks && hr.landmarks.length && lm2d) {
+        for (let hi = 0; hi < hr.landmarks.length; hi++) {
+          const h2 = hr.landmarks[hi];
+          const hw = hr.worldLandmarks && hr.worldLandmarks[hi];
+          if (!h2 || !hw) continue;
+          const dL = Math.hypot(h2[0].x - lm2d[15].x, h2[0].y - lm2d[15].y);
+          const dR = Math.hypot(h2[0].x - lm2d[16].x, h2[0].y - lm2d[16].y);
+          if (Math.min(dL, dR) > 0.2) continue;   // どの手首にも遠い検出は捨てる
+          const personLeft = dL < dR;
+          const side = (personLeft !== mir) ? 'left' : 'right';  // 鏡像時はモデル左右入替
+          const sign = side === 'left' ? -1 : 1;
+          for (const [name, a, b2, c2, d2] of FINGER_CHAINS) {
+            const ang1 = segAngle(hw, a, b2, c2);
+            const ang2 = segAngle(hw, b2, c2, d2);
+            fingerRot(`${side}${name}Proximal`, sign, ang1);
+            fingerRot(`${side}${name}Intermediate`, sign, ang2);
+            fingerRot(`${side}${name}Distal`, sign, ang2 * 0.7);
+          }
+          // 親指は軸が別系(対向)なので v1 では控えめに追従のみ
+          const tAng = segAngle(hw, 1, 2, 3);
+          fingerRot(`${side}ThumbProximal`, sign, tAng * 0.5);
+          fingerRot(`${side}ThumbDistal`, sign, tAng * 0.4);
+        }
+      }
 
       if (!ar) {
         // ---- 点群モード: 従来のworld空間IK(腕のみ) ----
@@ -484,7 +537,6 @@ export default function Mirror() {
       // その上でマゼンタ○(モデル関節の投影)が骨格に重なる → 追従も正しい。
       // 骨格が乗らなければ取得/写像の問題、骨格は乗るが○がズレるならIK/配置の問題
       const dbg = apiRef.current.debugCanvas;
-      const opts = apiRef.current.dbgOpts || {};
       vrm.scene.visible = opts.model !== false;
       if (dbg) {
         if (dbg.width !== W || dbg.height !== H) { dbg.width = W; dbg.height = H; }
@@ -567,8 +619,12 @@ export default function Mirror() {
       let pr = null;
       try { pr = pose.detectForVideo(video, performance.now()); detectErr = null; }
       catch (e) { detectErr = String((e && e.message) || e); }  // 黙殺しない — dev計測に出す
+      let hr = null;
+      if (handLm && (apiRef.current.dbgOpts || {}).fingers !== false) {
+        try { hr = handLm.detectForVideo(video, performance.now()); } catch {}
+      }
       drawLandmarks(pr);
-      drive(pr);
+      drive(pr, hr);
       maskFx(pr);
       if (pr && pr.segmentationMasks) {
         for (const m of pr.segmentationMasks) { try { m.close(); } catch {} }
@@ -576,48 +632,105 @@ export default function Mirror() {
       requestAnimationFrame(loop);
     };
 
-    // ---- 実写マスク: 蒸着後、人物領域をシルエットに沈める ----
-    // 「変身した以上、素の自分が映っていてはいけない」— 人物セグメンテーションで
-    // 自分の写り込み(袖・肌)を暗いシルエットに落とし、その上にモデル(素体+鎧)が乗る。
-    // マスクはぼかして広めに取り、端の写り込みを柔らかく包む
+    // ---- 実写マスク: 蒸着後、人物を「背景」で置き換える = 存在を消す ----
+    // 黒塗りは不可(黒い何かが目立つ)。理想は「その人が透明化していてスーツだけがある」。
+    // 背景プレート(人物以外の画素で常時更新+ボタンで真の背景を撮影)をマスク領域に
+    // 流し込み、モデル(素体+鎧)がその上に立つ — 鏡の中で人がヒーローに置き換わる
     let mCan = null, mCtx = null, mPrevA = null;
+    let dCan = null, dCtx = null, bgCan = null, bgCtx = null, tmpCan = null, tCtx = null;
+    let bgInit = false, bgCaptured = false;
+    // 背景プレート撮影: 3秒でフレームから外れてもらい、無人の背景を記憶する
+    apiRef.current.captureBg = () => {
+      if (!video || !video.videoWidth) {
+        setStatus('カメラ開始後に使用できます');
+        return;
+      }
+      setStatus('3秒後に背景を記憶する — フレームの外へ!');
+      setTimeout(() => {
+        if (!video || !video.videoWidth) return;
+        if (!bgCan) { bgCan = document.createElement('canvas'); bgCtx = bgCan.getContext('2d'); }
+        if (bgCan.width !== video.videoWidth || bgCan.height !== video.videoHeight) {
+          bgCan.width = video.videoWidth; bgCan.height = video.videoHeight;
+        }
+        bgCtx.globalAlpha = 1;
+        bgCtx.drawImage(video, 0, 0, bgCan.width, bgCan.height);
+        bgCaptured = true; bgInit = true;
+        setStatus('背景を記憶した — 蒸着すれば君は消え、ヒーローだけが立つ');
+      }, 3000);
+    };
     const maskFx = (pr) => {
       const W = mount.clientWidth, H = mount.clientHeight;
       if (fxCan.width !== W || fxCan.height !== H) { fxCan.width = W; fxCan.height = H; }
       const fctx = fxCan.getContext('2d');
       fctx.clearRect(0, 0, W, H);
       const mask = pr && pr.segmentationMasks && pr.segmentationMasks[0];
-      const active = apiRef.current.ar && wornFlag &&
-        (apiRef.current.dbgOpts || {}).mask !== false;
-      if (!active || !mask || !video || !video.videoWidth) return;
+      if (!apiRef.current.ar || !mask || !video || !video.videoWidth) return;
+      const vw = video.videoWidth, vh = video.videoHeight;
       const mw = mask.width, mh = mask.height;
-      if (!mCan) { mCan = document.createElement('canvas'); mCtx = mCan.getContext('2d'); }
+      if (!mCan) {
+        mCan = document.createElement('canvas'); mCtx = mCan.getContext('2d');
+        dCan = document.createElement('canvas'); dCtx = dCan.getContext('2d');
+        tmpCan = document.createElement('canvas'); tCtx = tmpCan.getContext('2d');
+      }
+      // bgCanはcaptureBgが先に作っている場合がある — 上書きせず独立に確保する
+      if (!bgCan) { bgCan = document.createElement('canvas'); bgCtx = bgCan.getContext('2d'); }
       if (mCan.width !== mw || mCan.height !== mh) { mCan.width = mw; mCan.height = mh; }
+      if (dCan.width !== vw || dCan.height !== vh) {
+        dCan.width = vw; dCan.height = vh;
+        tmpCan.width = vw; tmpCan.height = vh;
+      }
+      if (bgCan.width !== vw || bgCan.height !== vh) {
+        bgCan.width = vw; bgCan.height = vh;   // リサイズはプレートを失う
+        bgInit = false; bgCaptured = false;
+      }
+      // 1) 人物マスク(時間方向の粘り=輪郭ちらつき抑制)
       const data = mask.getAsFloat32Array();
       if (!mPrevA || mPrevA.length !== data.length) mPrevA = new Float32Array(data.length);
       const img = mCtx.createImageData(mw, mh);
       const px = img.data;
       for (let i = 0; i < data.length; i++) {
-        const a = Math.max(data[i], mPrevA[i] * 0.8);   // 時間方向の粘り=輪郭ちらつき抑制
+        const a = Math.max(data[i], mPrevA[i] * 0.8);
         mPrevA[i] = a;
         px[i * 4 + 3] = a > 0.3 ? 255 : a > 0.12 ? Math.min(255, a * 600) : 0;
       }
       mCtx.putImageData(img, 0, 0);
-      // videoと同じcover写像+ミラーで重ねる
-      const vw = video.videoWidth, vh = video.videoHeight;
+      // 2) 拡張マスク(video解像度、広め=端の写り込みごと包む)
+      dCtx.clearRect(0, 0, vw, vh);
+      dCtx.filter = 'blur(8px)';
+      dCtx.drawImage(mCan, 0, 0, vw, vh);
+      dCtx.drawImage(mCan, 0, 0, vw, vh);
+      dCtx.drawImage(mCan, 0, 0, vw, vh);
+      dCtx.filter = 'none';
+      // 3) 背景プレートを「人物以外の画素」で常時更新 — 人が動くほど背景が育つ。
+      //    蒸着前から回すので、変身の瞬間にはプレートができている
+      if (!bgInit) { bgCtx.drawImage(video, 0, 0, vw, vh); bgInit = true; }
+      tCtx.clearRect(0, 0, vw, vh);
+      tCtx.globalCompositeOperation = 'source-over';
+      tCtx.drawImage(video, 0, 0, vw, vh);
+      tCtx.globalCompositeOperation = 'destination-out';
+      tCtx.drawImage(dCan, 0, 0);   // 人物領域に穴を開ける(透明画素は下に影響しない)
+      bgCtx.globalAlpha = 0.12;
+      bgCtx.drawImage(tmpCan, 0, 0);
+      bgCtx.globalAlpha = 1;
+      // 4) 蒸着後: 人物領域に背景を流し込む(黒塗りではなく透明化)
+      const active = wornFlag && (apiRef.current.dbgOpts || {}).mask !== false;
+      if (!active) return;
       const cs = Math.max(W / vw, H / vh);
       const dx = (W - vw * cs) / 2, dy = (H - vh * cs) / 2;
       fctx.save();
       if (apiRef.current.mirror) { fctx.translate(W, 0); fctx.scale(-1, 1); }
-      fctx.filter = 'blur(6px)';
-      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);
-      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);
-      fctx.drawImage(mCan, dx, dy, vw * cs, vh * cs);  // 3度描き=広めに拡張+内部を塗り切る
+      fctx.filter = 'blur(3px)';
+      fctx.drawImage(dCan, dx, dy, vw * cs, vh * cs);
       fctx.filter = 'none';
       fctx.globalCompositeOperation = 'source-in';
-      // 完全不透明の蒸着フィールド — 「うっすら見える」は不可。素の自分は一切残さない
-      fctx.fillStyle = '#0b1118';
-      fctx.fillRect(0, 0, W, H);
+      if (bgCaptured) {
+        fctx.drawImage(bgCan, dx, dy, vw * cs, vh * cs);
+      } else {
+        // プレート未撮影時の退避: 育ち途中のプレートを軽くぼかして流す
+        fctx.filter = 'blur(8px)';
+        fctx.drawImage(bgCan, dx, dy, vw * cs, vh * cs);
+        fctx.filter = 'none';
+      }
       fctx.restore();
     };
 
@@ -636,9 +749,10 @@ export default function Mirror() {
         setBodyVisible(vrm.scene, !ar || wornFlag);  // AR素体待機=モデル全隠し、蒸着後=素体+鎧
         setArmorVisible(vrm.scene, wornFlag);
         if (!ar) {
-          // 点群モードに戻す時は定位置へ(ARが動かした配置・向きを破棄)
+          // 点群モードに戻す時は定位置へ(ARが動かした配置・向きを破棄)。
+          // ★rotationは0でなくbaseYawへ — 0にするとVRM0の正対(π)が壊れて背面になる
           vrm.scene.position.set(0, 0, 0);
-          vrm.scene.rotation.set(0, 0, 0);
+          vrm.scene.rotation.set(0, baseYaw, 0);
           vrm.scene.scale.setScalar(1);
         }
         bones = null;
@@ -670,6 +784,20 @@ export default function Mirror() {
         });
         try { pose = await mkPose('GPU'); }
         catch { pose = await mkPose('CPU'); }  // WebGL不調端末はCPU推論で続行
+        // 手指トラッキング(dev): 顔は不要(スーツで隠れる)、手・腕を丁寧に、の方針。
+        // 失敗しても本体は動く
+        handLm = null;
+        if (devFlag) {
+          try {
+            handLm = await vision.HandLandmarker.createFromOptions(files, {
+              baseOptions: {
+                modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+                delegate: 'GPU',
+              },
+              runningMode: 'VIDEO', numHands: 2,
+            });
+          } catch { handLm = null; }
+        }
         if (!video) {
           video = document.createElement('video');
           video.muted = true; video.playsInline = true;
@@ -687,7 +815,7 @@ export default function Mirror() {
         setRunning(true);
         apiRef.current.applyAr();
         setStatus(apiRef.current.ar
-          ? '実写合成(撮影向き) — 素体は君自身。「蒸着!」で体に鎧が装着される'
+          ? '実写合成(鏡) — 鏡に映る君がヒーローになる。「蒸着!」で装着'
           : '追跡中 — Two-Bone IK + One Euro(映像は表示・保存しません)');
         loop();
       } catch (e) {
@@ -788,6 +916,7 @@ export default function Mirror() {
         const gltf = await loader.loadAsync(fileUrl(code, m.files.vrm));
         vrm = gltf.userData.vrm;
         VRMUtils.rotateVRM0(vrm);  // VRM0はZ+向き — VRM1と同じ向きに揃える
+        baseYaw = vrm.scene.rotation.y;   // この向き=カメラ正対(VRM0はπ、VRM1は0)
         scene.add(vrm.scene);
         if (m.files.vrma) {
           try {
@@ -827,6 +956,7 @@ export default function Mirror() {
   useEffect(() => {   // 計測トグルと表示先は毎レンダ同期(条件マウントの取りこぼし防止)
     apiRef.current.dbgOpts = {
       skel: dbgSkel, resid: dbgResid, model: dbgModel, mask: dbgMask, flip: dbgFlip,
+      fingers: dbgFingers,
     };
     apiRef.current.devInfo = devInfoRef.current;
   });
@@ -867,6 +997,22 @@ export default function Mirror() {
             <input type="checkbox" checked={dbgFlip} onChange={(e) => setDbgFlip(e.target.checked)} />
             {' '}前後反転(モデルが背中を向けている時にON→報告を)
           </label>
+          <label style={{ display: 'block', cursor: 'pointer', lineHeight: 1.9 }}>
+            <input type="checkbox" checked={dbgFingers} onChange={(e) => setDbgFingers(e.target.checked)} />
+            {' '}指トラッキング(HandLandmarker — 重い時はOFF)
+          </label>
+          <button
+            onClick={() => apiRef.current.captureBg && apiRef.current.captureBg()}
+            style={{
+              marginTop: 6, width: '100%', background: '#12222f', color: '#9fdcff',
+              border: '1px solid #24425a', borderRadius: 6, padding: '7px 10px',
+              fontSize: 11, cursor: 'pointer', letterSpacing: '0.1em',
+            }}>
+            背景を記憶(3秒後に撮影 — フレームの外へ)
+          </button>
+          <div style={{ marginTop: 4, fontSize: 10, color: '#5a7284', lineHeight: 1.6 }}>
+            背景を記憶すると、蒸着後は君が背景に置き換わり完全に消える
+          </div>
           <div ref={devInfoRef} style={{
             marginTop: 6, color: '#8fa7b8', fontFamily: 'ui-monospace, monospace',
             whiteSpace: 'pre-wrap', lineHeight: 1.7,
@@ -903,7 +1049,7 @@ export default function Mirror() {
         }}>{worn ? '解除' : '蒸着'}</button>
         <label style={{ fontSize: 12, color: arMode ? '#5a7284' : '#dce8f2', cursor: 'pointer' }}>
           <input type="checkbox" checked={mirrorMode} disabled={arMode}
-            onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像{arMode ? '(ARは撮影向き固定)' : ''}
+            onChange={(e) => setMirrorMode(e.target.checked)} /> 鏡像{arMode ? '(ARは鏡像固定)' : ''}
         </label>
         {devMode && (
           <label style={{ fontSize: 12, color: '#d9b45f', cursor: 'pointer' }}>
@@ -911,9 +1057,9 @@ export default function Mirror() {
               onChange={(e) => {
                 const on = e.target.checked;
                 setArMode(on);
-                // AR=撮影向き(Zoomアバター式)固定。鏡像はCSS反転×左右入替×座標反転の
-                // 三重合わせになり、腕の左右食い違い・前後捻れの温床 — ARでは使わない
-                setMirrorMode(!on);
+                // AR=鏡像固定: 「鏡に映った自分がヒーローになっている」体験。
+                // 左手を動かせば画面の左側の手が動く(2Dミラーで実証済みの写像を使う)
+                if (on) setMirrorMode(true);
                 setFlashKey((k) => k + 1);  // モード切替の瞬間を閃光で包む
               }} /> 実写に重ねる(AR/dev)
           </label>

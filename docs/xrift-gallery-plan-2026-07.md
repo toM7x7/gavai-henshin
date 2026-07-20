@@ -78,7 +78,11 @@ World Components / Public API のどこにも「ユーザーのアバターを�
 
 ## 4. 未確認事項(Phase 1で潰す)
 
-- [ ] ワールドからの外部URL fetch 可否(CSP) — A案の成否
+- [x] ワールドからの外部URL fetch 可否 → **権限宣言制と判明**(2026-07-20実測):
+      `xrift upload` の @xrift/code-security が `no-network-without-permission` で検出し、
+      `world.permissions.allowedDomains` にドメイン宣言すれば許可される。
+      **A案は公式サポートの範囲内**。※本番ランタイムでの動作確認は入場時の計測板で最終確定
+- [ ] (残)本番XRift上で計測板の文言確認(権限宣言後の実動作)
 - [ ] アバターの公開共有(他人が着られるか)の仕様
 - [ ] ワールド内の状態同期(カスタムイベント)の提供有無
 - [ ] xrift-cli のアバターアップロードの実コマンド(READMEはワールド中心)

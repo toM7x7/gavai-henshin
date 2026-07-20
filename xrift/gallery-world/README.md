@@ -37,6 +37,16 @@ xrift upload world           # ビルド→検証→アップロードまで一�
 アップロード後、XRiftでワールドに入り**計測板の文言を確認**するのがPhase 1の完了条件。
 `✗ 外部fetch失敗` が出た場合はその文言(HTTPコード等)を記録して報告。
 
+## セキュリティ検査と権限宣言
+
+`xrift upload` は @xrift/code-security による静的検査を通る必要がある。
+本ワールドは xrift.json の `world.permissions` で2件を宣言済み:
+
+- `allowedDomains: ["ddoedsybeuivbqtjgrrx.supabase.co"]` — 外部通信は**権限宣言制**
+  (禁止ではない = A案は公式サポートの範囲内)。fetch先を増やす時はここに追記
+- `allowedCodeRules: ["no-obfuscation"]` — @pixiv/three-vrm のクラス名
+  (`_VRMExpressionManager` 等)がバンドラのリネームで難読化と誤検出されるため
+
 ## 注意
 
 - Supabase URLは公開バケット(秘密情報ではない)。書き込み系の鍵は一切含まない

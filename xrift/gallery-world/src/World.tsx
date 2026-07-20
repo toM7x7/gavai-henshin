@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Color } from 'three'
+import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody } from '@react-three/rapier'
 import { SpawnPoint, useInstanceState } from '@xrift/world-components'
 import { fetchGallery, shuffled, type GalleryEntry } from '~/lib/gallery'
@@ -11,6 +13,37 @@ export interface WorldProps {
 }
 
 const ALCOVE_COUNT = 6
+
+// 撮影モード(dev専用): ?shot=1 でカメラをシネマティック定点に固定する。
+// サムネイル撮影用 — 本番XRiftではクエリが付かないため常に不活性
+const IS_SHOT = typeof window !== 'undefined' && window.location.search.includes('shot')
+
+function ShotCamera() {
+  const { gl, scene, camera } = useThree()
+  useFrame(() => {
+    camera.position.set(1.4, 2.2, 7.4)
+    camera.lookAt(0, 1.25, -2.4)
+    if ('fov' in camera && camera.fov !== 48) {
+      camera.fov = 48
+      camera.updateProjectionMatrix()
+    }
+  }, 1000)  // プレイヤーコントローラの後に上書きする
+  // 撮影イベント: 同期でrender→toDataURL(コンポジタ非依存のピクセル取得)。
+  // 結果はcanvasのdata属性経由で受け渡す(グローバル汚染なし)
+  useEffect(() => {
+    const capture = () => {
+      camera.position.set(1.4, 2.2, 7.4)
+      camera.lookAt(0, 1.25, -2.4)
+      gl.setClearColor('#060b11', 1)          // 手動renderは背景を明示しないと白飛びする
+      scene.background = new Color('#060b11')
+      gl.render(scene, camera)
+      gl.domElement.dataset.shot = gl.domElement.toDataURL('image/png')
+    }
+    window.addEventListener('gavai-shot', capture)
+    return () => window.removeEventListener('gavai-shot', capture)
+  }, [gl, scene, camera])
+  return null
+}
 
 // 蒸着庫 Phase 2.1: スーツ格納庫ホール。
 // スポーンは召喚台の正面 — 入った瞬間、目の前にスーツが立っている。
@@ -58,9 +91,9 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
       {/* ========== 環境(格納庫: 暗部+シアン) ========== */}
       <color attach="background" args={['#060b11']} />
       <fog attach="fog" args={['#060b11', 20, 48]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[4, 9, 6]} intensity={1.1} castShadow />
-      <pointLight position={[0, 4.5, 0]} intensity={9} color="#38d9f1" distance={13} />
+      <ambientLight intensity={IS_SHOT ? 0.9 : 0.5} />
+      <directionalLight position={[4, 9, 6]} intensity={IS_SHOT ? 1.8 : 1.1} castShadow />
+      <pointLight position={[0, 4.5, 0]} intensity={IS_SHOT ? 14 : 9} color="#38d9f1" distance={13} />
       <gridHelper args={[44, 44, '#264a58', '#121e26']} position={[0, 0.01, 0]} />
 
       {/* ========== 床 ========== */}
@@ -100,9 +133,13 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
       />
 
       {/* ========== スポーン: 召喚台の正面 — 目の前にスーツ ========== */}
-      <group position={[0, 0, 3.4]}>
-        <SpawnPoint />
-      </group>
+      {!IS_SHOT && (  // 撮影時はスポーンギズモを写さない
+        <group position={[0, 0, 3.4]}>
+          <SpawnPoint />
+        </group>
+      )}
+
+      {IS_SHOT && <ShotCamera />}
     </group>
   )
 }

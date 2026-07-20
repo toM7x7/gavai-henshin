@@ -80,6 +80,30 @@ export default function Home() {
         </div>
       </div>
 
+      {/* 蒸着庫 — XRiftメタバース展示ワールドへの導線 */}
+      <a
+        className="rise"
+        href="https://app.xrift.net/world/8bc8e2bc-25aa-42d5-adfc-e53dec39a74d"
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          width: 'min(760px, 94vw)', display: 'flex', alignItems: 'center', gap: 14,
+          border: '1px solid #24425a', borderRadius: 12, padding: '14px 18px',
+          textDecoration: 'none', background: 'rgba(7,14,22,0.8)', animationDelay: '0.16s',
+        }}
+      >
+        <span style={{ fontSize: 24 }}>🏛️</span>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ color: '#9fdcff', fontSize: 14, letterSpacing: '0.15em' }}>
+            蒸着庫 — メタバース展示ワールド(XRift)
+          </span>
+          <span style={{ color: '#8fa7b8', fontSize: 12, lineHeight: 1.7 }}>
+            鍛造されたスーツは、そのままXRiftのギャラリーワールドに収蔵されていく。
+            インストール不要、ブラウザでそのまま入場して見られる →
+          </span>
+        </span>
+      </a>
+
       {gallery.length > 0 && (
         <section className="rise" style={{ width: 'min(760px, 94vw)', animationDelay: '0.2s' }}>
           <div style={{ fontSize: 11, letterSpacing: '0.4em', color: '#5fc7e8', marginBottom: 10 }}>

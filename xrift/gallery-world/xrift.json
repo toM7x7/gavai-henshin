@@ -1,8 +1,8 @@
 {
   "world": {
     "distDir": "./dist",
-    "title": "蒸着庫 — GAVAI SUIT GALLERY(技術検証)",
-    "description": "言葉から鍛造されたヒーロースーツの保管庫。鍛造ギャラリー(Supabase)から最新スーツを実行時に取得して展示する技術検証ワールド。",
+    "title": "【試験中】蒸着庫 — GAVAI SUIT GALLERY",
+    "description": "言葉から生まれたヒーロースーツの保管庫。鍛造されたスーツが、ここに次々と収蔵されていく。中央の召喚台に呼出符を打ち込めば、好きなスーツを呼び出して蒸着モーションを見られる。",
     "thumbnailPath": "thumbnail.png",
     "buildCommand": "npm run build",
     "ignore": [

@@ -20,20 +20,30 @@ const IS_SHOT = typeof window !== 'undefined' && window.location.search.includes
 
 function ShotCamera() {
   const { gl, scene, camera } = useThree()
-  useFrame(() => {
-    camera.position.set(1.4, 2.2, 7.4)
-    camera.lookAt(0, 1.25, -2.4)
+  // 画角はURLで差し替え可: ?shot=1&cam=1.4,2.2,7.4&look=0,1.25,-2.4
+  const params = new URLSearchParams(window.location.search)
+  const vec3 = (key: string, fallback: [number, number, number]) => {
+    const v = (params.get(key) ?? '').split(',').map(Number)
+    return (v.length === 3 && v.every(Number.isFinite)
+      ? (v as [number, number, number])
+      : fallback)
+  }
+  const camPos = vec3('cam', [1.4, 2.2, 7.4])
+  const lookAt = vec3('look', [0, 1.25, -2.4])
+  const aim = () => {
+    camera.position.set(...camPos)
+    camera.lookAt(...lookAt)
     if ('fov' in camera && camera.fov !== 48) {
       camera.fov = 48
       camera.updateProjectionMatrix()
     }
-  }, 1000)  // プレイヤーコントローラの後に上書きする
+  }
+  useFrame(aim, 1000)  // プレイヤーコントローラの後に上書きする
   // 撮影イベント: 同期でrender→toDataURL(コンポジタ非依存のピクセル取得)。
   // 結果はcanvasのdata属性経由で受け渡す(グローバル汚染なし)
   useEffect(() => {
     const capture = () => {
-      camera.position.set(1.4, 2.2, 7.4)
-      camera.lookAt(0, 1.25, -2.4)
+      aim()
       gl.setClearColor('#060b11', 1)          // 手動renderは背景を明示しないと白飛びする
       scene.background = new Color('#060b11')
       gl.render(scene, camera)
@@ -41,7 +51,7 @@ function ShotCamera() {
     }
     window.addEventListener('gavai-shot', capture)
     return () => window.removeEventListener('gavai-shot', capture)
-  }, [gl, scene, camera])
+  })
   return null
 }
 
@@ -108,7 +118,9 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
       {alcoves.map((entry, i) => {
         const a = (i - (alcoves.length - 1) / 2) * (Math.PI / 5.2)
         const pos: [number, number, number] = [Math.sin(a) * 8.5, 0, -Math.cos(a) * 8.5]
-        const rotY = Math.atan2(-pos[0], -pos[2]) + Math.PI
+        // ローカル+z(スーツの正面)が中央を向く回転。+πを足すとアルコーブ全体が
+        // 反転し、背面パネルが中央側に回り込んで「黒い壁」になる(実機で実証済みの罠)
+        const rotY = Math.atan2(-pos[0], -pos[2])
         return (
           <AlcoveExhibit
             key={entry.code}

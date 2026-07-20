@@ -1,5 +1,5 @@
 import { Interactable, TextInput } from '@xrift/world-components'
-import { normalizeCode, type GalleryEntry } from '~/lib/gallery'
+import { normalizeCode, SUIT_FACING, type GalleryEntry } from '~/lib/gallery'
 import { useSuit, useHenshin } from './SuitExhibit'
 import { TextPlate } from './TextPlate'
 
@@ -38,8 +38,8 @@ export function CenterStage({
         <cylinderGeometry args={[1.52, 1.52, 0.015, 48]} />
         <meshBasicMaterial color="#38d9f1" />
       </mesh>
-      {/* スーツ — π回転でスポーン側(正面)を向かせる */}
-      <group position={[0, 0.28, 0]} rotation={[0, Math.PI, 0]}>
+      {/* スーツ — rotateVRM0後の自然な向き(+Z=スポーン側)。Phase 2で実証済みの基準 */}
+      <group position={[0, 0.28, 0]} rotation={[0, SUIT_FACING, 0]}>
         {vrm && <primitive object={vrm.scene} />}
       </group>
       {code && (

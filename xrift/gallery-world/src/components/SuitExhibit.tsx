@@ -9,7 +9,7 @@ import {
   createVRMAnimationClip,
   type VRMAnimation,
 } from '@pixiv/three-vrm-animation'
-import { enqueueLoad, fetchSuitFiles, type GalleryEntry } from '~/lib/gallery'
+import { enqueueLoad, fetchSuitFiles, SUIT_FACING, type GalleryEntry } from '~/lib/gallery'
 import { TextPlate } from './TextPlate'
 
 // スーツVRM(+VRMA)の実行時ロード。逐次キューで1体ずつ流し、
@@ -131,8 +131,8 @@ export function AlcoveExhibit({ entry, position, rotationY, onSummon, onResult }
         <cylinderGeometry args={[0.87, 0.87, 0.012, 32]} />
         <meshBasicMaterial color={accent} />
       </mesh>
-      {/* スーツ — π回転で正面(中央側)を向かせる。素のVRM0は背を向けて立つ */}
-      <group position={[0, 0.19, 0]} rotation={[0, Math.PI, 0]}>
+      {/* スーツ — rotateVRM0後の自然な向き(ローカル+z=中央側)で立つ */}
+      <group position={[0, 0.19, 0]} rotation={[0, SUIT_FACING, 0]}>
         {vrm && <primitive object={vrm.scene} />}
       </group>
       <TextPlate

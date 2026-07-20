@@ -4,6 +4,11 @@
 const SUITS_BASE =
   'https://ddoedsybeuivbqtjgrrx.supabase.co/storage/v1/object/public/suits'
 
+// スーツの正面補正(全展示共通)。VRM0はrotateVRM0後に+Z正面で立つ =
+// 追加回転は不要、が実機実証済みの基準。もし実機で背面になったら
+// ここを Math.PI にして再アップ(1行で全台座に効く)
+export const SUIT_FACING = 0
+
 export interface GalleryEntry {
   code: string
   blueprint_id?: string

@@ -24,7 +24,9 @@ try {
     if (m.type() === 'error' || m.type() === 'warn') console.log(`[page:${m.type()}]`, m.text().slice(0, 160))
   })
   page.on('pageerror', (e) => console.log('[pageerror]', String(e).slice(0, 200)))
-  await page.goto('http://localhost:5173/?shot=1', {
+  // 画角指定: node scripts/shot.mjs "cam=0,1.6,2.5&look=0,1.4,-8.5"
+  const extra = process.argv[2] ? `&${process.argv[2]}` : ''
+  await page.goto(`http://localhost:5173/?shot=1${extra}`, {
     waitUntil: 'networkidle2',
     timeout: 120_000,
   })

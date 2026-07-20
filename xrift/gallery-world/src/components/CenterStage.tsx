@@ -1,46 +1,27 @@
-import { useEffect, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
-import { AnimationMixer, LoopOnce } from 'three'
 import { Interactable, TextInput } from '@xrift/world-components'
-import { createVRMAnimationClip } from '@pixiv/three-vrm-animation'
-import { normalizeCode } from '~/lib/gallery'
-import { useSuit } from './SuitExhibit'
+import { normalizeCode, type GalleryEntry } from '~/lib/gallery'
+import { useSuit, useHenshin } from './SuitExhibit'
 import { TextPlate } from './TextPlate'
 
 interface CenterStageProps {
   code: string | null
   henshinTick: number
+  entries: GalleryEntry[]
+  infoLines: string[]
   onSummon: (code: string) => void
   onHenshin: () => void
   onResult: (line: string) => void
 }
 
-// 中央の召喚台(トニーの組立プラットフォームの意匠):
-// 呼出符コンソールでスーツを召喚し、蒸着ボタンでヘンシンモーション(VRMA)が走る。
+const CATALOG_MAX = 8
+
+// 中央の召喚台: 呼出符コンソール(手入力)+収蔵カタログ(選んで召喚)+蒸着ボタン。
 // 召喚・蒸着はインスタンス同期 — 来訪者全員が同じ儀式を目撃する
-export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }: CenterStageProps) {
+export function CenterStage({
+  code, henshinTick, entries, infoLines, onSummon, onHenshin, onResult,
+}: CenterStageProps) {
   const { vrm, vrma } = useSuit(code, true, onResult)
-  const mixerRef = useRef<AnimationMixer | null>(null)
-
-  useEffect(() => {
-    mixerRef.current = null  // スーツ入替でモーションを破棄
-  }, [vrm])
-
-  useEffect(() => {
-    if (!vrm || !vrma || henshinTick === 0) return
-    const clip = createVRMAnimationClip(vrma, vrm)
-    const mixer = new AnimationMixer(vrm.scene)
-    const action = mixer.clipAction(clip)
-    action.setLoop(LoopOnce, 1)
-    action.clampWhenFinished = true  // 見得で止める
-    action.play()
-    mixerRef.current = mixer
-  }, [henshinTick, vrm, vrma])
-
-  useFrame((_, dt) => {
-    mixerRef.current?.update(dt)
-    vrm?.update(dt)
-  })
+  useHenshin(vrm, vrma, henshinTick)
 
   return (
     <group>
@@ -57,12 +38,16 @@ export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }
         <cylinderGeometry args={[1.52, 1.52, 0.015, 48]} />
         <meshBasicMaterial color="#38d9f1" />
       </mesh>
-      <group position={[0, 0.28, 0]}>
+      {/* スーツ — π回転でスポーン側(正面)を向かせる */}
+      <group position={[0, 0.28, 0]} rotation={[0, Math.PI, 0]}>
         {vrm && <primitive object={vrm.scene} />}
       </group>
       {code && (
         <TextPlate lines={[code, '召喚中のスーツ']} position={[0, 2.7, 0]} width={1.8} />
       )}
+
+      {/* 収蔵サマリ(ラフなメニュー — 台座右脇) */}
+      <TextPlate lines={infoLines} position={[2.9, 1.5, 1.2]} rotation={[0, -0.5, 0]} width={2.1} />
 
       {/* 蒸着ボタン(赤い儀式スイッチ) */}
       <Interactable
@@ -71,7 +56,7 @@ export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }
         interactionText="蒸着!"
         enabled={!!vrm && !!vrma}
       >
-        <group position={[1.6, 0, 1.6]}>
+        <group position={[1.6, 0, 1.9]}>
           <mesh position={[0, 0.5, 0]} castShadow>
             <cylinderGeometry args={[0.09, 0.12, 1.0, 12]} />
             <meshStandardMaterial color="#1c2833" metalness={0.6} roughness={0.4} />
@@ -86,7 +71,7 @@ export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }
         </group>
       </Interactable>
 
-      {/* 召喚コンソール(呼出符の書き込み台) */}
+      {/* 召喚コンソール(呼出符の手入力) */}
       <TextInput
         id="summon-console"
         placeholder="呼出符 5文字 (例: PTAU3)"
@@ -97,7 +82,7 @@ export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }
           if (normalized) onSummon(normalized)
         }}
       >
-        <group position={[-1.9, 0, 1.9]} rotation={[0, Math.PI / 5, 0]}>
+        <group position={[-1.7, 0, 2.0]} rotation={[0, Math.PI / 5, 0]}>
           <mesh position={[0, 0.45, 0]} castShadow>
             <boxGeometry args={[0.7, 0.9, 0.35]} />
             <meshStandardMaterial color="#141e28" metalness={0.6} roughness={0.4} />
@@ -110,6 +95,39 @@ export function CenterStage({ code, henshinTick, onSummon, onHenshin, onResult }
           </mesh>
         </group>
       </TextInput>
+
+      {/* 収蔵カタログ(プルダウン相当 — 選んで召喚するボード) */}
+      <group position={[-3.1, 0, 1.4]} rotation={[0, 0.6, 0]}>
+        <mesh position={[0, 1.45, -0.05]}>
+          <boxGeometry args={[1.5, 2.7, 0.08]} />
+          <meshStandardMaterial color="#0c141c" metalness={0.5} roughness={0.5} />
+        </mesh>
+        <TextPlate lines={['収蔵カタログ', '押して召喚']} position={[0, 2.55, 0.02]} width={1.3} />
+        {entries.slice(0, CATALOG_MAX).map((entry, i) => {
+          const accent = entry.palette?.emissive ?? entry.palette?.accent ?? '#9fdcff'
+          const selected = entry.code === code
+          return (
+            <Interactable
+              key={entry.code}
+              id={`catalog-${entry.code}`}
+              onInteract={() => onSummon(entry.code)}
+              interactionText={`${entry.code} を召喚`}
+            >
+              <group position={[0, 2.12 - i * 0.26, 0.03]}>
+                <mesh>
+                  <boxGeometry args={[1.34, 0.22, 0.03]} />
+                  <meshStandardMaterial
+                    color={selected ? '#173242' : '#101a24'}
+                    emissive={accent}
+                    emissiveIntensity={selected ? 0.55 : 0.18}
+                  />
+                </mesh>
+                <TextPlate lines={[entry.code]} position={[0, 0, 0.03]} width={1.1} aspect={5.2} accent={accent} />
+              </group>
+            </Interactable>
+          )
+        })}
+      </group>
     </group>
   )
 }

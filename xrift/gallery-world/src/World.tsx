@@ -4,7 +4,6 @@ import { SpawnPoint, useInstanceState } from '@xrift/world-components'
 import { fetchGallery, shuffled, type GalleryEntry } from '~/lib/gallery'
 import { AlcoveExhibit } from '~/components/SuitExhibit'
 import { CenterStage } from '~/components/CenterStage'
-import { TextPlate } from '~/components/TextPlate'
 
 export interface WorldProps {
   position?: [number, number, number]
@@ -13,12 +12,13 @@ export interface WorldProps {
 
 const ALCOVE_COUNT = 6
 
-// 蒸着庫 Phase 2: スーツ格納庫ホール。
-// 壁面アルコーブに鍛造スーツが並び(訪問ごとにシャッフル)、中央の召喚台では
-// 呼出符で任意のスーツを召喚して蒸着モーション(VRMA)を見られる。
-// 展示は実行時fetch — 鍛造するだけで収蔵が増える(再アップロード不要)
+// 蒸着庫 Phase 2.1: スーツ格納庫ホール。
+// スポーンは召喚台の正面 — 入った瞬間、目の前にスーツが立っている。
+// 壁面アルコーブ(訪問ごとにシャッフル)には台座ごとの[蒸着][召喚]ボタン、
+// 中央では呼出符の手入力+収蔵カタログから選んで召喚できる
 export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 }) => {
-  const [lines, setLines] = useState<string[]>(['蒸着庫 — 収蔵記録', '照合中…'])
+  const [infoLines, setInfoLines] = useState<string[]>(['蒸着庫', '照合中…'])
+  const [entries, setEntries] = useState<GalleryEntry[]>([])
   const [alcoves, setAlcoves] = useState<GalleryEntry[]>([])
   const [latestCode, setLatestCode] = useState<string | null>(null)
   // 召喚台の状態はインスタンス同期 — 全員が同じスーツと儀式を見る
@@ -31,18 +31,15 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
         const gallery = await fetchGallery()
         const sorted = [...gallery].sort((a, b) =>
           (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+        setEntries(sorted)
         setLatestCode(sorted[0]?.code ?? null)
         setAlcoves(shuffled(gallery).slice(0, ALCOVE_COUNT))
-        setLines((prev) => [
-          prev[0],
-          `✓ 収蔵 ${gallery.length}体 / 展示 ${Math.min(gallery.length, ALCOVE_COUNT)}体`,
-          '召喚台に呼出符を打ち込めば任意のスーツを呼べる',
+        setInfoLines([
+          '蒸着庫',
+          `収蔵 ${gallery.length}体 / 展示 ${Math.min(gallery.length, ALCOVE_COUNT)}体`,
         ])
       } catch (e) {
-        setLines((prev) => [
-          prev[0],
-          `✗ 収蔵庫に接続できない: ${String((e as Error)?.message ?? e)}`,
-        ])
+        setInfoLines(['蒸着庫', `✗ 収蔵庫に接続できない: ${String((e as Error)?.message ?? e)}`])
       }
     })()
   }, [])
@@ -52,8 +49,9 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
     if (latestCode && !centerCode) setCenterCode(latestCode)
   }, [latestCode, centerCode])
 
+  // 読込失敗だけ収蔵メニューに記す(成功はスーツ自身が語る)
   const report = (line: string) =>
-    setLines((prev) => (prev.length > 9 ? [...prev.slice(0, 2), line] : [...prev, line]))
+    setInfoLines((prev) => (prev.length > 6 ? [...prev.slice(0, 2), line] : [...prev, line]))
 
   return (
     <group position={position} scale={scale}>
@@ -84,6 +82,7 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
             entry={entry}
             position={pos}
             rotationY={rotY}
+            onSummon={(code) => setCenterCode(code)}
             onResult={report}
           />
         )
@@ -93,24 +92,15 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
       <CenterStage
         code={centerCode || null}
         henshinTick={henshinTick}
-        onSummon={(code) => {
-          setCenterCode(code)
-          report(`⚡ ${code} を召喚`)
-        }}
+        entries={entries}
+        infoLines={infoLines}
+        onSummon={(code) => setCenterCode(code)}
         onHenshin={() => setHenshinTick((t) => t + 1)}
         onResult={report}
       />
 
-      {/* ========== 収蔵記録板(右手側) ========== */}
-      <TextPlate
-        lines={lines}
-        position={[7.8, 2.3, 3.2]}
-        rotation={[0, -Math.PI / 3, 0]}
-        width={3.8}
-      />
-
-      {/* ========== スポーン ========== */}
-      <group position={[0, 0, 6.5]}>
+      {/* ========== スポーン: 召喚台の正面 — 目の前にスーツ ========== */}
+      <group position={[0, 0, 3.4]}>
         <SpawnPoint />
       </group>
     </group>

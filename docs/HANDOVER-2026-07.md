@@ -101,6 +101,8 @@ Status: Active — このファイルが「いまのシステムの正」。次�
 3. Vercel env: TTS_PROVIDER=aivis + AIVIS_API_KEY(+必要ならAIVIS_MODEL_UUID)
 4. .env実鍵のローテーション(Gemini/Supabase service/Sakura) — LAN配信期間あり
 5. recall_codes の RLS有効化(SQL1行)
+6. 実写ARトラッキング強化 — ar-tracking-roadmap-2026-07.md(Segmenter→heavy A/B→輪郭フィット→オフライン高品質パイプライン)
+7. XRiftスーツギャラリー — xrift-gallery-plan-2026-07.md(Phase 1: 外部fetch可否の技術検証ワールド。変身は当面「アバター並行登録+導線」で代替)
 6. main への統合 + node_modules 197MiB の filter-repo(公開前必須)
 7. 実写ARのv2(Segmenterマスク合成)、蒸着演出の部位順次マテリアライズ化
 8. Cloud Run env → Secret Manager移行(任意)

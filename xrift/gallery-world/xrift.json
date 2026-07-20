@@ -26,7 +26,8 @@
     ],
     "permissions": {
       "allowedCodeRules": [
-        "no-obfuscation"
+        "no-obfuscation",
+        "no-network-without-permission"
       ],
       "allowedDomains": [
         "ddoedsybeuivbqtjgrrx.supabase.co"

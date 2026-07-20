@@ -42,8 +42,12 @@ xrift upload world           # ビルド→検証→アップロードまで一�
 `xrift upload` は @xrift/code-security による静的検査を通る必要がある。
 本ワールドは xrift.json の `world.permissions` で2件を宣言済み:
 
-- `allowedDomains: ["ddoedsybeuivbqtjgrrx.supabase.co"]` — 外部通信は**権限宣言制**
-  (禁止ではない = A案は公式サポートの範囲内)。fetch先を増やす時はここに追記
+- `allowedDomains: ["ddoedsybeuivbqtjgrrx.supabase.co"]` — **URLリテラル**の許可
+  (`no-unauthorized-domain` 用)。fetch先ドメインを増やす時はここに追記
+- `allowedCodeRules: ["no-network-without-permission"]` — **動的URL構築**
+  (テンプレート文字列でのURL組み立て+three.jsローダ内部)の許可。
+  検査器の仕様: allowedDomainsはリテラルにしか効かず、動的構築はこのルール宣言が必要
+  (ALLOWABLE_RULES掲載 = 正当用途の緩和として訪問者同意のうえ入室する設計)
 - `allowedCodeRules: ["no-obfuscation"]` — @pixiv/three-vrm のクラス名
   (`_VRMExpressionManager` 等)がバンドラのリネームで難読化と誤検出されるため
 

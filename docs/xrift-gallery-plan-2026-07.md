@@ -71,7 +71,7 @@ World Components / Public API のどこにも「ユーザーのアバターを�
 
 | Phase | 内容 | 前提 |
 |---|---|---|
-| 1 | 技術検証ワールド: Supabaseから1体fetch表示する最小ワールドを手動アップロード(A案の成否確定) | ユーザーのXRiftログイン |
+| 1 | ✅実装済(2026-07-20): `xrift/gallery-world/` — gallery.json→最新3体VRMを実行時fetchして展示+ワールド内計測板が成否を表示。**ローカルDevEnvironmentでフルチェーン成立を確認済み**(Supabase CORS問題なし)。残り=主催アカウントで`xrift upload world`→本番XRift上で計測板の文言確認(ホストCSPの最終確定) | ユーザーのXRiftログイン |
 | 2 | ギャラリーワールドv1: gallery.json駆動で直近N体を展示台+呼出符プレート表示。世界観(蒸着庫)デザイン | Phase 1でA案OK |
 | 3 | 「着る」導線: スーツのXRiftアバター並行登録を forge に組み込み+展示台にリンク | アバター共有仕様の確認 |
 | 4 | 疑似変身ギミック or 公式ペデスタル要望の進捗次第で本物の変身 | ワールド同期API調査 |

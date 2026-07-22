@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { galleryUrl } from '../lib/suit';
+import { galleryUrl, normalizeCodeInput as normalize } from '../lib/suit';
 
 export default function Home() {
   const [code, setCode] = useState('');
@@ -14,8 +14,6 @@ export default function Home() {
       .then((items) => Array.isArray(items) && setGallery(items.slice(0, 8)))
       .catch(() => {});
   }, []);
-  // 入力はGAVAI-の続き5文字だけ。フル呼出符を貼り付けても自動で剥がす
-  const normalize = (v) => v.toUpperCase().replace(/^GAVAI-?/, '').replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const go = (e) => {
     e.preventDefault();
     const c = normalize(code);

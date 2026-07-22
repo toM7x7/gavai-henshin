@@ -60,7 +60,7 @@ function ShotCamera() {
 // 壁面アルコーブ(訪問ごとにシャッフル)には台座ごとの[蒸着][召喚]ボタン、
 // 中央では呼出符の手入力+収蔵カタログから選んで召喚できる
 export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 }) => {
-  const [infoLines, setInfoLines] = useState<string[]>(['蒸着庫', '照合中…'])
+  const [infoLines, setInfoLines] = useState<string[]>(['蒸着庫 — 記録院分室', '照合中…'])
   const [entries, setEntries] = useState<GalleryEntry[]>([])
   const [alcoves, setAlcoves] = useState<GalleryEntry[]>([])
   const [latestCode, setLatestCode] = useState<string | null>(null)
@@ -78,11 +78,14 @@ export const World: React.FC<WorldProps> = ({ position = [0, 0, 0], scale = 1 })
         setLatestCode(sorted[0]?.code ?? null)
         setAlcoves(shuffled(gallery).slice(0, ALCOVE_COUNT))
         setInfoLines([
-          '蒸着庫',
-          `収蔵 ${gallery.length}体 / 展示 ${Math.min(gallery.length, ALCOVE_COUNT)}体`,
+          '蒸着庫 — 記録院分室',
+          `ARCHIVE: REGISTERED — 収蔵 ${gallery.length}体 / 展示 ${Math.min(gallery.length, ALCOVE_COUNT)}体`,
         ])
       } catch (e) {
-        setInfoLines(['蒸着庫', `✗ 収蔵庫に接続できない: ${String((e as Error)?.message ?? e)}`])
+        setInfoLines([
+          '蒸着庫 — 記録院分室',
+          `✗ 記録院と照合不能: ${String((e as Error)?.message ?? e)}`,
+        ])
       }
     })()
   }, [])

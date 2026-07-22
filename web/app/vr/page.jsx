@@ -4,7 +4,7 @@
 // 蒸着チャンバー(/ar/<code>)へ飛ぶ。鍛造記録からのワンタップ入場も可。
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { galleryUrl } from '../../lib/suit';
+import { galleryUrl, normalizeCodeInput as normalize } from '../../lib/suit';
 
 export default function VrGate() {
   const [code, setCode] = useState('');
@@ -18,7 +18,6 @@ export default function VrGate() {
       .catch(() => {});
   }, []);
 
-  const normalize = (v) => v.toUpperCase().replace(/^GAVAI-?/, '').replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const go = (e) => {
     e.preventDefault();
     const c = normalize(code);

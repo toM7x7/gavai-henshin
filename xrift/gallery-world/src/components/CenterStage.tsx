@@ -1,6 +1,7 @@
-import { Interactable, TextInput } from '@xrift/world-components'
-import { normalizeCode, SUIT_FACING, type GalleryEntry } from '~/lib/gallery'
+import { Interactable } from '@xrift/world-components'
+import { SUIT_FACING, type GalleryEntry } from '~/lib/gallery'
 import { useSuit, useHenshin } from './SuitExhibit'
+import { SummonKeypad } from './SummonKeypad'
 import { TextPlate } from './TextPlate'
 
 interface CenterStageProps {
@@ -43,7 +44,7 @@ export function CenterStage({
         {vrm && <primitive object={vrm.scene} />}
       </group>
       {code && (
-        <TextPlate lines={[code, '召喚中のスーツ']} position={[0, 2.7, 0]} width={1.8} />
+        <TextPlate lines={[code, '召喚中 — 蒸着待機']} position={[0, 2.7, 0]} width={1.8} />
       )}
 
       {/* 収蔵サマリ(ラフなメニュー — 台座右脇) */}
@@ -71,30 +72,10 @@ export function CenterStage({
         </group>
       </Interactable>
 
-      {/* 召喚コンソール(呼出符の手入力) */}
-      <TextInput
-        id="summon-console"
-        placeholder="呼出符 5文字 (例: PTAU3)"
-        maxLength={12}
-        interactionText="呼出符を入力"
-        onSubmit={(value) => {
-          const normalized = normalizeCode(value)
-          if (normalized) onSummon(normalized)
-        }}
-      >
-        <group position={[-1.7, 0, 2.0]} rotation={[0, Math.PI / 5, 0]}>
-          <mesh position={[0, 0.45, 0]} castShadow>
-            <boxGeometry args={[0.7, 0.9, 0.35]} />
-            <meshStandardMaterial color="#141e28" metalness={0.6} roughness={0.4} />
-          </mesh>
-          <mesh position={[0, 0.93, -0.02]} rotation={[-0.5, 0, 0]}>
-            <boxGeometry args={[0.62, 0.36, 0.04]} />
-            <meshStandardMaterial
-              color="#0a1620" emissive="#38d9f1" emissiveIntensity={0.5}
-            />
-          </mesh>
-        </group>
-      </TextInput>
+      {/* 呼出符 照合盤 — ワールド内キーパッド。
+          プラットフォームのTextInputはDOMキーボードを呼び、VRの没入セッションを
+          中断させる(実機確認済みの仕様制約)ため、Interactableキーで完結させる */}
+      <SummonKeypad onSummon={onSummon} />
 
       {/* 収蔵カタログ(プルダウン相当 — 選んで召喚するボード) */}
       <group position={[-3.1, 0, 1.4]} rotation={[0, 0.6, 0]}>
@@ -102,7 +83,7 @@ export function CenterStage({
           <boxGeometry args={[1.5, 2.7, 0.08]} />
           <meshStandardMaterial color="#0c141c" metalness={0.5} roughness={0.5} />
         </mesh>
-        <TextPlate lines={['収蔵カタログ', '押して召喚']} position={[0, 2.55, 0.02]} width={1.3} />
+        <TextPlate lines={['収蔵目録', '押して照合・召喚']} position={[0, 2.55, 0.02]} width={1.3} />
         {entries.slice(0, CATALOG_MAX).map((entry, i) => {
           const accent = entry.palette?.emissive ?? entry.palette?.accent ?? '#9fdcff'
           const selected = entry.code === code

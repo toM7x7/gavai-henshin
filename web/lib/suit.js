@@ -6,6 +6,11 @@ const SUPA = (process.env.NEXT_PUBLIC_SUPABASE_URL || '')
   .replace(/\/(rest|storage|auth)\/v1\/?$/, '')
   .replace(/\/+$/, '') || null;
 
+// 呼出符入力の正規化(GAVAI-プレフィックスは枠側が持つ)。
+// 貼り付け・小文字・全角混じりに耐える共通規約 — 全入力欄でこれを使う
+export const normalizeCodeInput = (v) =>
+  v.toUpperCase().replace(/^GAVAI-?/, '').replace(/[^A-Z0-9]/g, '').slice(0, 5);
+
 export function packageBase(code) {
   const safe = String(code || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
   if (SUPA) return `${SUPA}/storage/v1/object/public/suits/${safe}`;
